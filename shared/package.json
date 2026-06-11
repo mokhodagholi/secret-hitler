@@ -1,0 +1,23 @@
+{
+  "name": "@secret-hitler/shared",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "rslib build",
+    "dev": "rslib build --watch"
+  },
+  "devDependencies": {
+    "@rslib/core": "^0.6.0",
+    "typescript": "^5.5.4"
+  }
+}
