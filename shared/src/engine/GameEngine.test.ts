@@ -295,6 +295,24 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.nominationEndsAt).toBeGreaterThan(0);
   });
 
+  it('Should pass the talking stick clockwise from the President', () => {
+    const { engine, room, players } = startGame(); // Ana(0), Ben(1), Cal(2)
+    const [ana, ben, cal] = players;
+    // Fail the opening round so Ben (seat 1) becomes the next President.
+    engine.handleCommand(ana.id, { kind: 'endTurn' });
+    engine.handleCommand(ben.id, { kind: 'endTurn' });
+    engine.handleCommand(cal.id, { kind: 'endTurn' });
+    engine.handleCommand(ana.id, { kind: 'endTurn' });
+    expect(room.presidentId).toBe(ben.id);
+    expect(room.speakerId).toBe(ben.id);
+
+    // Discussion goes Ben → Cal → Ana, not back to the lowest seat.
+    engine.handleCommand(ben.id, { kind: 'endTurn' });
+    expect(room.speakerId).toBe(cal.id);
+    engine.handleCommand(cal.id, { kind: 'endTurn' });
+    expect(room.speakerId).toBe(ana.id);
+  });
+
   it('Should fail the election when the President ends the round', () => {
     const { engine, room, players } = startGame();
     const [president, ben, cal] = players;

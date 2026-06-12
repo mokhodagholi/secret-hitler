@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js';
+import { For } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -55,15 +55,13 @@ export function NominationModal(props: NominationModalProps) {
         <div class={styles.list}>
           <For each={seated()}>
             {(player) => (
-              <Show when={player.id !== props.youId}>
-                <PlayerRow
-                  player={player}
-                  isYou={false}
-                  nominatable={props.canNominate(player)}
-                  onNominate={() => props.onNominate(player)}
-                  formatMessage={formatMessage}
-                />
-              </Show>
+              <PlayerRow
+                player={player}
+                isYou={player.id === props.youId}
+                nominatable={props.canNominate(player)}
+                onNominate={() => props.onNominate(player)}
+                formatMessage={formatMessage}
+              />
             )}
           </For>
         </div>

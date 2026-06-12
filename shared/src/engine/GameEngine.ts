@@ -353,7 +353,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       (p) => !room.discussionSpokenIds.includes(p.id),
     );
     if (remaining.length === 0) return this.beginNomination();
-    this.setSpeaker(remaining[0]);
+    // Continue clockwise from the current speaker's seat, wrapping around —
+    // not back to the lowest seat.
+    const currentSeat = room.findPlayer(room.speakerId ?? '')?.seat ?? -1;
+    const next = remaining.find((p) => p.seat > currentSeat) ?? remaining[0];
+    this.setSpeaker(next);
   }
 
   /** Discussion is over: drop the talking stick and start the nomination clock. */
