@@ -4,6 +4,7 @@ import { HomeScreen } from './screens/HomeScreen/HomeScreen';
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen/PlaceholderScreen';
+import { HowToPlayScreen } from './screens/HowToPlayScreen/HowToPlayScreen';
 import { PlayScreen } from './screens/PlayScreen/PlayScreen';
 import { CreateRoomScreen } from './screens/CreateRoomScreen/CreateRoomScreen';
 import { JoinGameScreen } from './screens/JoinGameScreen/JoinGameScreen';
@@ -40,7 +41,7 @@ function Router() {
         <SettingsScreen />
       </Match>
       <Match when={nav.screen() === 'how-to-play'}>
-        <PlaceholderScreen title={formatMessage('screens.howToPlay')} />
+        <HowToPlayScreen />
       </Match>
       <Match when={nav.screen() === 'about'}>
         <PlaceholderScreen title={formatMessage('screens.about')} />
