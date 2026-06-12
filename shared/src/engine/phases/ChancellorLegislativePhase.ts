@@ -1,0 +1,32 @@
+import { Phase } from '../../types/GameState';
+import type { GameCommand } from '../../types/events';
+import { type EngineError, err } from '../errors';
+import type { GamePhase, PhaseHost } from './GamePhase';
+
+/** The Chancellor holds the remaining two policies and enacts one. */
+export class ChancellorLegislativePhase implements GamePhase {
+  readonly name = Phase.ChancellorLegislative;
+
+  constructor(private readonly host: PhaseHost) {}
+
+  handle(playerId: string, command: GameCommand): EngineError | null {
+    if (command.kind !== 'enactPolicy') {
+      return err('INVALID_ACTION', 'The Chancellor is choosing a policy to enact.');
+    }
+    const room = this.host.room;
+    if (playerId !== room.chancellorId) {
+      return err('INVALID_ACTION', 'You are not enacting a policy.');
+    }
+    if (command.index < 0 || command.index >= room.drawnPolicies.length) {
+      return err('INVALID_ACTION', 'Invalid policy choice.');
+    }
+
+    const [enacted] = room.drawnPolicies.splice(command.index, 1);
+    room.deck.discardTiles(room.drawnPolicies);
+    room.drawnPolicies = [];
+    this.host.log(`A ${enacted} policy is enacted.`);
+    this.host.enactPolicy(enacted);
+    this.host.advanceRound(); // no-op if the policy ended the game
+    return null;
+  }
+}

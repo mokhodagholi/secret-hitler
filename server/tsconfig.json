@@ -3,8 +3,10 @@
   "compilerOptions": {
     "module": "node16",
     "moduleResolution": "node16",
-    "rootDir": "./src",
-    "outDir": "./dist"
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "test"],
+  // *.test.ts files import the ESM-only rstest runner, which TS rejects under
+  // node16 CJS resolution. They are compiled and run by rstest's own pipeline.
+  "exclude": ["**/*.test.ts"]
 }

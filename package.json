@@ -2,14 +2,14 @@
   "name": "secret-hitler",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter server dev && pnpm --filter client dev",
+    "dev": "pnpm --parallel --filter server --filter client dev",
     "dev:server": "pnpm --filter server dev",
     "dev:client": "pnpm --filter client dev",
     "build:shared": "pnpm --filter shared build",
     "build:server": "pnpm --filter server build",
     "build:client": "pnpm --filter client build",
     "build": "pnpm build:shared && pnpm build:server && pnpm build:client",
-    "test": "pnpm --filter shared test"
+    "test": "pnpm build:shared && pnpm -r test"
   },
   "devDependencies": {
     "typescript": "^5.5.4"

@@ -130,3 +130,5 @@ export const MAX_PLAYERS = 10;
 export const SUPPORTED_MIN_PLAYERS = 3;
 /** How long each player holds the talking stick, in ms. */
 export const SPEAKING_TURN_MS = 20_000;
+/** How long a disconnected host keeps the host seat before migration, in ms. */
+export const HOST_MIGRATION_GRACE_MS = 30_000;

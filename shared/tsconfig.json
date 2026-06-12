@@ -4,5 +4,7 @@
     "rootDir": "./src",
     "outDir": "./dist"
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests are compiled by rstest's own pipeline, not the library build.
+  "exclude": ["src/**/*.test.ts"]
 }

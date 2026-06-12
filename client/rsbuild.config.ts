@@ -24,6 +24,8 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // /join/CODE share links must serve the app shell, not 404.
+    historyApiFallback: true,
     proxy: {
       '/api': 'http://localhost:3001',
       '/ws': {

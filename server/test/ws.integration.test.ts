@@ -1,0 +1,181 @@
+import { afterEach, describe, expect, it } from '@rstest/core';
+import { Phase, type CreateRoomResponse, type JoinRoomResponse } from '@secret-hitler/shared';
+import { TestClient, httpJson, listenServer, type LiveServer } from './test-utils';
+
+let server: LiveServer | undefined;
+const clients: TestClient[] = [];
+
+afterEach(async () => {
+  for (const client of clients) client.close();
+  clients.length = 0;
+  await server?.close();
+  server = undefined;
+});
+
+async function connect(): Promise<TestClient> {
+  const client = await TestClient.connect(server!.port);
+  clients.push(client);
+  return client;
+}
+
+/** Create a room + join two guests over HTTP, then auth all three sockets. */
+async function seatThreePlayers() {
+  const created = (
+    await httpJson<CreateRoomResponse>(server!.app, 'POST', '/api/rooms', {
+      name: 'Bunker',
+      hostName: 'Ana',
+    })
+  ).body;
+  const join = (name: string) =>
+    httpJson<JoinRoomResponse>(server!.app, 'POST', `/api/rooms/${created.roomId}/join`, {
+      name,
+    });
+  const ben = (await join('Ben')).body;
+  const cal = (await join('Cal')).body;
+
+  const [hostWs, benWs, calWs] = [await connect(), await connect(), await connect()];
+  await hostWs.auth(created.token);
+  await benWs.auth(ben.token);
+  await calWs.auth(cal.token);
+
+  return { created, ben, cal, hostWs, benWs, calWs };
+}
+
+describe('WebSocket gameplay', () => {
+  it('Should authenticate a join token and deliver the lobby snapshot', async () => {
+    server = await listenServer();
+    const created = (
+      await httpJson<CreateRoomResponse>(server.app, 'POST', '/api/rooms', {
+        name: 'Bunker',
+        hostName: 'Ana',
+      })
+    ).body;
+
+    const ws = await connect();
+    const playerId = await ws.auth(created.token);
+    expect(playerId).toBe(created.playerId);
+
+    const state = await ws.waitFor('state');
+    expect(state.state.phase).toBe(Phase.Lobby);
+    expect(state.state.players.map((p) => p.name)).toEqual(['Ana']);
+  });
+
+  it('Should reject an invalid token and refuse unauthenticated messages', async () => {
+    server = await listenServer();
+    const ws = await connect();
+    ws.send({ type: 'auth', token: 'forged' });
+    const rejected = await ws.waitFor('error');
+    expect(rejected.code).toBe('AUTH_FAILED');
+
+    const ws2 = await connect();
+    ws2.send({ type: 'game:start' });
+    const refused = await ws2.waitFor('error');
+    expect(refused.code).toBe('AUTH_FAILED');
+  });
+
+  it('Should survive malformed frames without crashing the room', async () => {
+    server = await listenServer();
+    const created = (
+      await httpJson<CreateRoomResponse>(server.app, 'POST', '/api/rooms', {
+        name: 'Bunker',
+        hostName: 'Ana',
+      })
+    ).body;
+    const ws = await connect();
+    await ws.auth(created.token);
+
+    // The exact payloads that would throw if they ever reached the engine.
+    ws.sendRaw('{"type":"chat:message","text":123}');
+    ws.sendRaw('{"type":"command","command":{"kind":"castVote","vote":{}}}');
+    ws.sendRaw('total garbage');
+
+    ws.send({ type: 'ping' });
+    await ws.waitFor('pong');
+  });
+
+  it('Should run a full round: ready, start, nominate, vote, legislate', async () => {
+    server = await listenServer();
+    const { created, ben, cal, hostWs, benWs, calWs } = await seatThreePlayers();
+
+    benWs.send({ type: 'player:ready' });
+    calWs.send({ type: 'player:ready' });
+    await hostWs.waitFor('state', (m) =>
+      m.state.players.every((player) => player.ready),
+    );
+
+    hostWs.send({ type: 'game:start' });
+    const started = await hostWs.waitFor('state', (m) => m.state.phase !== Phase.Lobby);
+    expect(started.state.phase).toBe(Phase.Nomination);
+    expect(started.state.board.president).toBe(created.playerId);
+    await hostWs.waitFor('private');
+
+    hostWs.send({
+      type: 'command',
+      command: { kind: 'nominateChancellor', targetId: ben.playerId },
+    });
+    await benWs.waitFor('state', (m) => m.state.phase === Phase.Voting);
+
+    hostWs.send({ type: 'command', command: { kind: 'castVote', vote: 'ja' } });
+    benWs.send({ type: 'command', command: { kind: 'castVote', vote: 'ja' } });
+    calWs.send({ type: 'command', command: { kind: 'castVote', vote: 'ja' } });
+
+    const legislative = await hostWs.waitFor(
+      'state',
+      (m) => m.state.phase === Phase.PresidentLegislative,
+    );
+    expect(legislative.state.you.policies).toHaveLength(3);
+
+    hostWs.send({ type: 'command', command: { kind: 'discardPolicy', index: 0 } });
+    const chancellorTurn = await benWs.waitFor(
+      'state',
+      (m) => m.state.phase === Phase.ChancellorLegislative,
+    );
+    expect(chancellorTurn.state.you.policies).toHaveLength(2);
+
+    benWs.send({ type: 'command', command: { kind: 'enactPolicy', index: 0 } });
+    // Match the next round specifically — an earlier Nomination snapshot from
+    // game start is already sitting in Cal's inbox.
+    const nextRound = await calWs.waitFor(
+      'state',
+      (m) =>
+        m.state.phase === Phase.Nomination &&
+        m.state.board.liberalPolicies + m.state.board.fascistPolicies === 1,
+    );
+    const board = nextRound.state.board;
+    // Presidency rotated off the first seat.
+    expect(board.president).toBe(ben.playerId);
+    // Spectators never see the legislators' hands.
+    expect(nextRound.state.you.id).toBe(cal.playerId);
+    expect(nextRound.state.you.policies).toHaveLength(0);
+  });
+
+  it('Should reject a start while guests are not ready', async () => {
+    server = await listenServer();
+    const { hostWs } = await seatThreePlayers();
+
+    hostWs.send({ type: 'game:start' });
+    const error = await hostWs.waitFor('error');
+    expect(error.code).toBe('PLAYERS_NOT_READY');
+  });
+
+  it('Should close the room for everyone when the host leaves', async () => {
+    server = await listenServer();
+    const { hostWs, benWs } = await seatThreePlayers();
+
+    hostWs.send({ type: 'room:leave' });
+    const closed = await benWs.waitFor('room:closed');
+    expect(closed.reason).toBe('HOST_LEFT');
+    expect(server.repo.listPublic()).toHaveLength(0);
+  });
+
+  it('Should rate-limit chat flooding', async () => {
+    server = await listenServer();
+    const { hostWs } = await seatThreePlayers();
+
+    for (let i = 0; i < 9; i++) {
+      hostWs.send({ type: 'chat:message', text: `spam ${i}` });
+    }
+    const limited = await hostWs.waitFor('error');
+    expect(limited.code).toBe('RATE_LIMITED');
+  });
+});

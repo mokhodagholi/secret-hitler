@@ -7,6 +7,7 @@ export interface ButtonProps {
   size?: 'lg' | 'md';
   onClick?: () => void;
   type?: 'button' | 'submit';
+  disabled?: boolean;
 }
 
 /** Primary action button — gold filled (PLAY) or gold outline (Restore Purchases). */
@@ -14,6 +15,7 @@ export function Button(props: ButtonProps) {
   return (
     <button
       type={props.type ?? 'button'}
+      disabled={props.disabled}
       classList={{
         [styles.btn]: true,
         [styles.gold]: (props.variant ?? 'gold') === 'gold',

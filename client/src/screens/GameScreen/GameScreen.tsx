@@ -8,7 +8,7 @@ import {
 } from 'solid-js';
 import { Phase, type PublicPlayer } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
-import type { MessageKey } from '../../i18n';
+import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
 import { BoardRenderer } from '../../canvas/BoardRenderer';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
@@ -42,7 +42,6 @@ export function GameScreen() {
   });
 
   onMount(() => {
-    renderer = new BoardRenderer(boardCanvas);
     const ticker = setInterval(() => setNow(Date.now()), 500);
     onCleanup(() => {
       renderer?.dispose();
@@ -61,11 +60,14 @@ export function GameScreen() {
   };
   const chatLocked = () => speaker() != null && !isMySpeakingTurn();
 
-  // Redraw the canvas whenever board state or language changes.
+  // Redraw the canvas whenever board state or language changes. The canvas
+  // lives inside <Show when={view()}>, so the renderer is created lazily the
+  // first time a board (and therefore the canvas element) actually exists.
   createEffect(() => {
     const board = view()?.board;
-    if (!board || !renderer) return;
-    renderer.render(board, {
+    if (!board) return;
+    if (!renderer && boardCanvas) renderer = new BoardRenderer(boardCanvas);
+    renderer?.render(board, {
       liberal: formatMessage('game.liberal'),
       fascist: formatMessage('game.fascist'),
       draw: formatMessage('game.drawPile'),
@@ -96,10 +98,6 @@ export function GameScreen() {
     );
   };
 
-  const me = () => {
-    const state = view();
-    return state?.players.find((player) => player.id === state.you.id) ?? null;
-  };
   const voters = () =>
     view()?.players.filter((player) => player.isAlive && player.connected) ?? [];
   const votedCount = () => voters().filter((player) => player.hasVoted).length;
@@ -177,9 +175,7 @@ export function GameScreen() {
                   [styles.connection]: true,
                   [styles.connected]: socket.status() === 'connected',
                 }}
-                title={formatMessage(
-                  `connection.${socket.status()}` as MessageKey,
-                )}
+                title={formatMessage(CONNECTION_STATUS_KEYS[socket.status()])}
               />
             </div>
 
@@ -243,7 +239,7 @@ export function GameScreen() {
                   })}
                 </span>
                 <Show
-                  when={state().you.vote == null && me()?.isAlive}
+                  when={state().you.vote == null && game.you()?.isAlive}
                   fallback={
                     <span class={styles.voteWaiting}>
                       <Show when={state().you.vote}>
@@ -325,7 +321,7 @@ export function GameScreen() {
 
             <Show when={game.lastError()}>
               <p class={styles.error} onClick={() => game.clearError()}>
-                {formatMessage(`error.${game.lastError()!.code}` as MessageKey)}
+                {formatMessage(ERROR_MESSAGE_KEYS[game.lastError()!.code])}
               </p>
             </Show>
 

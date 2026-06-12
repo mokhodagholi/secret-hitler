@@ -14,10 +14,12 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "rslib build",
-    "dev": "rslib build --watch"
+    "dev": "rslib build --watch",
+    "test": "rstest run"
   },
   "devDependencies": {
     "@rslib/core": "^0.6.0",
+    "@rstest/core": "^0.10.4",
     "typescript": "^5.5.4"
   }
 }

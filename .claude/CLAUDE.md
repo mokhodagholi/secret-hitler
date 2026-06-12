@@ -6,15 +6,18 @@ A real-time multiplayer Secret Hitler board game played in the browser, with voi
 
 ## Agent Conventions
 
-Project coding conventions and rules live in the [`.agents/`](.agents/) directory — read and follow them. (Tool permissions stay in `.claude/settings.local.json`.)
+All project documentation and coding rules live in [`docs/`](../docs/) — read and follow them. The files under [`.agents/rules/`](../.agents/rules/) are thin pointers to those docs (kept so the `.agents/` convention still resolves). Tool permissions stay in [`settings.local.json`](settings.local.json).
 
-- [`.agents/rules/naming.md`](.agents/rules/naming.md) — use descriptive names, not 1–2 character abbreviations.
-- [`.agents/rules/commit-messages.md`](.agents/rules/commit-messages.md) — Conventional Commits with a capitalized subject.
-- [`.agents/rules/comments.md`](.agents/rules/comments.md) — concise comments; explain why, not what.
+- [`docs/naming.md`](../docs/naming.md) — use descriptive names, not 1–2 character abbreviations.
+- [`docs/commit-messages.md`](../docs/commit-messages.md) — Conventional Commits with a capitalized subject.
+- [`docs/comments.md`](../docs/comments.md) — concise comments; explain why, not what.
+- [`docs/testing.md`](../docs/testing.md) — rstest, `it('Should …')`, co-located tests, `test/` utils.
+- [`docs/game-rules.md`](../docs/game-rules.md) — how a round plays out; implemented vs. planned.
 
-@.agents/rules/naming.md
-@.agents/rules/commit-messages.md
-@.agents/rules/comments.md
+@../docs/naming.md
+@../docs/commit-messages.md
+@../docs/comments.md
+@../docs/testing.md
 
 ## Tech Stack
 
@@ -57,34 +60,30 @@ Project coding conventions and rules live in the [`.agents/`](.agents/) director
 ## Design Patterns
 
 ### State Machine — game phase management (most critical)
-The game progresses through strict phases. Each phase is a class implementing a `GamePhase` interface with `enter()`, `exit()`, and `handle(action)` methods. The `GameEngine` holds the current phase and delegates all actions to it.
+The game progresses through strict phases. Each phase is a class implementing the `GamePhase` interface (`shared/src/engine/phases/`) with optional `enter()`/`exit()` hooks and a required `handle(playerId, command)` method, plus an optional `presenceChanged()` for connect/disconnect re-evaluation. `GameEngine` implements `PhaseHost` (the services phases call back into — `transitionTo`, `enactPolicy`, `advanceRound`, `endGame`, speaker control), holds the current phase, and delegates every in-game command to it via `handleCommand`. Lobby flow (join → ready → start) lives on the engine itself.
 
 ```
 GamePhase (interface)
-├── LobbyPhase
-├── NominationPhase
-├── VotingPhase
-├── PresidentLegislativePhase
-├── ChancellorLegislativePhase
-├── SpecialPowerPhase
-│   ├── InvestigatePhase
-│   ├── SpecialElectionPhase
-│   ├── PeekPhase
-│   └── ExecutionPhase
-└── GameOverPhase
+├── LobbyPhase                    ← implemented
+├── NominationPhase               ← implemented
+├── VotingPhase                   ← implemented
+├── PresidentLegislativePhase     ← implemented
+├── ChancellorLegislativePhase    ← implemented
+├── SpecialPowerPhase             ← not yet (investigate / peek / special election / execute)
+└── GameOverPhase                 ← implemented
 ```
 
 ### Command — player actions over WebSocket
-Every player action is a Command object with a `validate()` and `execute()` method. The server receives a command DTO, deserializes it, validates it against current game state, then executes it.
+A player action is a `GameCommand` — a discriminated union tagged by `kind` (`shared/src/types/events.ts`), not a class hierarchy; TypeScript narrowing on `kind` is preferred over per-command `validate()`/`execute()` classes. Inbound frames are validated structurally by `parseClientMessage` (`shared/src/net/clientMessages.ts`) before they reach the engine — the server never casts raw JSON. The owning phase validates the command against current state and applies it.
 
 ```
-GameCommand (abstract)
-├── NominateChancellorCommand
-├── CastVoteCommand
-├── DiscardPolicyCommand
-├── EnactPolicyCommand
-├── UseSpecialPowerCommand
-└── VetoRequestCommand
+GameCommand (union by `kind`)
+├── nominateChancellor   ← implemented
+├── castVote             ← implemented
+├── discardPolicy        ← implemented
+├── enactPolicy          ← implemented
+├── useSpecialPower      ← not yet
+└── vetoRequest          ← not yet
 ```
 
 ### Observer / EventEmitter — game events
@@ -505,6 +504,7 @@ Everything in the Screen features above. Players create or join a room with a pa
 pnpm install
 
 # Dev
+pnpm dev           # server + client together (parallel)
 pnpm dev:server    # backend with tsx watch
 pnpm dev:client    # Rsbuild dev server
 
@@ -514,6 +514,7 @@ pnpm build:client  # Rsbuild production build
 pnpm build:server  # tsc production build
 pnpm build         # all in order
 
-# Test
-pnpm test          # shared engine unit tests
+# Test — rstest in every package (see .agents/rules/testing.md)
+pnpm test                 # build shared, then run all package suites
+pnpm --filter shared test # one package
 ```

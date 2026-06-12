@@ -20,15 +20,19 @@ export interface AppServices {
 
 const AppContext = createContext<AppServices>();
 
-export function AppProvider(props: ParentProps) {
-  const settings = new SettingsService();
-  const socket = new WebSocketService();
+export function AppProvider(
+  props: ParentProps<{ services?: Partial<AppServices> }>,
+) {
+  // Tests inject fakes (e.g. a socket that never connects); the app uses real ones.
+  const overrides = props.services ?? {};
+  const settings = overrides.settings ?? new SettingsService();
+  const socket = overrides.socket ?? new WebSocketService();
   const services: AppServices = {
-    nav: new NavigationService(),
+    nav: overrides.nav ?? new NavigationService(),
     settings,
-    i18n: new I18nService(() => settings.settings.language),
+    i18n: overrides.i18n ?? new I18nService(() => settings.settings.language),
     socket,
-    game: new GameStateService(socket),
+    game: overrides.game ?? new GameStateService(socket),
   };
 
   // Keep the document's language and reading direction in sync with the

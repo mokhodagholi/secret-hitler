@@ -72,14 +72,14 @@ play is liberal/fascist policies only.
 
 ## Implemented vs. planned
 
-Implemented: lobby, role dealing, talking-stick discussion, nomination, voting,
-the 5/6-policy and Hitler-Chancellor win conditions, the election tracker and
-chaos rule.
+Implemented: lobby with ready-up, role dealing, talking-stick discussion,
+nomination, voting, the legislative card session (draw 3 / discard / enact), the
+5/6-policy and Hitler-Chancellor win conditions, the election tracker and chaos
+rule. All driven by the `GamePhase` state machine (`shared/src/engine/phases/`).
 
-Planned / not yet done: the legislative card session (draw 3 / discard / enact)
-in the current phase-machine engine, the timed voting screen, presidential
-powers, veto power (unlocks after 5 fascist policies), term limits, and the
-Hitler-execution liberal win.
+Planned / not yet done: the timed voting screen, presidential powers, veto power
+(unlocks after 5 fascist policies), term limits, and the Hitler-execution
+liberal win.
 
 ## Dev notes
 

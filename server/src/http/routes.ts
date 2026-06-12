@@ -5,9 +5,10 @@ import type {
   JoinRoomRequest,
   JoinRoomResponse,
 } from '@secret-hitler/shared';
-import type { RoomRepository } from './RoomRepository';
-import type { SocketHandler } from './SocketHandler';
-import type { TokenStore } from './TokenStore';
+import { RateLimiter } from '../util/RateLimiter';
+import type { RoomRepository } from '../rooms/RoomRepository';
+import type { SocketHandler } from '../ws/SocketHandler';
+import type { TokenStore } from '../rooms/TokenStore';
 import { hashPassword, verifyPassword } from './password';
 
 export interface RouteDeps {
@@ -16,12 +17,24 @@ export interface RouteDeps {
   sockets: SocketHandler;
 }
 
+/** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
+const CREATE_LIMIT = 5;
+const JOIN_LIMIT = 10;
+const LIMIT_WINDOW_MS = 60_000;
+
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const { repo, tokens, sockets } = deps;
+  const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
+  const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
 
   // Create a room and seat the host.
   app.post('/api/rooms', async (req, reply) => {
+    if (!createLimiter.allow(req.ip)) {
+      return reply
+        .code(429)
+        .send({ error: 'Too many rooms created. Try again shortly.', code: 'RATE_LIMITED' });
+    }
     const body = (req.body ?? {}) as CreateRoomRequest;
     if (!body.name?.trim() || !body.hostName?.trim()) {
       return reply.code(400).send({ error: 'name and hostName are required' });
@@ -62,6 +75,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
   // Join an existing room by id or code.
   app.post('/api/rooms/:idOrCode/join', async (req, reply) => {
+    if (!joinLimiter.allow(req.ip)) {
+      return reply
+        .code(429)
+        .send({ error: 'Too many join attempts. Try again shortly.', code: 'RATE_LIMITED' });
+    }
     const { idOrCode } = req.params as { idOrCode: string };
     const body = (req.body ?? {}) as JoinRoomRequest;
     if (!body.name?.trim()) {

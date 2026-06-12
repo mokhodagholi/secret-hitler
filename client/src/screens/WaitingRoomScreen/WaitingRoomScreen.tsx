@@ -8,7 +8,11 @@ import {
 } from 'solid-js';
 import { Phase, type GameStateView } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
-import type { MessageKey } from '../../i18n';
+import {
+  CONNECTION_STATUS_KEYS,
+  ERROR_MESSAGE_KEYS,
+  type MessageKey,
+} from '../../i18n';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
@@ -48,7 +52,10 @@ export function WaitingRoomScreen() {
   // Host pressed start → server flips the phase → everyone moves to the board.
   createEffect(() => {
     const phase = view()?.phase;
-    if (phase && phase !== Phase.Lobby) nav.navigate('game');
+    if (phase && phase !== Phase.Lobby) {
+      game.clearError(); // don't carry a lobby error into the game
+      nav.navigate('game');
+    }
   });
 
   async function copyShareLink(): Promise<void> {
@@ -75,7 +82,7 @@ export function WaitingRoomScreen() {
         when={view()}
         fallback={
           <p class={styles.note}>
-            {formatMessage(`connection.${socket.status()}` as MessageKey)}
+            {formatMessage(CONNECTION_STATUS_KEYS[socket.status()])}
           </p>
         }
       >
@@ -87,7 +94,7 @@ export function WaitingRoomScreen() {
 
             <Show when={game.lastError()}>
               <p class={styles.error} onClick={() => game.clearError()}>
-                {formatMessage(`error.${game.lastError()!.code}` as MessageKey)}
+                {formatMessage(ERROR_MESSAGE_KEYS[game.lastError()!.code])}
               </p>
             </Show>
 
@@ -217,7 +224,11 @@ export function WaitingRoomScreen() {
         </Show>
 
         <div class={styles.startWrap}>
-          <Button size="lg" onClick={() => game.startGame()}>
+          <Button
+            size="lg"
+            disabled={!game.canStart()}
+            onClick={() => game.startGame()}
+          >
             {formatMessage('waiting.startGame')}
           </Button>
         </div>
@@ -239,6 +250,7 @@ export function WaitingRoomScreen() {
     });
 
     const progress = () => props.state.players.length / props.state.maxPlayers;
+    const amReady = () => game.you()?.ready ?? false;
 
     return (
       <div class={styles.guest}>
@@ -251,6 +263,14 @@ export function WaitingRoomScreen() {
         </p>
 
         <ProgressRing progress={progress()} />
+
+        <Button
+          size="lg"
+          variant={amReady() ? 'outline' : 'gold'}
+          onClick={() => game.setReady(!amReady())}
+        >
+          {formatMessage(amReady() ? 'waiting.notReadyYet' : 'waiting.imReady')}
+        </Button>
 
         <div class={styles.tips}>
           <div class={styles.tipsHeading}>

@@ -5,19 +5,21 @@ import {
   type LogEntry,
   type Player,
   type Policy,
-  type Vote,
 } from '../types/GameState';
-import type { GameCommand, ServerErrorCode } from '../types/events';
-import { TypedEmitter } from './EventEmitter';
-import { makeId } from './ids';
-import { PlayerFactory } from './PlayerFactory';
-import { Room } from './Room';
-import { buildRoleBag } from './roleDistribution';
-
-export interface EngineError {
-  code: ServerErrorCode;
-  message: string;
-}
+import type { GameCommand } from '../types/events';
+import { TypedEmitter } from '../util/TypedEmitter';
+import { type EngineError, err } from './errors';
+import { makeId } from '../util/ids';
+import { PlayerFactory } from '../factories/PlayerFactory';
+import { Room } from '../domain/Room';
+import { buildRoleBag } from '../rules/roleDistribution';
+import type { GamePhase, PhaseHost } from './phases/GamePhase';
+import { ChancellorLegislativePhase } from './phases/ChancellorLegislativePhase';
+import { GameOverPhase } from './phases/GameOverPhase';
+import { LobbyPhase } from './phases/LobbyPhase';
+import { NominationPhase } from './phases/NominationPhase';
+import { PresidentLegislativePhase } from './phases/PresidentLegislativePhase';
+import { VotingPhase } from './phases/VotingPhase';
 
 /** Events the engine emits; the server subscribes and fans them out over WS. */
 export interface EngineEvents extends Record<string, unknown> {
@@ -35,16 +37,43 @@ export interface EngineEvents extends Record<string, unknown> {
 
 /**
  * State-machine host. Owns a single {@link Room} and is the only place its
- * state mutates. Lobby flow (join → ready → start) is fully implemented here;
- * in-game phase handling is delegated to `handleCommand`, the extension point
- * where the GamePhase state machine will be wired.
+ * state mutates. Lobby flow (join → ready → start) lives here; every in-game
+ * command is delegated to the current {@link GamePhase}.
  */
-export class GameEngine extends TypedEmitter<EngineEvents> {
+export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost {
+  private readonly phases: Partial<Record<Phase, GamePhase>>;
+  private currentPhase: GamePhase;
+
   constructor(readonly room: Room) {
     super();
+    this.phases = {
+      [Phase.Lobby]: new LobbyPhase(),
+      [Phase.Nomination]: new NominationPhase(this),
+      [Phase.Voting]: new VotingPhase(this),
+      [Phase.PresidentLegislative]: new PresidentLegislativePhase(this),
+      [Phase.ChancellorLegislative]: new ChancellorLegislativePhase(this),
+      [Phase.GameOver]: new GameOverPhase(this),
+    };
+    this.currentPhase = this.phaseFor(room.phase);
   }
 
-  // --- Lobby -------------------------------------------------------------
+  // --- State machine -------------------------------------------------------
+
+  /** Move the room to a new phase, running exit/enter hooks. */
+  transitionTo(name: Phase): void {
+    this.currentPhase.exit?.();
+    this.currentPhase = this.phaseFor(name);
+    this.room.phase = name;
+    this.currentPhase.enter?.();
+  }
+
+  private phaseFor(name: Phase): GamePhase {
+    const phase = this.phases[name];
+    if (!phase) throw new Error(`Phase not implemented: ${name}`);
+    return phase;
+  }
+
+  // --- Lobby ---------------------------------------------------------------
 
   addPlayer(name: string, asHost = false): Player | EngineError {
     const room = this.room;
@@ -90,11 +119,14 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     const player = this.room.findPlayer(playerId);
     if (!player || player.connected === connected) return;
     player.connected = connected;
-    // Ready mirrors presence — players are ready while seated and connected,
-    // so the host can start as soon as enough players have joined.
-    player.ready = connected || player.isHost;
     this.log(`${player.name} ${connected ? 'reconnected' : 'disconnected'}.`);
-    this.maybeMigrateHost();
+    // A disconnected speaker must not hold everyone's chat hostage.
+    if (!connected && this.room.speakerId === playerId) this.advanceSpeaker();
+    // Reopen a discussion that stalled with nobody eligible to speak.
+    if (connected && !this.room.speakerId && this.isDiscussionPhase()) {
+      this.startSpeakingTurnAt(playerId);
+    }
+    this.currentPhase.presenceChanged?.();
     this.changed();
   }
 
@@ -117,24 +149,36 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
 
   startGame(requesterId: string): EngineError | null {
     const room = this.room;
+    if (room.phase !== Phase.Lobby) {
+      return err('ALREADY_STARTED', 'The game has already started.');
+    }
     if (requesterId !== room.hostId) {
       return err('NOT_HOST', 'Only the host can start the game.');
     }
-    const players = room.players.filter((p) => p.connected);
-    if (players.length < room.options.minPlayers) {
+    const connected = room.players.filter((p) => p.connected);
+    if (connected.length < room.options.minPlayers) {
       return err(
         'NOT_ENOUGH_PLAYERS',
         `Need at least ${room.options.minPlayers} players.`,
       );
     }
+    if (!connected.every((p) => p.ready)) {
+      return err('PLAYERS_NOT_READY', 'Everyone must be ready to start.');
+    }
 
-    this.dealRoles(players);
+    // Disconnected lobby players never received a role — drop their seats.
+    room.players = connected;
+    room.players.forEach((player, seat) => (player.seat = seat));
+
+    this.dealRoles(room.players);
     room.deck.reset();
     room.liberalPolicies = 0;
     room.fascistPolicies = 0;
     room.electionTracker = 0;
+    room.lastEnacted = [];
+    room.drawnPolicies = [];
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
-    this.beginNomination();
+    this.transitionTo(Phase.Nomination);
 
     this.log('The game has started. Roles have been dealt.');
     this.emit('gameStarted', { room });
@@ -142,7 +186,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     return null;
   }
 
-  // --- Chat / log --------------------------------------------------------
+  // --- Chat / log ------------------------------------------------------------
 
   postChat(playerId: string, text: string): void {
     const player = this.room.findPlayer(playerId);
@@ -160,145 +204,16 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     this.emit('chat', { message });
   }
 
-  // --- In-game commands --------------------------------------------------
+  // --- In-game commands ------------------------------------------------------
 
-  /** Dispatches an in-game {@link GameCommand} to the matching phase handler. */
+  /** Delegate an in-game {@link GameCommand} to the current phase. */
   handleCommand(playerId: string, command: GameCommand): EngineError | null {
-    switch (command.kind) {
-      case 'nominateChancellor':
-        return this.nominateChancellor(playerId, command.targetId);
-      case 'castVote':
-        return this.castVote(playerId, command.vote);
-      case 'discardPolicy':
-        return this.discardPolicy(playerId, command.index);
-      case 'enactPolicy':
-        return this.enactChosenPolicy(playerId, command.index);
-      default:
-        // Special-power commands are out of scope for now.
-        return err('INVALID_ACTION', 'That action is not available yet.');
-    }
+    return this.currentPhase.handle(playerId, command);
   }
 
-  private nominateChancellor(playerId: string, targetId: string): EngineError | null {
-    const room = this.room;
-    if (room.phase !== Phase.Nomination || playerId !== room.presidentId) {
-      return err('INVALID_ACTION', 'You cannot nominate right now.');
-    }
-    const target = room.findPlayer(targetId);
-    if (!target || !target.isAlive || target.id === playerId) {
-      return err('INVALID_ACTION', 'That player cannot be nominated.');
-    }
+  // --- Board / round progression (PhaseHost) ----------------------------------
 
-    room.chancellorId = targetId;
-    room.phase = Phase.Voting;
-    room.votes.clear();
-    this.log(
-      `${room.findPlayer(playerId)?.name} nominated ${target.name} as Chancellor.`,
-    );
-    this.changed();
-    return null;
-  }
-
-  private castVote(playerId: string, vote: Vote): EngineError | null {
-    const room = this.room;
-    const player = room.findPlayer(playerId);
-    if (room.phase !== Phase.Voting || !player?.isAlive) {
-      return err('INVALID_ACTION', 'There is no vote in progress.');
-    }
-
-    room.votes.set(playerId, vote);
-    const voters = room.players.filter((p) => p.isAlive && p.connected);
-    if (voters.every((p) => room.votes.has(p.id))) {
-      this.resolveElection(voters);
-    } else {
-      this.changed();
-    }
-    return null;
-  }
-
-  // --- Election resolution -----------------------------------------------
-
-  private resolveElection(voters: Player[]): void {
-    const room = this.room;
-    const ja = voters.filter((p) => room.votes.get(p.id) === 'ja').length;
-    const elected = ja * 2 > voters.length;
-    const chancellor = room.findPlayer(room.chancellorId ?? '');
-    this.log(`The vote ${elected ? 'passed' : 'failed'} (${ja}/${voters.length} Ja).`);
-
-    if (elected && chancellor) {
-      room.electionTracker = 0;
-      if (room.fascistPolicies >= 3 && chancellor.role === 'hitler') {
-        this.log(`${chancellor.name} was Hitler — the Fascists win!`);
-        this.endGame();
-        return;
-      }
-      this.log(`${chancellor.name}'s government takes office.`);
-      this.beginLegislative();
-    } else {
-      room.electionTracker += 1;
-      if (room.electionTracker >= 3) this.enactChaosPolicy();
-      this.advanceRound();
-    }
-  }
-
-  // --- Legislative session -----------------------------------------------
-
-  /** Deal three policies to the President to discard one of. */
-  private beginLegislative(): void {
-    const room = this.room;
-    room.drawnPolicies = room.deck.drawTiles(3);
-    room.phase = Phase.PresidentLegislative;
-    this.setSpeaker(null);
-    this.log('The President draws three policies.');
-    this.changed();
-  }
-
-  private discardPolicy(playerId: string, index: number): EngineError | null {
-    const room = this.room;
-    if (room.phase !== Phase.PresidentLegislative || playerId !== room.presidentId) {
-      return err('INVALID_ACTION', 'You are not discarding a policy.');
-    }
-    if (index < 0 || index >= room.drawnPolicies.length) {
-      return err('INVALID_ACTION', 'Invalid policy choice.');
-    }
-
-    const [discarded] = room.drawnPolicies.splice(index, 1);
-    room.deck.discardTiles([discarded]);
-    room.phase = Phase.ChancellorLegislative;
-    this.log('The President passes two policies to the Chancellor.');
-    this.changed();
-    return null;
-  }
-
-  private enactChosenPolicy(playerId: string, index: number): EngineError | null {
-    const room = this.room;
-    if (room.phase !== Phase.ChancellorLegislative || playerId !== room.chancellorId) {
-      return err('INVALID_ACTION', 'You are not enacting a policy.');
-    }
-    if (index < 0 || index >= room.drawnPolicies.length) {
-      return err('INVALID_ACTION', 'Invalid policy choice.');
-    }
-
-    const [enacted] = room.drawnPolicies.splice(index, 1);
-    room.deck.discardTiles(room.drawnPolicies);
-    room.drawnPolicies = [];
-    this.log(`A ${enacted} policy is enacted.`);
-    this.enactPolicy(enacted);
-    this.advanceRound(); // no-op if the policy ended the game
-    return null;
-  }
-
-  /** Three failed elections — the top policy is enacted automatically. */
-  private enactChaosPolicy(): void {
-    const [policy] = this.room.deck.drawTiles(1);
-    if (policy) {
-      this.log('Three elections failed — the top policy is enacted.');
-      this.enactPolicy(policy);
-    }
-    this.room.electionTracker = 0;
-  }
-
-  private enactPolicy(policy: Policy): void {
+  enactPolicy(policy: Policy): void {
     const room = this.room;
     if (policy === 'liberal') room.liberalPolicies += 1;
     else room.fascistPolicies += 1;
@@ -313,23 +228,14 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     }
   }
 
-  private advanceRound(): void {
+  advanceRound(): void {
     if (this.room.phase === Phase.GameOver) return;
     this.room.presidentId = this.nextPresidentId();
-    this.beginNomination();
+    this.transitionTo(Phase.Nomination);
   }
 
-  /** Start a fresh round: discussion (talking stick) opens on the President. */
-  private beginNomination(): void {
-    this.room.phase = Phase.Nomination;
-    this.room.chancellorId = null;
-    this.room.votes.clear();
-    this.startSpeakingTurnAt(this.room.presidentId);
-  }
-
-  private endGame(): void {
-    this.room.phase = Phase.GameOver;
-    this.setSpeaker(null);
+  endGame(): void {
+    this.transitionTo(Phase.GameOver);
     this.emit('gameOver', { room: this.room });
     this.changed();
   }
@@ -349,7 +255,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     return living[(currentIndex + 1) % living.length].id;
   }
 
-  // --- Speaking turns (talking stick) ------------------------------------
+  // --- Speaking turns (talking stick) ----------------------------------------
 
   private speakingEligible(): Player[] {
     return this.livingInSeatOrder().filter((p) => p.connected);
@@ -371,6 +277,10 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     this.setSpeaker(eligible[(currentIndex + 1) % eligible.length]);
   }
 
+  clearSpeaker(): void {
+    this.setSpeaker(null);
+  }
+
   private isDiscussionPhase(): boolean {
     return (
       this.room.phase === Phase.Nomination || this.room.phase === Phase.Voting
@@ -386,6 +296,26 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     this.changed();
   }
 
+  // --- Host migration ----------------------------------------------------------
+
+  /** Server calls this after the disconnect grace period; no-op if the host
+   *  came back in time. */
+  migrateHostIfDisconnected(): void {
+    if (this.maybeMigrateHost()) this.changed();
+  }
+
+  private maybeMigrateHost(): boolean {
+    const host = this.room.findPlayer(this.room.hostId);
+    if (host?.connected) return false;
+    const successor = this.room.players.find((p) => p.connected);
+    if (!successor) return false;
+    this.room.players.forEach((p) => (p.isHost = p.id === successor.id));
+    this.room.hostId = successor.id;
+    successor.ready = true;
+    this.log(`${successor.name} is now the host.`);
+    return true;
+  }
+
   // --- Internals ---------------------------------------------------------
 
   private dealRoles(players: Player[]): void {
@@ -396,28 +326,13 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     });
   }
 
-  private maybeMigrateHost(): void {
-    const host = this.room.findPlayer(this.room.hostId);
-    if (host?.connected) return;
-    const successor = this.room.players.find((p) => p.connected);
-    if (!successor) return;
-    this.room.players.forEach((p) => (p.isHost = p.id === successor.id));
-    this.room.hostId = successor.id;
-    successor.ready = true;
-    this.log(`${successor.name} is now the host.`);
-  }
-
-  private log(text: string): void {
+  log(text: string): void {
     this.emit('log', { entry: { id: makeId(), text, at: Date.now() } });
   }
 
-  private changed(): void {
+  changed(): void {
     this.emit('stateChanged', { room: this.room });
   }
-}
-
-function err(code: ServerErrorCode, message: string): EngineError {
-  return { code, message };
 }
 
 function shuffle<T>(items: T[]): T[] {

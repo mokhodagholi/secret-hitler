@@ -3,6 +3,8 @@ import { faNum } from './utils';
 import { en } from './locales/en';
 import { fa } from './locales/fa';
 
+export { ERROR_MESSAGE_KEYS, CONNECTION_STATUS_KEYS } from './keys';
+
 /**
  * Registry of every supported language.
  *

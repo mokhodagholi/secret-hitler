@@ -1,5 +1,5 @@
 import { Match, Switch } from 'solid-js';
-import { AppProvider, useApp } from './services/AppContext';
+import { AppProvider, useApp, type AppServices } from './services/AppContext';
 import { HomeScreen } from './screens/HomeScreen/HomeScreen';
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
@@ -64,9 +64,9 @@ function Router() {
   );
 }
 
-export function App() {
+export function App(props: { services?: Partial<AppServices> }) {
   return (
-    <AppProvider>
+    <AppProvider services={props.services}>
       <Router />
       <RoomClosedNotice />
     </AppProvider>

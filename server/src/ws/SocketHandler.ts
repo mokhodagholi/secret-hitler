@@ -1,7 +1,10 @@
 import type { WebSocket } from 'ws';
 import {
+  HOST_MIGRATION_GRACE_MS,
   MessageRouter,
+  Phase,
   SPEAKING_TURN_MS,
+  parseClientMessage,
   type ClientMessage,
   type EngineError,
   type GameEngine,
@@ -9,8 +12,9 @@ import {
   type ServerMessage,
 } from '@secret-hitler/shared';
 import { ConnectionRegistry } from './ConnectionRegistry';
-import type { RoomEntry, RoomRepository } from './RoomRepository';
-import type { TokenStore } from './TokenStore';
+import { RateLimiter } from '../util/RateLimiter';
+import type { RoomEntry, RoomRepository } from '../rooms/RoomRepository';
+import type { TokenStore } from '../rooms/TokenStore';
 
 /** Resolved per-message context for an authenticated socket. */
 interface GameContext {
@@ -20,17 +24,25 @@ interface GameContext {
   playerId: string;
 }
 
+/** Chat flood control: max messages per window, per player. */
+const CHAT_LIMIT = 8;
+const CHAT_WINDOW_MS = 10_000;
+
 /**
- * Bridges raw WebSocket traffic and the game engine. Deserializes inbound
- * {@link ClientMessage}s into engine calls, and subscribes to each engine's
- * events to broadcast per-viewer state snapshots back out.
+ * Bridges raw WebSocket traffic and the game engine. Validates and
+ * deserializes inbound {@link ClientMessage}s into engine calls, and
+ * subscribes to each engine's events to broadcast per-viewer state snapshots
+ * back out.
  */
 export class SocketHandler {
   private readonly connections = new ConnectionRegistry();
   /** Which room a given live socket has authenticated into. */
   private readonly socketRoom = new WeakMap<WebSocket, string>();
   /** Per-room talking-stick rotation timers. */
-  private readonly turnTimers = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly turnTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room pending host-migration timers (disconnect grace period). */
+  private readonly hostGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly chatLimiter = new RateLimiter(CHAT_LIMIT, CHAT_WINDOW_MS);
   private readonly router: MessageRouter<ClientMessage, GameContext>;
 
   constructor(
@@ -46,7 +58,13 @@ export class SocketHandler {
       .on('player:ready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, true))
       .on('player:unready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, false))
       .on('game:start', (_m, ctx) => this.fail(ctx, ctx.engine.startGame(ctx.playerId)))
-      .on('chat:message', (m, ctx) => ctx.engine.postChat(ctx.playerId, m.text))
+      .on('chat:message', (m, ctx) => {
+        if (!this.chatLimiter.allow(ctx.playerId)) {
+          this.sendError(ctx.ws, 'RATE_LIMITED', 'You are sending messages too quickly.');
+          return;
+        }
+        ctx.engine.postChat(ctx.playerId, m.text);
+      })
       .on('command', (m, ctx) =>
         this.fail(ctx, ctx.engine.handleCommand(ctx.playerId, m.command)),
       )
@@ -67,10 +85,7 @@ export class SocketHandler {
           });
         }
       }
-      if (room.isEmpty) {
-        this.stopTurnTimer(room.id);
-        this.repo.remove(room.id);
-      }
+      if (room.isEmpty) this.removeRoom(room.id);
     });
 
     engine.on('roleAssigned', ({ playerId }) => {
@@ -94,7 +109,7 @@ export class SocketHandler {
   private stopTurnTimer(roomId: string): void {
     const timer = this.turnTimers.get(roomId);
     if (timer) {
-      clearInterval(timer);
+      clearTimeout(timer);
       this.turnTimers.delete(roomId);
     }
   }
@@ -107,12 +122,9 @@ export class SocketHandler {
   }
 
   private onMessage(ws: WebSocket, raw: string): void {
-    let msg: ClientMessage;
-    try {
-      msg = JSON.parse(raw) as ClientMessage;
-    } catch {
-      return;
-    }
+    // Structural validation — a malformed frame must never reach the engine.
+    const msg = parseClientMessage(raw);
+    if (!msg) return;
 
     if (msg.type === 'auth') {
       this.onAuth(ws, msg.token);
@@ -124,7 +136,13 @@ export class SocketHandler {
       this.sendError(ws, 'AUTH_FAILED', 'Authenticate before sending messages.');
       return;
     }
-    this.router.dispatch(msg, context);
+    try {
+      this.router.dispatch(msg, context);
+    } catch (error) {
+      // One bad message must not take down every room on the process.
+      console.error('Unhandled error dispatching client message', error);
+      this.sendError(ws, 'INVALID_ACTION', 'That action failed unexpectedly.');
+    }
   }
 
   private contextFor(ws: WebSocket): GameContext | null {
@@ -148,24 +166,33 @@ export class SocketHandler {
       this.destroyRoom(entry);
     } else {
       engine.removePlayer(playerId);
+      // In-game leavers keep their seat (and token) for a possible rejoin.
+      if (entry.room.phase === Phase.Lobby) this.tokens.revokePlayer(playerId);
       this.connections.close(playerId);
     }
   }
 
   /** Kick every remaining connection and drop the room from the repository. */
   private destroyRoom(entry: RoomEntry): void {
-    this.stopTurnTimer(entry.room.id);
     for (const player of entry.room.players) {
       this.connections.close(player.id);
     }
-    this.repo.remove(entry.room.id);
+    this.removeRoom(entry.room.id);
+  }
+
+  /** Stop the room's timers, revoke its tokens, and drop it from the repo. */
+  private removeRoom(roomId: string): void {
+    this.stopTurnTimer(roomId);
+    this.cancelHostGrace(roomId);
+    this.tokens.revokeRoom(roomId);
+    this.repo.remove(roomId);
   }
 
   private onAuth(ws: WebSocket, token: string): void {
     const claim = this.tokens.lookup(token);
     const entry = claim ? this.repo.get(claim.roomId) : undefined;
-    const player = entry?.room.findPlayer(claim!.playerId);
-    if (!claim || !entry || !player) {
+    const player = claim && entry ? entry.room.findPlayer(claim.playerId) : undefined;
+    if (!entry || !player) {
       this.sendError(ws, 'AUTH_FAILED', 'Invalid or expired token.');
       ws.close(4001, 'auth failed');
       return;
@@ -173,6 +200,7 @@ export class SocketHandler {
 
     this.connections.bind(player.id, ws);
     this.socketRoom.set(ws, entry.room.id);
+    if (player.id === entry.room.hostId) this.cancelHostGrace(entry.room.id);
     entry.engine.setConnected(player.id, true);
 
     this.sendTo(ws, { type: 'authed', playerId: player.id });
@@ -185,7 +213,30 @@ export class SocketHandler {
     const roomId = this.socketRoom.get(ws);
     this.socketRoom.delete(ws);
     if (!playerId || !roomId) return;
-    this.repo.get(roomId)?.engine.setConnected(playerId, false);
+    this.chatLimiter.clear(playerId);
+
+    const entry = this.repo.get(roomId);
+    if (!entry) return;
+    entry.engine.setConnected(playerId, false);
+    // A dropped host keeps the seat for a grace period before migration.
+    if (playerId === entry.room.hostId) this.scheduleHostGrace(roomId);
+  }
+
+  private scheduleHostGrace(roomId: string): void {
+    this.cancelHostGrace(roomId);
+    const timer = setTimeout(() => {
+      this.hostGraceTimers.delete(roomId);
+      this.repo.get(roomId)?.engine.migrateHostIfDisconnected();
+    }, HOST_MIGRATION_GRACE_MS);
+    this.hostGraceTimers.set(roomId, timer);
+  }
+
+  private cancelHostGrace(roomId: string): void {
+    const timer = this.hostGraceTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.hostGraceTimers.delete(roomId);
+    }
   }
 
   private broadcast(roomId: string, message: ServerMessage): void {

@@ -4,8 +4,8 @@ import {
   SUPPORTED_MIN_PLAYERS,
   type RoomOptions,
 } from '../types/GameState';
-import { makeId, makeRoomCode } from './ids';
-import { Room } from './Room';
+import { makeId, makeRoomCode } from '../util/ids';
+import { Room } from '../domain/Room';
 
 export interface RoomCreateArgs {
   name: string;

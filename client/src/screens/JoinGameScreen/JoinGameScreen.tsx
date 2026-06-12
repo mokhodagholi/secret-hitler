@@ -2,7 +2,7 @@ import { For, Show, createEffect, createResource, createSignal } from 'solid-js'
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { RoomApiError } from '../../services/GameStateService';
-import type { MessageKey } from '../../i18n';
+import { ERROR_MESSAGE_KEYS, type MessageKey } from '../../i18n';
 import { APP_NAV } from '../../components/BottomNav/BottomNav';
 import { Button } from '../../components/Button/Button';
 import { Icon } from '../../components/Icon/Icon';
@@ -19,6 +19,8 @@ export function JoinGameScreen() {
 
   const [rooms, { refetch }] = createResource(() => game.listRooms());
   const [selectedRoomId, setSelectedRoomId] = createSignal<string | null>(null);
+  // A /join/CODE share link preselects its room once the list arrives.
+  const [pendingJoinCode, setPendingJoinCode] = createSignal(nav.consumeJoinCode());
   // Asked only once — afterwards the profile name from Settings is used.
   const profileMissing = settings.settings.profileName.trim().length === 0;
   const [playerName, setPlayerName] = createSignal(settings.settings.profileName);
@@ -32,6 +34,14 @@ export function JoinGameScreen() {
     if (!game.inRoom()) return;
     const phase = game.view()?.phase;
     nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
+  });
+
+  createEffect(() => {
+    const code = pendingJoinCode();
+    const match = rooms()?.find((room) => room.code === code);
+    if (!code || !rooms()) return;
+    if (match && joinable(match)) setSelectedRoomId(match.id);
+    setPendingJoinCode(null);
   });
 
   const selectedRoom = (): RoomSummary | null =>
@@ -57,7 +67,7 @@ export function JoinGameScreen() {
       nav.navigate('waiting-room');
     } catch (error) {
       const code = error instanceof RoomApiError ? error.code : 'NETWORK';
-      setErrorKey(`error.${code}` as MessageKey);
+      setErrorKey(ERROR_MESSAGE_KEYS[code]);
       void refetch();
     } finally {
       setSubmitting(false);

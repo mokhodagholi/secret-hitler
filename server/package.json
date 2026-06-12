@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc --project tsconfig.json"
+    "build": "tsc --project tsconfig.build.json",
+    "test": "rstest run"
   },
   "dependencies": {
     "@secret-hitler/shared": "workspace:*",
@@ -12,6 +13,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@rstest/core": "^0.10.4",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.12",
     "tsx": "^4.16.2",

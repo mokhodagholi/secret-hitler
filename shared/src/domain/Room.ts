@@ -22,7 +22,7 @@ export class Room {
   readonly code: string;
   readonly options: RoomOptions;
   readonly passwordHash: string | null;
-  readonly deck = new PolicyDeck();
+  readonly deck: PolicyDeck;
 
   players: Player[] = [];
   phase: Phase = Phase.Lobby;
@@ -47,11 +47,14 @@ export class Room {
     code: string;
     options: RoomOptions;
     passwordHash: string | null;
+    /** Injectable for tests that need a known tile order. */
+    deck?: PolicyDeck;
   }) {
     this.id = args.id;
     this.code = args.code;
     this.options = args.options;
     this.passwordHash = args.passwordHash;
+    this.deck = args.deck ?? new PolicyDeck();
   }
 
   get isFull(): boolean {

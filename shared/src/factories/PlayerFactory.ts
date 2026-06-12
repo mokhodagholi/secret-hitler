@@ -1,5 +1,5 @@
 import type { Player } from '../types/GameState';
-import { makeId } from './ids';
+import { makeId } from '../util/ids';
 
 const AVATAR_COUNT = 8;
 
@@ -14,7 +14,7 @@ export class PlayerFactory {
       seat,
       isHost,
       connected: true,
-      ready: true, // ready mirrors presence — seated players count as ready
+      ready: isHost, // hosts are implicitly ready; guests opt in from the lobby
       isAlive: true,
       role: null,
     };

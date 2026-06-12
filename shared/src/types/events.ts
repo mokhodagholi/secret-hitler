@@ -52,6 +52,8 @@ export type ServerErrorCode =
   | 'ALREADY_STARTED'
   | 'NOT_HOST'
   | 'NOT_ENOUGH_PLAYERS'
+  | 'PLAYERS_NOT_READY'
+  | 'RATE_LIMITED'
   | 'INVALID_ACTION';
 
 export type RoomClosedReason = 'HOST_LEFT';

@@ -1,4 +1,4 @@
-import { createSignal, type Accessor, type Setter } from 'solid-js';
+import { createSignal } from 'solid-js';
 import {
   MessageRouter,
   Phase,
@@ -55,50 +55,38 @@ const MAX_CHAT_ENTRIES = 200;
  * reconnects to the same seat.
  */
 export class GameStateService {
-  readonly view: Accessor<GameStateView | null>;
-  readonly role: Accessor<Role | null>;
-  readonly chatMessages: Accessor<ChatMessage[]>;
-  readonly logEntries: Accessor<LogEntry[]>;
-  readonly lastError: Accessor<ServerError | null>;
-  /** Set when the server destroys the room (e.g. the host left). */
-  readonly roomClosedNotice: Accessor<RoomClosedReason | null>;
+  private readonly viewSignal = createSignal<GameStateView | null>(null);
+  readonly view = this.viewSignal[0];
+  private readonly setView = this.viewSignal[1];
 
-  private readonly setView: Setter<GameStateView | null>;
-  private readonly setRole: Setter<Role | null>;
-  private readonly setChatMessages: Setter<ChatMessage[]>;
-  private readonly setLogEntries: Setter<LogEntry[]>;
-  private readonly setLastError: Setter<ServerError | null>;
-  private readonly setRoomClosedNotice: Setter<RoomClosedReason | null>;
+  private readonly roleSignal = createSignal<Role | null>(null);
+  readonly role = this.roleSignal[0];
+  private readonly setRole = this.roleSignal[1];
+
+  private readonly chatSignal = createSignal<ChatMessage[]>([]);
+  readonly chatMessages = this.chatSignal[0];
+  private readonly setChatMessages = this.chatSignal[1];
+
+  private readonly logSignal = createSignal<LogEntry[]>([]);
+  readonly logEntries = this.logSignal[0];
+  private readonly setLogEntries = this.logSignal[1];
+
+  private readonly lastErrorSignal = createSignal<ServerError | null>(null);
+  readonly lastError = this.lastErrorSignal[0];
+  private readonly setLastError = this.lastErrorSignal[1];
+
+  /** Set when the server destroys the room (e.g. the host left). */
+  private readonly roomClosedSignal = createSignal<RoomClosedReason | null>(null);
+  readonly roomClosedNotice = this.roomClosedSignal[0];
+  private readonly setRoomClosedNotice = this.roomClosedSignal[1];
 
   // A signal so screens can react to entering/leaving a room (e.g. the play
   // flow redirects back into the active room instead of seating a new player).
-  private readonly session: Accessor<RoomSession | null>;
-  private readonly setSession: Setter<RoomSession | null>;
+  private readonly sessionSignal = createSignal<RoomSession | null>(null);
+  private readonly session = this.sessionSignal[0];
+  private readonly setSession = this.sessionSignal[1];
 
   constructor(private readonly socket: WebSocketService) {
-    const [view, setView] = createSignal<GameStateView | null>(null);
-    const [role, setRole] = createSignal<Role | null>(null);
-    const [chatMessages, setChatMessages] = createSignal<ChatMessage[]>([]);
-    const [logEntries, setLogEntries] = createSignal<LogEntry[]>([]);
-    const [lastError, setLastError] = createSignal<ServerError | null>(null);
-    const [roomClosedNotice, setRoomClosedNotice] =
-      createSignal<RoomClosedReason | null>(null);
-    const [session, setSession] = createSignal<RoomSession | null>(null);
-    this.session = session;
-    this.setSession = setSession;
-    this.view = view;
-    this.setView = setView;
-    this.role = role;
-    this.setRole = setRole;
-    this.chatMessages = chatMessages;
-    this.setChatMessages = setChatMessages;
-    this.logEntries = logEntries;
-    this.setLogEntries = setLogEntries;
-    this.lastError = lastError;
-    this.setLastError = setLastError;
-    this.roomClosedNotice = roomClosedNotice;
-    this.setRoomClosedNotice = setRoomClosedNotice;
-
     const router = this.buildRouter();
     socket.onMessage((message) => router.dispatch(message, undefined));
     this.restoreSession();
