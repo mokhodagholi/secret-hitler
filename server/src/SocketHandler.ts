@@ -1,14 +1,25 @@
 import type { WebSocket } from 'ws';
 import {
+  MessageRouter,
   Phase,
   SPEAKING_TURN_MS,
   type ClientMessage,
+  type EngineError,
+  type GameEngine,
   type ServerErrorCode,
   type ServerMessage,
 } from '@secret-hitler/shared';
 import { ConnectionRegistry } from './ConnectionRegistry';
 import type { RoomEntry, RoomRepository } from './RoomRepository';
 import type { TokenStore } from './TokenStore';
+
+/** Resolved per-message context for an authenticated socket. */
+interface GameContext {
+  ws: WebSocket;
+  entry: RoomEntry;
+  engine: GameEngine;
+  playerId: string;
+}
 
 /**
  * Bridges raw WebSocket traffic and the game engine. Deserializes inbound
@@ -21,11 +32,28 @@ export class SocketHandler {
   private readonly socketRoom = new WeakMap<WebSocket, string>();
   /** Per-room talking-stick rotation timers. */
   private readonly turnTimers = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly router: MessageRouter<ClientMessage, GameContext>;
 
   constructor(
     private readonly repo: RoomRepository,
     private readonly tokens: TokenStore,
-  ) {}
+  ) {
+    this.router = this.buildRouter();
+  }
+
+  /** Authenticated client messages — `auth` is handled before dispatch. */
+  private buildRouter(): MessageRouter<ClientMessage, GameContext> {
+    return new MessageRouter<ClientMessage, GameContext>()
+      .on('player:ready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, true))
+      .on('player:unready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, false))
+      .on('game:start', (_m, ctx) => this.fail(ctx, ctx.engine.startGame(ctx.playerId)))
+      .on('chat:message', (m, ctx) => ctx.engine.postChat(ctx.playerId, m.text))
+      .on('command', (m, ctx) =>
+        this.fail(ctx, ctx.engine.handleCommand(ctx.playerId, m.command)),
+      )
+      .on('room:leave', (_m, ctx) => this.leaveRoom(ctx))
+      .on('ping', (_m, ctx) => this.sendTo(ctx.ws, { type: 'pong' }));
+  }
 
   /** Wire an engine's events to the connection layer. Call once per room. */
   registerEngine(entry: RoomEntry): void {
@@ -99,51 +127,36 @@ export class SocketHandler {
       return;
     }
 
-    const roomId = this.socketRoom.get(ws);
-    const playerId = this.connections.playerFor(ws);
-    if (!roomId || !playerId) {
+    const context = this.contextFor(ws);
+    if (!context) {
       this.sendError(ws, 'AUTH_FAILED', 'Authenticate before sending messages.');
       return;
     }
-    const entry = this.repo.get(roomId);
-    if (!entry) return;
-    const { engine } = entry;
+    this.router.dispatch(msg, context);
+  }
 
-    switch (msg.type) {
-      case 'player:ready':
-        engine.setReady(playerId, true);
-        break;
-      case 'player:unready':
-        engine.setReady(playerId, false);
-        break;
-      case 'game:start': {
-        const error = engine.startGame(playerId);
-        if (error) this.sendError(ws, error.code, error.message);
-        break;
-      }
-      case 'chat:message':
-        engine.postChat(playerId, msg.text);
-        break;
-      case 'command': {
-        const error = engine.handleCommand(playerId, msg.command);
-        if (error) this.sendError(ws, error.code, error.message);
-        break;
-      }
-      case 'room:leave': {
-        const player = entry.room.findPlayer(playerId);
-        if (player?.isHost) {
-          // The host owns the room — leaving destroys it for everyone.
-          this.broadcast(roomId, { type: 'room:closed', reason: 'HOST_LEFT' });
-          this.destroyRoom(entry);
-        } else {
-          engine.removePlayer(playerId);
-          this.connections.close(playerId);
-        }
-        break;
-      }
-      case 'ping':
-        this.sendTo(ws, { type: 'pong' });
-        break;
+  private contextFor(ws: WebSocket): GameContext | null {
+    const roomId = this.socketRoom.get(ws);
+    const playerId = this.connections.playerFor(ws);
+    if (!roomId || !playerId) return null;
+    const entry = this.repo.get(roomId);
+    if (!entry) return null;
+    return { ws, entry, engine: entry.engine, playerId };
+  }
+
+  private fail(context: GameContext, error: EngineError | null): void {
+    if (error) this.sendError(context.ws, error.code, error.message);
+  }
+
+  /** Host leave destroys the room; a guest just vacates their seat. */
+  private leaveRoom(context: GameContext): void {
+    const { entry, engine, playerId } = context;
+    if (entry.room.findPlayer(playerId)?.isHost) {
+      this.broadcast(entry.room.id, { type: 'room:closed', reason: 'HOST_LEFT' });
+      this.destroyRoom(entry);
+    } else {
+      engine.removePlayer(playerId);
+      this.connections.close(playerId);
     }
   }
 

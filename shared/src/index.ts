@@ -15,3 +15,7 @@ export { PolicyDeck } from './engine/PolicyDeck';
 export { TypedEmitter } from './engine/EventEmitter';
 export { buildRoleBag } from './engine/roleDistribution';
 export { makeId, makeRoomCode } from './engine/ids';
+
+// Networking
+export { MessageRouter } from './net/MessageRouter';
+export type { Tagged, MessageHandler } from './net/MessageRouter';

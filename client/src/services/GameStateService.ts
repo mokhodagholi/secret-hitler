@@ -1,5 +1,6 @@
 import { createSignal, type Accessor, type Setter } from 'solid-js';
 import {
+  MessageRouter,
   Phase,
   type ChatMessage,
   type CreateRoomRequest,
@@ -98,7 +99,8 @@ export class GameStateService {
     this.roomClosedNotice = roomClosedNotice;
     this.setRoomClosedNotice = setRoomClosedNotice;
 
-    socket.onMessage((message) => this.onServerMessage(message));
+    const router = this.buildRouter();
+    socket.onMessage((message) => router.dispatch(message, undefined));
     this.restoreSession();
   }
 
@@ -228,42 +230,37 @@ export class GameStateService {
     }
   }
 
-  private onServerMessage(message: ServerMessage): void {
-    switch (message.type) {
-      case 'state':
+  private buildRouter(): MessageRouter<ServerMessage> {
+    return new MessageRouter<ServerMessage>()
+      .on('state', (message) => {
         this.setView(message.state);
         if (message.state.you.role) this.setRole(message.state.you.role);
-        break;
-      case 'private':
-        this.setRole(message.role);
-        break;
-      case 'chat':
+      })
+      .on('private', (message) => this.setRole(message.role))
+      .on('chat', (message) =>
         this.setChatMessages((messages) =>
           [...messages, message.message].slice(-MAX_CHAT_ENTRIES),
-        );
-        break;
-      case 'log':
+        ),
+      )
+      .on('log', (message) =>
         this.setLogEntries((entries) =>
           [...entries, message.entry].slice(-MAX_CHAT_ENTRIES),
-        );
-        break;
-      case 'room:closed':
-        // The leaving host may catch its own broadcast — only players still
-        // holding a session were actually kicked.
+        ),
+      )
+      .on('room:closed', (message) => {
+        // Host can catch its own broadcast; only kicked players still hold a session.
         if (this.session()) {
           this.setRoomClosedNotice(message.reason);
           this.leaveRoom();
         }
-        break;
-      case 'error':
+      })
+      .on('error', (message) => {
         if (message.code === 'AUTH_FAILED') {
-          // Token expired (e.g. server restarted) — the seat is gone.
           this.leaveRoom();
         } else {
           this.setLastError({ code: message.code, message: message.message });
         }
-        break;
-    }
+      });
   }
 
   private async post<T>(url: string, body: unknown): Promise<T> {
