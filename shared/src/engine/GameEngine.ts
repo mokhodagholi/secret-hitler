@@ -182,6 +182,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.lastEnacted = [];
     room.drawnPolicies = [];
     room.winner = null;
+    room.lastElectedPresidentId = null;
+    room.lastElectedChancellorId = null;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.transitionTo(Phase.Nomination);
 

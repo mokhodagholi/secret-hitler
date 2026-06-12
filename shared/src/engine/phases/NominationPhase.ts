@@ -29,6 +29,9 @@ export class NominationPhase implements GamePhase {
     if (!target || !target.isAlive || target.id === playerId) {
       return err('INVALID_ACTION', 'That player cannot be nominated.');
     }
+    if (room.ineligibleChancellorIds().includes(target.id)) {
+      return err('INVALID_ACTION', 'That player is term-limited this round.');
+    }
 
     room.chancellorId = target.id;
     this.host.transitionTo(Phase.Voting);

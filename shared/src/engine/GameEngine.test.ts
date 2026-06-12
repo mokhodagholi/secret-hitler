@@ -390,6 +390,9 @@ describe('GameEngine — legislative session', () => {
     const game = startGame(['Ana', 'Ben', 'Cal'], deck);
     const [president, chancellor] = game.players;
     game.room.fascistPolicies = 5;
+    // Pin the Chancellor non-Hitler so the win comes from the 6th policy,
+    // not the "Hitler elected after 3 fascist policies" shortcut.
+    chancellor.role = 'liberal';
     electGovernment(game, chancellor);
 
     game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 1 });
@@ -397,6 +400,29 @@ describe('GameEngine — legislative session', () => {
 
     expect(game.room.fascistPolicies).toBe(6);
     expect(game.room.winner).toBe('fascist');
+  });
+
+  it('Should term-limit the last Chancellor from the next nomination', () => {
+    const deck = new StackedDeck(['liberal', 'liberal', 'liberal']);
+    const game = startGame(['Ana', 'Ben', 'Cal', 'Dan', 'Eve'], deck);
+    const lastChancellor = game.players[2];
+    lastChancellor.role = 'liberal'; // avoid the Hitler-Chancellor shortcut
+    electGovernment(game, lastChancellor);
+    game.engine.handleCommand(game.room.presidentId!, {
+      kind: 'discardPolicy',
+      index: 0,
+    });
+    game.engine.handleCommand(lastChancellor.id, { kind: 'enactPolicy', index: 0 });
+
+    expect(game.room.phase).toBe(Phase.Nomination);
+    expect(game.room.viewFor('x').ineligibleChancellors).toContain(
+      lastChancellor.id,
+    );
+    const error = game.engine.handleCommand(game.room.presidentId!, {
+      kind: 'nominateChancellor',
+      targetId: lastChancellor.id,
+    });
+    expect(error).toMatchObject({ code: 'INVALID_ACTION' });
   });
 
   it('Should refuse legislative commands once the game is over', () => {

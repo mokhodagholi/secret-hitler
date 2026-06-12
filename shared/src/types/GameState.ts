@@ -106,6 +106,8 @@ export interface GameStateView {
   speaker: { playerId: string; startedAt: number; endsAt: number } | null;
   /** Active vote window (epoch ms) during the Voting phase, else null. */
   voteDeadline: { startedAt: number; endsAt: number } | null;
+  /** Player ids that may not be nominated as Chancellor (term limits). */
+  ineligibleChancellors: string[];
   /** Private data for the recipient only. */
   you: {
     id: string;

@@ -75,6 +75,9 @@ export class VotingPhase implements GamePhase {
         this.host.endGame('fascist');
         return;
       }
+      // This government is term-limited from the next nomination.
+      room.lastElectedPresidentId = room.presidentId;
+      room.lastElectedChancellorId = chancellor.id;
       this.host.log(`${chancellor.name}'s government takes office.`);
       this.host.transitionTo(Phase.PresidentLegislative);
     } else {
@@ -86,11 +89,15 @@ export class VotingPhase implements GamePhase {
 
   /** Three failed elections — the top policy is enacted automatically. */
   private enactChaosPolicy(): void {
-    const [policy] = this.host.room.deck.drawTiles(1);
+    const room = this.host.room;
+    const [policy] = room.deck.drawTiles(1);
     if (policy) {
       this.host.log('Three elections failed — the top policy is enacted.');
       this.host.enactPolicy(policy);
     }
-    this.host.room.electionTracker = 0;
+    room.electionTracker = 0;
+    // Chaos clears term limits — every player is eligible again.
+    room.lastElectedPresidentId = null;
+    room.lastElectedChancellorId = null;
   }
 }

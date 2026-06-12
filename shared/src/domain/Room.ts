@@ -35,6 +35,9 @@ export class Room {
   electionTracker = 0;
   presidentId: string | null = null;
   chancellorId: string | null = null;
+  /** Previous elected government — term-limited from the next nomination. */
+  lastElectedPresidentId: string | null = null;
+  lastElectedChancellorId: string | null = null;
   lastEnacted: BoardState['lastEnacted'] = [];
   /** Winning faction once the game has ended, else null. */
   winner: Faction | null = null;
@@ -88,7 +91,8 @@ export class Room {
   }
 
   /** Roles are visible to a viewer if they're the player, the game is over,
-   *  or the room has "show roles" enabled. Fascists also see each other. */
+   *  or the room has "show roles" enabled. Fascists see each other and Hitler;
+   *  in 5–6 player games Hitler also sees the Fascists. */
   private roleVisibleTo(viewer: Player, target: Player): Role | null {
     if (target.role == null) return null;
     if (viewer.id === target.id) return target.role;
@@ -98,7 +102,23 @@ export class Room {
     const fascistView =
       viewer.role === 'fascist' &&
       (target.role === 'fascist' || target.role === 'hitler');
-    return fascistView ? target.role : null;
+    const hitlerView =
+      viewer.role === 'hitler' &&
+      this.players.length <= 6 &&
+      target.role === 'fascist';
+    return fascistView || hitlerView ? target.role : null;
+  }
+
+  /** Chancellor candidates barred by term limits this nomination. */
+  ineligibleChancellorIds(): string[] {
+    const livingCount = this.players.filter((p) => p.isAlive).length;
+    const ids: string[] = [];
+    if (this.lastElectedChancellorId) ids.push(this.lastElectedChancellorId);
+    // The last President is only term-limited while more than 5 players live.
+    if (livingCount > 5 && this.lastElectedPresidentId) {
+      ids.push(this.lastElectedPresidentId);
+    }
+    return ids;
   }
 
   private toPublicPlayer(viewer: Player, p: Player): PublicPlayer {
@@ -146,6 +166,8 @@ export class Room {
         this.phase === Phase.Voting && this.voteEndsAt > 0
           ? { startedAt: this.voteStartedAt, endsAt: this.voteEndsAt }
           : null,
+      ineligibleChancellors:
+        this.phase === Phase.Nomination ? this.ineligibleChancellorIds() : [],
       you: {
         id: viewerId,
         role: viewer?.role ?? null,

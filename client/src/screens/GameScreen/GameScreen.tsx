@@ -99,7 +99,8 @@ export function GameScreen() {
       state?.phase === Phase.Nomination &&
       iAmPresident() &&
       player.isAlive &&
-      player.id !== state.you.id
+      player.id !== state.you.id &&
+      !state.ineligibleChancellors.includes(player.id)
     );
   };
 
