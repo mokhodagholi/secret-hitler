@@ -262,6 +262,38 @@
   justify-content: center;
 }
 
+.powerTargets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.powerTarget {
+  @include display(0.78rem, 0.06em);
+  @include pressable;
+  padding: 9px 14px;
+  border-radius: $radius-sm;
+  color: $gold;
+  border: 1px solid rgba($gold, 0.55);
+  background: rgba($gold, 0.08);
+}
+
+.investigationResult {
+  font-size: 0.95rem;
+  color: $text-light;
+  text-align: center;
+}
+
+.powerContinue {
+  @include display(0.85rem, 0.1em);
+  @include pressable;
+  padding: 11px 22px;
+  border-radius: $radius;
+  color: $navy-950;
+  background: linear-gradient(180deg, $gold-bright, $gold-dark);
+}
+
 .policyCard {
   @include display(0.78rem, 0.08em);
   @include pressable;

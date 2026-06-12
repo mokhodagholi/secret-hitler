@@ -9,6 +9,7 @@ import {
 import {
   Phase,
   VOTE_DURATION_MS,
+  type Policy,
   type PublicPlayer,
 } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
@@ -19,6 +20,8 @@ import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { PlayerSeat } from './PlayerSeat';
 import { VotingOverlay } from './VotingOverlay';
+import { PowerPanel } from './PowerPanel';
+import { PolicyRevealOverlay } from './PolicyRevealOverlay';
 import styles from './GameScreen.module.scss';
 
 /**
@@ -28,7 +31,7 @@ import styles from './GameScreen.module.scss';
  * GameStateView and sends commands back.
  */
 export function GameScreen() {
-  const { nav, game, socket, i18n, settings } = useApp();
+  const { nav, game, socket, i18n, settings, animation } = useApp();
   const { formatMessage } = i18n;
   const showTimer = () => settings.settings.timerEnabled;
 
@@ -89,6 +92,45 @@ export function GameScreen() {
     if (chatScroller) chatScroller.scrollTop = chatScroller.scrollHeight;
   });
 
+  // --- Policy enactment reveal ----------------------------------------------
+  // The server broadcasts full state, so an enactment is detected as a diff:
+  // the policy total grew within the same room. (lastEnacted caps at 5 entries,
+  // so its length is not a reliable counter.)
+  const [revealedPolicy, setRevealedPolicy] = createSignal<Policy | null>(null);
+  let revealCard: HTMLDivElement | undefined;
+  let seenPolicyTotal: number | null = null;
+  let seenRoomId: string | null = null;
+
+  createEffect(() => {
+    const state = view();
+    if (!state) {
+      seenPolicyTotal = null;
+      seenRoomId = null;
+      return;
+    }
+    const total = state.board.liberalPolicies + state.board.fascistPolicies;
+    if (state.roomId !== seenRoomId) {
+      // First snapshot of a room (join/rejoin) — baseline, don't replay history.
+      seenRoomId = state.roomId;
+      seenPolicyTotal = total;
+      return;
+    }
+    const previousTotal = seenPolicyTotal ?? total;
+    seenPolicyTotal = total;
+    const latest = state.board.lastEnacted[state.board.lastEnacted.length - 1];
+    if (total > previousTotal && latest) revealEnactedPolicy(latest);
+  });
+
+  function revealEnactedPolicy(policy: Policy): void {
+    void animation.enqueue(async () => {
+      setRevealedPolicy(policy);
+      await animation.play(revealCard, 'policy-reveal');
+      await animation.hold(900);
+      await animation.play(revealCard, 'policy-exit');
+      setRevealedPolicy(null);
+    });
+  }
+
   const iAmPresident = () => {
     const state = view();
     return state != null && state.board.president === state.you.id;
@@ -136,6 +178,16 @@ export function GameScreen() {
       game.sendCommand({ kind: 'enactPolicy', index });
     }
   }
+
+  const powerTargets = () => {
+    const state = view();
+    if (!state) return [];
+    return state.players.filter(
+      (player) => player.isAlive && player.id !== state.you.id,
+    );
+  };
+  const usePower = (targetId: string) =>
+    game.sendCommand({ kind: 'useSpecialPower', targetId });
 
   /** Seat centre on the table ellipse — seat 0 at the top, clockwise. */
   const seatPosition = (seatIndex: number, seatCount: number) => {
@@ -244,6 +296,16 @@ export function GameScreen() {
               <p class={styles.hint}>{formatMessage('game.nominateHint')}</p>
             </Show>
 
+            <Show when={revealedPolicy()}>
+              {(policy) => (
+                <PolicyRevealOverlay
+                  policy={policy()}
+                  label={formatMessage(`policyReveal.${policy()}`)}
+                  cardRef={(element) => (revealCard = element)}
+                />
+              )}
+            </Show>
+
             <Show when={state().phase === Phase.Voting}>
               <VotingOverlay
                 formatMessage={formatMessage}
@@ -303,6 +365,20 @@ export function GameScreen() {
                   </div>
                 </Show>
               </div>
+            </Show>
+
+            <Show when={state().phase === Phase.SpecialPower && state().activePower}>
+              <PowerPanel
+                formatMessage={formatMessage}
+                power={state().activePower!}
+                isPresident={iAmPresident()}
+                presidentName={playerName(state().board.president)}
+                peek={state().you.peek}
+                investigation={state().you.investigation}
+                targets={powerTargets()}
+                onTarget={usePower}
+                onContinue={() => usePower('')}
+              />
             </Show>
 
             <Show when={game.lastError()}>
@@ -415,7 +491,10 @@ export function GameScreen() {
 
               <div class={styles.sideColumn}>
                 <Show when={game.role()}>
-                  <section class={styles.roleCard}>
+                  <section
+                    class={styles.roleCard}
+                    ref={(element) => void animation.play(element, 'card-flip-in')}
+                  >
                     <span class={styles.panelHeading}>
                       {formatMessage('game.yourRole')}
                     </span>

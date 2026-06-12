@@ -23,6 +23,8 @@ export const en = {
     goBack: 'Go back',
     ok: 'OK',
     cancel: 'Cancel',
+    previous: 'Previous',
+    next: 'Next',
   },
   rules: {
     title: 'Rules',
@@ -60,6 +62,45 @@ export const en = {
       'Deduction, deception, and discussion are your greatest weapons.',
     trustNoOne: 'Trust no one.',
   },
+  howToPlay: {
+    title: 'How to Play',
+    counter: '{current}/{total}',
+    steps: {
+      deal: {
+        title: 'Deal Roles',
+        subtitle: 'Each player is secretly assigned a role.',
+        points: {
+          fascists: 'Fascists secretly know one another and who Hitler is.',
+          liberals: 'Liberals know no one — not even each other.',
+        },
+      },
+      elect: {
+        title: 'Elect a Government',
+        subtitle: 'Players elect a President and a Chancellor.',
+        points: {
+          nominate: 'The presidential candidate nominates a Chancellor.',
+          vote: 'Everyone votes Ja or Nein — a majority forms the government.',
+        },
+      },
+      enact: {
+        title: 'Enact Policies',
+        subtitle: 'The elected government enacts one policy.',
+        points: {
+          president: 'The President draws 3 policies and discards 1.',
+          chancellor: 'The Chancellor enacts 1 of the remaining 2.',
+        },
+      },
+      agenda: {
+        title: 'Achieve Your Agenda',
+        subtitle: 'Each party has its own path to victory.',
+        points: {
+          liberal: 'Liberals win with 5 Liberal policies, or by executing Hitler.',
+          fascist:
+            'Fascists win with 6 Fascist policies, or by electing Hitler Chancellor after 3 Fascist policies.',
+        },
+      },
+    },
+  },
   settings: {
     title: 'Settings',
     headerLabel: 'Settings',
@@ -80,6 +121,7 @@ export const en = {
     language: 'Language',
     music: 'Music',
     soundEffects: 'Sound Effects',
+    reduceMotion: 'Reduce Motion',
     other: 'Other',
     howToPlay: 'How to Play',
     about: 'About',
@@ -186,10 +228,23 @@ export const en = {
     chancellorEnactHint: 'Tap a policy to enact',
     presidentChoosing: '{name} is choosing a policy to discard…',
     chancellorChoosing: '{name} is choosing a policy to enact…',
+    power: {
+      peekHint: 'The top three policies, in order:',
+      investigateHint: 'Tap a player to investigate their loyalty',
+      executeHint: 'Tap a player to execute',
+      electHint: 'Tap a player to be the next President',
+      investigationResult: '{name} belongs to the {party} party',
+      inProgress: '{name} is using a presidential power…',
+      continue: 'Continue',
+    },
   },
   vote: {
     ja: 'Ja',
     nein: 'Nein',
+  },
+  policyReveal: {
+    liberal: 'A Liberal Policy was enacted',
+    fascist: 'A Fascist Policy was enacted',
   },
   leaveDialog: {
     message: 'Do you want to leave the room?',
