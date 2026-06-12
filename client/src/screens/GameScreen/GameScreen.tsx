@@ -13,12 +13,14 @@ import {
   type PublicPlayer,
 } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
-import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
+import { ERROR_MESSAGE_KEYS } from '../../i18n';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
+import { POLICY_FACE } from '../../assets/cards';
 import { PolicyBoard } from './PolicyBoard';
-import { PlayerRow } from './PlayerRow';
+import { RoleBanner } from './RoleBanner';
+import { PlayersModal } from './PlayersModal';
 import { GameMenu } from './GameMenu';
 import { VotingOverlay } from './VotingOverlay';
 import { PowerPanel } from './PowerPanel';
@@ -27,13 +29,13 @@ import { PolicyRevealOverlay } from './PolicyRevealOverlay';
 import styles from './GameScreen.module.scss';
 
 /**
- * Main game screen: header bar with the in-game menu, the policy board next
- * to a sidebar (your role, stats, player list), the phase action panel and a
- * full-width chat. State is the server's; this screen renders the latest
- * GameStateView and sends commands back.
+ * Main game screen: header with the in-game menu, the full-width policy board
+ * (your role banner, draw/discard stacks, tracks, player-count chip), the
+ * phase action panel and a full-width chat. State is the server's; this screen
+ * renders the latest GameStateView and sends commands back.
  */
 export function GameScreen() {
-  const { nav, game, socket, i18n, settings, animation } = useApp();
+  const { nav, game, i18n, settings, animation } = useApp();
   const { formatMessage } = i18n;
   const showTimer = () => settings.settings.timerEnabled;
 
@@ -42,6 +44,7 @@ export function GameScreen() {
   const [chatDraft, setChatDraft] = createSignal('');
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [menuOpen, setMenuOpen] = createSignal(false);
+  const [playersOpen, setPlayersOpen] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
 
   let chatScroller: HTMLDivElement | undefined;
@@ -134,8 +137,10 @@ export function GameScreen() {
     );
   };
 
-  const seatedPlayers = () =>
-    [...(view()?.players ?? [])].sort((a, b) => a.seat - b.seat);
+  function nominate(player: PublicPlayer): void {
+    game.sendCommand({ kind: 'nominateChancellor', targetId: player.id });
+    setPlayersOpen(false);
+  }
 
   const voters = () =>
     view()?.players.filter((player) => player.isAlive && player.connected) ?? [];
@@ -147,7 +152,7 @@ export function GameScreen() {
   const voteProgress = () =>
     Math.max(0, Math.min(1, (voteSecondsLeft() * 1000) / VOTE_DURATION_MS));
 
-  // The countdown the sidebar surfaces: an open vote first, else the talking
+  // The countdown the board surfaces: an open vote first, else the talking
   // stick. Always plain seconds — no minutes for windows this short.
   const activeDeadline = () => view()?.voteDeadline ?? speaker();
   const deadlineSecondsLeft = () => {
@@ -223,13 +228,6 @@ export function GameScreen() {
           <div class={styles.layout}>
             <header class={styles.topBar}>
               <span class={styles.roomName}>{state().name}</span>
-              <span
-                classList={{
-                  [styles.connection]: true,
-                  [styles.connected]: socket.status() === 'connected',
-                }}
-                title={formatMessage(CONNECTION_STATUS_KEYS[socket.status()])}
-              />
               <button
                 type="button"
                 class={styles.menuButton}
@@ -240,12 +238,23 @@ export function GameScreen() {
               </button>
             </header>
 
-            <div class={styles.main}>
-              <section
-                class={styles.boardColumn}
-                ref={(element) => (boardElement = element)}
-              >
-                <PolicyBoard board={state().board} formatMessage={formatMessage} />
+            <section
+              class={styles.boardColumn}
+              ref={(element) => (boardElement = element)}
+            >
+              <Show when={game.role()}>
+                <RoleBanner role={game.role()!} formatMessage={formatMessage} />
+              </Show>
+
+              <PolicyBoard
+                board={state().board}
+                playerCount={state().players.length}
+                maxPlayers={state().maxPlayers}
+                formatMessage={formatMessage}
+                onOpenPlayers={() => setPlayersOpen(true)}
+              />
+
+              <div class={styles.boardStatus}>
                 <div class={styles.government}>
                   <div class={styles.governmentCard}>
                     <span class={styles.governmentLabel}>
@@ -264,90 +273,23 @@ export function GameScreen() {
                     </span>
                   </div>
                 </div>
-              </section>
-
-              <aside class={styles.sidebar}>
-                <Show when={game.role()}>
-                  <section
-                    class={styles.roleCard}
-                    ref={(element) => void animation.play(element, 'card-flip-in')}
+                <Show when={activeDeadline()}>
+                  <div
+                    classList={{
+                      [styles.timeLeft]: true,
+                      [styles.timeUrgent]: deadlineSecondsLeft() <= 5,
+                    }}
                   >
-                    <span class={styles.panelHeading}>
-                      {formatMessage('game.yourRole')}
-                    </span>
-                    <span
-                      classList={{
-                        [styles.roleName]: true,
-                        [styles.roleLiberal]: game.role() === 'liberal',
-                        [styles.roleFascist]: game.role() !== 'liberal',
-                      }}
-                    >
-                      {formatMessage(`role.${game.role()!}`)}
-                    </span>
-                    <span class={styles.roleDescription}>
-                      {formatMessage(`roleDescription.${game.role()!}`)}
-                    </span>
-                  </section>
-                </Show>
-
-                <div class={styles.stats}>
-                  <div class={styles.statRow}>
-                    <Icon name="people" size={15} class={styles.statIcon} />
-                    <span class={styles.statLabel}>
-                      {formatMessage('game.players')}
-                    </span>
-                    <span class={styles.statValue}>
-                      {formatMessage('waiting.playerCount', {
-                        count: state().players.length,
-                        max: state().maxPlayers,
+                    <Icon name="clock" size={15} />
+                    <span>
+                      {formatMessage('game.secondsLeft', {
+                        seconds: deadlineSecondsLeft(),
                       })}
                     </span>
                   </div>
-                  <Show when={showTimer() && activeDeadline()}>
-                    <div class={styles.statRow}>
-                      <Icon name="clock" size={15} class={styles.statIcon} />
-                      <span class={styles.statLabel}>
-                        {formatMessage('game.timeLeft')}
-                      </span>
-                      <span
-                        classList={{
-                          [styles.statValue]: true,
-                          [styles.statUrgent]: deadlineSecondsLeft() <= 5,
-                        }}
-                      >
-                        {formatMessage('game.secondsLeft', {
-                          seconds: deadlineSecondsLeft(),
-                        })}
-                      </span>
-                    </div>
-                  </Show>
-                </div>
-
-                <section class={styles.playersPanel}>
-                  <span class={styles.panelHeading}>
-                    {formatMessage('game.players')}
-                  </span>
-                  <div class={styles.playerList}>
-                    <For each={seatedPlayers()}>
-                      {(player) => (
-                        <PlayerRow
-                          player={player}
-                          isYou={player.id === state().you.id}
-                          nominatable={canNominate(player)}
-                          onNominate={() =>
-                            game.sendCommand({
-                              kind: 'nominateChancellor',
-                              targetId: player.id,
-                            })
-                          }
-                          formatMessage={formatMessage}
-                        />
-                      )}
-                    </For>
-                  </div>
-                </section>
-              </aside>
-            </div>
+                </Show>
+              </div>
+            </section>
 
             <Show when={state().phase === Phase.Nomination && iAmPresident()}>
               <p class={styles.hint}>{formatMessage('game.nominateHint')}</p>
@@ -411,14 +353,14 @@ export function GameScreen() {
                           {(policy, index) => (
                             <button
                               type="button"
-                              classList={{
-                                [styles.policyCard]: true,
-                                [styles.policyLiberal]: policy === 'liberal',
-                                [styles.policyFascist]: policy === 'fascist',
-                              }}
+                              class={styles.policyCard}
                               onClick={() => chooseLegislative(index())}
                             >
-                              {formatMessage(`game.${policy}`)}
+                              <img
+                                class={styles.policyImage}
+                                src={POLICY_FACE[policy]}
+                                alt={formatMessage(`game.${policy}`)}
+                              />
                             </button>
                           )}
                         </For>
@@ -545,8 +487,9 @@ export function GameScreen() {
 
               <Show when={activeTab() === 'chat'}>
                 <div class={styles.chatComposer}>
-                  <input
+                  <textarea
                     class={styles.chatInput}
+                    rows={2}
                     value={chatDraft()}
                     disabled={chatLocked()}
                     placeholder={formatMessage(
@@ -555,7 +498,11 @@ export function GameScreen() {
                     maxlength={500}
                     onInput={(event) => setChatDraft(event.currentTarget.value)}
                     onKeyDown={(event) => {
-                      if (event.key === 'Enter') sendChat();
+                      // Enter sends; Shift+Enter inserts a newline.
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        sendChat();
+                      }
                     }}
                   />
                   <button
@@ -570,6 +517,16 @@ export function GameScreen() {
                 </div>
               </Show>
             </section>
+
+            <PlayersModal
+              open={playersOpen()}
+              players={state().players}
+              youId={state().you.id}
+              formatMessage={formatMessage}
+              canNominate={canNominate}
+              onNominate={nominate}
+              onClose={() => setPlayersOpen(false)}
+            />
 
             <GameMenu
               open={menuOpen()}

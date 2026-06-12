@@ -54,7 +54,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       name: body.name,
       passwordHash,
       maxPlayers: body.options?.maxPlayers,
-      showRoles: body.options?.showRoles,
       timerEnabled: body.options?.timerEnabled,
       confirmActions: body.options?.confirmActions,
     });

@@ -72,19 +72,24 @@ describe('GameScreen — voting', () => {
     expect(screen.getByText(/waiting for others/i)).toBeTruthy();
   });
 
-  it('Should show the role card with the player\'s secret role', () => {
+  it('Should show the role banner with the player\'s secret role', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
     harness.socket.emit({ type: 'private', role: 'liberal' });
 
-    expect(screen.getByText('Your Role')).toBeTruthy();
-    expect(screen.getByText('Find and stop Hitler. Pass 5 Liberal policies to win.')).toBeTruthy();
+    expect(
+      screen.getByText(en.game.youAreRole.replace('{role}', en.role.liberal)),
+    ).toBeTruthy();
   });
 });
 
-describe('GameScreen — player list', () => {
-  it('Should nominate a player by tapping their row during Nomination', () => {
+function openPlayers() {
+  fireEvent.click(screen.getByRole('button', { name: en.game.playersTitle }));
+}
+
+describe('GameScreen — players modal', () => {
+  it('Should nominate a player from the modal during Nomination', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -94,6 +99,7 @@ describe('GameScreen — player list', () => {
       board: { ...view.board, president: 'you', chancellor: null },
     });
 
+    openPlayers();
     fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
@@ -106,11 +112,12 @@ describe('GameScreen — player list', () => {
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
+    openPlayers();
     // Other players' roles are null in the view — no role label rendered.
     expect(screen.queryByText(en.role.hitler)).toBeNull();
   });
 
-  it('Should show a revealed role label in the player list', () => {
+  it('Should show a revealed role label in the modal', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -121,6 +128,7 @@ describe('GameScreen — player list', () => {
       ),
     });
 
+    openPlayers();
     expect(screen.getByText(en.role.hitler)).toBeTruthy();
   });
 });
@@ -142,18 +150,18 @@ describe('GameScreen — in-game menu', () => {
     harness.pushState(votingView());
 
     fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
-    expect(screen.getByText(en.gameMenu.muteMusic)).toBeTruthy();
-    expect(screen.getByText(en.gameMenu.muteEffects)).toBeTruthy();
-    expect(screen.getByText(en.settings.language)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.gameMenu.music })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.gameMenu.effects })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.gameMenu.viewRules })).toBeTruthy();
   });
 
-  it('Should ask for confirmation when leaving from the menu', () => {
+  it('Should ask for confirmation when quitting from the menu', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
     fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
-    fireEvent.click(screen.getByText(en.game.leaveRoom));
+    fireEvent.click(screen.getByRole('button', { name: en.gameMenu.quit }));
     expect(screen.getByText(en.leaveDialog.message)).toBeTruthy();
   });
 });

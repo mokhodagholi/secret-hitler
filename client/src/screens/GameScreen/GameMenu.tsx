@@ -1,8 +1,6 @@
 import { Show } from 'solid-js';
 import { useApp } from '../../services/AppContext';
-import { Icon } from '../../components/Icon/Icon';
-import { SectionTitle } from '../../components/SectionTitle/SectionTitle';
-import { SettingRow } from '../../components/SettingRow/SettingRow';
+import { Icon, type IconName } from '../../components/Icon/Icon';
 import styles from './GameMenu.module.scss';
 
 export interface GameMenuProps {
@@ -14,17 +12,14 @@ export interface GameMenuProps {
 }
 
 /**
- * Minimal in-game settings sheet: room info, audio mutes and language only —
- * everything else stays on the main Settings screen, outside a running game.
+ * Minimal in-game menu shown as a row of icon buttons: music and effects
+ * mutes, the room name, the rules, and quitting. Everything else stays on the
+ * main Settings screen, outside a running game.
  */
 export function GameMenu(props: GameMenuProps) {
   const { i18n, settings, animation } = useApp();
   const { formatMessage } = i18n;
   const state = settings.settings;
-
-  const activeLanguageName = () =>
-    i18n.available().find((language) => language.code === state.language)!
-      .nativeName;
 
   return (
     <Show when={props.open}>
@@ -43,7 +38,7 @@ export function GameMenu(props: GameMenuProps) {
           ref={(element) => void animation.play(element, 'pop-in')}
         >
           <header class={styles.header}>
-            <span class={styles.title}>{formatMessage('settings.title')}</span>
+            <span class={styles.roomName}>{props.roomName}</span>
             <button
               type="button"
               class={styles.close}
@@ -54,52 +49,61 @@ export function GameMenu(props: GameMenuProps) {
             </button>
           </header>
 
-          <div class={styles.body}>
-            <SectionTitle>{formatMessage('gameMenu.roomInfo')}</SectionTitle>
-            <SettingRow
-              kind="value"
-              icon="capitol"
-              label={formatMessage('waiting.roomName')}
-              value={props.roomName}
+          <div class={styles.actions}>
+            <MenuIcon
+              icon="music"
+              label={formatMessage('gameMenu.music')}
+              active={state.music}
+              onClick={() => settings.set('music', !state.music)}
             />
-            <SettingRow
-              kind="link"
+            <MenuIcon
+              icon="speaker"
+              label={formatMessage('gameMenu.effects')}
+              active={state.soundEffects}
+              onClick={() => settings.set('soundEffects', !state.soundEffects)}
+            />
+            <MenuIcon
               icon="book"
-              label={formatMessage('game.viewRules')}
+              label={formatMessage('gameMenu.viewRules')}
               onClick={() => props.onViewRules()}
             />
-            <button type="button" class={styles.leave} onClick={() => props.onLeave()}>
-              <Icon name="door" size={22} class={styles.leaveIcon} />
-              <span>{formatMessage('game.leaveRoom')}</span>
-            </button>
-
-            <SectionTitle>{formatMessage('gameMenu.audio')}</SectionTitle>
-            <SettingRow
-              kind="toggle"
-              icon="music"
-              label={formatMessage('gameMenu.muteMusic')}
-              checked={!state.music}
-              onChange={(muted) => settings.set('music', !muted)}
-            />
-            <SettingRow
-              kind="toggle"
-              icon="speaker"
-              label={formatMessage('gameMenu.muteEffects')}
-              checked={!state.soundEffects}
-              onChange={(muted) => settings.set('soundEffects', !muted)}
-            />
-
-            <SectionTitle>{formatMessage('settings.other')}</SectionTitle>
-            <SettingRow
-              kind="value"
-              icon="globe"
-              label={formatMessage('settings.language')}
-              value={activeLanguageName()}
-              onClick={() => settings.set('language', i18n.next(state.language))}
+            <MenuIcon
+              icon="door"
+              label={formatMessage('gameMenu.quit')}
+              danger
+              onClick={() => props.onLeave()}
             />
           </div>
         </div>
       </div>
     </Show>
+  );
+}
+
+interface MenuIconProps {
+  icon: IconName;
+  label: string;
+  /** Toggle state — when defined, an inactive icon reads as "muted". */
+  active?: boolean;
+  danger?: boolean;
+  onClick: () => void;
+}
+
+function MenuIcon(props: MenuIconProps) {
+  return (
+    <button
+      type="button"
+      classList={{
+        [styles.iconButton]: true,
+        [styles.muted]: props.active === false,
+        [styles.danger]: props.danger,
+      }}
+      aria-label={props.label}
+      aria-pressed={props.active}
+      onClick={() => props.onClick()}
+    >
+      <Icon name={props.icon} size={24} />
+      <span class={styles.iconLabel}>{props.label}</span>
+    </button>
   );
 }

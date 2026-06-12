@@ -50,13 +50,6 @@ export function SettingsScreen() {
         onClick={() => settings.cyclePlayerCount()}
       />
       <SettingRow
-        kind="toggle"
-        icon="masks"
-        label={formatMessage('settings.showRoles')}
-        checked={state.showRoles}
-        onChange={(value) => settings.set('showRoles', value)}
-      />
-      <SettingRow
         kind="value"
         icon="clock"
         label={formatMessage('settings.timer')}

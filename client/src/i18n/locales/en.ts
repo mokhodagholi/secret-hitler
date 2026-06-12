@@ -110,7 +110,6 @@ export const en = {
     gameSettings: 'Game Settings',
     playerCount: 'Player Count',
     players: '{count} Players',
-    showRoles: 'Show Roles in Game',
     timer: 'Timer',
     enabled: 'Enabled',
     disabled: 'Disabled',
@@ -196,6 +195,8 @@ export const en = {
   game: {
     roomLabel: 'Room: {name}',
     players: 'Players',
+    playersTitle: 'Players',
+    youAreRole: 'You are {role}',
     timeLeft: 'Time Left',
     currentTrack: 'Current Track',
     endTurn: 'End Turn',
@@ -256,10 +257,11 @@ export const en = {
     nein: 'Nein',
   },
   gameMenu: {
-    roomInfo: 'Room Info',
-    audio: 'Audio',
-    muteMusic: 'Mute Music',
-    muteEffects: 'Mute Effects',
+    music: 'Music',
+    effects: 'Sound Effects',
+    roomName: 'Room',
+    viewRules: 'Rules',
+    quit: 'Quit',
   },
   policyReveal: {
     liberal: 'A Liberal Policy was enacted',

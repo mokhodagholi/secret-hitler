@@ -13,7 +13,6 @@ export interface RoomCreateArgs {
   /** Effective start minimum (server policy); defaults to standard. */
   minPlayers?: number;
   maxPlayers?: number;
-  showRoles?: boolean;
   timerEnabled?: boolean;
   confirmActions?: boolean;
 }
@@ -32,7 +31,6 @@ export class RoomFactory {
       hasPassword: args.passwordHash != null,
       minPlayers,
       maxPlayers,
-      showRoles: args.showRoles ?? false,
       timerEnabled: args.timerEnabled ?? false,
       confirmActions: args.confirmActions ?? true,
     };

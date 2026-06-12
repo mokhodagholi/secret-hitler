@@ -27,18 +27,6 @@
   white-space: nowrap;
 }
 
-.connection {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: $red-bright;
-  flex-shrink: 0;
-}
-
-.connected {
-  background: #7fd08a;
-}
-
 .menuButton {
   @include pressable;
   display: grid;
@@ -52,36 +40,24 @@
   flex-shrink: 0;
 }
 
-// --- Board + sidebar -----------------------------------------------------------
-
-.main {
-  display: flex;
-  gap: 10px;
-  align-items: stretch;
-}
+// --- Board column (full width) --------------------------------------------------
 
 .boardColumn {
   @include card;
-  flex: 1.2;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px;
+  gap: 12px;
+  padding: 12px;
 }
 
-.sidebar {
-  flex: 1;
-  min-width: 0;
+.boardStatus {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 10px;
 }
-
-// --- Government cards ------------------------------------------------------------
 
 .government {
-  margin-top: auto;
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -113,169 +89,22 @@
   white-space: nowrap;
 }
 
-// --- Sidebar: role card, stats, player list ----------------------------------------
-
-.panelHeading {
-  @include display(0.66rem, 0.14em);
-  color: $text-dim;
-}
-
-.roleCard {
-  @include card;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border-color: rgba($blue-liberal, 0.5);
-}
-
-.roleName {
-  @include display(0.95rem, 0.1em);
-}
-
-.roleDescription {
-  font-size: 0.72rem;
-  color: $text-dim;
-  line-height: 1.5;
-}
-
-.roleLiberal {
-  color: $blue-liberal;
-}
-
-.roleFascist {
-  color: $red-bright;
-}
-
-.stats {
-  @include card;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-}
-
-.statRow {
+.timeLeft {
+  @include display(0.95rem, 0.04em);
   display: flex;
   align-items: center;
-  gap: 7px;
-}
-
-.statIcon {
-  color: $gold;
-  flex-shrink: 0;
-}
-
-.statLabel {
-  @include display(0.62rem, 0.1em);
-  flex: 1;
-  color: $text-dim;
-}
-
-.statValue {
-  @include display(0.72rem, 0.06em);
-  color: $text-light;
-}
-
-.statUrgent {
-  color: $red-bright;
-}
-
-.playersPanel {
-  @include card;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 10px;
-  min-height: 0;
-}
-
-.playerList {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  overflow-y: auto;
-}
-
-.playerRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 6px;
+  gap: 6px;
+  padding: 8px 12px;
   border-radius: $radius-sm;
-  border: 1px solid transparent;
-  text-align: start;
-  cursor: default;
-}
-
-.nominatable {
-  cursor: pointer;
-  border-color: rgba($gold, 0.55);
-  background: rgba($gold, 0.07);
-}
-
-.dead {
-  filter: grayscale(1);
-  opacity: 0.5;
-}
-
-.offline {
-  opacity: 0.45;
-}
-
-.voted .playerAvatar {
-  border-color: #7fd08a;
-  box-shadow: 0 0 7px rgba(127, 208, 138, 0.55);
-}
-
-.you .playerAvatar {
-  background: rgba($gold, 0.3);
-}
-
-.playerAvatar {
-  @include display(0.82rem, 0);
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: $navy-800;
-  border: 2px solid rgba($gold, 0.55);
   color: $gold;
+  border: 1px solid rgba($gold, 0.4);
+  background: rgba($navy-900, 0.6);
   flex-shrink: 0;
 }
 
-.playerInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.playerName {
-  font-size: 0.76rem;
-  color: $white;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.playerRole {
-  @include display(0.55rem, 0.08em);
-}
-
-.playerBadge {
-  @include display(0.6rem, 0);
-  display: grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: $gold;
-  color: $navy-950;
-  flex-shrink: 0;
+.timeUrgent {
+  color: $red-bright;
+  border-color: rgba($red-bright, 0.6);
 }
 
 // --- Phase panels ----------------------------------------------------------------
@@ -338,7 +167,7 @@
 
 .policyCards {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
 }
 
@@ -384,20 +213,25 @@
   background: rgba($red-bright, 0.08);
 }
 
+// A pickable policy card — image face (placeholder art for now).
 .policyCard {
-  @include display(0.78rem, 0.08em);
   @include pressable;
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 90px;
+  width: 78px;
+  aspect-ratio: 2 / 3;
   border-radius: $radius;
-  color: $white;
+  overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.35);
-  text-align: center;
-  padding: 6px;
+  padding: 0;
 }
 
+.policyImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+// Text-faced policy chips still used by the Policy Peek list.
 .policyLiberal {
   background: linear-gradient(180deg, $blue-liberal, #2f6aa6);
 }
@@ -413,6 +247,103 @@
   font-size: 0.85rem;
   padding: 10px 14px;
   cursor: pointer;
+}
+
+// --- Player rows (rendered inside the players modal) -------------------------------
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: $radius-sm;
+  border: 1px solid transparent;
+  text-align: start;
+  cursor: default;
+}
+
+.nominatable {
+  cursor: pointer;
+  border-color: rgba($gold, 0.55);
+  background: rgba($gold, 0.07);
+}
+
+.dead {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.offline {
+  opacity: 0.45;
+}
+
+.voted .playerAvatar {
+  border-color: #7fd08a;
+  box-shadow: 0 0 7px rgba(127, 208, 138, 0.55);
+}
+
+.you .playerAvatar {
+  background: rgba($gold, 0.3);
+}
+
+.playerAvatar {
+  @include display(0.82rem, 0);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: $navy-800;
+  border: 2px solid rgba($gold, 0.55);
+  color: $gold;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.playerAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playerInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.playerName {
+  font-size: 0.8rem;
+  color: $white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerRole {
+  @include display(0.55rem, 0.08em);
+}
+
+.roleLiberal {
+  color: $blue-liberal;
+}
+
+.roleFascist {
+  color: $red-bright;
+}
+
+.playerBadge {
+  @include display(0.6rem, 0);
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: $gold;
+  color: $navy-950;
+  flex-shrink: 0;
 }
 
 // --- Chat ------------------------------------------------------------------------
@@ -482,19 +413,22 @@
 .chatComposer {
   display: flex;
   gap: 8px;
+  align-items: stretch;
 }
 
 .chatInput {
   flex: 1;
   min-width: 0;
-  padding: 13px 14px;
+  padding: 11px 14px;
   background: $navy-900;
   border: 1px solid $line-soft;
   border-radius: $radius;
   color: $cream;
   font: inherit;
   font-size: 0.95rem;
+  line-height: 1.4;
   outline: none;
+  resize: none;
 
   &:focus {
     border-color: rgba($gold, 0.7);

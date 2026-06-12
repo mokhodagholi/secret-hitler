@@ -1,8 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase } from '../types/GameState';
-import { StackedDeck, electGovernment, makeRoom, startGame } from '../../test/test-utils';
-import { GameEngine } from '../engine/GameEngine';
-import { seatPlayers } from '../../test/test-utils';
+import { StackedDeck, electGovernment, startGame } from '../../test/test-utils';
 
 describe('Room.viewFor — information hiding', () => {
   it('Should hide other players\' roles while the game is running', () => {
@@ -77,15 +75,32 @@ describe('Room.viewFor — information hiding', () => {
     expect(game.room.viewFor(chancellor.id).you.policies).toHaveLength(2);
   });
 
-  it('Should reveal roles to everyone when the room opts into showRoles', () => {
-    const room = makeRoom({ showRoles: true });
-    const engine = new GameEngine(room);
-    const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
-    players.forEach((p) => engine.setReady(p.id, true));
-    engine.startGame(players[0].id);
+  it('Should not let a liberal see any other role mid-game', () => {
+    const { room, players } = startGame(['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);
+    const [ana, ben, cal, dia, eli] = players;
+    ana.role = 'liberal';
+    ben.role = 'fascist';
+    cal.role = 'hitler';
+    dia.role = 'liberal';
+    eli.role = 'liberal';
 
-    const view = room.viewFor(players[0].id);
-    expect(view.players.every((p) => p.role != null)).toBe(true);
+    const view = room.viewFor(ana.id);
+    const others = view.players.filter((p) => p.id !== ana.id);
+    expect(others.every((p) => p.role === null)).toBe(true);
+  });
+
+  it('Should not let Hitler see the fascists in a 7+ player game', () => {
+    const { room, players } = startGame([
+      'Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay', 'Gus',
+    ]);
+    const [hitler, fascist] = players;
+    hitler.role = 'hitler';
+    fascist.role = 'fascist';
+    players.slice(2).forEach((p) => (p.role = 'liberal'));
+
+    const view = room.viewFor(hitler.id);
+    const seen = view.players.find((p) => p.id === fascist.id)!;
+    expect(seen.role).toBeNull();
   });
 
   it('Should count only lobby rooms as joinable in the public summary', () => {

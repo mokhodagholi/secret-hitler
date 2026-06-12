@@ -1,0 +1,46 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 14px;
+  border-radius: $radius;
+  border: 1px solid transparent;
+}
+
+.liberal {
+  background: linear-gradient(180deg, rgba(79, 143, 208, 0.22), rgba(47, 106, 166, 0.12));
+  border-color: rgba($blue-liberal, 0.5);
+
+  .art {
+    color: $blue-liberal;
+  }
+}
+
+.fascist {
+  background: linear-gradient(180deg, rgba(226, 96, 63, 0.22), rgba(138, 47, 35, 0.12));
+  border-color: rgba($red-bright, 0.5);
+
+  .art {
+    color: $red-bright;
+  }
+}
+
+// Placeholder stand-in for the role illustration — a bold faction word.
+.art {
+  @include display(1.35rem, 0.14em);
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 14px 0;
+  border-radius: $radius-sm;
+  background: rgba(7, 21, 39, 0.4);
+}
+
+.caption {
+  @include display(0.6rem, 0.14em);
+  color: $text-dim;
+}

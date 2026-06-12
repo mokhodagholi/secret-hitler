@@ -36,7 +36,6 @@ export function makeRoom(
       hasPassword: false,
       minPlayers: 3,
       maxPlayers: 10,
-      showRoles: false,
       timerEnabled: false,
       confirmActions: false,
       ...options,

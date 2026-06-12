@@ -6,7 +6,6 @@ export interface SettingsState {
   /** Display name used for every room you create or join. */
   profileName: string;
   playerCount: number;
-  showRoles: boolean;
   timerEnabled: boolean;
   confirmActions: boolean;
   theme: 'classic-blue';
@@ -20,7 +19,6 @@ export interface SettingsState {
 const DEFAULTS: SettingsState = {
   profileName: '',
   playerCount: 7,
-  showRoles: false,
   timerEnabled: false,
   confirmActions: true,
   theme: 'classic-blue',

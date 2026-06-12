@@ -46,7 +46,6 @@ export function CreateRoomScreen() {
         hostName: hostName().trim(),
         options: {
           maxPlayers: settings.settings.playerCount,
-          showRoles: settings.settings.showRoles,
           timerEnabled: settings.settings.timerEnabled,
           confirmActions: settings.settings.confirmActions,
         },

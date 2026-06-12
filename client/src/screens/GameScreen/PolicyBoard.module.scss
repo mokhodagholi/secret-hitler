@@ -2,51 +2,81 @@
 @use '../../styles/mixins' as *;
 
 .board {
+  // The board is a fixed left-to-right diagram; never mirror it in RTL.
+  direction: ltr;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-// --- Draw / discard piles -----------------------------------------------------
+// --- Draw / discard stacks + player chip ----------------------------------------
 
 .piles {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
-.pile {
+.stack {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  width: 76px;
-  padding: 8px 6px 6px;
-  border-radius: $radius;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
-  color: $cream;
+  gap: 5px;
 }
 
-.pileDraw {
-  background: linear-gradient(180deg, #2f6aa6, #1d4a7c);
+.stackCards {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  aspect-ratio: 2 / 3;
+  // Stacked siblings behind the top card, faked with layered shadows.
+  filter: drop-shadow(3px 3px 0 rgba(7, 21, 39, 0.55))
+    drop-shadow(6px 6px 0 rgba(7, 21, 39, 0.4));
 }
 
-.pileDiscard {
-  background: linear-gradient(180deg, $red-bright, $red-deep);
+.stackBack {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 7px;
+  object-fit: cover;
 }
 
-.pileEmblem {
-  opacity: 0.9;
-}
-
-.pileCount {
+.stackCount {
   @include display(1.05rem, 0.02em);
-  line-height: 1;
+  position: relative;
+  color: $cream;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
-.pileLabel {
+.stackLabel {
   @include display(0.56rem, 0.12em);
-  opacity: 0.85;
+  color: $text-dim;
+}
+
+.playersChip {
+  @include pressable;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: $radius;
+  border: 1px solid rgba($gold, 0.45);
+  background: rgba($navy-900, 0.6);
+  color: $gold;
+}
+
+.playersChipCount {
+  @include display(0.95rem, 0.04em);
+}
+
+.playersChipLabel {
+  @include display(0.54rem, 0.14em);
+  color: $text-dim;
 }
 
 // --- Policy tracks --------------------------------------------------------------
@@ -99,7 +129,7 @@
   display: grid;
   place-items: center;
   flex: 1;
-  max-width: 44px;
+  max-width: 52px;
   aspect-ratio: 3 / 4;
   border-radius: 6px;
   background: rgba(7, 21, 39, 0.6);
@@ -119,16 +149,23 @@
 
 // --- Counters + election tracker -------------------------------------------------
 
+.footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  gap: 12px;
+}
+
 .counters,
 .electionTracker {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .countersLabel {
-  @include display(0.58rem, 0.16em);
+  @include display(0.56rem, 0.16em);
   color: $text-dim;
 }
 
@@ -155,6 +192,7 @@
 .trackerDots {
   display: flex;
   gap: 14px;
+  margin-top: 3px;
 }
 
 .trackerDot {

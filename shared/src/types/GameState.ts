@@ -33,7 +33,6 @@ export interface RoomOptions {
   /** Min players to start. Standard 5; a dev server may lower it. */
   minPlayers: number;
   maxPlayers: number;
-  showRoles: boolean;
   timerEnabled: boolean;
   confirmActions: boolean;
 }

@@ -83,7 +83,6 @@ export interface CreateRoomRequest {
   hostName: string;
   options?: {
     maxPlayers?: number;
-    showRoles?: boolean;
     timerEnabled?: boolean;
     confirmActions?: boolean;
   };

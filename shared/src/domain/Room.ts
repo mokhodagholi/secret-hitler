@@ -104,13 +104,13 @@ export class Room {
     };
   }
 
-  /** Roles are visible to a viewer if they're the player, the game is over,
-   *  or the room has "show roles" enabled. Fascists see each other and Hitler;
-   *  in 5–6 player games Hitler also sees the Fascists. */
+  /** Roles are visible to a viewer if they're the player or the game is over.
+   *  Fascists see each other and Hitler; in 5–6 player games Hitler also sees
+   *  the Fascists. Liberals never see anyone. */
   private roleVisibleTo(viewer: Player, target: Player): Role | null {
     if (target.role == null) return null;
     if (viewer.id === target.id) return target.role;
-    if (this.phase === Phase.GameOver || this.options.showRoles) {
+    if (this.phase === Phase.GameOver) {
       return target.role;
     }
     const fascistView =

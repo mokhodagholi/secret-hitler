@@ -107,7 +107,6 @@ export const fa = {
     gameSettings: 'تنظیمات بازی',
     playerCount: 'تعداد بازیکنان',
     players: '{count} بازیکن',
-    showRoles: 'نمایش نقش‌ها در بازی',
     timer: 'زمان‌سنج',
     enabled: 'فعال',
     disabled: 'غیرفعال',
@@ -193,6 +192,8 @@ export const fa = {
   game: {
     roomLabel: 'اتاق: {name}',
     players: 'بازیکنان',
+    playersTitle: 'بازیکنان',
+    youAreRole: 'شما {role} هستید',
     timeLeft: 'زمان باقی‌مانده',
     currentTrack: 'وضعیت فعلی',
     endTurn: 'پایان نوبت',
@@ -252,10 +253,11 @@ export const fa = {
     nein: 'مخالف',
   },
   gameMenu: {
-    roomInfo: 'اطلاعات اتاق',
-    audio: 'صدا',
-    muteMusic: 'قطع موسیقی',
-    muteEffects: 'قطع جلوه‌های صوتی',
+    music: 'موسیقی',
+    effects: 'جلوه‌های صوتی',
+    roomName: 'اتاق',
+    viewRules: 'قوانین',
+    quit: 'خروج',
   },
   policyReveal: {
     liberal: 'یک سیاست لیبرال تصویب شد',
