@@ -1,0 +1,25 @@
+@use './vars' as *;
+
+// Condensed uppercase display type used for all headings, labels and buttons
+@mixin display($size: 1rem, $tracking: 0.08em) {
+  font-family: $font-display;
+  font-size: $size;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: $tracking;
+}
+
+// Raised navy panel used for setting rows and rule panels
+@mixin card {
+  background: linear-gradient(180deg, $navy-800, $navy-850);
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+}
+
+@mixin pressable {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+
+  &:active {
+    transform: translateY(2px);
+  }
+}
