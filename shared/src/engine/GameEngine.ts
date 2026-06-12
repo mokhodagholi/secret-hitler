@@ -50,9 +50,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     if (room.isFull) {
       return err('ROOM_FULL', 'This room is full.');
     }
-    if (room.hasName(name)) {
-      return err('NAME_TAKEN', 'That name is already taken in this room.');
-    }
 
     const isHost = asHost || room.players.length === 0;
     const player = PlayerFactory.create(name, room.players.length, isHost);
@@ -89,7 +86,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     const player = this.room.findPlayer(playerId);
     if (!player || player.connected === connected) return;
     player.connected = connected;
-    if (!connected) player.ready = player.isHost;
+    // Ready mirrors presence — players are ready while seated and connected,
+    // so the host can start as soon as enough players have joined.
+    player.ready = connected || player.isHost;
     this.log(`${player.name} ${connected ? 'reconnected' : 'disconnected'}.`);
     this.maybeMigrateHost();
     this.changed();

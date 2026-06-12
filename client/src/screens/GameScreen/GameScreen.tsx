@@ -17,10 +17,10 @@ import { PlayerSeat } from './PlayerSeat';
 import styles from './GameScreen.module.scss';
 
 /**
- * Main game board: players around the oval table, the canvas policy board,
- * the viewer's role card, chat / game-log tabs and a phase-contextual action
- * area. All state is the server's — this screen renders the latest
- * GameStateView and sends commands back.
+ * Main game board: players around the wooden table, the canvas policy board,
+ * president/chancellor cards, chat/log panel beside the voice + role column,
+ * and the phase action footer. All state is the server's — this screen
+ * renders the latest GameStateView and sends commands back.
  */
 export function GameScreen() {
   const { nav, game, socket, i18n } = useApp();
@@ -54,6 +54,7 @@ export function GameScreen() {
       fascist: formatMessage('game.fascist'),
       draw: formatMessage('game.drawPile'),
       discard: formatMessage('game.discardPile'),
+      currentTrack: formatMessage('game.currentTrack'),
     });
   });
 
@@ -83,8 +84,8 @@ export function GameScreen() {
   const seatPosition = (seatIndex: number, seatCount: number) => {
     const angle = -Math.PI / 2 + (2 * Math.PI * seatIndex) / seatCount;
     return {
-      x: 50 + 42 * Math.cos(angle),
-      y: 50 + 40 * Math.sin(angle),
+      x: 50 + 43 * Math.cos(angle),
+      y: 50 + 42 * Math.sin(angle),
     };
   };
 
@@ -113,13 +114,17 @@ export function GameScreen() {
       <Show when={view()}>
         {(state) => (
           <div class={styles.layout}>
-            <header class={styles.header}>
-              <div class={styles.headerText}>
-                <span class={styles.roomName}>{state().name}</span>
-                <span class={styles.phase}>
-                  {formatMessage(`phase.${state().phase}` as MessageKey)}
-                </span>
-              </div>
+            <div class={styles.roomBar}>
+              <span class={styles.roomName}>
+                {formatMessage('game.roomLabel', { name: state().name })}
+              </span>
+              <span class={styles.roomCount}>
+                <Icon name="people" size={15} />
+                {formatMessage('waiting.playerCount', {
+                  count: state().players.length,
+                  max: state().maxPlayers,
+                })}
+              </span>
               <span
                 classList={{
                   [styles.connection]: true,
@@ -129,7 +134,7 @@ export function GameScreen() {
                   `connection.${socket.status()}` as MessageKey,
                 )}
               />
-            </header>
+            </div>
 
             <div class={styles.table}>
               <For each={state().players}>
@@ -160,38 +165,26 @@ export function GameScreen() {
             </div>
 
             <div class={styles.government}>
-              <span>
-                {formatMessage('game.president')}:{' '}
-                <strong>{playerName(state().board.president)}</strong>
-              </span>
-              <span>
-                {formatMessage('game.chancellor')}:{' '}
-                <strong>{playerName(state().board.chancellor)}</strong>
-              </span>
+              <div class={styles.governmentCard}>
+                <span class={styles.governmentLabel}>
+                  {formatMessage('game.president')}
+                </span>
+                <span class={styles.governmentName}>
+                  {playerName(state().board.president)}
+                </span>
+              </div>
+              <div class={styles.governmentCard}>
+                <span class={styles.governmentLabel}>
+                  {formatMessage('game.chancellor')}
+                </span>
+                <span class={styles.governmentName}>
+                  {playerName(state().board.chancellor)}
+                </span>
+              </div>
             </div>
 
             <Show when={state().phase === Phase.Nomination && iAmPresident()}>
               <p class={styles.hint}>{formatMessage('game.nominateHint')}</p>
-            </Show>
-
-            <Show when={game.role()}>
-              <div class={styles.roleCard}>
-                <span class={styles.roleLabel}>
-                  {formatMessage('game.yourRole')}
-                </span>
-                <span
-                  classList={{
-                    [styles.roleName]: true,
-                    [styles.roleLiberal]: game.role() === 'liberal',
-                    [styles.roleFascist]: game.role() !== 'liberal',
-                  }}
-                >
-                  {formatMessage(`role.${game.role()!}`)}
-                </span>
-                <span class={styles.roleDescription}>
-                  {formatMessage(`roleDescription.${game.role()!}`)}
-                </span>
-              </div>
             </Show>
 
             <Show when={game.lastError()}>
@@ -200,77 +193,121 @@ export function GameScreen() {
               </p>
             </Show>
 
-            <div class={styles.tabs}>
-              <button
-                type="button"
-                classList={{
-                  [styles.tab]: true,
-                  [styles.tabActive]: activeTab() === 'chat',
-                }}
-                onClick={() => setActiveTab('chat')}
-              >
-                {formatMessage('game.chat')}
-              </button>
-              <button
-                type="button"
-                classList={{
-                  [styles.tab]: true,
-                  [styles.tabActive]: activeTab() === 'log',
-                }}
-                onClick={() => setActiveTab('log')}
-              >
-                {formatMessage('game.gameLog')}
-              </button>
-            </div>
+            <div class={styles.panels}>
+              <section class={styles.chatPanel}>
+                <div class={styles.tabs}>
+                  <button
+                    type="button"
+                    classList={{
+                      [styles.tab]: true,
+                      [styles.tabActive]: activeTab() === 'chat',
+                    }}
+                    onClick={() => setActiveTab('chat')}
+                  >
+                    {formatMessage('game.chat')}
+                  </button>
+                  <button
+                    type="button"
+                    classList={{
+                      [styles.tab]: true,
+                      [styles.tabActive]: activeTab() === 'log',
+                    }}
+                    onClick={() => setActiveTab('log')}
+                  >
+                    {formatMessage('game.gameLog')}
+                  </button>
+                </div>
 
-            <div class={styles.feed} ref={chatScroller}>
-              <Show
-                when={activeTab() === 'chat'}
-                fallback={
-                  <For each={game.logEntries()}>
-                    {(entry) => (
-                      <p class={styles.logEntry}>
-                        <span class={styles.time}>{timestamp(entry.at)}</span>
-                        {entry.text}
-                      </p>
-                    )}
-                  </For>
-                }
-              >
-                <For each={game.chatMessages()}>
-                  {(message) => (
-                    <p class={styles.chatMessage}>
-                      <span class={styles.chatAuthor}>{message.name}</span>
-                      <span class={styles.time}>{timestamp(message.at)}</span>
-                      <span class={styles.chatText}>{message.text}</span>
-                    </p>
-                  )}
-                </For>
-              </Show>
-            </div>
+                <div class={styles.feed} ref={chatScroller}>
+                  <Show
+                    when={activeTab() === 'chat'}
+                    fallback={
+                      <For each={game.logEntries()}>
+                        {(entry) => (
+                          <p class={styles.logEntry}>
+                            <span class={styles.time}>{timestamp(entry.at)}</span>
+                            {entry.text}
+                          </p>
+                        )}
+                      </For>
+                    }
+                  >
+                    <For each={game.chatMessages()}>
+                      {(message) => (
+                        <p class={styles.chatMessage}>
+                          <span class={styles.chatAuthor}>{message.name}</span>
+                          <span class={styles.time}>{timestamp(message.at)}</span>
+                          <span class={styles.chatText}>{message.text}</span>
+                        </p>
+                      )}
+                    </For>
+                  </Show>
+                </div>
 
-            <Show when={activeTab() === 'chat'}>
-              <div class={styles.chatComposer}>
-                <input
-                  class={styles.chatInput}
-                  value={chatDraft()}
-                  placeholder={formatMessage('game.chatPlaceholder')}
-                  maxlength={500}
-                  onInput={(event) => setChatDraft(event.currentTarget.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') sendChat();
-                  }}
-                />
-                <button
-                  type="button"
-                  class={styles.chatSend}
-                  aria-label={formatMessage('game.send')}
-                  onClick={sendChat}
-                >
-                  <Icon name="chat" size={20} />
-                </button>
+                <Show when={activeTab() === 'chat'}>
+                  <div class={styles.chatComposer}>
+                    <input
+                      class={styles.chatInput}
+                      value={chatDraft()}
+                      placeholder={formatMessage('game.chatPlaceholder')}
+                      maxlength={500}
+                      onInput={(event) => setChatDraft(event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') sendChat();
+                      }}
+                    />
+                    <button
+                      type="button"
+                      class={styles.chatSend}
+                      aria-label={formatMessage('game.send')}
+                      onClick={sendChat}
+                    >
+                      <Icon name="chat" size={18} />
+                    </button>
+                  </div>
+                </Show>
+              </section>
+
+              <div class={styles.sideColumn}>
+                <section class={styles.voicePanel}>
+                  <span class={styles.panelHeading}>
+                    {formatMessage('game.voiceChat')}
+                  </span>
+                  <span
+                    classList={{
+                      [styles.voiceStatus]: true,
+                      [styles.voiceOnline]: socket.status() === 'connected',
+                    }}
+                  >
+                    {formatMessage(`connection.${socket.status()}` as MessageKey)}
+                  </span>
+                  {/* Voice chat lands in Phase 7 — the mic is visual only. */}
+                  <span class={styles.micButton} aria-hidden="true">
+                    <Icon name="mic" size={22} />
+                  </span>
+                </section>
+
+                <Show when={game.role()}>
+                  <section class={styles.roleCard}>
+                    <span class={styles.panelHeading}>
+                      {formatMessage('game.yourRole')}
+                    </span>
+                    <span
+                      classList={{
+                        [styles.roleName]: true,
+                        [styles.roleLiberal]: game.role() === 'liberal',
+                        [styles.roleFascist]: game.role() !== 'liberal',
+                      }}
+                    >
+                      {formatMessage(`role.${game.role()!}`)}
+                    </span>
+                    <span class={styles.roleDescription}>
+                      {formatMessage(`roleDescription.${game.role()!}`)}
+                    </span>
+                  </section>
+                </Show>
               </div>
-            </Show>
+            </div>
 
             <footer class={styles.footer}>
               <button
@@ -280,6 +317,19 @@ export function GameScreen() {
               >
                 {formatMessage('game.leaveRoom')}
               </button>
+
+              {/* Phase actions arrive with the game engine — visual stub. */}
+              <button type="button" class={styles.endTurn} disabled>
+                <span class={styles.endTurnLabel}>
+                  {formatMessage('game.endTurn')}
+                </span>
+                <Show when={iAmPresident()}>
+                  <span class={styles.endTurnSub}>
+                    {formatMessage('game.youArePresident')}
+                  </span>
+                </Show>
+              </button>
+
               <button
                 type="button"
                 class={styles.rules}

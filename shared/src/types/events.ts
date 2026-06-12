@@ -50,7 +50,6 @@ export type ServerErrorCode =
   | 'ROOM_FULL'
   | 'WRONG_PASSWORD'
   | 'ALREADY_STARTED'
-  | 'NAME_TAKEN'
   | 'NOT_HOST'
   | 'NOT_ENOUGH_PLAYERS'
   | 'INVALID_ACTION';

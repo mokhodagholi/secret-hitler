@@ -58,11 +58,6 @@ export class Room {
     return this.players.find((p) => p.id === id);
   }
 
-  hasName(name: string): boolean {
-    const normalized = name.trim().toLowerCase();
-    return this.players.some((p) => p.name.toLowerCase() === normalized);
-  }
-
   private board(): BoardState {
     return {
       liberalPolicies: this.liberalPolicies,

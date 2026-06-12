@@ -23,7 +23,11 @@ export type IconName =
   | 'envelope'
   | 'cards'
   | 'scroll'
-  | 'skull';
+  | 'skull'
+  | 'door'
+  | 'mic'
+  | 'crown'
+  | 'share';
 
 const glyphs: Record<IconName, () => JSX.Element> = {
   book: () => (
@@ -172,6 +176,32 @@ const glyphs: Record<IconName, () => JSX.Element> = {
       <circle cx="9" cy="12" r="1" />
       <circle cx="15" cy="12" r="1" />
       <path d="m12.5 17-.5-1-.5 1z" />
+    </>
+  ),
+  door: () => (
+    <>
+      <path d="M13 3h6a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-6" />
+      <path d="M13 21 4 19V5l9-2z" />
+      <circle cx="10.5" cy="12" r="0.75" fill="currentColor" />
+    </>
+  ),
+  mic: () => (
+    <>
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <path d="M12 17v5" />
+      <path d="M8 22h8" />
+    </>
+  ),
+  crown: () => (
+    <path d="m3 8 4.5 4L12 5l4.5 7L21 8l-1.5 10h-15z" fill="currentColor" stroke="none" />
+  ),
+  share: () => (
+    <>
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="6" r="3" />
+      <circle cx="18" cy="18" r="3" />
+      <path d="m8.7 10.6 6.6-3.2M8.7 13.4l6.6 3.2" />
     </>
   ),
 };

@@ -1,17 +1,28 @@
-import { For, Show, createEffect, createSignal } from 'solid-js';
-import { MIN_PLAYERS, Phase } from '@secret-hitler/shared';
+import {
+  For,
+  Show,
+  createEffect,
+  createSignal,
+  onCleanup,
+  onMount,
+} from 'solid-js';
+import { MIN_PLAYERS, Phase, type GameStateView } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { MessageKey } from '../../i18n';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import styles from './WaitingRoomScreen.module.scss';
 
+const TIP_KEYS: MessageKey[] = ['tip.watch', 'tip.numbers', 'tip.hitler'];
+const TIP_ROTATION_MS = 5000;
+
 /**
- * Lobby for a joined room: code + share link, live player list with ready
- * badges, the viewer's ready toggle and the host's start button. Navigates to
- * the game board as soon as the server moves the room out of the lobby phase.
+ * Lobby for a joined room. The host sees the room info, the live player list
+ * and the start button; guests see a join-progress ring and rotating tips.
+ * Navigates to the game board as soon as the server leaves the lobby phase.
  */
 export function WaitingRoomScreen() {
   const { nav, game, socket, i18n } = useApp();
@@ -24,6 +35,8 @@ export function WaitingRoomScreen() {
   const shareLink = () =>
     game.currentSession()?.shareLink ??
     `${location.origin}/join/${view()?.code ?? ''}`;
+  const missingCount = () =>
+    Math.max(0, MIN_PLAYERS - (view()?.players.length ?? 0));
 
   // Session dropped (left room / token expired) → back to the play menu.
   createEffect(() => {
@@ -54,67 +67,21 @@ export function WaitingRoomScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title={view()?.name ?? ''} />
+      <ScreenHeader title={formatMessage('waiting.title')} />
 
-      <Show when={view()} fallback={<ConnectionNote />}>
+      <Show
+        when={view()}
+        fallback={
+          <p class={styles.note}>
+            {formatMessage(`connection.${socket.status()}` as MessageKey)}
+          </p>
+        }
+      >
         {(state) => (
           <>
-            <div class={styles.meta}>
-              <div class={styles.codeBlock}>
-                <span class={styles.metaLabel}>
-                  {formatMessage('waiting.roomCode')}
-                </span>
-                <span class={styles.code}>{state().code}</span>
-              </div>
-              <div class={styles.count}>
-                {formatMessage('waiting.playerCount', {
-                  count: state().players.length,
-                  max: state().maxPlayers,
-                })}
-              </div>
-            </div>
-
-            <button type="button" class={styles.share} onClick={copyShareLink}>
-              <span class={styles.shareLink}>{shareLink()}</span>
-              <span class={styles.copy}>
-                {formatMessage(copied() ? 'waiting.copied' : 'waiting.copy')}
-              </span>
-            </button>
-
-            <ul class={styles.players}>
-              <For each={[...state().players].sort((a, b) => a.seat - b.seat)}>
-                {(player) => (
-                  <li
-                    classList={{
-                      [styles.player]: true,
-                      [styles.offline]: !player.connected,
-                    }}
-                  >
-                    <span class={styles.avatar}>
-                      {player.name.slice(0, 1).toUpperCase()}
-                    </span>
-                    <span class={styles.playerName}>
-                      {player.name}
-                      <Show when={player.isHost}>
-                        <span class={styles.hostBadge}>
-                          {formatMessage('waiting.host')}
-                        </span>
-                      </Show>
-                    </span>
-                    <span
-                      classList={{
-                        [styles.readyBadge]: true,
-                        [styles.isReady]: player.ready,
-                      }}
-                    >
-                      {formatMessage(
-                        player.ready ? 'waiting.ready' : 'waiting.notReady',
-                      )}
-                    </span>
-                  </li>
-                )}
-              </For>
-            </ul>
+            <Show when={game.isHost()} fallback={<GuestView state={state()} />}>
+              <HostView state={state()} />
+            </Show>
 
             <Show when={game.lastError()}>
               <p class={styles.error} onClick={() => game.clearError()}>
@@ -122,42 +89,13 @@ export function WaitingRoomScreen() {
               </p>
             </Show>
 
-            <div class={styles.actions}>
-              <Button
-                variant="outline"
-                onClick={() => game.setReady(!game.you()?.ready)}
-              >
-                {formatMessage(
-                  game.you()?.ready ? 'waiting.imNotReady' : 'waiting.imReady',
-                )}
-              </Button>
-
-              <Show
-                when={game.isHost()}
-                fallback={
-                  <p class={styles.note}>
-                    {formatMessage('waiting.waitingForPlayers')}
-                  </p>
-                }
-              >
-                <Button size="lg" onClick={() => game.startGame()}>
-                  {formatMessage('waiting.startGame')}
-                </Button>
-                <Show when={!game.canStart()}>
-                  <p class={styles.note}>
-                    {formatMessage('waiting.autoStartNote', { min: MIN_PLAYERS })}
-                  </p>
-                </Show>
-              </Show>
-
-              <button
-                type="button"
-                class={styles.leave}
-                onClick={() => setConfirmingLeave(true)}
-              >
-                {formatMessage('waiting.leaveRoom')}
-              </button>
-            </div>
+            <button
+              type="button"
+              class={styles.leave}
+              onClick={() => setConfirmingLeave(true)}
+            >
+              {formatMessage('waiting.leaveRoom')}
+            </button>
 
             <ConfirmDialog
               open={confirmingLeave()}
@@ -175,11 +113,186 @@ export function WaitingRoomScreen() {
     </Screen>
   );
 
-  function ConnectionNote() {
+  // --- Host: room info, share, player list, start --------------------------
+
+  function HostView(props: { state: GameStateView }) {
     return (
-      <p class={styles.note}>
-        {formatMessage(`connection.${socket.status()}` as MessageKey)}
-      </p>
+      <>
+        <div class={styles.infoCard}>
+          <div class={styles.infoColumn}>
+            <span class={styles.infoLabel}>
+              {formatMessage('waiting.roomName')}
+            </span>
+            <span class={styles.infoValue}>{props.state.name}</span>
+          </div>
+          <div classList={{ [styles.infoColumn]: true, [styles.infoEnd]: true }}>
+            <span class={styles.infoLabel}>
+              {formatMessage('waiting.playersSection')}
+            </span>
+            <span class={styles.infoCount}>
+              {formatMessage('waiting.playerCount', {
+                count: props.state.players.length,
+                max: props.state.maxPlayers,
+              })}
+            </span>
+          </div>
+        </div>
+
+        <div class={styles.infoCard}>
+          <div class={styles.infoColumn}>
+            <span class={styles.infoLabel}>
+              {formatMessage('waiting.roomCode')}
+            </span>
+            <span class={styles.code}>{props.state.code}</span>
+          </div>
+          <button
+            type="button"
+            classList={{
+              [styles.infoColumn]: true,
+              [styles.infoEnd]: true,
+              [styles.shareButton]: true,
+            }}
+            onClick={copyShareLink}
+          >
+            <span class={styles.infoLabel}>
+              {formatMessage(copied() ? 'waiting.copied' : 'waiting.shareLink')}
+            </span>
+            <span class={styles.shareRow}>
+              <span class={styles.shareLink}>{shareLink()}</span>
+              <Icon name="share" size={16} />
+            </span>
+          </button>
+        </div>
+
+        <div class={styles.playersHeading}>
+          <span>{formatMessage('waiting.playersSection')}</span>
+          <span class={styles.playersHeadingCount}>
+            {formatMessage('waiting.playerCount', {
+              count: props.state.players.length,
+              max: props.state.maxPlayers,
+            })}
+          </span>
+        </div>
+
+        <ul class={styles.players}>
+          <For each={[...props.state.players].sort((a, b) => a.seat - b.seat)}>
+            {(player) => (
+              <li
+                classList={{
+                  [styles.player]: true,
+                  [styles.you]: player.id === props.state.you.id,
+                  [styles.offline]: !player.connected,
+                }}
+              >
+                <span class={styles.avatar}>
+                  {player.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span class={styles.playerName}>
+                  {player.name}
+                  <Show when={player.isHost}>
+                    <Icon name="crown" size={14} class={styles.crown} />
+                  </Show>
+                </span>
+                <span
+                  classList={{
+                    [styles.readyBadge]: true,
+                    [styles.isReady]: player.ready,
+                  }}
+                >
+                  {formatMessage(
+                    player.ready ? 'waiting.ready' : 'waiting.notReady',
+                  )}
+                </span>
+              </li>
+            )}
+          </For>
+        </ul>
+
+        <Show when={missingCount() > 0}>
+          <p class={styles.note}>
+            {formatMessage('waiting.needMore', { count: missingCount() })}
+          </p>
+        </Show>
+
+        <div class={styles.startWrap}>
+          <Button size="lg" onClick={() => game.startGame()}>
+            {formatMessage('waiting.startGame')}
+          </Button>
+        </div>
+      </>
     );
   }
+
+  // --- Guest: progress ring + rotating tips ---------------------------------
+
+  function GuestView(props: { state: GameStateView }) {
+    const [tipIndex, setTipIndex] = createSignal(0);
+
+    onMount(() => {
+      const timer = setInterval(
+        () => setTipIndex((index) => (index + 1) % TIP_KEYS.length),
+        TIP_ROTATION_MS,
+      );
+      onCleanup(() => clearInterval(timer));
+    });
+
+    const progress = () => props.state.players.length / props.state.maxPlayers;
+
+    return (
+      <div class={styles.guest}>
+        <p class={styles.waitingText}>{formatMessage('waiting.waitingToJoin')}</p>
+        <p class={styles.guestCount}>
+          {formatMessage('waiting.playerCount', {
+            count: props.state.players.length,
+            max: props.state.maxPlayers,
+          })}
+        </p>
+
+        <ProgressRing progress={progress()} />
+
+        <div class={styles.tips}>
+          <div class={styles.tipsHeading}>
+            <Icon name="masks" size={20} />
+            <span>{formatMessage('waiting.tips')}</span>
+          </div>
+          <p class={styles.tipText}>{formatMessage(TIP_KEYS[tipIndex()])}</p>
+          <div class={styles.dots}>
+            <For each={TIP_KEYS}>
+              {(_, index) => (
+                <span
+                  classList={{
+                    [styles.dot]: true,
+                    [styles.dotActive]: index() === tipIndex(),
+                  }}
+                />
+              )}
+            </For>
+          </div>
+        </div>
+
+        <p class={styles.note}>{formatMessage('waiting.autoStartGuestNote')}</p>
+      </div>
+    );
+  }
+}
+
+/** Gold arc showing how full the room is, with the capitol in the middle. */
+function ProgressRing(props: { progress: number }) {
+  const RADIUS = 84;
+  const circumference = 2 * Math.PI * RADIUS;
+  return (
+    <div class={styles.ringWrap}>
+      <svg class={styles.ring} viewBox="0 0 200 200" aria-hidden="true">
+        <circle class={styles.ringTrack} cx="100" cy="100" r={RADIUS} />
+        <circle
+          class={styles.ringValue}
+          cx="100"
+          cy="100"
+          r={RADIUS}
+          stroke-dasharray={`${circumference * props.progress} ${circumference}`}
+        />
+      </svg>
+      <Icon name="capitol" size={72} class={styles.ringIcon} />
+    </div>
+  );
 }

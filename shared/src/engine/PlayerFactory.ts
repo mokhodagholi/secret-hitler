@@ -14,7 +14,7 @@ export class PlayerFactory {
       seat,
       isHost,
       connected: true,
-      ready: isHost, // host counts as ready by default
+      ready: true, // ready mirrors presence — seated players count as ready
       isAlive: true,
       role: null,
     };
