@@ -13,6 +13,7 @@ All project documentation and coding rules live in [`docs/`](../docs/) — read 
 - [`docs/comments.md`](../docs/comments.md) — concise comments; explain why, not what.
 - [`docs/testing.md`](../docs/testing.md) — rstest, `it('Should …')`, co-located tests, `test/` utils.
 - [`docs/game-rules.md`](../docs/game-rules.md) — how a round plays out; implemented vs. planned.
+- [`client/docs/audio.md`](../client/docs/audio.md) — playing music & sound effects via `SoundService`.
 
 @../docs/naming.md
 @../docs/commit-messages.md

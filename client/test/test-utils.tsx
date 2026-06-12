@@ -12,6 +12,7 @@ import { GameStateService, type RoomSession } from '../src/services/GameStateSer
 import { I18nService } from '../src/services/I18nService';
 import { NavigationService } from '../src/services/NavigationService';
 import { SettingsService } from '../src/services/SettingsService';
+import { SoundService } from '../src/services/SoundService';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -97,6 +98,7 @@ export function buildHarness(
     i18n: new I18nService(() => settings.settings.language),
     socket: socket as unknown as WebSocketService,
     game,
+    sound: new SoundService(settings),
   };
   return {
     services,
