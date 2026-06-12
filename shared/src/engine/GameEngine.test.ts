@@ -326,6 +326,31 @@ describe('GameEngine — legislative session', () => {
     expect(game.room.drawnPolicies).toEqual(['liberal', 'fascist', 'fascist']);
   });
 
+  it('Should auto-discard for the President when the timer elapses', () => {
+    const deck = new StackedDeck(['liberal', 'fascist', 'fascist']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck);
+    electGovernment(game, game.players[1]);
+    expect(game.room.phase).toBe(Phase.PresidentLegislative);
+
+    game.engine.resolveLegislativeTimeout();
+    expect(game.room.phase).toBe(Phase.ChancellorLegislative);
+    expect(game.room.drawnPolicies).toHaveLength(2);
+  });
+
+  it('Should auto-enact for the Chancellor when the timer elapses', () => {
+    const deck = new StackedDeck(['liberal', 'fascist', 'fascist']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck);
+    const [president, chancellor] = game.players;
+    electGovernment(game, chancellor);
+
+    game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 0 });
+    expect(game.room.phase).toBe(Phase.ChancellorLegislative);
+    game.engine.resolveLegislativeTimeout();
+
+    expect(game.room.liberalPolicies + game.room.fascistPolicies).toBe(1);
+    expect(game.room.phase).not.toBe(Phase.ChancellorLegislative);
+  });
+
   it('Should reject a discard from anyone but the President', () => {
     const game = startGame();
     electGovernment(game, game.players[1]);

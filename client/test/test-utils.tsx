@@ -162,6 +162,7 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     winner: null,
     speaker: null,
     voteDeadline: null,
+    legislativeDeadline: null,
     ineligibleChancellors: [],
     activePower: null,
     vetoUnlocked: false,

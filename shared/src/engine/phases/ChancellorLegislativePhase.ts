@@ -15,6 +15,11 @@ export class ChancellorLegislativePhase implements GamePhase {
 
   enter(): void {
     this.host.room.vetoRequested = false;
+    this.host.openLegislativeTimer();
+  }
+
+  exit(): void {
+    this.host.closeLegislativeTimer();
   }
 
   handle(playerId: string, command: GameCommand): EngineError | null {
@@ -32,9 +37,21 @@ export class ChancellorLegislativePhase implements GamePhase {
     if (command.index < 0 || command.index >= room.drawnPolicies.length) {
       return err('INVALID_ACTION', 'Invalid policy choice.');
     }
+    return this.enactAt(command.index);
+  }
 
+  /** No choice in time — the engine enacts a random tile (never on a pending veto). */
+  timeout(): void {
+    const room = this.host.room;
+    if (room.vetoRequested) return;
+    const count = room.drawnPolicies.length;
+    if (count > 0) this.enactAt(Math.floor(Math.random() * count));
+  }
+
+  private enactAt(index: number): EngineError | null {
+    const room = this.host.room;
     room.vetoRequested = false;
-    const [enacted] = room.drawnPolicies.splice(command.index, 1);
+    const [enacted] = room.drawnPolicies.splice(index, 1);
     room.deck.discardTiles(room.drawnPolicies);
     room.drawnPolicies = [];
     this.host.log(enacted === 'liberal' ? 'liberalEnacted' : 'fascistEnacted');
@@ -60,6 +77,8 @@ export class ChancellorLegislativePhase implements GamePhase {
       return err('INVALID_ACTION', 'Veto is not available yet.');
     }
     room.vetoRequested = true;
+    // The Chancellor has acted — pause the auto-pick while the President decides.
+    this.host.closeLegislativeTimer();
     this.host.log('vetoProposed');
     this.host.changed();
     return null;
@@ -72,6 +91,8 @@ export class ChancellorLegislativePhase implements GamePhase {
     }
     room.vetoRequested = false;
     if (!agree) {
+      // Veto refused — the Chancellor must still enact; give them a fresh window.
+      this.host.openLegislativeTimer();
       this.host.log('vetoRejected');
       this.host.changed();
       return null;

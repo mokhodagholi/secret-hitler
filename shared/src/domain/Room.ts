@@ -51,6 +51,8 @@ export class Room {
   speakerEndsAt = 0;
   voteStartedAt = 0;
   voteEndsAt = 0;
+  legislativeStartedAt = 0;
+  legislativeEndsAt = 0;
   /** Executive power awaiting the President's use, else null. */
   activePower: ExecutivePower | null = null;
   /** Players already investigated this game (each may be investigated once). */
@@ -179,6 +181,10 @@ export class Room {
       voteDeadline:
         this.phase === Phase.Voting && this.voteEndsAt > 0
           ? { startedAt: this.voteStartedAt, endsAt: this.voteEndsAt }
+          : null,
+      legislativeDeadline:
+        this.legislativeEndsAt > 0
+          ? { startedAt: this.legislativeStartedAt, endsAt: this.legislativeEndsAt }
           : null,
       ineligibleChancellors:
         this.phase === Phase.Nomination ? this.ineligibleChancellorIds() : [],

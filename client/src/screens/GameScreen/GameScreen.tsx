@@ -17,12 +17,12 @@ import { ERROR_MESSAGE_KEYS } from '../../i18n';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
-import { POLICY_FACE } from '../../assets/cards';
 import { PolicyBoard } from './PolicyBoard';
 import { RoleBanner } from './RoleBanner';
 import { TurnBanner } from './TurnBanner';
 import { PlayersModal } from './PlayersModal';
 import { GameMenu } from './GameMenu';
+import { LegislativeModal } from './LegislativeModal';
 import { VotingOverlay } from './VotingOverlay';
 import { PowerPanel } from './PowerPanel';
 import { GameOverOverlay } from './GameOverOverlay';
@@ -177,6 +177,10 @@ export function GameScreen() {
     );
   };
   const myPolicies = () => view()?.you.policies ?? [];
+  const legislativeSecondsLeft = () => {
+    const deadline = view()?.legislativeDeadline;
+    return deadline ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000)) : 0;
+  };
 
   function chooseLegislative(index: number): void {
     const phase = view()?.phase;
@@ -324,97 +328,74 @@ export function GameScreen() {
               />
             </Show>
 
-            <Show when={isLegislative()}>
+            <Show when={isLegislative() && state().vetoRequested}>
               <div class={styles.votePanel}>
+                <span class={styles.votePrompt}>
+                  {formatMessage('game.veto.consentPrompt')}
+                </span>
                 <Show
-                  when={state().vetoRequested}
+                  when={iAmPresident()}
                   fallback={
-                    <Show
-                      when={myPolicies().length > 0}
-                      fallback={
-                        <span class={styles.voteWaiting}>
-                          {state().phase === Phase.PresidentLegislative
-                            ? formatMessage('game.presidentChoosing', {
-                                name: playerName(state().board.president),
-                              })
-                            : formatMessage('game.chancellorChoosing', {
-                                name: playerName(state().board.chancellor),
-                              })}
-                        </span>
-                      }
-                    >
-                      <span class={styles.votePrompt}>
-                        {formatMessage(
-                          state().phase === Phase.PresidentLegislative
-                            ? 'game.presidentDiscardHint'
-                            : 'game.chancellorEnactHint',
-                        )}
-                      </span>
-                      <div class={styles.policyCards}>
-                        <For each={myPolicies()}>
-                          {(policy, index) => (
-                            <button
-                              type="button"
-                              class={styles.policyCard}
-                              onClick={() => chooseLegislative(index())}
-                            >
-                              <img
-                                class={styles.policyImage}
-                                src={POLICY_FACE[policy]}
-                                alt={formatMessage(`game.${policy}`)}
-                              />
-                            </button>
-                          )}
-                        </For>
-                      </div>
-                      <Show
-                        when={
-                          state().phase === Phase.ChancellorLegislative &&
-                          state().vetoUnlocked &&
-                          iAmChancellor()
-                        }
-                      >
-                        <button
-                          type="button"
-                          class={styles.vetoButton}
-                          onClick={proposeVeto}
-                        >
-                          {formatMessage('game.veto.propose')}
-                        </button>
-                      </Show>
-                    </Show>
+                    <span class={styles.voteWaiting}>
+                      {formatMessage('game.veto.waiting')}
+                    </span>
                   }
                 >
-                  <span class={styles.votePrompt}>
-                    {formatMessage('game.veto.consentPrompt')}
-                  </span>
-                  <Show
-                    when={iAmPresident()}
-                    fallback={
-                      <span class={styles.voteWaiting}>
-                        {formatMessage('game.veto.waiting')}
-                      </span>
-                    }
-                  >
-                    <div class={styles.voteButtons}>
-                      <button
-                        type="button"
-                        class={styles.voteJa}
-                        onClick={() => respondVeto(true)}
-                      >
-                        {formatMessage('game.veto.agree')}
-                      </button>
-                      <button
-                        type="button"
-                        class={styles.voteNein}
-                        onClick={() => respondVeto(false)}
-                      >
-                        {formatMessage('game.veto.reject')}
-                      </button>
-                    </div>
-                  </Show>
+                  <div class={styles.voteButtons}>
+                    <button
+                      type="button"
+                      class={styles.voteJa}
+                      onClick={() => respondVeto(true)}
+                    >
+                      {formatMessage('game.veto.agree')}
+                    </button>
+                    <button
+                      type="button"
+                      class={styles.voteNein}
+                      onClick={() => respondVeto(false)}
+                    >
+                      {formatMessage('game.veto.reject')}
+                    </button>
+                  </div>
                 </Show>
               </div>
+            </Show>
+
+            <Show when={isLegislative() && !state().vetoRequested}>
+              <Show
+                when={myPolicies().length > 0}
+                fallback={
+                  <div class={styles.votePanel}>
+                    <span class={styles.voteWaiting}>
+                      {state().phase === Phase.PresidentLegislative
+                        ? formatMessage('game.presidentChoosing', {
+                            name: playerName(state().board.president),
+                          })
+                        : formatMessage('game.chancellorChoosing', {
+                            name: playerName(state().board.chancellor),
+                          })}
+                    </span>
+                  </div>
+                }
+              >
+                <LegislativeModal
+                  mode={
+                    state().phase === Phase.PresidentLegislative
+                      ? 'discard'
+                      : 'enact'
+                  }
+                  policies={myPolicies()}
+                  secondsLeft={legislativeSecondsLeft()}
+                  canVeto={
+                    state().phase === Phase.ChancellorLegislative &&
+                    state().vetoUnlocked &&
+                    iAmChancellor()
+                  }
+                  onPick={chooseLegislative}
+                  onVeto={proposeVeto}
+                  formatMessage={formatMessage}
+                />
+              </Show>
             </Show>
 
             <Show when={state().phase === Phase.SpecialPower && state().activePower}>

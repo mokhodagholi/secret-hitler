@@ -1,0 +1,98 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 12, 22, 0.82);
+}
+
+.dialog {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 18px;
+  width: min(360px, 100%);
+  border-color: rgba($gold, 0.5);
+}
+
+.title {
+  @include display(0.85rem, 0.1em);
+  color: $text-light;
+  text-align: center;
+}
+
+.timer {
+  @include display(0.82rem, 0.04em);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: $gold;
+}
+
+.urgent {
+  color: $red-bright;
+}
+
+.pulse {
+  animation: legislative-timer-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes legislative-timer-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.75;
+  }
+}
+
+.cards {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+
+.card {
+  @include pressable;
+  width: 92px;
+  aspect-ratio: 2 / 3;
+  border-radius: $radius;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  padding: 0;
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.veto {
+  @include display(0.75rem, 0.08em);
+  @include pressable;
+  padding: 9px 18px;
+  border-radius: $radius-sm;
+  color: $red-bright;
+  border: 1px solid rgba($red-bright, 0.55);
+  background: rgba($red-bright, 0.08);
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}

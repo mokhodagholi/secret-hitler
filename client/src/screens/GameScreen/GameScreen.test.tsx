@@ -133,6 +133,31 @@ describe('GameScreen — players modal', () => {
   });
 });
 
+describe('GameScreen — legislative modal', () => {
+  it('Should send a discard when the President picks a card', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      you: {
+        ...view.you,
+        policies: ['liberal', 'fascist', 'fascist'],
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
+    // The pick plays an exit animation (a resolved no-op under jsdom) first.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'discardPolicy', index: 0 },
+    });
+  });
+});
+
 describe('GameScreen — board', () => {
   it('Should show the election tracker', () => {
     const harness = buildHarness({ seated: true });

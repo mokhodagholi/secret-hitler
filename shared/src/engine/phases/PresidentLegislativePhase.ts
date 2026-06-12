@@ -14,8 +14,13 @@ export class PresidentLegislativePhase implements GamePhase {
     const room = this.host.room;
     room.drawnPolicies = room.deck.drawTiles(3);
     this.host.clearSpeaker();
+    this.host.openLegislativeTimer();
     this.host.log('presidentDraws');
     this.host.changed();
+  }
+
+  exit(): void {
+    this.host.closeLegislativeTimer();
   }
 
   handle(playerId: string, command: GameCommand): EngineError | null {
@@ -29,8 +34,18 @@ export class PresidentLegislativePhase implements GamePhase {
     if (command.index < 0 || command.index >= room.drawnPolicies.length) {
       return err('INVALID_ACTION', 'Invalid policy choice.');
     }
+    return this.discardAt(command.index);
+  }
 
-    const [discarded] = room.drawnPolicies.splice(command.index, 1);
+  /** No choice in time — the engine discards a random tile. */
+  timeout(): void {
+    const count = this.host.room.drawnPolicies.length;
+    if (count > 0) this.discardAt(Math.floor(Math.random() * count));
+  }
+
+  private discardAt(index: number): EngineError | null {
+    const room = this.host.room;
+    const [discarded] = room.drawnPolicies.splice(index, 1);
     room.deck.discardTiles([discarded]);
     this.host.transitionTo(Phase.ChancellorLegislative);
     this.host.log('presidentPasses');

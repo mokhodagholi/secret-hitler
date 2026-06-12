@@ -1,4 +1,5 @@
 import {
+  LEGISLATIVE_DURATION_MS,
   Phase,
   SPEAKING_TURN_MS,
   VOTE_DURATION_MS,
@@ -40,6 +41,8 @@ export interface EngineEvents extends Record<string, unknown> {
   speakerChanged: { speakerId: string | null };
   /** Vote window opened (endsAt set) or closed (null); server (un)schedules. */
   voteTimerChanged: { endsAt: number | null };
+  /** Legislative window opened (endsAt set) or closed (null); server (un)schedules. */
+  legislativeTimerChanged: { endsAt: number | null };
 }
 
 /**
@@ -366,6 +369,26 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Server calls this when the vote window elapses. */
   resolveVoteTimeout(): void {
+    this.currentPhase.timeout?.();
+  }
+
+  // --- Legislative timer (PhaseHost) -----------------------------------------
+
+  openLegislativeTimer(): void {
+    const room = this.room;
+    room.legislativeStartedAt = Date.now();
+    room.legislativeEndsAt = room.legislativeStartedAt + LEGISLATIVE_DURATION_MS;
+    this.emit('legislativeTimerChanged', { endsAt: room.legislativeEndsAt });
+  }
+
+  closeLegislativeTimer(): void {
+    this.room.legislativeStartedAt = 0;
+    this.room.legislativeEndsAt = 0;
+    this.emit('legislativeTimerChanged', { endsAt: null });
+  }
+
+  /** Server calls this when a legislator's choice window elapses. */
+  resolveLegislativeTimeout(): void {
     this.currentPhase.timeout?.();
   }
 
