@@ -256,6 +256,34 @@
   text-align: center;
 }
 
+.policyCards {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.policyCard {
+  @include display(0.78rem, 0.08em);
+  @include pressable;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 90px;
+  border-radius: $radius;
+  color: $white;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  text-align: center;
+  padding: 6px;
+}
+
+.policyLiberal {
+  background: linear-gradient(180deg, $blue-liberal, #2f6aa6);
+}
+
+.policyFascist {
+  background: linear-gradient(180deg, $red-bright, $red-deep);
+}
+
 .error {
   @include card;
   border-color: rgba($red-bright, 0.6);

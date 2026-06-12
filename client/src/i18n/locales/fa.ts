@@ -176,6 +176,10 @@ export const fa = {
     drawPile: 'دستهٔ کشیدن',
     discardPile: 'دستهٔ دور ریخته',
     nominateHint: 'شما رئیس‌جمهور هستید — برای معرفی صدراعظم روی یک بازیکن بزنید.',
+    presidentDiscardHint: 'برای دور انداختن، روی یک قانون بزنید',
+    chancellorEnactHint: 'برای تصویب، روی یک قانون بزنید',
+    presidentChoosing: '{name} در حال انتخاب قانون برای دور انداختن است…',
+    chancellorChoosing: '{name} در حال انتخاب قانون برای تصویب است…',
   },
   vote: {
     ja: 'موافق',

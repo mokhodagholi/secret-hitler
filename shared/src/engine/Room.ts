@@ -3,6 +3,7 @@ import {
   type BoardState,
   type GameStateView,
   type Player,
+  type Policy,
   type PublicPlayer,
   type Role,
   type RoomOptions,
@@ -35,6 +36,8 @@ export class Room {
   chancellorId: string | null = null;
   lastEnacted: BoardState['lastEnacted'] = [];
   votes = new Map<string, Vote>();
+  /** Policies in the active legislator's hand (3 President, then 2 Chancellor). */
+  drawnPolicies: Policy[] = [];
   speakerId: string | null = null;
   speakerStartedAt = 0;
   speakerEndsAt = 0;
@@ -134,8 +137,18 @@ export class Room {
         id: viewerId,
         role: viewer?.role ?? null,
         vote: this.votes.get(viewerId) ?? null,
+        policies: this.policiesFor(viewerId),
       },
     };
+  }
+
+  /** The legislative hand a viewer may currently see (President or Chancellor). */
+  private policiesFor(viewerId: string): Policy[] {
+    const isPresidentTurn =
+      this.phase === Phase.PresidentLegislative && viewerId === this.presidentId;
+    const isChancellorTurn =
+      this.phase === Phase.ChancellorLegislative && viewerId === this.chancellorId;
+    return isPresidentTurn || isChancellorTurn ? [...this.drawnPolicies] : [];
   }
 
   summary(): RoomSummary {

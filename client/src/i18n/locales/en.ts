@@ -180,6 +180,10 @@ export const en = {
     discardPile: 'Discard',
     nominateHint:
       'You are the President — tap a player to nominate them as Chancellor.',
+    presidentDiscardHint: 'Tap a policy to discard',
+    chancellorEnactHint: 'Tap a policy to enact',
+    presidentChoosing: '{name} is choosing a policy to discard…',
+    chancellorChoosing: '{name} is choosing a policy to enact…',
   },
   vote: {
     ja: 'Ja',

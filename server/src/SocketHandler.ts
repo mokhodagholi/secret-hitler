@@ -1,7 +1,6 @@
 import type { WebSocket } from 'ws';
 import {
   MessageRouter,
-  Phase,
   SPEAKING_TURN_MS,
   type ClientMessage,
   type EngineError,
@@ -81,22 +80,15 @@ export class SocketHandler {
 
     engine.on('chat', ({ message }) => this.broadcast(room.id, { type: 'chat', message }));
     engine.on('log', ({ entry: e }) => this.broadcast(room.id, { type: 'log', entry: e }));
-    engine.on('gameStarted', () => this.startTurnTimer(room.id));
-    engine.on('gameOver', () => this.stopTurnTimer(room.id));
-  }
-
-  /** Rotate the talking stick every {@link SPEAKING_TURN_MS} while in-game. */
-  private startTurnTimer(roomId: string): void {
-    this.stopTurnTimer(roomId);
-    const timer = setInterval(() => {
-      const entry = this.repo.get(roomId);
-      if (!entry || entry.room.phase === Phase.GameOver) {
-        this.stopTurnTimer(roomId);
-        return;
-      }
-      entry.engine.advanceSpeaker();
-    }, SPEAKING_TURN_MS);
-    this.turnTimers.set(roomId, timer);
+    // Each speaker holds the stick for one window; reschedule on every change.
+    engine.on('speakerChanged', ({ speakerId }) => {
+      this.stopTurnTimer(room.id);
+      if (!speakerId) return;
+      const timer = setTimeout(() => {
+        this.repo.get(room.id)?.engine.advanceSpeaker();
+      }, SPEAKING_TURN_MS);
+      this.turnTimers.set(room.id, timer);
+    });
   }
 
   private stopTurnTimer(roomId: string): void {

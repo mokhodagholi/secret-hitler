@@ -107,6 +107,8 @@ export interface GameStateView {
     id: string;
     role: Role | null;
     vote: Vote | null;
+    /** Policies in your hand if you're the active legislator, else empty. */
+    policies: Policy[];
   };
 }
 

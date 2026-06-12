@@ -29,6 +29,8 @@ export interface EngineEvents extends Record<string, unknown> {
   log: { entry: LogEntry };
   gameStarted: { room: Room };
   gameOver: { room: Room };
+  /** Talking stick moved; the server (re)schedules the turn timer. */
+  speakerChanged: { speakerId: string | null };
 }
 
 /**
@@ -133,7 +135,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     room.electionTracker = 0;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.beginNomination();
-    this.startSpeakingTurnAt(room.presidentId);
 
     this.log('The game has started. Roles have been dealt.');
     this.emit('gameStarted', { room });
@@ -168,8 +169,12 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
         return this.nominateChancellor(playerId, command.targetId);
       case 'castVote':
         return this.castVote(playerId, command.vote);
+      case 'discardPolicy':
+        return this.discardPolicy(playerId, command.index);
+      case 'enactPolicy':
+        return this.enactChosenPolicy(playerId, command.index);
       default:
-        // Legislative / special-power commands are not implemented yet.
+        // Special-power commands are out of scope for now.
         return err('INVALID_ACTION', 'That action is not available yet.');
     }
   }
@@ -227,14 +232,60 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
         this.endGame();
         return;
       }
-      // Legislative session is the next milestone; for now advance the round.
       this.log(`${chancellor.name}'s government takes office.`);
-      this.advanceRound();
+      this.beginLegislative();
     } else {
       room.electionTracker += 1;
       if (room.electionTracker >= 3) this.enactChaosPolicy();
       this.advanceRound();
     }
+  }
+
+  // --- Legislative session -----------------------------------------------
+
+  /** Deal three policies to the President to discard one of. */
+  private beginLegislative(): void {
+    const room = this.room;
+    room.drawnPolicies = room.deck.drawTiles(3);
+    room.phase = Phase.PresidentLegislative;
+    this.setSpeaker(null);
+    this.log('The President draws three policies.');
+    this.changed();
+  }
+
+  private discardPolicy(playerId: string, index: number): EngineError | null {
+    const room = this.room;
+    if (room.phase !== Phase.PresidentLegislative || playerId !== room.presidentId) {
+      return err('INVALID_ACTION', 'You are not discarding a policy.');
+    }
+    if (index < 0 || index >= room.drawnPolicies.length) {
+      return err('INVALID_ACTION', 'Invalid policy choice.');
+    }
+
+    const [discarded] = room.drawnPolicies.splice(index, 1);
+    room.deck.discardTiles([discarded]);
+    room.phase = Phase.ChancellorLegislative;
+    this.log('The President passes two policies to the Chancellor.');
+    this.changed();
+    return null;
+  }
+
+  private enactChosenPolicy(playerId: string, index: number): EngineError | null {
+    const room = this.room;
+    if (room.phase !== Phase.ChancellorLegislative || playerId !== room.chancellorId) {
+      return err('INVALID_ACTION', 'You are not enacting a policy.');
+    }
+    if (index < 0 || index >= room.drawnPolicies.length) {
+      return err('INVALID_ACTION', 'Invalid policy choice.');
+    }
+
+    const [enacted] = room.drawnPolicies.splice(index, 1);
+    room.deck.discardTiles(room.drawnPolicies);
+    room.drawnPolicies = [];
+    this.log(`A ${enacted} policy is enacted.`);
+    this.enactPolicy(enacted);
+    this.advanceRound(); // no-op if the policy ended the game
+    return null;
   }
 
   /** Three failed elections — the top policy is enacted automatically. */
@@ -266,18 +317,19 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     if (this.room.phase === Phase.GameOver) return;
     this.room.presidentId = this.nextPresidentId();
     this.beginNomination();
-    this.changed();
   }
 
+  /** Start a fresh round: discussion (talking stick) opens on the President. */
   private beginNomination(): void {
     this.room.phase = Phase.Nomination;
     this.room.chancellorId = null;
     this.room.votes.clear();
+    this.startSpeakingTurnAt(this.room.presidentId);
   }
 
   private endGame(): void {
     this.room.phase = Phase.GameOver;
-    this.room.speakerId = null;
+    this.setSpeaker(null);
     this.emit('gameOver', { room: this.room });
     this.changed();
   }
@@ -310,12 +362,19 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     this.setSpeaker(next ?? null);
   }
 
-  /** Pass the talking stick to the next eligible player. */
+  /** Pass the talking stick to the next eligible player (discussion only). */
   advanceSpeaker(): void {
+    if (!this.isDiscussionPhase()) return this.setSpeaker(null);
     const eligible = this.speakingEligible();
     if (eligible.length === 0) return this.setSpeaker(null);
     const currentIndex = eligible.findIndex((p) => p.id === this.room.speakerId);
     this.setSpeaker(eligible[(currentIndex + 1) % eligible.length]);
+  }
+
+  private isDiscussionPhase(): boolean {
+    return (
+      this.room.phase === Phase.Nomination || this.room.phase === Phase.Voting
+    );
   }
 
   private setSpeaker(player: Player | null): void {
@@ -323,6 +382,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     room.speakerId = player?.id ?? null;
     room.speakerStartedAt = player ? Date.now() : 0;
     room.speakerEndsAt = player ? room.speakerStartedAt + SPEAKING_TURN_MS : 0;
+    this.emit('speakerChanged', { speakerId: room.speakerId });
     this.changed();
   }
 

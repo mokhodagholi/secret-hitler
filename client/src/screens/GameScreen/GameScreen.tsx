@@ -108,6 +108,24 @@ export function GameScreen() {
     game.sendCommand({ kind: 'castVote', vote });
   }
 
+  const isLegislative = () => {
+    const phase = view()?.phase;
+    return (
+      phase === Phase.PresidentLegislative ||
+      phase === Phase.ChancellorLegislative
+    );
+  };
+  const myPolicies = () => view()?.you.policies ?? [];
+
+  function chooseLegislative(index: number): void {
+    const phase = view()?.phase;
+    if (phase === Phase.PresidentLegislative) {
+      game.sendCommand({ kind: 'discardPolicy', index });
+    } else if (phase === Phase.ChancellorLegislative) {
+      game.sendCommand({ kind: 'enactPolicy', index });
+    }
+  }
+
   /** Seat centre on the table ellipse — seat 0 at the top, clockwise. */
   const seatPosition = (seatIndex: number, seatCount: number) => {
     const angle = -Math.PI / 2 + (2 * Math.PI * seatIndex) / seatCount;
@@ -256,6 +274,50 @@ export function GameScreen() {
                     >
                       {formatMessage('game.voteNein')}
                     </button>
+                  </div>
+                </Show>
+              </div>
+            </Show>
+
+            <Show when={isLegislative()}>
+              <div class={styles.votePanel}>
+                <Show
+                  when={myPolicies().length > 0}
+                  fallback={
+                    <span class={styles.voteWaiting}>
+                      {state().phase === Phase.PresidentLegislative
+                        ? formatMessage('game.presidentChoosing', {
+                            name: playerName(state().board.president),
+                          })
+                        : formatMessage('game.chancellorChoosing', {
+                            name: playerName(state().board.chancellor),
+                          })}
+                    </span>
+                  }
+                >
+                  <span class={styles.votePrompt}>
+                    {formatMessage(
+                      state().phase === Phase.PresidentLegislative
+                        ? 'game.presidentDiscardHint'
+                        : 'game.chancellorEnactHint',
+                    )}
+                  </span>
+                  <div class={styles.policyCards}>
+                    <For each={myPolicies()}>
+                      {(policy, index) => (
+                        <button
+                          type="button"
+                          classList={{
+                            [styles.policyCard]: true,
+                            [styles.policyLiberal]: policy === 'liberal',
+                            [styles.policyFascist]: policy === 'fascist',
+                          }}
+                          onClick={() => chooseLegislative(index())}
+                        >
+                          {formatMessage(`game.${policy}`)}
+                        </button>
+                      )}
+                    </For>
                   </div>
                 </Show>
               </div>
