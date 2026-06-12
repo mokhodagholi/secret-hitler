@@ -11,7 +11,7 @@ describe('WaitingRoomScreen', () => {
     harness.pushState(
       makeView({
         hostId: 'host',
-        you: { id: 'you', role: null, vote: null, policies: [] },
+        you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
         players: [
           makePlayer({ id: 'host', name: 'Ana', seat: 0, isHost: true, ready: true }),
           makePlayer({ id: 'you', name: 'You', seat: 1, ready: false }),
@@ -29,7 +29,7 @@ describe('WaitingRoomScreen', () => {
     harness.pushState(
       makeView({
         hostId: 'host',
-        you: { id: 'you', role: null, vote: null, policies: [] },
+        you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
         players: [
           makePlayer({ id: 'host', name: 'Ana', seat: 0, isHost: true, ready: true }),
           makePlayer({ id: 'you', name: 'You', seat: 1, ready: true }),

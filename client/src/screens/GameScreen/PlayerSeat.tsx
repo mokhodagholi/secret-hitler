@@ -1,6 +1,7 @@
 import { Show } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
+import { useApp } from '../../services/AppContext';
 import styles from './GameScreen.module.scss';
 
 export interface PlayerSeatProps {
@@ -18,6 +19,7 @@ export interface PlayerSeatProps {
 /** One avatar around the oval table: initial, name, badges and role label. */
 export function PlayerSeat(props: PlayerSeatProps) {
   const { formatMessage } = props;
+  const { animation } = useApp();
   return (
     <button
       type="button"
@@ -37,10 +39,20 @@ export function PlayerSeat(props: PlayerSeatProps) {
       <span class={styles.seatAvatar}>
         {props.player.name.slice(0, 1).toUpperCase()}
         <Show when={props.player.isPresident}>
-          <span class={styles.seatBadge}>P</span>
+          <span
+            class={styles.seatBadge}
+            ref={(element) => void animation.play(element, 'badge-pop')}
+          >
+            P
+          </span>
         </Show>
         <Show when={props.player.isChancellor}>
-          <span class={styles.seatBadge}>C</span>
+          <span
+            class={styles.seatBadge}
+            ref={(element) => void animation.play(element, 'badge-pop')}
+          >
+            C
+          </span>
         </Show>
       </span>
       <span class={styles.seatName}>{props.player.name}</span>

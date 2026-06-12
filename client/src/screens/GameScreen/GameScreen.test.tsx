@@ -27,7 +27,7 @@ function votingView() {
       chancellor: 'you',
       lastEnacted: [],
     },
-    you: { id: 'you', role: 'liberal', vote: null, policies: [] },
+    you: { id: 'you', role: 'liberal', vote: null, policies: [], peek: [], investigation: null },
   });
 }
 

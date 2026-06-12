@@ -11,6 +11,7 @@ import { I18nService } from './I18nService';
 import { WebSocketService } from './WebSocketService';
 import { GameStateService } from './GameStateService';
 import { SoundService } from './SoundService';
+import { AnimationService } from './AnimationService';
 
 export interface AppServices {
   nav: NavigationService;
@@ -19,6 +20,7 @@ export interface AppServices {
   socket: WebSocketService;
   game: GameStateService;
   sound: SoundService;
+  animation: AnimationService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -37,6 +39,7 @@ export function AppProvider(
     socket,
     game: overrides.game ?? new GameStateService(socket),
     sound: overrides.sound ?? new SoundService(settings),
+    animation: overrides.animation ?? new AnimationService(settings),
   };
 
   // Keep the document's language and reading direction in sync with the

@@ -1,0 +1,36 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 95; // above the vote overlay (90) — an enactment outranks everything
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.card {
+  display: grid;
+  place-items: center;
+  width: min(220px, 60vw);
+  padding: 38px 22px;
+  border-radius: 14px;
+  border: 2px solid rgba($gold, 0.55);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
+  text-align: center;
+}
+
+.liberal {
+  background: linear-gradient(160deg, $blue-liberal, $navy-700);
+}
+
+.fascist {
+  background: linear-gradient(160deg, $red-bright, $red-deep);
+}
+
+.label {
+  @include display(1rem, 0.18em);
+  color: $white;
+  line-height: 1.6;
+}

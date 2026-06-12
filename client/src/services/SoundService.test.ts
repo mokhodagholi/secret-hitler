@@ -3,7 +3,9 @@ import { SoundService } from './SoundService';
 import { SettingsService } from './SettingsService';
 
 // Spies live on the shared HTMLMediaElement prototype — reset them per test.
-afterEach(() => rs.restoreAllMocks());
+afterEach(() => {
+  rs.restoreAllMocks();
+});
 
 describe('SoundService — effects', () => {
   it('Should play an effect while Sound Effects are on', () => {

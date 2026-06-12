@@ -1,5 +1,6 @@
 import { Show, type JSX } from 'solid-js';
 import { BottomNav, type NavItem } from '../BottomNav/BottomNav';
+import { useApp } from '../../services/AppContext';
 import styles from './Screen.module.scss';
 
 export interface ScreenProps {
@@ -13,6 +14,7 @@ export interface ScreenProps {
  * area and an optional bottom navigation bar.
  */
 export function Screen(props: ScreenProps) {
+  const { animation } = useApp();
   return (
     <div class={styles.shell}>
       <div class={styles.frame} aria-hidden="true" />
@@ -20,7 +22,14 @@ export function Screen(props: ScreenProps) {
       <Corner position="tr" />
       <Corner position="bl" />
       <Corner position="br" />
-      <main class={styles.content}>{props.children}</main>
+      {/* Each navigation mounts a fresh screen — its content rises in while
+          the gold frame stays put. */}
+      <main
+        class={styles.content}
+        ref={(element) => void animation.play(element, 'screen-enter')}
+      >
+        {props.children}
+      </main>
       <Show when={props.nav}>
         <BottomNav items={props.nav!} />
       </Show>

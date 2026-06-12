@@ -101,6 +101,13 @@ export function SettingsScreen() {
         checked={state.soundEffects}
         onChange={(value) => settings.set('soundEffects', value)}
       />
+      <SettingRow
+        kind="toggle"
+        icon="refresh"
+        label={formatMessage('settings.reduceMotion')}
+        checked={state.reduceMotion}
+        onChange={(value) => settings.set('reduceMotion', value)}
+      />
 
       <SectionTitle>{formatMessage('settings.other')}</SectionTitle>
       <SettingRow

@@ -13,6 +13,8 @@ export interface SettingsState {
   language: Language;
   music: boolean;
   soundEffects: boolean;
+  /** Collapse every animation to an instant state change. */
+  reduceMotion: boolean;
 }
 
 const DEFAULTS: SettingsState = {
@@ -25,6 +27,7 @@ const DEFAULTS: SettingsState = {
   language: DEFAULT_LANGUAGE,
   music: true,
   soundEffects: true,
+  reduceMotion: false,
 };
 
 const STORAGE_KEY = 'sh:settings';

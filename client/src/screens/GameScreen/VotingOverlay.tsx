@@ -1,6 +1,7 @@
 import { Show } from 'solid-js';
 import type { Vote } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
+import { useApp } from '../../services/AppContext';
 import styles from './VotingOverlay.module.scss';
 
 export interface VotingOverlayProps {
@@ -23,9 +24,18 @@ export interface VotingOverlayProps {
 /** Full-screen timed Ja/Nein agreement screen shown during the Voting phase. */
 export function VotingOverlay(props: VotingOverlayProps) {
   const { formatMessage } = props;
+  const { animation } = useApp();
   return (
-    <div class={styles.backdrop}>
-      <div class={styles.dialog} role="dialog" aria-modal="true">
+    <div
+      class={styles.backdrop}
+      ref={(element) => void animation.play(element, 'fade-in')}
+    >
+      <div
+        class={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        ref={(element) => void animation.play(element, 'pop-in')}
+      >
         <span class={styles.title}>{formatMessage('game.voteTitle')}</span>
         <p class={styles.prompt}>{props.prompt}</p>
 
