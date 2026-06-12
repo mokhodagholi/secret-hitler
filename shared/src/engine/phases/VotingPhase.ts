@@ -9,8 +9,15 @@ export class VotingPhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
+  /** Open a fresh vote: no talking stick, a countdown runs server-side. */
   enter(): void {
     this.host.room.votes.clear();
+    this.host.clearSpeaker();
+    this.host.openVote();
+  }
+
+  exit(): void {
+    this.host.closeVote();
   }
 
   handle(playerId: string, command: GameCommand): EngineError | null {
@@ -31,6 +38,12 @@ export class VotingPhase implements GamePhase {
   /** A disconnect can shrink the electorate enough to finish the election. */
   presenceChanged(): void {
     this.resolveIfComplete();
+  }
+
+  /** Vote window closed — anyone who didn't vote is counted as Nein. */
+  timeout(): void {
+    if (this.host.room.phase !== Phase.Voting) return;
+    this.resolveElection(this.voters());
   }
 
   /** Living, connected players — the current electorate. */
@@ -59,7 +72,7 @@ export class VotingPhase implements GamePhase {
       room.electionTracker = 0;
       if (room.fascistPolicies >= 3 && chancellor.role === 'hitler') {
         this.host.log(`${chancellor.name} was Hitler — the Fascists win!`);
-        this.host.endGame();
+        this.host.endGame('fascist');
         return;
       }
       this.host.log(`${chancellor.name}'s government takes office.`);

@@ -1,6 +1,7 @@
 import {
   Phase,
   type BoardState,
+  type Faction,
   type GameStateView,
   type Player,
   type Policy,
@@ -35,12 +36,16 @@ export class Room {
   presidentId: string | null = null;
   chancellorId: string | null = null;
   lastEnacted: BoardState['lastEnacted'] = [];
+  /** Winning faction once the game has ended, else null. */
+  winner: Faction | null = null;
   votes = new Map<string, Vote>();
   /** Policies in the active legislator's hand (3 President, then 2 Chancellor). */
   drawnPolicies: Policy[] = [];
   speakerId: string | null = null;
   speakerStartedAt = 0;
   speakerEndsAt = 0;
+  voteStartedAt = 0;
+  voteEndsAt = 0;
 
   constructor(args: {
     id: string;
@@ -129,6 +134,7 @@ export class Room {
       maxPlayers: this.options.maxPlayers,
       players,
       board: this.board(),
+      winner: this.winner,
       speaker: this.speakerId
         ? {
             playerId: this.speakerId,
@@ -136,6 +142,10 @@ export class Room {
             endsAt: this.speakerEndsAt,
           }
         : null,
+      voteDeadline:
+        this.phase === Phase.Voting && this.voteEndsAt > 0
+          ? { startedAt: this.voteStartedAt, endsAt: this.voteEndsAt }
+          : null,
       you: {
         id: viewerId,
         role: viewer?.role ?? null,

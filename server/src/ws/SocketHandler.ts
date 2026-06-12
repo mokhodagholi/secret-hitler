@@ -40,6 +40,8 @@ export class SocketHandler {
   private readonly socketRoom = new WeakMap<WebSocket, string>();
   /** Per-room talking-stick rotation timers. */
   private readonly turnTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room vote-window deadline timers. */
+  private readonly voteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room pending host-migration timers (disconnect grace period). */
   private readonly hostGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly chatLimiter = new RateLimiter(CHAT_LIMIT, CHAT_WINDOW_MS);
@@ -104,6 +106,15 @@ export class SocketHandler {
       }, SPEAKING_TURN_MS);
       this.turnTimers.set(room.id, timer);
     });
+    // The vote window closes on its own; unvoted players default to Nein.
+    engine.on('voteTimerChanged', ({ endsAt }) => {
+      this.stopVoteTimer(room.id);
+      if (endsAt == null) return;
+      const timer = setTimeout(() => {
+        this.repo.get(room.id)?.engine.resolveVoteTimeout();
+      }, Math.max(0, endsAt - Date.now()));
+      this.voteTimers.set(room.id, timer);
+    });
   }
 
   private stopTurnTimer(roomId: string): void {
@@ -111,6 +122,14 @@ export class SocketHandler {
     if (timer) {
       clearTimeout(timer);
       this.turnTimers.delete(roomId);
+    }
+  }
+
+  private stopVoteTimer(roomId: string): void {
+    const timer = this.voteTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.voteTimers.delete(roomId);
     }
   }
 
@@ -183,6 +202,7 @@ export class SocketHandler {
   /** Stop the room's timers, revoke its tokens, and drop it from the repo. */
   private removeRoom(roomId: string): void {
     this.stopTurnTimer(roomId);
+    this.stopVoteTimer(roomId);
     this.cancelHostGrace(roomId);
     this.tokens.revokeRoom(roomId);
     this.repo.remove(roomId);

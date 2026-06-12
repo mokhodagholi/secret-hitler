@@ -6,7 +6,11 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { Phase, type PublicPlayer } from '@secret-hitler/shared';
+import {
+  Phase,
+  VOTE_DURATION_MS,
+  type PublicPlayer,
+} from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
 import { BoardRenderer } from '../../canvas/BoardRenderer';
@@ -14,6 +18,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { PlayerSeat } from './PlayerSeat';
+import { VotingOverlay } from './VotingOverlay';
 import styles from './GameScreen.module.scss';
 
 /**
@@ -101,6 +106,12 @@ export function GameScreen() {
   const voters = () =>
     view()?.players.filter((player) => player.isAlive && player.connected) ?? [];
   const votedCount = () => voters().filter((player) => player.hasVoted).length;
+  const voteSecondsLeft = () => {
+    const deadline = view()?.voteDeadline;
+    return deadline ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000)) : 0;
+  };
+  const voteProgress = () =>
+    Math.max(0, Math.min(1, (voteSecondsLeft() * 1000) / VOTE_DURATION_MS));
 
   function castVote(vote: 'ja' | 'nein'): void {
     game.sendCommand({ kind: 'castVote', vote });
@@ -232,47 +243,19 @@ export function GameScreen() {
             </Show>
 
             <Show when={state().phase === Phase.Voting}>
-              <div class={styles.votePanel}>
-                <span class={styles.votePrompt}>
-                  {formatMessage('game.votePrompt', {
-                    name: playerName(state().board.chancellor),
-                  })}
-                </span>
-                <Show
-                  when={state().you.vote == null && game.you()?.isAlive}
-                  fallback={
-                    <span class={styles.voteWaiting}>
-                      <Show when={state().you.vote}>
-                        {formatMessage('game.youVoted', {
-                          vote: formatMessage(`vote.${state().you.vote!}`),
-                        })}
-                        {' · '}
-                      </Show>
-                      {formatMessage('game.voteProgress', {
-                        count: votedCount(),
-                        total: voters().length,
-                      })}
-                    </span>
-                  }
-                >
-                  <div class={styles.voteButtons}>
-                    <button
-                      type="button"
-                      class={styles.voteJa}
-                      onClick={() => castVote('ja')}
-                    >
-                      {formatMessage('game.voteJa')}
-                    </button>
-                    <button
-                      type="button"
-                      class={styles.voteNein}
-                      onClick={() => castVote('nein')}
-                    >
-                      {formatMessage('game.voteNein')}
-                    </button>
-                  </div>
-                </Show>
-              </div>
+              <VotingOverlay
+                formatMessage={formatMessage}
+                prompt={formatMessage('game.votePrompt', {
+                  name: playerName(state().board.chancellor),
+                })}
+                canVote={state().you.vote == null && !!game.you()?.isAlive}
+                yourVote={state().you.vote}
+                votedCount={votedCount()}
+                totalVoters={voters().length}
+                secondsLeft={voteSecondsLeft()}
+                progress={voteProgress()}
+                onVote={castVote}
+              />
             </Show>
 
             <Show when={isLegislative()}>

@@ -1,4 +1,4 @@
-import type { Phase, Policy } from '../../types/GameState';
+import type { Faction, Phase, Policy } from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import type { Room } from '../../domain/Room';
 import type { EngineError } from '../errors';
@@ -11,9 +11,13 @@ export interface PhaseHost {
   transitionTo(phase: Phase): void;
   enactPolicy(policy: Policy): void;
   advanceRound(): void;
-  endGame(): void;
+  endGame(winner: Faction): void;
   startSpeakingTurnAt(playerId: string | null): void;
   clearSpeaker(): void;
+  /** Open the vote window and schedule its deadline on the server. */
+  openVote(): void;
+  /** Close the vote window (vote resolved) and cancel its deadline. */
+  closeVote(): void;
 }
 
 /**
@@ -27,4 +31,6 @@ export interface GamePhase {
   handle(playerId: string, command: GameCommand): EngineError | null;
   /** A player connected or disconnected — re-evaluate phase conditions. */
   presenceChanged?(): void;
+  /** A scheduled phase deadline elapsed (e.g. the vote window closed). */
+  timeout?(): void;
 }

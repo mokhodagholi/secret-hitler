@@ -65,7 +65,7 @@ describe('GameScreen — voting', () => {
     });
 
     expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
-    expect(screen.getByText(/voted/i)).toBeTruthy();
+    expect(screen.getByText(/waiting for others/i)).toBeTruthy();
   });
 
   it('Should show the role card with the player\'s secret role', () => {

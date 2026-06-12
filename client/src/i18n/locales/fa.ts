@@ -157,6 +157,7 @@ export const fa = {
     speakingNow: '{name} در حال صحبت است',
     secondsLeft: '{seconds} ثانیه',
     chatWaitTurn: 'منتظر نوبت صحبت خود بمانید…',
+    voteTitle: 'رأی‌گیری',
     votePrompt: '{name} به‌عنوان صدراعظم انتخاب شود؟',
     voteJa: 'موافق',
     voteNein: 'مخالف',

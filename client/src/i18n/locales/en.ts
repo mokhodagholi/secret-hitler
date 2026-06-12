@@ -160,6 +160,7 @@ export const en = {
     speakingNow: '{name} is speaking',
     secondsLeft: '{seconds}s',
     chatWaitTurn: 'Wait for your turn to speak…',
+    voteTitle: 'Vote',
     votePrompt: 'Elect {name} as Chancellor?',
     voteJa: 'Ja!',
     voteNein: 'Nein!',

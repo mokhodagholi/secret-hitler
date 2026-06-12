@@ -1,7 +1,9 @@
 import {
   Phase,
   SPEAKING_TURN_MS,
+  VOTE_DURATION_MS,
   type ChatMessage,
+  type Faction,
   type LogEntry,
   type Player,
   type Policy,
@@ -33,6 +35,8 @@ export interface EngineEvents extends Record<string, unknown> {
   gameOver: { room: Room };
   /** Talking stick moved; the server (re)schedules the turn timer. */
   speakerChanged: { speakerId: string | null };
+  /** Vote window opened (endsAt set) or closed (null); server (un)schedules. */
+  voteTimerChanged: { endsAt: number | null };
 }
 
 /**
@@ -177,6 +181,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.electionTracker = 0;
     room.lastEnacted = [];
     room.drawnPolicies = [];
+    room.winner = null;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.transitionTo(Phase.Nomination);
 
@@ -221,10 +226,10 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
     if (room.liberalPolicies >= 5) {
       this.log('Five Liberal policies enacted — the Liberals win!');
-      this.endGame();
+      this.endGame('liberal');
     } else if (room.fascistPolicies >= 6) {
       this.log('Six Fascist policies enacted — the Fascists win!');
-      this.endGame();
+      this.endGame('fascist');
     }
   }
 
@@ -234,7 +239,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.transitionTo(Phase.Nomination);
   }
 
-  endGame(): void {
+  endGame(winner: Faction): void {
+    this.room.winner = winner;
     this.transitionTo(Phase.GameOver);
     this.emit('gameOver', { room: this.room });
     this.changed();
@@ -282,9 +288,27 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   private isDiscussionPhase(): boolean {
-    return (
-      this.room.phase === Phase.Nomination || this.room.phase === Phase.Voting
-    );
+    return this.room.phase === Phase.Nomination;
+  }
+
+  // --- Vote timer (PhaseHost) ------------------------------------------------
+
+  openVote(): void {
+    const room = this.room;
+    room.voteStartedAt = Date.now();
+    room.voteEndsAt = room.voteStartedAt + VOTE_DURATION_MS;
+    this.emit('voteTimerChanged', { endsAt: room.voteEndsAt });
+  }
+
+  closeVote(): void {
+    this.room.voteStartedAt = 0;
+    this.room.voteEndsAt = 0;
+    this.emit('voteTimerChanged', { endsAt: null });
+  }
+
+  /** Server calls this when the vote window elapses. */
+  resolveVoteTimeout(): void {
+    this.currentPhase.timeout?.();
   }
 
   private setSpeaker(player: Player | null): void {

@@ -100,8 +100,12 @@ export interface GameStateView {
   maxPlayers: number;
   players: PublicPlayer[];
   board: BoardState;
+  /** Winning faction once the game is over, else null. */
+  winner: Faction | null;
   /** Whose turn it is to talk, and when their window closes (epoch ms). */
   speaker: { playerId: string; startedAt: number; endsAt: number } | null;
+  /** Active vote window (epoch ms) during the Voting phase, else null. */
+  voteDeadline: { startedAt: number; endsAt: number } | null;
   /** Private data for the recipient only. */
   you: {
     id: string;
@@ -130,5 +134,7 @@ export const MAX_PLAYERS = 10;
 export const SUPPORTED_MIN_PLAYERS = 3;
 /** How long each player holds the talking stick, in ms. */
 export const SPEAKING_TURN_MS = 20_000;
+/** How long the Ja/Nein vote stays open before unvoted players default to Nein. */
+export const VOTE_DURATION_MS = 30_000;
 /** How long a disconnected host keeps the host seat before migration, in ms. */
 export const HOST_MIGRATION_GRACE_MS = 30_000;

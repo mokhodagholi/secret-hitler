@@ -155,7 +155,9 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
       chancellor: null,
       lastEnacted: [],
     },
+    winner: null,
     speaker: null,
+    voteDeadline: null,
     you: { id: 'you', role: null, vote: null, policies: [] },
     ...overrides,
   };
