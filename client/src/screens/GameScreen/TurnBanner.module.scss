@@ -48,35 +48,6 @@
   white-space: nowrap;
 }
 
-.timer {
-  @include display(0.82rem, 0.04em);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: $gold;
-  flex-shrink: 0;
-}
-
-.urgent {
-  color: $red-bright;
-}
-
-.pulse {
-  animation: turn-timer-pulse 0.7s ease-in-out infinite;
-}
-
-@keyframes turn-timer-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.12);
-    opacity: 0.75;
-  }
-}
-
 .endTurn {
   @include display(0.62rem, 0.08em);
   @include pressable;

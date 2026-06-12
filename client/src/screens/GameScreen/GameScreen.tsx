@@ -18,7 +18,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { PolicyBoard } from './PolicyBoard';
-import { RoleBanner } from './RoleBanner';
+import { StatusRow } from './StatusRow';
 import { TurnBanner } from './TurnBanner';
 import { PlayersModal } from './PlayersModal';
 import { GameMenu } from './GameMenu';
@@ -153,13 +153,18 @@ export function GameScreen() {
   const voteProgress = () =>
     Math.max(0, Math.min(1, (voteSecondsLeft() * 1000) / VOTE_DURATION_MS));
 
-  // Discussion countdown for the turn banner — always plain seconds.
-  const speakerSecondsLeft = () => {
-    const current = speaker();
-    return current ? Math.max(0, Math.ceil((current.endsAt - now()) / 1000)) : 0;
-  };
   const speakerPlayer = () =>
     view()?.players.find((player) => player.id === speaker()?.playerId) ?? null;
+
+  // Whichever phase clock is running right now, for the compact status row.
+  const activeDeadline = () =>
+    view()?.voteDeadline ?? view()?.legislativeDeadline ?? speaker();
+  const activeSecondsLeft = () => {
+    const deadline = activeDeadline();
+    return deadline
+      ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000))
+      : null;
+  };
 
   function castVote(vote: 'ja' | 'nein'): void {
     game.sendCommand({ kind: 'castVote', vote });
@@ -252,7 +257,14 @@ export function GameScreen() {
               ref={(element) => (boardElement = element)}
             >
               <Show when={game.role()}>
-                <RoleBanner role={game.role()!} formatMessage={formatMessage} />
+                <StatusRow
+                  role={game.role()!}
+                  playerCount={state().players.length}
+                  maxPlayers={state().maxPlayers}
+                  secondsLeft={activeSecondsLeft()}
+                  onOpenPlayers={() => setPlayersOpen(true)}
+                  formatMessage={formatMessage}
+                />
               </Show>
 
               <Show when={speakerPlayer()}>
@@ -261,7 +273,6 @@ export function GameScreen() {
                     speakerId={player().id}
                     name={player().name}
                     avatar={player().avatar}
-                    secondsLeft={speakerSecondsLeft()}
                     isMyTurn={isMySpeakingTurn()}
                     onEndTurn={endSpeakingTurn}
                     formatMessage={formatMessage}
@@ -269,13 +280,7 @@ export function GameScreen() {
                 )}
               </Show>
 
-              <PolicyBoard
-                board={state().board}
-                playerCount={state().players.length}
-                maxPlayers={state().maxPlayers}
-                formatMessage={formatMessage}
-                onOpenPlayers={() => setPlayersOpen(true)}
-              />
+              <PolicyBoard board={state().board} formatMessage={formatMessage} />
 
               <div class={styles.government}>
                 <div class={styles.governmentCard}>

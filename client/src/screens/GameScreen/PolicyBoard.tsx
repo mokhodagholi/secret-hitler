@@ -8,10 +8,7 @@ import styles from './PolicyBoard.module.scss';
 
 export interface PolicyBoardProps {
   board: BoardState;
-  playerCount: number;
-  maxPlayers: number;
   formatMessage: FormatMessage;
-  onOpenPlayers: () => void;
 }
 
 const LIBERAL_SLOTS = 5;
@@ -32,23 +29,6 @@ export function PolicyBoard(props: PolicyBoardProps) {
           count={props.board.drawPile}
           label={formatMessage('game.drawPile')}
         />
-        <button
-          type="button"
-          class={styles.playersChip}
-          aria-label={formatMessage('game.playersTitle')}
-          onClick={() => props.onOpenPlayers()}
-        >
-          <Icon name="people" size={18} />
-          <span class={styles.playersChipCount}>
-            {formatMessage('waiting.playerCount', {
-              count: props.playerCount,
-              max: props.maxPlayers,
-            })}
-          </span>
-          <span class={styles.playersChipLabel}>
-            {formatMessage('game.players')}
-          </span>
-        </button>
         <CardStack
           count={props.board.discardPile}
           label={formatMessage('game.discardPile')}

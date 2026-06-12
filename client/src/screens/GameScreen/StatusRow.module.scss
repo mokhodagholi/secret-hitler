@@ -1,0 +1,79 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.role,
+.players,
+.timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: $radius-sm;
+  border: 1px solid $line-soft;
+  background: rgba($navy-900, 0.6);
+  min-width: 0;
+}
+
+.role {
+  flex: 1.3;
+}
+
+.roleName {
+  @include display(0.82rem, 0.06em);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liberal {
+  border-color: rgba($blue-liberal, 0.5);
+  color: $blue-liberal;
+}
+
+.fascist {
+  border-color: rgba($red-bright, 0.5);
+  color: $red-bright;
+}
+
+.players {
+  @include display(0.8rem, 0.04em);
+  @include pressable;
+  flex: 1;
+  color: $gold;
+  border-color: rgba($gold, 0.4);
+}
+
+.timer {
+  @include display(0.8rem, 0.04em);
+  flex: 1;
+  color: $gold;
+  border-color: rgba($gold, 0.4);
+}
+
+.urgent {
+  color: $red-bright;
+  border-color: rgba($red-bright, 0.6);
+}
+
+.pulse {
+  animation: status-timer-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes status-timer-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.75;
+  }
+}

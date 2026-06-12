@@ -13,9 +13,9 @@
 
 .piles {
   display: flex;
-  gap: 12px;
+  gap: 36px;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .stack {
@@ -54,28 +54,6 @@
 
 .stackLabel {
   @include display(0.56rem, 0.12em);
-  color: $text-dim;
-}
-
-.playersChip {
-  @include pressable;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 12px;
-  border-radius: $radius;
-  border: 1px solid rgba($gold, 0.45);
-  background: rgba($navy-900, 0.6);
-  color: $gold;
-}
-
-.playersChipCount {
-  @include display(0.95rem, 0.04em);
-}
-
-.playersChipLabel {
-  @include display(0.54rem, 0.14em);
   color: $text-dim;
 }
 

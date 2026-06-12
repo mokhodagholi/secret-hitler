@@ -2,7 +2,6 @@ import { Show, createEffect, on } from 'solid-js';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import { avatarImage } from '../../assets/avatars';
-import { Icon } from '../../components/Icon/Icon';
 import styles from './TurnBanner.module.scss';
 
 export interface TurnBannerProps {
@@ -10,7 +9,6 @@ export interface TurnBannerProps {
   speakerId: string;
   name: string;
   avatar: number;
-  secondsLeft: number;
   isMyTurn: boolean;
   onEndTurn: () => void;
   formatMessage: FormatMessage;
@@ -43,16 +41,6 @@ export function TurnBanner(props: TurnBannerProps) {
         <span class={styles.label}>{formatMessage('game.currentTurn')}</span>
         <span class={styles.name}>{props.name}</span>
       </div>
-      <span
-        classList={{
-          [styles.timer]: true,
-          [styles.urgent]: props.secondsLeft <= 4,
-          [styles.pulse]: props.secondsLeft <= 4 && animation.motionEnabled(),
-        }}
-      >
-        <Icon name="clock" size={14} />
-        {formatMessage('game.secondsLeft', { seconds: props.secondsLeft })}
-      </span>
       <Show when={props.isMyTurn}>
         <button
           type="button"

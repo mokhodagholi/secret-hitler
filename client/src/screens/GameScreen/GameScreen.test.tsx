@@ -72,14 +72,14 @@ describe('GameScreen — voting', () => {
     expect(screen.getByText(/waiting for others/i)).toBeTruthy();
   });
 
-  it('Should show the role banner with the player\'s secret role', () => {
+  it('Should show the status row with the player\'s secret role', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
     harness.socket.emit({ type: 'private', role: 'liberal' });
 
     expect(
-      screen.getByText(en.game.youAreRole.replace('{role}', en.role.liberal)),
+      screen.getByLabelText(en.game.youAreRole.replace('{role}', en.role.liberal)),
     ).toBeTruthy();
   });
 });
