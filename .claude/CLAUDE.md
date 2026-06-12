@@ -41,7 +41,7 @@ All project documentation and coding rules live in [`docs/`](../docs/) — read 
 - **Fastify** — HTTP server (room creation, join endpoints)
 - **ws** — raw WebSocket server (no Socket.IO)
 - **mediasoup** — WebRTC SFU for voice routing (not peer-to-peer mesh)
-- **PostgreSQL + Drizzle ORM** (`drizzle-orm` over `pg`) — persists finished games only (`games` + `game_players`). Optional: gated on `DATABASE_URL`. Local Postgres via `docker-compose.yml`; migrations via `drizzle-kit` (`server/drizzle/`).
+- **PostgreSQL + Drizzle ORM** (`drizzle-orm` over `pg`) — persists finished games only (`games` + `game_players`). **Required**: the server refuses to start without `DATABASE_URL`. Local Postgres via `docker-compose.yml`; migrations via `drizzle-kit` (`server/drizzle/`).
 - Built with **tsx** in dev, compiled with **tsc** for production
 
 ## Architecture Style
@@ -159,7 +159,7 @@ Each special power (investigate, peek, special election, execute) is a `SpecialP
 - **Server is single source of truth.** Client never mutates local state directly — it sends Commands, server validates + applies them via `GameEngine`, broadcasts new `GameState` to all clients.
 - **State updates are full state broadcasts**, not diffs, to keep client logic simple.
 - **Live game state stays in memory.** Active rooms live in `RoomRepository`; the database is only for *finished* games (history → Phase 2 profiles/ELO). Never round-trip the DB mid-round. Add Redis only if multi-instance scaling is ever needed.
-- **Persistence is optional and decoupled.** The server depends on the `GameHistoryStore` interface, not Postgres. With no `DATABASE_URL` the store is omitted and the game runs unpersisted — every test builds the server this way. `GameResultRecorder` listens for the engine's `gameOver` event and writes through the store; a failed write is logged, never thrown.
+- **Persistence is required but decoupled.** The running server refuses to start without `DATABASE_URL`. Internally the server depends on the `GameHistoryStore` interface, not Postgres directly, and always holds a store — production injects the Postgres-backed one, tests inject `InMemoryGameHistoryStore`. `GameResultRecorder` listens for the engine's `gameOver` event and writes through the store; a failed write is logged, never thrown.
 - **Animations run on `transform` and `opacity` only** — compositor-thread only, never trigger layout or paint.
 - **One class, one responsibility.** If a class needs a comment to explain what it does, split it.
 
@@ -520,9 +520,9 @@ pnpm build         # all in order
 pnpm test                 # build shared, then run all package suites
 pnpm --filter shared test # one package
 
-# Database (optional — only needed to persist finished games)
+# Database (required — the server won't start without it)
 docker compose up -d                              # start local Postgres
-cp .env.example .env                              # then set DATABASE_URL
+cp .env.example .env                              # DATABASE_URL must be set
 pnpm --filter @secret-hitler/server db:generate   # SQL migration from schema.ts
 pnpm --filter @secret-hitler/server db:migrate    # apply migrations
 pnpm --filter @secret-hitler/server db:studio     # browse data in Drizzle Studio

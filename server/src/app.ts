@@ -9,6 +9,7 @@ import { SocketHandler } from './ws/SocketHandler';
 import { registerRoutes } from './http/routes';
 import { GameResultRecorder } from './history/GameResultRecorder';
 import type { GameHistoryStore } from './history/GameHistoryStore';
+import { InMemoryGameHistoryStore } from './history/InMemoryGameHistoryStore';
 
 const WS_PATH = '/ws';
 
@@ -16,7 +17,11 @@ export interface ServerOptions {
   /** Server-wide start minimum (env override in dev). */
   minPlayers?: number;
   logger?: boolean;
-  /** Persists finished games. Omitted (no `DATABASE_URL`) → nothing is stored. */
+  /**
+   * Store for finished games. The production entrypoint always supplies a
+   * Postgres-backed one (DATABASE_URL is required there); tests and embeddings
+   * default to an in-memory store. The server never runs without a store.
+   */
   history?: GameHistoryStore;
 }
 
@@ -38,10 +43,11 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   const repo = new RoomRepository(options.minPlayers);
   const tokens = new TokenStore();
   const sockets = new SocketHandler(repo, tokens);
-  const recorder = options.history ? new GameResultRecorder(options.history) : undefined;
+  const history = options.history ?? new InMemoryGameHistoryStore();
+  const recorder = new GameResultRecorder(history);
 
   app.get('/health', async () => ({ status: 'ok', shared: SHARED_VERSION }));
-  registerRoutes(app, { repo, tokens, sockets, recorder, history: options.history });
+  registerRoutes(app, { repo, tokens, sockets, recorder, history });
 
   await app.ready();
 

@@ -27,8 +27,9 @@ export interface SavedGame extends GameRecord {
 
 /**
  * Persistence boundary for finished games. The server depends only on this
- * interface, so the Postgres-backed implementation can be swapped or omitted
- * (no `DATABASE_URL` → no store) without touching the game flow.
+ * interface, so the Postgres-backed implementation can be swapped for the
+ * in-memory one (tests) without touching the game flow. A store is always
+ * present — production requires Postgres via `DATABASE_URL`.
  */
 export interface GameHistoryStore {
   saveGame(record: GameRecord): Promise<void>;

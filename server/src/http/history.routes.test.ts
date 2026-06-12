@@ -25,7 +25,7 @@ function stubHistory(recent: SavedGame[]): GameHistoryStore {
 }
 
 describe('history HTTP endpoint', () => {
-  it('Should return an empty list when no database is configured', async () => {
+  it('Should return an empty list before any games are recorded', async () => {
     const { app } = await buildServer();
     const { status, body } = await httpJson<SavedGame[]>(app, 'GET', '/api/history');
 

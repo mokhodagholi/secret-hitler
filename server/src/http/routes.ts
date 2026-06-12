@@ -17,10 +17,10 @@ export interface RouteDeps {
   repo: RoomRepository;
   tokens: TokenStore;
   sockets: SocketHandler;
-  /** Persists finished games, when a database is configured. */
-  recorder?: GameResultRecorder;
-  /** Reads finished games for the history endpoint, when configured. */
-  history?: GameHistoryStore;
+  /** Persists finished games. */
+  recorder: GameResultRecorder;
+  /** Reads finished games for the history endpoint. */
+  history: GameHistoryStore;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -59,7 +59,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       confirmActions: body.options?.confirmActions,
     });
     sockets.registerEngine(entry);
-    recorder?.attach(entry);
+    recorder.attach(entry);
 
     const host = entry.engine.addPlayer(body.hostName, true);
     if ('code' in host) {
@@ -80,9 +80,8 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   // List public, joinable rooms.
   app.get('/api/rooms', async () => repo.listPublic());
 
-  // Recent finished games. 404-free: returns an empty list when no DB is set.
+  // Recent finished games.
   app.get('/api/history', async (req) => {
-    if (!history) return [];
     const limit = Number((req.query as { limit?: string }).limit) || undefined;
     return history.listRecent(limit);
   });
