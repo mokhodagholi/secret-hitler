@@ -1,0 +1,85 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: $gold;
+}
+
+.secret {
+  @include display(0.95rem, 0.45em);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  // shift right slightly so wide letter-spacing stays visually centered
+  margin-right: -0.45em;
+
+  &::before,
+  &::after {
+    content: '';
+    width: 30px;
+    height: 2px;
+    background: $gold;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hitler {
+  font-family: $font-display;
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.wing {
+  width: 34px;
+  height: 22px;
+}
+
+.flipped {
+  transform: scaleX(-1);
+}
+
+.star {
+  margin-top: 2px;
+}
+
+.tagline {
+  @include display(0.78rem, 0.18em);
+  margin-top: 14px;
+  color: $red-bright;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.large {
+  .secret {
+    @include display(1.2rem, 0.5em);
+    margin-right: -0.5em;
+
+    &::before,
+    &::after {
+      width: 38px;
+    }
+  }
+
+  .hitler {
+    font-size: 3.4rem;
+  }
+
+  .wing {
+    width: 46px;
+    height: 30px;
+  }
+}

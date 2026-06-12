@@ -1,0 +1,45 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.row {
+  @include card;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.tappable {
+  @include pressable;
+  cursor: pointer;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  color: $gold;
+  flex-shrink: 0;
+}
+
+.label {
+  @include display(0.82rem, 0.1em);
+  color: $text-light;
+  flex: 1;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.value {
+  @include display(0.78rem, 0.08em);
+  color: $text-dim;
+}
+
+.chevron {
+  color: $gold;
+}

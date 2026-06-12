@@ -1,0 +1,20 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.title {
+  @include display(0.95rem, 0.18em);
+  color: $gold;
+  margin: 22px 0 12px;
+}
+
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.star {
+  color: $gold;
+}

@@ -1,0 +1,61 @@
+@use '../../styles/vars' as *;
+
+.shell {
+  position: relative;
+  height: 100dvh;
+  max-width: $shell-max-width;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, $navy-850 0%, $navy-900 45%, $navy-950 100%);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.frame {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba($gold, 0.28);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  color: $gold;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.tl {
+  top: 4px;
+  left: 4px;
+}
+
+.tr {
+  top: 4px;
+  right: 4px;
+  transform: scaleX(-1);
+}
+
+.bl {
+  bottom: 4px;
+  left: 4px;
+  transform: scaleY(-1);
+}
+
+.br {
+  bottom: 4px;
+  right: 4px;
+  transform: scale(-1);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 20px ($nav-height + 40px);
+  scrollbar-width: thin;
+}
