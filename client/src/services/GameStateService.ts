@@ -70,7 +70,10 @@ export class GameStateService {
   private readonly setLastError: Setter<ServerError | null>;
   private readonly setRoomClosedNotice: Setter<RoomClosedReason | null>;
 
-  private session: RoomSession | null = null;
+  // A signal so screens can react to entering/leaving a room (e.g. the play
+  // flow redirects back into the active room instead of seating a new player).
+  private readonly session: Accessor<RoomSession | null>;
+  private readonly setSession: Setter<RoomSession | null>;
 
   constructor(private readonly socket: WebSocketService) {
     const [view, setView] = createSignal<GameStateView | null>(null);
@@ -80,6 +83,9 @@ export class GameStateService {
     const [lastError, setLastError] = createSignal<ServerError | null>(null);
     const [roomClosedNotice, setRoomClosedNotice] =
       createSignal<RoomClosedReason | null>(null);
+    const [session, setSession] = createSignal<RoomSession | null>(null);
+    this.session = session;
+    this.setSession = setSession;
     this.view = view;
     this.setView = setView;
     this.role = role;
@@ -121,12 +127,13 @@ export class GameStateService {
     );
   }
 
+  /** Reactive — true while this client holds a seat in a room. */
   inRoom(): boolean {
-    return this.session != null;
+    return this.session() != null;
   }
 
   currentSession(): RoomSession | null {
-    return this.session;
+    return this.session();
   }
 
   clearError(): void {
@@ -188,7 +195,7 @@ export class GameStateService {
   leaveRoom(): void {
     this.socket.send({ type: 'room:leave' });
     this.socket.disconnect();
-    this.session = null;
+    this.setSession(null);
     sessionStorage.removeItem(SESSION_KEY);
     this.setView(null);
     this.setRole(null);
@@ -200,7 +207,7 @@ export class GameStateService {
   // --- Internals -----------------------------------------------------------
 
   private beginSession(session: RoomSession): RoomSession {
-    this.session = session;
+    this.setSession(session);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     this.setChatMessages([]);
     this.setLogEntries([]);
@@ -213,8 +220,9 @@ export class GameStateService {
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (!raw) return;
-      this.session = JSON.parse(raw) as RoomSession;
-      this.socket.connect(this.session.token);
+      const restored = JSON.parse(raw) as RoomSession;
+      this.setSession(restored);
+      this.socket.connect(restored.token);
     } catch {
       sessionStorage.removeItem(SESSION_KEY);
     }
@@ -242,7 +250,7 @@ export class GameStateService {
       case 'room:closed':
         // The leaving host may catch its own broadcast — only players still
         // holding a session were actually kicked.
-        if (this.session) {
+        if (this.session()) {
           this.setRoomClosedNotice(message.reason);
           this.leaveRoom();
         }

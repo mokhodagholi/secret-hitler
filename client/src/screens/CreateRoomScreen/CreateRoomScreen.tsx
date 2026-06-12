@@ -1,4 +1,5 @@
-import { Show, createSignal } from 'solid-js';
+import { Show, createEffect, createSignal } from 'solid-js';
+import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { RoomApiError } from '../../services/GameStateService';
 import type { MessageKey } from '../../i18n';
@@ -21,6 +22,14 @@ export function CreateRoomScreen() {
   const [hostName, setHostName] = createSignal(settings.settings.profileName);
   const [submitting, setSubmitting] = createSignal(false);
   const [errorKey, setErrorKey] = createSignal<MessageKey | null>(null);
+
+  // Already seated in a room (e.g. navigated back) — return to it instead of
+  // letting the same person join again as a brand-new player.
+  createEffect(() => {
+    if (!game.inRoom()) return;
+    const phase = game.view()?.phase;
+    nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
+  });
 
   const canSubmit = () =>
     roomName().trim().length > 0 && hostName().trim().length > 0 && !submitting();

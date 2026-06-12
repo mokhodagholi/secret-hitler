@@ -1,4 +1,4 @@
-import { For, Show, createResource, createSignal } from 'solid-js';
+import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { RoomApiError } from '../../services/GameStateService';
@@ -25,6 +25,14 @@ export function JoinGameScreen() {
   const [password, setPassword] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
   const [errorKey, setErrorKey] = createSignal<MessageKey | null>(null);
+
+  // Already seated in a room (e.g. navigated back) — return to it instead of
+  // letting the same person join again as a brand-new player.
+  createEffect(() => {
+    if (!game.inRoom()) return;
+    const phase = game.view()?.phase;
+    nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
+  });
 
   const selectedRoom = (): RoomSummary | null =>
     rooms()?.find((room) => room.id === selectedRoomId()) ?? null;

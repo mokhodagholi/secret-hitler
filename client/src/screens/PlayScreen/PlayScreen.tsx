@@ -1,4 +1,5 @@
-import { For } from 'solid-js';
+import { For, createEffect } from 'solid-js';
+import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { ScreenName } from '../../services/NavigationService';
 import type { MessageKey } from '../../i18n';
@@ -31,8 +32,16 @@ const PLAY_OPTIONS: PlayOption[] = [
 
 /** "Choose an Option" — entry to the play flow: Create Room or Join Game. */
 export function PlayScreen() {
-  const { nav, i18n } = useApp();
+  const { nav, game, i18n } = useApp();
   const { formatMessage } = i18n;
+
+  // Already seated in a room (e.g. navigated back) — return to it instead of
+  // letting the same person join again as a brand-new player.
+  createEffect(() => {
+    if (!game.inRoom()) return;
+    const phase = game.view()?.phase;
+    nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
+  });
 
   return (
     <Screen>
