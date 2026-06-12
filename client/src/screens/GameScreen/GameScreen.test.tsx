@@ -107,6 +107,20 @@ describe('GameScreen — nomination', () => {
     });
   });
 
+  it('Should notify the table when a government fails', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const base = votingView();
+    harness.pushState(base);
+    harness.pushState({
+      ...base,
+      phase: Phase.Nomination,
+      board: { ...base.board, electionTracker: 1 },
+    });
+
+    expect(screen.getByText(/election tracker is now 1 of 3/i)).toBeTruthy();
+  });
+
   it('Should end the round from the nomination modal', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);

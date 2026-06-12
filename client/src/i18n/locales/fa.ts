@@ -199,6 +199,8 @@ export const fa = {
     nominateTitle: 'یک صدراعظم نامزد کنید',
     nominateWaiting: 'در انتظار نامزدی صدراعظم توسط {name}…',
     endRound: 'پایان دور',
+    electionFailed:
+      'دولت تأیید نشد. شمارندهٔ انتخابات اکنون {count} از ۳ است — دور جدیدی آغاز می‌شود.',
     infoTitle: 'اطلاعات بازی',
     status: 'وضعیت',
     none: '—',

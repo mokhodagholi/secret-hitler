@@ -82,6 +82,8 @@ export function GameScreen() {
   // the policy total grew within the same room. (lastEnacted caps at 5 entries,
   // so its length is not a reliable counter.)
   const [revealedPolicy, setRevealedPolicy] = createSignal<Policy | null>(null);
+  // Set to the new tracker count when a government fails, for the notice dialog.
+  const [electionFailedAt, setElectionFailedAt] = createSignal<number | null>(null);
   let revealCard: HTMLDivElement | undefined;
   let seenPolicyTotal: number | null = null;
   let seenElectionTracker: number | null = null;
@@ -110,8 +112,12 @@ export function GameScreen() {
     seenElectionTracker = tracker;
     const latest = state.board.lastEnacted[state.board.lastEnacted.length - 1];
     if (total > previousTotal && latest) revealEnactedPolicy(latest);
-    // A failed election jolts the board (a reset to 0 is not a failure).
-    if (tracker > previousTracker) void animation.play(boardElement, 'shake');
+    // A failed government jolts the board and raises a notice (a reset to 0 is
+    // chaos, not a failure).
+    if (tracker > previousTracker) {
+      void animation.play(boardElement, 'shake');
+      setElectionFailedAt(tracker);
+    }
   });
 
   function revealEnactedPolicy(policy: Policy): void {
@@ -581,6 +587,15 @@ export function GameScreen() {
               cancelLabel={formatMessage('common.cancel')}
               onConfirm={leaveRoom}
               onCancel={() => setConfirmingLeave(false)}
+            />
+
+            <ConfirmDialog
+              open={electionFailedAt() != null}
+              message={formatMessage('game.electionFailed', {
+                count: electionFailedAt() ?? 0,
+              })}
+              confirmLabel={formatMessage('common.ok')}
+              onConfirm={() => setElectionFailedAt(null)}
             />
 
             <Show when={state().phase === Phase.GameOver && state().winner}>

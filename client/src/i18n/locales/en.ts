@@ -202,6 +202,8 @@ export const en = {
     nominateTitle: 'Nominate a Chancellor',
     nominateWaiting: 'Waiting for {name} to nominate a Chancellor…',
     endRound: 'End Round',
+    electionFailed:
+      'The government was not approved. The election tracker is now {count} of 3 — a new round begins.',
     infoTitle: 'Game Info',
     status: 'Status',
     none: '—',
