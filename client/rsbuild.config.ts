@@ -1,9 +1,19 @@
 import { defineConfig } from '@rsbuild/core';
+import { pluginBabel } from '@rsbuild/plugin-babel';
 import { pluginSass } from '@rsbuild/plugin-sass';
 import { pluginSolid } from '@rsbuild/plugin-solid';
 
 export default defineConfig({
-  plugins: [pluginSolid(), pluginSass()],
+  // pluginSolid only injects babel-preset-solid into pluginBabel — without
+  // pluginBabel registered, rsbuild's default SWC transform compiles JSX to
+  // React.createElement instead of Solid's DOM templates.
+  plugins: [
+    pluginBabel({
+      include: /\.(?:jsx|tsx)$/,
+    }),
+    pluginSolid(),
+    pluginSass(),
+  ],
   html: {
     template: './index.html',
   },
