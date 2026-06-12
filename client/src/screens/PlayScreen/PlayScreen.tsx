@@ -1,4 +1,4 @@
-import { For, createEffect } from 'solid-js';
+import { For } from 'solid-js';
 import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { ScreenName } from '../../services/NavigationService';
@@ -35,13 +35,18 @@ export function PlayScreen() {
   const { nav, game, i18n } = useApp();
   const { formatMessage } = i18n;
 
-  // Already seated in a room (e.g. navigated back) — return to it instead of
-  // letting the same person join again as a brand-new player.
-  createEffect(() => {
-    if (!game.inRoom()) return;
-    const phase = game.view()?.phase;
-    nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
-  });
+  /**
+   * Browsing here while still seated is fine — but picking either option
+   * returns to the room already held instead of seating a new player.
+   */
+  function openOption(option: PlayOption): void {
+    if (game.inRoom()) {
+      const phase = game.view()?.phase;
+      nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
+      return;
+    }
+    nav.navigate(option.screen);
+  }
 
   return (
     <Screen>
@@ -66,7 +71,7 @@ export function PlayScreen() {
             <button
               type="button"
               class={styles.option}
-              onClick={() => nav.navigate(option.screen)}
+              onClick={() => openOption(option)}
             >
               <span class={styles.optionIcon}>
                 <Icon name={option.icon} size={34} />
