@@ -2,6 +2,8 @@ import type { Role } from '../types/GameState';
 
 /** Standard Secret Hitler role counts keyed by player count (5–10). */
 const FASCIST_COUNT: Record<number, number> = {
+  3: 1,
+  4: 1,
   5: 1,
   6: 1,
   7: 2,

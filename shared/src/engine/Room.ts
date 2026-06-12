@@ -113,6 +113,7 @@ export class Room {
       name: this.options.name,
       phase: this.phase,
       hostId: this.hostId,
+      minPlayers: this.options.minPlayers,
       maxPlayers: this.options.maxPlayers,
       players,
       board: this.board(),

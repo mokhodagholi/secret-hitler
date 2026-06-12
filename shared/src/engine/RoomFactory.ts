@@ -1,10 +1,17 @@
-import { MAX_PLAYERS, MIN_PLAYERS, type RoomOptions } from '../types/GameState';
+import {
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  SUPPORTED_MIN_PLAYERS,
+  type RoomOptions,
+} from '../types/GameState';
 import { makeId, makeRoomCode } from './ids';
 import { Room } from './Room';
 
 export interface RoomCreateArgs {
   name: string;
   passwordHash?: string | null;
+  /** Effective start minimum (server policy); defaults to standard. */
+  minPlayers?: number;
   maxPlayers?: number;
   showRoles?: boolean;
   timerEnabled?: boolean;
@@ -14,10 +21,16 @@ export interface RoomCreateArgs {
 /** Creates {@link Room} instances with validated defaults. */
 export class RoomFactory {
   static create(args: RoomCreateArgs): Room {
-    const maxPlayers = clamp(args.maxPlayers ?? MAX_PLAYERS, MIN_PLAYERS, MAX_PLAYERS);
+    const minPlayers = clamp(
+      args.minPlayers ?? MIN_PLAYERS,
+      SUPPORTED_MIN_PLAYERS,
+      MAX_PLAYERS,
+    );
+    const maxPlayers = clamp(args.maxPlayers ?? MAX_PLAYERS, minPlayers, MAX_PLAYERS);
     const options: RoomOptions = {
       name: args.name.trim() || 'Untitled Room',
       hasPassword: args.passwordHash != null,
+      minPlayers,
       maxPlayers,
       showRoles: args.showRoles ?? false,
       timerEnabled: args.timerEnabled ?? false,

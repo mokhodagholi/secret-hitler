@@ -1,5 +1,4 @@
 import {
-  MIN_PLAYERS,
   Phase,
   type ChatMessage,
   type LogEntry,
@@ -106,7 +105,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     const connected = this.room.players.filter((p) => p.connected);
     return (
       this.room.phase === Phase.Lobby &&
-      connected.length >= MIN_PLAYERS &&
+      connected.length >= this.room.options.minPlayers &&
       connected.every((p) => p.ready)
     );
   }
@@ -117,8 +116,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
       return err('NOT_HOST', 'Only the host can start the game.');
     }
     const players = room.players.filter((p) => p.connected);
-    if (players.length < MIN_PLAYERS) {
-      return err('NOT_ENOUGH_PLAYERS', `Need at least ${MIN_PLAYERS} players.`);
+    if (players.length < room.options.minPlayers) {
+      return err(
+        'NOT_ENOUGH_PLAYERS',
+        `Need at least ${room.options.minPlayers} players.`,
+      );
     }
 
     this.dealRoles(players);

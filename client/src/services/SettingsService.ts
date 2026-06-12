@@ -1,4 +1,5 @@
 import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
+import { MAX_PLAYERS, MIN_PLAYERS } from '@secret-hitler/shared';
 import { DEFAULT_LANGUAGE, type Language } from '../i18n';
 
 export interface SettingsState {
@@ -29,12 +30,7 @@ const DEFAULTS: SettingsState = {
 const STORAGE_KEY = 'sh:settings';
 const TUTORIALS_KEY = 'sh:tutorials';
 
-const MIN_PLAYERS = 5;
-const MAX_PLAYERS = 10;
-
-/**
- * Holds user-facing settings as a Solid store, persisted to localStorage.
- */
+/** User-facing settings as a Solid store, persisted to localStorage. */
 export class SettingsService {
   readonly settings: Store<SettingsState>;
   private readonly update: SetStoreFunction<SettingsState>;

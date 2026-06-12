@@ -10,9 +10,11 @@ Project coding conventions and rules live in the [`.agents/`](.agents/) director
 
 - [`.agents/rules/naming.md`](.agents/rules/naming.md) — use descriptive names, not 1–2 character abbreviations.
 - [`.agents/rules/commit-messages.md`](.agents/rules/commit-messages.md) — Conventional Commits with a capitalized subject.
+- [`.agents/rules/comments.md`](.agents/rules/comments.md) — concise comments; explain why, not what.
 
 @.agents/rules/naming.md
 @.agents/rules/commit-messages.md
+@.agents/rules/comments.md
 
 ## Tech Stack
 

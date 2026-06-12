@@ -9,8 +9,14 @@ export class RoomRepository {
   private readonly rooms = new Map<string, RoomEntry>();
   private readonly byCode = new Map<string, string>();
 
+  /** @param defaultMinPlayers server-wide start minimum (env override in dev). */
+  constructor(private readonly defaultMinPlayers?: number) {}
+
   create(args: RoomCreateArgs): RoomEntry {
-    const room = RoomFactory.create(args);
+    const room = RoomFactory.create({
+      minPlayers: this.defaultMinPlayers,
+      ...args,
+    });
     const entry: RoomEntry = { room, engine: new GameEngine(room) };
     this.rooms.set(room.id, entry);
     this.byCode.set(room.code, room.id);

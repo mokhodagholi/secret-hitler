@@ -23,6 +23,8 @@ export enum Phase {
 export interface RoomOptions {
   name: string;
   hasPassword: boolean;
+  /** Min players to start. Standard 5; a dev server may lower it. */
+  minPlayers: number;
   maxPlayers: number;
   showRoles: boolean;
   timerEnabled: boolean;
@@ -92,6 +94,7 @@ export interface GameStateView {
   name: string;
   phase: Phase;
   hostId: string;
+  minPlayers: number;
   maxPlayers: number;
   players: PublicPlayer[];
   board: BoardState;
@@ -113,5 +116,8 @@ export interface RoomSummary {
   phase: Phase;
 }
 
+/** Standard minimum for real games; dev servers may lower the effective value. */
 export const MIN_PLAYERS = 5;
 export const MAX_PLAYERS = 10;
+/** Lowest count the role distribution supports — the dev floor. */
+export const SUPPORTED_MIN_PLAYERS = 3;

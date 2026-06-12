@@ -15,7 +15,9 @@ async function main() {
   const app = Fastify({ logger: true });
 
   // --- Composition root: wire the singletons together. -------------------
-  const repo = new RoomRepository();
+  // MIN_PLAYERS env lowers the start minimum for dev; unset = standard rules.
+  const minPlayers = Number(process.env.MIN_PLAYERS) || undefined;
+  const repo = new RoomRepository(minPlayers);
   const tokens = new TokenStore();
   const sockets = new SocketHandler(repo, tokens);
 

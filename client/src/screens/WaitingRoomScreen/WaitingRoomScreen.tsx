@@ -6,7 +6,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { MIN_PLAYERS, Phase, type GameStateView } from '@secret-hitler/shared';
+import { Phase, type GameStateView } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { MessageKey } from '../../i18n';
 import { Button } from '../../components/Button/Button';
@@ -35,8 +35,10 @@ export function WaitingRoomScreen() {
   const shareLink = () =>
     game.currentSession()?.shareLink ??
     `${location.origin}/join/${view()?.code ?? ''}`;
-  const missingCount = () =>
-    Math.max(0, MIN_PLAYERS - (view()?.players.length ?? 0));
+  const missingCount = () => {
+    const state = view();
+    return state ? Math.max(0, state.minPlayers - state.players.length) : 0;
+  };
 
   // Session dropped (left room / token expired) → back to the play menu.
   createEffect(() => {

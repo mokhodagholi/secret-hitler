@@ -1,6 +1,5 @@
 import { createSignal, type Accessor, type Setter } from 'solid-js';
 import {
-  MIN_PLAYERS,
   Phase,
   type ChatMessage,
   type CreateRoomRequest,
@@ -117,13 +116,14 @@ export class GameStateService {
     return state != null && state.hostId === state.you.id;
   }
 
-  /** Client-side mirror of the server's start conditions (server re-checks). */
+  /** Client mirror of the server's start conditions (server re-checks). */
   canStart(): boolean {
     const state = this.view();
     if (!state || state.phase !== Phase.Lobby) return false;
     const connected = state.players.filter((player) => player.connected);
     return (
-      connected.length >= MIN_PLAYERS && connected.every((player) => player.ready)
+      connected.length >= state.minPlayers &&
+      connected.every((player) => player.ready)
     );
   }
 
