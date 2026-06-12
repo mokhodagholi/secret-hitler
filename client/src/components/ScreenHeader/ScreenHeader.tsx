@@ -1,7 +1,6 @@
 import { Show, type JSX } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../Icon/Icon';
-import { Logo } from '../Logo/Logo';
 import styles from './ScreenHeader.module.scss';
 
 export interface ScreenHeaderProps {
@@ -25,7 +24,6 @@ export function ScreenHeader(props: ScreenHeaderProps) {
       <Show when={props.right}>
         <div class={styles.right}>{props.right}</div>
       </Show>
-      <Logo size="small" />
       <h1 class={styles.title}>{props.title}</h1>
     </header>
   );
