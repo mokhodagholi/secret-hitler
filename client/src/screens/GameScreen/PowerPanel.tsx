@@ -5,6 +5,7 @@ import type {
   PublicPlayer,
 } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
+import { useApp } from '../../services/AppContext';
 import styles from './GameScreen.module.scss';
 
 export interface PowerPanelProps {
@@ -32,6 +33,7 @@ const HINT_KEY = {
 /** The President's executive-action UI during the SpecialPower phase. */
 export function PowerPanel(props: PowerPanelProps) {
   const { formatMessage } = props;
+  const { animation } = useApp();
   const needsTarget = () =>
     (props.power === 'investigate' && !props.investigation) ||
     props.power === 'execution' ||
@@ -52,13 +54,20 @@ export function PowerPanel(props: PowerPanelProps) {
         <Show when={props.power === 'policyPeek'}>
           <div class={styles.policyCards}>
             <For each={props.peek}>
-              {(policy) => (
+              {(policy, index) => (
                 <span
                   classList={{
                     [styles.policyCard]: true,
                     [styles.policyLiberal]: policy === 'liberal',
                     [styles.policyFascist]: policy === 'fascist',
                   }}
+                  ref={(element) =>
+                    void animation.play(element, 'card-flip-in', {
+                      delay: index() * 150,
+                      // Hold the hidden first frame through the delay.
+                      fill: 'backwards',
+                    })
+                  }
                 >
                   {formatMessage(`game.${policy}`)}
                 </span>

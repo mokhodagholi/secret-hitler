@@ -99,27 +99,36 @@ export function GameScreen() {
   // so its length is not a reliable counter.)
   const [revealedPolicy, setRevealedPolicy] = createSignal<Policy | null>(null);
   let revealCard: HTMLDivElement | undefined;
+  let tableElement: HTMLDivElement | undefined;
   let seenPolicyTotal: number | null = null;
+  let seenElectionTracker: number | null = null;
   let seenRoomId: string | null = null;
 
   createEffect(() => {
     const state = view();
     if (!state) {
       seenPolicyTotal = null;
+      seenElectionTracker = null;
       seenRoomId = null;
       return;
     }
     const total = state.board.liberalPolicies + state.board.fascistPolicies;
+    const tracker = state.board.electionTracker;
     if (state.roomId !== seenRoomId) {
       // First snapshot of a room (join/rejoin) — baseline, don't replay history.
       seenRoomId = state.roomId;
       seenPolicyTotal = total;
+      seenElectionTracker = tracker;
       return;
     }
     const previousTotal = seenPolicyTotal ?? total;
+    const previousTracker = seenElectionTracker ?? tracker;
     seenPolicyTotal = total;
+    seenElectionTracker = tracker;
     const latest = state.board.lastEnacted[state.board.lastEnacted.length - 1];
     if (total > previousTotal && latest) revealEnactedPolicy(latest);
+    // A failed election jolts the table (a reset to 0 is not a failure).
+    if (tracker > previousTracker) void animation.play(tableElement, 'shake');
   });
 
   function revealEnactedPolicy(policy: Policy): void {
@@ -253,7 +262,7 @@ export function GameScreen() {
               />
             </div>
 
-            <div class={styles.table}>
+            <div class={styles.table} ref={tableElement}>
               <For each={state().players}>
                 {(player) => {
                   const position = seatPosition(

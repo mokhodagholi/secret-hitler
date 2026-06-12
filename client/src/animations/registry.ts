@@ -73,6 +73,18 @@ export const ANIMATIONS = {
     options: { duration: 350, easing: 'ease-in', fill: 'forwards' },
   },
 
+  /** A player's execution: brief swell, then collapse into the seat's dead state.
+   *  The final keyframe omits opacity so it lands on the `.dead` CSS styling. */
+  'seat-death': {
+    keyframes: [
+      { opacity: 1, transform: 'scale(1)' },
+      { opacity: 0.9, transform: 'scale(1.08)', offset: 0.25 },
+      { opacity: 0.1, transform: 'scale(0.82)', offset: 0.7 },
+      { transform: 'scale(1)' },
+    ],
+    options: { duration: 700, easing: 'ease-in-out' },
+  },
+
   // --- Attention ---------------------------------------------------------------
   /** Horizontal jolt for failures (failed election, rejected action). */
   shake: {

@@ -1,7 +1,12 @@
 import { For } from 'solid-js';
 import type { Faction, PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
+import { useApp } from '../../services/AppContext';
 import styles from './GameOverOverlay.module.scss';
+
+/** Stagger between role reveals — the "I knew it!" cascade. */
+const CASCADE_STEP_MS = 140;
+const CASCADE_START_MS = 350;
 
 export interface GameOverOverlayProps {
   formatMessage: FormatMessage;
@@ -14,9 +19,18 @@ export interface GameOverOverlayProps {
 /** End-of-game screen: the winning faction and every player's revealed role. */
 export function GameOverOverlay(props: GameOverOverlayProps) {
   const { formatMessage } = props;
+  const { animation } = useApp();
   return (
-    <div class={styles.backdrop}>
-      <div class={styles.dialog} role="alertdialog" aria-modal="true">
+    <div
+      class={styles.backdrop}
+      ref={(element) => void animation.play(element, 'fade-in')}
+    >
+      <div
+        class={styles.dialog}
+        role="alertdialog"
+        aria-modal="true"
+        ref={(element) => void animation.play(element, 'pop-in')}
+      >
         <span
           classList={{
             [styles.headline]: true,
@@ -33,8 +47,17 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
 
         <ul class={styles.roles}>
           <For each={[...props.players].sort((a, b) => a.seat - b.seat)}>
-            {(player) => (
-              <li class={styles.roleRow}>
+            {(player, index) => (
+              <li
+                class={styles.roleRow}
+                ref={(element) =>
+                  void animation.play(element, 'card-flip-in', {
+                    delay: CASCADE_START_MS + index() * CASCADE_STEP_MS,
+                    // Hold the hidden first frame through the delay.
+                    fill: 'backwards',
+                  })
+                }
+              >
                 <span class={styles.name}>{player.name}</span>
                 <span
                   classList={{

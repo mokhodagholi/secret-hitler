@@ -88,10 +88,13 @@ snapshot of a room so a rejoin doesn't replay history.
 | `card-flip-in` | Your secret role card appears (game start) |
 | `pop-in` + `fade-in` | Voting overlay entrance |
 | `badge-pop` | President/Chancellor badge lands on a seat |
-| `shake` | Registered, unwired — failed-election / rejected-action jolt |
+| `shake` | Failed election — the whole table jolts (tracker grew; a reset is not a failure) |
+| `card-flip-in` (staggered) | Game-over role cascade (`GameOverOverlay`) and the Policy Peek fan (`PowerPanel`) — `delay: index * step` + `fill: 'backwards'` to hold the hidden first frame through the delay |
+| `seat-death` | A player's execution — the seat swells, collapses and settles into its `.dead` styling |
 
-Planned (see CLAUDE.md "Animation Sequences to Build"): vote-reveal flip,
-game-over cascade, execution fade.
+Planned (see CLAUDE.md "Animation Sequences to Build"): vote-reveal
+simultaneous flip (needs the server to disclose per-player votes at
+resolution — protocol change).
 
 ## Testing
 

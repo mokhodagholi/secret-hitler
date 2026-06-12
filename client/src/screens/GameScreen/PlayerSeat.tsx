@@ -1,4 +1,4 @@
-import { Show } from 'solid-js';
+import { Show, createEffect, on } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -20,9 +20,23 @@ export interface PlayerSeatProps {
 export function PlayerSeat(props: PlayerSeatProps) {
   const { formatMessage } = props;
   const { animation } = useApp();
+  let seatElement: HTMLButtonElement | undefined;
+
+  // An execution collapses the seat into its greyed dead state.
+  createEffect(
+    on(
+      () => props.player.isAlive,
+      (alive, previouslyAlive) => {
+        if (previouslyAlive && !alive) void animation.play(seatElement, 'seat-death');
+      },
+      { defer: true },
+    ),
+  );
+
   return (
     <button
       type="button"
+      ref={seatElement}
       classList={{
         [styles.seat]: true,
         [styles.dead]: !props.player.isAlive,
