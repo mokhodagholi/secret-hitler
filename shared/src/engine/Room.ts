@@ -35,6 +35,9 @@ export class Room {
   chancellorId: string | null = null;
   lastEnacted: BoardState['lastEnacted'] = [];
   votes = new Map<string, Vote>();
+  speakerId: string | null = null;
+  speakerStartedAt = 0;
+  speakerEndsAt = 0;
 
   constructor(args: {
     id: string;
@@ -120,6 +123,13 @@ export class Room {
       maxPlayers: this.options.maxPlayers,
       players,
       board: this.board(),
+      speaker: this.speakerId
+        ? {
+            playerId: this.speakerId,
+            startedAt: this.speakerStartedAt,
+            endsAt: this.speakerEndsAt,
+          }
+        : null,
       you: {
         id: viewerId,
         role: viewer?.role ?? null,

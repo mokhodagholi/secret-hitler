@@ -100,6 +100,8 @@ export interface GameStateView {
   maxPlayers: number;
   players: PublicPlayer[];
   board: BoardState;
+  /** Whose turn it is to talk, and when their window closes (epoch ms). */
+  speaker: { playerId: string; startedAt: number; endsAt: number } | null;
   /** Private data for the recipient only. */
   you: {
     id: string;
@@ -124,3 +126,5 @@ export const MIN_PLAYERS = 5;
 export const MAX_PLAYERS = 10;
 /** Lowest count the role distribution supports — the dev floor. */
 export const SUPPORTED_MIN_PLAYERS = 3;
+/** How long each player holds the talking stick, in ms. */
+export const SPEAKING_TURN_MS = 20_000;

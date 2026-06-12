@@ -9,6 +9,7 @@ export interface PlayerSeatProps {
   x: number;
   y: number;
   isYou: boolean;
+  speaking: boolean;
   nominatable: boolean;
   onNominate: () => void;
   formatMessage: FormatMessage;
@@ -25,6 +26,7 @@ export function PlayerSeat(props: PlayerSeatProps) {
         [styles.dead]: !props.player.isAlive,
         [styles.offline]: !props.player.connected,
         [styles.you]: props.isYou,
+        [styles.speaking]: props.speaking,
         [styles.nominatable]: props.nominatable,
         [styles.voted]: props.player.hasVoted,
       }}

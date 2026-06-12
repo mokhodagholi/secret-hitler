@@ -30,6 +30,7 @@ export function GameScreen() {
   const [activeTab, setActiveTab] = createSignal<'chat' | 'log'>('chat');
   const [chatDraft, setChatDraft] = createSignal('');
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
+  const [now, setNow] = createSignal(Date.now());
 
   let boardCanvas!: HTMLCanvasElement;
   let chatScroller: HTMLDivElement | undefined;
@@ -42,8 +43,23 @@ export function GameScreen() {
 
   onMount(() => {
     renderer = new BoardRenderer(boardCanvas);
-    onCleanup(() => renderer?.dispose());
+    const ticker = setInterval(() => setNow(Date.now()), 500);
+    onCleanup(() => {
+      renderer?.dispose();
+      clearInterval(ticker);
+    });
   });
+
+  const speaker = () => view()?.speaker ?? null;
+  const isMySpeakingTurn = () => {
+    const state = view();
+    return state?.speaker?.playerId === state?.you.id;
+  };
+  const secondsLeft = () => {
+    const current = speaker();
+    return current ? Math.max(0, Math.ceil((current.endsAt - now()) / 1000)) : 0;
+  };
+  const chatLocked = () => speaker() != null && !isMySpeakingTurn();
 
   // Redraw the canvas whenever board state or language changes.
   createEffect(() => {
@@ -111,6 +127,7 @@ export function GameScreen() {
     });
 
   function sendChat(): void {
+    if (chatLocked()) return;
     game.sendChat(chatDraft());
     setChatDraft('');
   }
@@ -161,6 +178,7 @@ export function GameScreen() {
                       x={position.x}
                       y={position.y}
                       isYou={player.id === state().you.id}
+                      speaking={player.id === state().speaker?.playerId}
                       nominatable={canNominate(player)}
                       onNominate={() =>
                         game.sendCommand({
@@ -301,11 +319,35 @@ export function GameScreen() {
                 </div>
 
                 <Show when={activeTab() === 'chat'}>
+                  <Show when={speaker()}>
+                    <div
+                      classList={{
+                        [styles.speakerBar]: true,
+                        [styles.speakerMine]: isMySpeakingTurn(),
+                      }}
+                    >
+                      <span>
+                        {isMySpeakingTurn()
+                          ? formatMessage('game.yourTurn')
+                          : formatMessage('game.speakingNow', {
+                              name: playerName(speaker()!.playerId),
+                            })}
+                      </span>
+                      <span class={styles.speakerTimer}>
+                        {formatMessage('game.secondsLeft', {
+                          seconds: secondsLeft(),
+                        })}
+                      </span>
+                    </div>
+                  </Show>
                   <div class={styles.chatComposer}>
                     <input
                       class={styles.chatInput}
                       value={chatDraft()}
-                      placeholder={formatMessage('game.chatPlaceholder')}
+                      disabled={chatLocked()}
+                      placeholder={formatMessage(
+                        chatLocked() ? 'game.chatWaitTurn' : 'game.chatPlaceholder',
+                      )}
                       maxlength={500}
                       onInput={(event) => setChatDraft(event.currentTarget.value)}
                       onKeyDown={(event) => {
@@ -316,6 +358,7 @@ export function GameScreen() {
                       type="button"
                       class={styles.chatSend}
                       aria-label={formatMessage('game.send')}
+                      disabled={chatLocked()}
                       onClick={sendChat}
                     >
                       <Icon name="chat" size={18} />

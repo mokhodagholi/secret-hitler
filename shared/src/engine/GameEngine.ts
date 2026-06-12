@@ -1,5 +1,6 @@
 import {
   Phase,
+  SPEAKING_TURN_MS,
   type ChatMessage,
   type LogEntry,
   type Player,
@@ -132,6 +133,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     room.electionTracker = 0;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.beginNomination();
+    this.startSpeakingTurnAt(room.presidentId);
 
     this.log('The game has started. Roles have been dealt.');
     this.emit('gameStarted', { room });
@@ -145,6 +147,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     const player = this.room.findPlayer(playerId);
     const body = text.trim();
     if (!player || !body) return;
+    // While the talking stick is active, only its holder may speak.
+    if (this.room.speakerId && this.room.speakerId !== playerId) return;
     const message: ChatMessage = {
       id: makeId(),
       playerId: player.id,
@@ -273,6 +277,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
 
   private endGame(): void {
     this.room.phase = Phase.GameOver;
+    this.room.speakerId = null;
     this.emit('gameOver', { room: this.room });
     this.changed();
   }
@@ -290,6 +295,35 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     if (living.length === 0) return null;
     const currentIndex = living.findIndex((p) => p.id === this.room.presidentId);
     return living[(currentIndex + 1) % living.length].id;
+  }
+
+  // --- Speaking turns (talking stick) ------------------------------------
+
+  private speakingEligible(): Player[] {
+    return this.livingInSeatOrder().filter((p) => p.connected);
+  }
+
+  /** Give the talking stick to a player (or the first eligible). */
+  startSpeakingTurnAt(playerId: string | null): void {
+    const eligible = this.speakingEligible();
+    const next = eligible.find((p) => p.id === playerId) ?? eligible[0];
+    this.setSpeaker(next ?? null);
+  }
+
+  /** Pass the talking stick to the next eligible player. */
+  advanceSpeaker(): void {
+    const eligible = this.speakingEligible();
+    if (eligible.length === 0) return this.setSpeaker(null);
+    const currentIndex = eligible.findIndex((p) => p.id === this.room.speakerId);
+    this.setSpeaker(eligible[(currentIndex + 1) % eligible.length]);
+  }
+
+  private setSpeaker(player: Player | null): void {
+    const room = this.room;
+    room.speakerId = player?.id ?? null;
+    room.speakerStartedAt = player ? Date.now() : 0;
+    room.speakerEndsAt = player ? room.speakerStartedAt + SPEAKING_TURN_MS : 0;
+    this.changed();
   }
 
   // --- Internals ---------------------------------------------------------

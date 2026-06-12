@@ -1,8 +1,10 @@
 import type { WebSocket } from 'ws';
-import type {
-  ClientMessage,
-  ServerErrorCode,
-  ServerMessage,
+import {
+  Phase,
+  SPEAKING_TURN_MS,
+  type ClientMessage,
+  type ServerErrorCode,
+  type ServerMessage,
 } from '@secret-hitler/shared';
 import { ConnectionRegistry } from './ConnectionRegistry';
 import type { RoomEntry, RoomRepository } from './RoomRepository';
@@ -17,6 +19,8 @@ export class SocketHandler {
   private readonly connections = new ConnectionRegistry();
   /** Which room a given live socket has authenticated into. */
   private readonly socketRoom = new WeakMap<WebSocket, string>();
+  /** Per-room talking-stick rotation timers. */
+  private readonly turnTimers = new Map<string, ReturnType<typeof setInterval>>();
 
   constructor(
     private readonly repo: RoomRepository,
@@ -36,7 +40,10 @@ export class SocketHandler {
           });
         }
       }
-      if (room.isEmpty) this.repo.remove(room.id);
+      if (room.isEmpty) {
+        this.stopTurnTimer(room.id);
+        this.repo.remove(room.id);
+      }
     });
 
     engine.on('roleAssigned', ({ playerId }) => {
@@ -46,6 +53,30 @@ export class SocketHandler {
 
     engine.on('chat', ({ message }) => this.broadcast(room.id, { type: 'chat', message }));
     engine.on('log', ({ entry: e }) => this.broadcast(room.id, { type: 'log', entry: e }));
+    engine.on('gameStarted', () => this.startTurnTimer(room.id));
+    engine.on('gameOver', () => this.stopTurnTimer(room.id));
+  }
+
+  /** Rotate the talking stick every {@link SPEAKING_TURN_MS} while in-game. */
+  private startTurnTimer(roomId: string): void {
+    this.stopTurnTimer(roomId);
+    const timer = setInterval(() => {
+      const entry = this.repo.get(roomId);
+      if (!entry || entry.room.phase === Phase.GameOver) {
+        this.stopTurnTimer(roomId);
+        return;
+      }
+      entry.engine.advanceSpeaker();
+    }, SPEAKING_TURN_MS);
+    this.turnTimers.set(roomId, timer);
+  }
+
+  private stopTurnTimer(roomId: string): void {
+    const timer = this.turnTimers.get(roomId);
+    if (timer) {
+      clearInterval(timer);
+      this.turnTimers.delete(roomId);
+    }
   }
 
   /** Attach handlers to a freshly upgraded socket. */
@@ -118,6 +149,7 @@ export class SocketHandler {
 
   /** Kick every remaining connection and drop the room from the repository. */
   private destroyRoom(entry: RoomEntry): void {
+    this.stopTurnTimer(entry.room.id);
     for (const player of entry.room.players) {
       this.connections.close(player.id);
     }
