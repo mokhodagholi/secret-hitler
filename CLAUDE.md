@@ -9,8 +9,10 @@ A real-time multiplayer Secret Hitler board game played in the browser, with voi
 Project coding conventions and rules live in the [`.agents/`](.agents/) directory — read and follow them. (Tool permissions stay in `.claude/settings.local.json`.)
 
 - [`.agents/rules/naming.md`](.agents/rules/naming.md) — use descriptive names, not 1–2 character abbreviations.
+- [`.agents/rules/commit-messages.md`](.agents/rules/commit-messages.md) — Conventional Commits with a capitalized subject.
 
 @.agents/rules/naming.md
+@.agents/rules/commit-messages.md
 
 ## Tech Stack
 

@@ -1,0 +1,26 @@
+// Yekan Bakh — Persian typeface used as the fallback for Farsi text.
+// woff2 is listed first (smaller, modern browsers); woff is the fallback for
+// older engines. The browser downloads only the format and weights it needs.
+
+$yekan-bakh-weights: (
+  'Thin': 100,
+  'Light': 300,
+  'Regular': 400,
+  'SemiBold': 600,
+  'Bold': 700,
+  'ExtraBold': 800,
+  'Black': 900,
+  'ExtraBlack': 950,
+);
+
+@each $styleName, $weight in $yekan-bakh-weights {
+  @font-face {
+    font-family: 'Yekan Bakh';
+    font-style: normal;
+    font-weight: $weight;
+    font-display: swap;
+    src:
+      url('../assets/fonts/woff2/YekanBakh-#{$styleName}.woff2') format('woff2'),
+      url('../assets/fonts/woff/YekanBakh-#{$styleName}.woff') format('woff');
+  }
+}
