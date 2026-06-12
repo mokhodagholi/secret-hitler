@@ -6,7 +6,7 @@ import {
   type Language,
   type LanguageDef,
 } from '../i18n';
-import { formatStrings } from '../i18n/utils';
+import { formatStrings, resolveMessage } from '../i18n/utils';
 
 /**
  * Reactive resolution of message ids into finished strings.
@@ -38,7 +38,7 @@ export class I18nService {
    */
   readonly formatMessage: FormatMessage = (id, data) => {
     const language: LanguageDef = LANGUAGES[this.lang()];
-    const template = language.strings[id] ?? id;
+    const template = resolveMessage(language.strings, id) ?? id;
     const interpolated = data ? formatStrings(template, data) : template;
     return language.formatDigits
       ? language.formatDigits(interpolated)
