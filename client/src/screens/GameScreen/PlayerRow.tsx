@@ -2,6 +2,7 @@ import { Show, createEffect, on } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
+import { avatarImage } from '../../assets/avatars';
 import styles from './GameScreen.module.scss';
 
 export interface PlayerRowProps {
@@ -49,7 +50,12 @@ export function PlayerRow(props: PlayerRowProps) {
       onClick={() => props.onNominate()}
     >
       <span class={styles.playerAvatar}>
-        {props.player.name.slice(0, 1).toUpperCase()}
+        <img
+          class={styles.playerAvatarImage}
+          src={avatarImage(props.player.avatar)}
+          alt=""
+          aria-hidden="true"
+        />
       </span>
       <span class={styles.playerInfo}>
         <span class={styles.playerName}>{props.player.name}</span>

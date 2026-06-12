@@ -194,6 +194,7 @@ export const fa = {
     players: 'بازیکنان',
     playersTitle: 'بازیکنان',
     youAreRole: 'شما {role} هستید',
+    currentTurn: 'نوبت فعلی',
     timeLeft: 'زمان باقی‌مانده',
     currentTrack: 'وضعیت فعلی',
     endTurn: 'پایان نوبت',

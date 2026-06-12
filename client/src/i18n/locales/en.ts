@@ -197,6 +197,7 @@ export const en = {
     players: 'Players',
     playersTitle: 'Players',
     youAreRole: 'You are {role}',
+    currentTurn: 'Current Turn',
     timeLeft: 'Time Left',
     currentTrack: 'Current Track',
     endTurn: 'End Turn',

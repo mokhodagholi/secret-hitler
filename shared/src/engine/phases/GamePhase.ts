@@ -21,6 +21,8 @@ export interface PhaseHost {
   failElection(): void;
   endGame(winner: Faction): void;
   startSpeakingTurnAt(playerId: string | null): void;
+  /** Pass the talking stick to the next eligible player (discussion only). */
+  advanceSpeaker(): void;
   clearSpeaker(): void;
   /** Open the vote window and schedule its deadline on the server. */
   openVote(): void;

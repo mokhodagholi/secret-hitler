@@ -18,10 +18,18 @@ export class NominationPhase implements GamePhase {
   }
 
   handle(playerId: string, command: GameCommand): EngineError | null {
+    const room = this.host.room;
+    // The current speaker may end their discussion turn early.
+    if (command.kind === 'endTurn') {
+      if (playerId !== room.speakerId) {
+        return err('INVALID_ACTION', 'It is not your turn to speak.');
+      }
+      this.host.advanceSpeaker();
+      return null;
+    }
     if (command.kind !== 'nominateChancellor') {
       return err('INVALID_ACTION', 'Only a nomination is expected right now.');
     }
-    const room = this.host.room;
     if (playerId !== room.presidentId) {
       return err('INVALID_ACTION', 'Only the President can nominate.');
     }

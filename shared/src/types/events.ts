@@ -23,7 +23,9 @@ export type GameCommand =
   | { kind: 'enactPolicy'; index: number }
   | { kind: 'useSpecialPower'; targetId: string }
   | { kind: 'vetoRequest' }
-  | { kind: 'vetoConsent'; agree: boolean };
+  | { kind: 'vetoConsent'; agree: boolean }
+  /** The current speaker ends their discussion turn early. */
+  | { kind: 'endTurn' };
 
 // ---------------------------------------------------------------------------
 // Client -> Server

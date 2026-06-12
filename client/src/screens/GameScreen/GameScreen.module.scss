@@ -50,14 +50,7 @@
   padding: 12px;
 }
 
-.boardStatus {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .government {
-  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -87,24 +80,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.timeLeft {
-  @include display(0.95rem, 0.04em);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: $radius-sm;
-  color: $gold;
-  border: 1px solid rgba($gold, 0.4);
-  background: rgba($navy-900, 0.6);
-  flex-shrink: 0;
-}
-
-.timeUrgent {
-  color: $red-bright;
-  border-color: rgba($red-bright, 0.6);
 }
 
 // --- Phase panels ----------------------------------------------------------------

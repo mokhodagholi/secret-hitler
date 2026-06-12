@@ -20,6 +20,7 @@ import { Screen } from '../../components/Screen/Screen';
 import { POLICY_FACE } from '../../assets/cards';
 import { PolicyBoard } from './PolicyBoard';
 import { RoleBanner } from './RoleBanner';
+import { TurnBanner } from './TurnBanner';
 import { PlayersModal } from './PlayersModal';
 import { GameMenu } from './GameMenu';
 import { VotingOverlay } from './VotingOverlay';
@@ -152,16 +153,20 @@ export function GameScreen() {
   const voteProgress = () =>
     Math.max(0, Math.min(1, (voteSecondsLeft() * 1000) / VOTE_DURATION_MS));
 
-  // The countdown the board surfaces: an open vote first, else the talking
-  // stick. Always plain seconds — no minutes for windows this short.
-  const activeDeadline = () => view()?.voteDeadline ?? speaker();
-  const deadlineSecondsLeft = () => {
-    const deadline = activeDeadline();
-    return deadline ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000)) : 0;
+  // Discussion countdown for the turn banner — always plain seconds.
+  const speakerSecondsLeft = () => {
+    const current = speaker();
+    return current ? Math.max(0, Math.ceil((current.endsAt - now()) / 1000)) : 0;
   };
+  const speakerPlayer = () =>
+    view()?.players.find((player) => player.id === speaker()?.playerId) ?? null;
 
   function castVote(vote: 'ja' | 'nein'): void {
     game.sendCommand({ kind: 'castVote', vote });
+  }
+
+  function endSpeakingTurn(): void {
+    game.sendCommand({ kind: 'endTurn' });
   }
 
   const isLegislative = () => {
@@ -246,6 +251,20 @@ export function GameScreen() {
                 <RoleBanner role={game.role()!} formatMessage={formatMessage} />
               </Show>
 
+              <Show when={speakerPlayer()}>
+                {(player) => (
+                  <TurnBanner
+                    speakerId={player().id}
+                    name={player().name}
+                    avatar={player().avatar}
+                    secondsLeft={speakerSecondsLeft()}
+                    isMyTurn={isMySpeakingTurn()}
+                    onEndTurn={endSpeakingTurn}
+                    formatMessage={formatMessage}
+                  />
+                )}
+              </Show>
+
               <PolicyBoard
                 board={state().board}
                 playerCount={state().players.length}
@@ -254,40 +273,23 @@ export function GameScreen() {
                 onOpenPlayers={() => setPlayersOpen(true)}
               />
 
-              <div class={styles.boardStatus}>
-                <div class={styles.government}>
-                  <div class={styles.governmentCard}>
-                    <span class={styles.governmentLabel}>
-                      {formatMessage('game.president')}
-                    </span>
-                    <span class={styles.governmentName}>
-                      {playerName(state().board.president)}
-                    </span>
-                  </div>
-                  <div class={styles.governmentCard}>
-                    <span class={styles.governmentLabel}>
-                      {formatMessage('game.chancellor')}
-                    </span>
-                    <span class={styles.governmentName}>
-                      {playerName(state().board.chancellor)}
-                    </span>
-                  </div>
+              <div class={styles.government}>
+                <div class={styles.governmentCard}>
+                  <span class={styles.governmentLabel}>
+                    {formatMessage('game.president')}
+                  </span>
+                  <span class={styles.governmentName}>
+                    {playerName(state().board.president)}
+                  </span>
                 </div>
-                <Show when={activeDeadline()}>
-                  <div
-                    classList={{
-                      [styles.timeLeft]: true,
-                      [styles.timeUrgent]: deadlineSecondsLeft() <= 5,
-                    }}
-                  >
-                    <Icon name="clock" size={15} />
-                    <span>
-                      {formatMessage('game.secondsLeft', {
-                        seconds: deadlineSecondsLeft(),
-                      })}
-                    </span>
-                  </div>
-                </Show>
+                <div class={styles.governmentCard}>
+                  <span class={styles.governmentLabel}>
+                    {formatMessage('game.chancellor')}
+                  </span>
+                  <span class={styles.governmentName}>
+                    {playerName(state().board.chancellor)}
+                  </span>
+                </div>
               </div>
             </section>
 

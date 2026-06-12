@@ -17,6 +17,7 @@ function isGameCommand(value: unknown): value is GameCommand {
     case 'enactPolicy':
       return Number.isInteger(command.index);
     case 'vetoRequest':
+    case 'endTurn':
       return true;
     case 'vetoConsent':
       return typeof command.agree === 'boolean';

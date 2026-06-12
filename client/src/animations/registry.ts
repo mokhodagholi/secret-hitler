@@ -85,6 +85,24 @@ export const ANIMATIONS = {
     options: { duration: 700, easing: 'ease-in-out' },
   },
 
+  /** The next player's turn slides in as the talking stick moves on. */
+  'turn-enter': {
+    keyframes: [
+      { opacity: 0, transform: 'translateX(26px)' },
+      { opacity: 1, transform: 'translateX(0)' },
+    ],
+    options: { duration: 320, easing: 'ease-out' },
+  },
+
+  /** A chosen card flies up toward the board after the Chancellor enacts it. */
+  'card-to-board': {
+    keyframes: [
+      { opacity: 1, transform: 'translateY(0) scale(1)' },
+      { opacity: 0, transform: 'translateY(-90px) scale(0.55)' },
+    ],
+    options: { duration: 450, easing: 'ease-in', fill: 'forwards' },
+  },
+
   // --- Attention ---------------------------------------------------------------
   /** Horizontal jolt for failures (failed election, rejected action). */
   shake: {

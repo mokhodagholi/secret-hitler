@@ -278,6 +278,24 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.speakerId).toBe(ben.id);
   });
 
+  it('Should let the speaker end their turn early', () => {
+    const { engine, room, players } = startGame();
+    const [president, ben] = players;
+    expect(room.speakerId).toBe(president.id);
+
+    expect(engine.handleCommand(president.id, { kind: 'endTurn' })).toBeNull();
+    expect(room.speakerId).toBe(ben.id);
+  });
+
+  it('Should reject ending a turn that is not yours', () => {
+    const { engine, room, players } = startGame();
+    const [president, ben] = players;
+
+    const error = engine.handleCommand(ben.id, { kind: 'endTurn' });
+    expect(error?.code).toBe('INVALID_ACTION');
+    expect(room.speakerId).toBe(president.id);
+  });
+
   it('Should clear the talking stick during the legislative session', () => {
     const game = startGame();
     electGovernment(game, game.players[1]);
