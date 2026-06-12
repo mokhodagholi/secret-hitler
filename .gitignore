@@ -3,3 +3,4 @@ dist
 .rsbuild
 *.log
 .DS_Store
+.env

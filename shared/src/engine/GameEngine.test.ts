@@ -381,6 +381,22 @@ describe('GameEngine — legislative session', () => {
 
     expect(game.room.liberalPolicies).toBe(5);
     expect(game.room.phase).toBe(Phase.GameOver);
+    expect(game.room.winner).toBe('liberal');
+    expect(game.room.viewFor(president.id).winner).toBe('liberal');
+  });
+
+  it('Should record the Fascists as the winner on six fascist policies', () => {
+    const deck = new StackedDeck(['fascist', 'liberal', 'liberal']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck);
+    const [president, chancellor] = game.players;
+    game.room.fascistPolicies = 5;
+    electGovernment(game, chancellor);
+
+    game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 1 });
+    game.engine.handleCommand(chancellor.id, { kind: 'enactPolicy', index: 0 });
+
+    expect(game.room.fascistPolicies).toBe(6);
+    expect(game.room.winner).toBe('fascist');
   });
 
   it('Should refuse legislative commands once the game is over', () => {

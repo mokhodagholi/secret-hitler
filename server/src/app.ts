@@ -7,6 +7,8 @@ import { RoomRepository } from './rooms/RoomRepository';
 import { TokenStore } from './rooms/TokenStore';
 import { SocketHandler } from './ws/SocketHandler';
 import { registerRoutes } from './http/routes';
+import { GameResultRecorder } from './history/GameResultRecorder';
+import type { GameHistoryStore } from './history/GameHistoryStore';
 
 const WS_PATH = '/ws';
 
@@ -14,6 +16,8 @@ export interface ServerOptions {
   /** Server-wide start minimum (env override in dev). */
   minPlayers?: number;
   logger?: boolean;
+  /** Persists finished games. Omitted (no `DATABASE_URL`) → nothing is stored. */
+  history?: GameHistoryStore;
 }
 
 export interface BuiltServer {
@@ -34,9 +38,10 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   const repo = new RoomRepository(options.minPlayers);
   const tokens = new TokenStore();
   const sockets = new SocketHandler(repo, tokens);
+  const recorder = options.history ? new GameResultRecorder(options.history) : undefined;
 
   app.get('/health', async () => ({ status: 'ok', shared: SHARED_VERSION }));
-  registerRoutes(app, { repo, tokens, sockets });
+  registerRoutes(app, { repo, tokens, sockets, recorder, history: options.history });
 
   await app.ready();
 

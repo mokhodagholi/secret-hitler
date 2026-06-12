@@ -1,0 +1,23 @@
+# Local Postgres for game-history persistence. Start with `docker compose up -d`
+# then point the server at it via DATABASE_URL (see .env.example).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: secret-hitler-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: secret_hitler
+      POSTGRES_PASSWORD: secret_hitler
+      POSTGRES_DB: secret_hitler
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U secret_hitler']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

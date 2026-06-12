@@ -9,12 +9,18 @@ import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { TokenStore } from '../rooms/TokenStore';
+import type { GameResultRecorder } from '../history/GameResultRecorder';
+import type { GameHistoryStore } from '../history/GameHistoryStore';
 import { hashPassword, verifyPassword } from './password';
 
 export interface RouteDeps {
   repo: RoomRepository;
   tokens: TokenStore;
   sockets: SocketHandler;
+  /** Persists finished games, when a database is configured. */
+  recorder?: GameResultRecorder;
+  /** Reads finished games for the history endpoint, when configured. */
+  history?: GameHistoryStore;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -24,7 +30,7 @@ const LIMIT_WINDOW_MS = 60_000;
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets } = deps;
+  const { repo, tokens, sockets, recorder, history } = deps;
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
   const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
 
@@ -53,6 +59,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       confirmActions: body.options?.confirmActions,
     });
     sockets.registerEngine(entry);
+    recorder?.attach(entry);
 
     const host = entry.engine.addPlayer(body.hostName, true);
     if ('code' in host) {
@@ -72,6 +79,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
   // List public, joinable rooms.
   app.get('/api/rooms', async () => repo.listPublic());
+
+  // Recent finished games. 404-free: returns an empty list when no DB is set.
+  app.get('/api/history', async (req) => {
+    if (!history) return [];
+    const limit = Number((req.query as { limit?: string }).limit) || undefined;
+    return history.listRecent(limit);
+  });
 
   // Join an existing room by id or code.
   app.post('/api/rooms/:idOrCode/join', async (req, reply) => {
