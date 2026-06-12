@@ -1,0 +1,16 @@
+@use '../../styles/vars' as *;
+
+.gear {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: $gold;
+  background: $navy-700;
+  border: 1px solid $line-strong;
+}
+
+.restore {
+  margin-top: 20px;
+}

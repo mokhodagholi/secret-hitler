@@ -1,0 +1,40 @@
+@use '../../styles/vars' as *;
+
+.home {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.eagle {
+  color: $gold;
+  margin-top: 4px;
+  z-index: 2;
+}
+
+.art {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 112%;
+  max-width: none;
+  color: $navy-700;
+  opacity: 0.9;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.logoWrap {
+  margin-top: 230px;
+  z-index: 2;
+}
+
+.cta {
+  width: 100%;
+  margin-top: auto;
+  padding: 28px 4px 8px;
+  z-index: 2;
+}

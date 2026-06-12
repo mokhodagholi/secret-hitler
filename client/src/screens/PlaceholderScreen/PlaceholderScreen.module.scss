@@ -1,0 +1,9 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.note {
+  @include display(0.9rem, 0.14em);
+  color: $text-dim;
+  text-align: center;
+  margin-top: 60px;
+}
