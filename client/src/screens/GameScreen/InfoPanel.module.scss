@@ -1,0 +1,80 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 86;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 12, 22, 0.78);
+}
+
+.sheet {
+  @include card;
+  width: min(360px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  border-color: rgba($gold, 0.45);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid $line-soft;
+}
+
+.title {
+  @include display(0.95rem, 0.18em);
+  color: $gold;
+}
+
+.close {
+  @include pressable;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  color: $text-dim;
+  border: 1px solid $line-soft;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px 16px;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba($line-soft, 0.6);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.label {
+  @include display(0.66rem, 0.12em);
+  color: $text-dim;
+}
+
+.value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $text-light;
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

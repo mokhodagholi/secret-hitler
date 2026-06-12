@@ -1,5 +1,6 @@
 import {
   LEGISLATIVE_DURATION_MS,
+  NOMINATION_DURATION_MS,
   Phase,
   SPEAKING_TURN_MS,
   VOTE_DURATION_MS,
@@ -43,6 +44,8 @@ export interface EngineEvents extends Record<string, unknown> {
   voteTimerChanged: { endsAt: number | null };
   /** Legislative window opened (endsAt set) or closed (null); server (un)schedules. */
   legislativeTimerChanged: { endsAt: number | null };
+  /** Nomination window opened (endsAt set) or closed (null); server (un)schedules. */
+  nominationTimerChanged: { endsAt: number | null };
 }
 
 /**
@@ -389,6 +392,26 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Server calls this when a legislator's choice window elapses. */
   resolveLegislativeTimeout(): void {
+    this.currentPhase.timeout?.();
+  }
+
+  // --- Nomination timer (PhaseHost) ------------------------------------------
+
+  openNominationTimer(): void {
+    const room = this.room;
+    room.nominationStartedAt = Date.now();
+    room.nominationEndsAt = room.nominationStartedAt + NOMINATION_DURATION_MS;
+    this.emit('nominationTimerChanged', { endsAt: room.nominationEndsAt });
+  }
+
+  closeNominationTimer(): void {
+    this.room.nominationStartedAt = 0;
+    this.room.nominationEndsAt = 0;
+    this.emit('nominationTimerChanged', { endsAt: null });
+  }
+
+  /** Server calls this when the President's nomination window elapses. */
+  resolveNominationTimeout(): void {
     this.currentPhase.timeout?.();
   }
 

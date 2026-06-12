@@ -44,6 +44,8 @@ export class SocketHandler {
   private readonly voteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room legislative choice-window deadline timers. */
   private readonly legislativeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room nomination-window deadline timers. */
+  private readonly nominationTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room pending host-migration timers (disconnect grace period). */
   private readonly hostGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly chatLimiter = new RateLimiter(CHAT_LIMIT, CHAT_WINDOW_MS);
@@ -126,6 +128,15 @@ export class SocketHandler {
       }, Math.max(0, endsAt - Date.now()));
       this.legislativeTimers.set(room.id, timer);
     });
+    // The nomination window closes on its own; the election then fails.
+    engine.on('nominationTimerChanged', ({ endsAt }) => {
+      this.stopNominationTimer(room.id);
+      if (endsAt == null) return;
+      const timer = setTimeout(() => {
+        this.repo.get(room.id)?.engine.resolveNominationTimeout();
+      }, Math.max(0, endsAt - Date.now()));
+      this.nominationTimers.set(room.id, timer);
+    });
   }
 
   private stopTurnTimer(roomId: string): void {
@@ -149,6 +160,14 @@ export class SocketHandler {
     if (timer) {
       clearTimeout(timer);
       this.legislativeTimers.delete(roomId);
+    }
+  }
+
+  private stopNominationTimer(roomId: string): void {
+    const timer = this.nominationTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.nominationTimers.delete(roomId);
     }
   }
 
@@ -223,6 +242,7 @@ export class SocketHandler {
     this.stopTurnTimer(roomId);
     this.stopVoteTimer(roomId);
     this.stopLegislativeTimer(roomId);
+    this.stopNominationTimer(roomId);
     this.cancelHostGrace(roomId);
     this.tokens.revokeRoom(roomId);
     this.repo.remove(roomId);

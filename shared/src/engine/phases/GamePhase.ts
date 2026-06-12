@@ -32,6 +32,10 @@ export interface PhaseHost {
   openLegislativeTimer(): void;
   /** Close the legislative choice window and cancel its deadline. */
   closeLegislativeTimer(): void;
+  /** Open the nomination window and schedule its deadline. */
+  openNominationTimer(): void;
+  /** Close the nomination window and cancel its deadline. */
+  closeNominationTimer(): void;
   /** Enter the SpecialPower phase with the President's pending power. */
   grantPower(power: ExecutivePower): void;
   /** Special election: hand the presidency to `playerId` for the next round. */

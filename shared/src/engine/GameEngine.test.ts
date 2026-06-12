@@ -278,13 +278,14 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.speakerId).toBe(ben.id);
   });
 
-  it('Should let the speaker end their turn early', () => {
+  it('Should fail the election when the President ends the round', () => {
     const { engine, room, players } = startGame();
     const [president, ben] = players;
-    expect(room.speakerId).toBe(president.id);
+    expect(room.presidentId).toBe(president.id);
 
     expect(engine.handleCommand(president.id, { kind: 'endTurn' })).toBeNull();
-    expect(room.speakerId).toBe(ben.id);
+    expect(room.electionTracker).toBe(1);
+    expect(room.presidentId).toBe(ben.id);
   });
 
   it('Should reject ending a turn that is not yours', () => {
@@ -294,6 +295,27 @@ describe('GameEngine — nomination and voting', () => {
     const error = engine.handleCommand(ben.id, { kind: 'endTurn' });
     expect(error?.code).toBe('INVALID_ACTION');
     expect(room.speakerId).toBe(president.id);
+  });
+
+  it('Should fail the election when the nomination window elapses', () => {
+    const { engine, room } = startGame();
+    expect(room.phase).toBe(Phase.Nomination);
+
+    engine.resolveNominationTimeout();
+    expect(room.electionTracker).toBe(1);
+    expect(room.phase).toBe(Phase.Nomination);
+  });
+
+  it('Should enact the top policy after three failed nominations', () => {
+    const deck = new StackedDeck(['liberal']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck);
+
+    game.engine.resolveNominationTimeout();
+    game.engine.resolveNominationTimeout();
+    game.engine.resolveNominationTimeout();
+
+    expect(game.room.liberalPolicies).toBe(1);
+    expect(game.room.electionTracker).toBe(0);
   });
 
   it('Should clear the talking stick during the legislative session', () => {

@@ -1,0 +1,83 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 12, 22, 0.82);
+}
+
+.dialog {
+  @include card;
+  width: min(360px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  border-color: rgba($gold, 0.5);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid $line-soft;
+}
+
+.title {
+  @include display(0.85rem, 0.1em);
+  color: $gold;
+}
+
+.timer {
+  @include display(0.82rem, 0.04em);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: $gold;
+  flex-shrink: 0;
+}
+
+.urgent {
+  color: $red-bright;
+}
+
+.pulse {
+  animation: nomination-timer-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes nomination-timer-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.75;
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+
+.endRound {
+  @include display(0.72rem, 0.08em);
+  @include pressable;
+  margin: 4px 14px 16px;
+  padding: 11px;
+  border-radius: $radius-sm;
+  color: $red-bright;
+  border: 1px solid rgba($red-bright, 0.55);
+  background: rgba($red-bright, 0.08);
+}

@@ -88,8 +88,8 @@ function openPlayers() {
   fireEvent.click(screen.getByRole('button', { name: en.game.playersTitle }));
 }
 
-describe('GameScreen — players modal', () => {
-  it('Should nominate a player from the modal during Nomination', () => {
+describe('GameScreen — nomination', () => {
+  it('Should nominate a player from the nomination modal', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -99,7 +99,7 @@ describe('GameScreen — players modal', () => {
       board: { ...view.board, president: 'you', chancellor: null },
     });
 
-    openPlayers();
+    // The nomination modal auto-opens for the President — no need to open it.
     fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
@@ -107,6 +107,25 @@ describe('GameScreen — players modal', () => {
     });
   });
 
+  it('Should end the round from the nomination modal', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, president: 'you', chancellor: null },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.endRound }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'endTurn' },
+    });
+  });
+});
+
+describe('GameScreen — players modal', () => {
   it('Should hide role labels the server has not revealed', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -158,13 +177,17 @@ describe('GameScreen — legislative modal', () => {
   });
 });
 
-describe('GameScreen — board', () => {
-  it('Should show the election tracker', () => {
+describe('GameScreen — info panel', () => {
+  it('Should reveal round details behind the info button', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
+    // Election tracker and government live in the info panel, not the board.
+    expect(screen.queryByText(en.game.electionTracker)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: en.game.infoTitle }));
     expect(screen.getByText(en.game.electionTracker)).toBeTruthy();
+    expect(screen.getByText(en.game.president)).toBeTruthy();
   });
 });
 

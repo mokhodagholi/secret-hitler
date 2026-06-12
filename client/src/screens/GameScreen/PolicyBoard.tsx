@@ -13,12 +13,11 @@ export interface PolicyBoardProps {
 
 const LIBERAL_SLOTS = 5;
 const FASCIST_SLOTS = 6;
-const ELECTION_TRACKER_SLOTS = 3;
 
 /**
- * The table-top policy board: face-down draw/discard stacks, both policy
- * tracks (filled left to right), the current-track counters, the election
- * tracker, and the tappable player-count chip that opens the player list.
+ * The table-top policy board: face-down draw/discard stacks and both policy
+ * tracks, filled left to right. Counters and the election tracker live in the
+ * info panel to keep the main view minimal.
  */
 export function PolicyBoard(props: PolicyBoardProps) {
   const { formatMessage } = props;
@@ -68,40 +67,6 @@ export function PolicyBoard(props: PolicyBoardProps) {
               </span>
             )}
           </Index>
-        </div>
-      </div>
-
-      <div class={styles.footer}>
-        <div class={styles.counters}>
-          <span class={styles.countersLabel}>
-            {formatMessage('game.currentTrack')}
-          </span>
-          <div class={styles.chips}>
-            <span classList={{ [styles.chip]: true, [styles.chipLiberal]: true }}>
-              {formatMessage('game.liberal')} {props.board.liberalPolicies}
-            </span>
-            <span classList={{ [styles.chip]: true, [styles.chipFascist]: true }}>
-              {formatMessage('game.fascist')} {props.board.fascistPolicies}
-            </span>
-          </div>
-        </div>
-
-        <div class={styles.electionTracker}>
-          <span class={styles.countersLabel}>
-            {formatMessage('game.electionTracker')}
-          </span>
-          <div class={styles.trackerDots}>
-            <Index each={Array.from({ length: ELECTION_TRACKER_SLOTS })}>
-              {(_dot, index) => (
-                <span
-                  classList={{
-                    [styles.trackerDot]: true,
-                    [styles.trackerDotOn]: index < props.board.electionTracker,
-                  }}
-                />
-              )}
-            </Index>
-          </div>
         </div>
       </div>
     </div>

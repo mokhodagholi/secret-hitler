@@ -9,18 +9,33 @@ export class NominationPhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
-  /** A fresh round: discussion (talking stick) opens on the President. */
+  /** A fresh round: the President has a timed window to nominate a Chancellor. */
   enter(): void {
     const room = this.host.room;
     room.chancellorId = null;
     room.votes.clear();
     this.host.startSpeakingTurnAt(room.presidentId);
+    this.host.openNominationTimer();
+  }
+
+  exit(): void {
+    this.host.closeNominationTimer();
+  }
+
+  /** No nomination in time: the election fails and the presidency passes on. */
+  timeout(): void {
+    this.host.failElection();
   }
 
   handle(playerId: string, command: GameCommand): EngineError | null {
     const room = this.host.room;
-    // The current speaker may end their discussion turn early.
+    // endTurn ends the round: the President fails the election early; any other
+    // speaker simply passes the talking stick.
     if (command.kind === 'endTurn') {
+      if (playerId === room.presidentId) {
+        this.host.failElection();
+        return null;
+      }
       if (playerId !== room.speakerId) {
         return err('INVALID_ACTION', 'It is not your turn to speak.');
       }

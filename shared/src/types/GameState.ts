@@ -144,6 +144,8 @@ export interface GameStateView {
   voteDeadline: { startedAt: number; endsAt: number } | null;
   /** Active legislative window (epoch ms) while a legislator chooses, else null. */
   legislativeDeadline: { startedAt: number; endsAt: number } | null;
+  /** Active nomination window (epoch ms) while the President nominates, else null. */
+  nominationDeadline: { startedAt: number; endsAt: number } | null;
   /** Player ids that may not be nominated as Chancellor (term limits). */
   ineligibleChancellors: string[];
   /** The power the President must use during the SpecialPower phase, else null. */
@@ -188,5 +190,7 @@ export const SPEAKING_TURN_MS = 20_000;
 export const VOTE_DURATION_MS = 30_000;
 /** How long a legislator has to choose before the engine picks at random. */
 export const LEGISLATIVE_DURATION_MS = 10_000;
+/** How long the President has to nominate before the election fails. */
+export const NOMINATION_DURATION_MS = 10_000;
 /** How long a disconnected host keeps the host seat before migration, in ms. */
 export const HOST_MIGRATION_GRACE_MS = 30_000;

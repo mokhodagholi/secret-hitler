@@ -19,8 +19,9 @@ import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { PolicyBoard } from './PolicyBoard';
 import { StatusRow } from './StatusRow';
-import { TurnBanner } from './TurnBanner';
 import { PlayersModal } from './PlayersModal';
+import { NominationModal } from './NominationModal';
+import { InfoPanel } from './InfoPanel';
 import { GameMenu } from './GameMenu';
 import { LegislativeModal } from './LegislativeModal';
 import { VotingOverlay } from './VotingOverlay';
@@ -30,10 +31,10 @@ import { PolicyRevealOverlay } from './PolicyRevealOverlay';
 import styles from './GameScreen.module.scss';
 
 /**
- * Main game screen: header with the in-game menu, the full-width policy board
- * (your role banner, draw/discard stacks, tracks, player-count chip), the
- * phase action panel and a full-width chat. State is the server's; this screen
- * renders the latest GameStateView and sends commands back.
+ * Main game screen, kept deliberately minimal: a status row (role, players,
+ * timer), the policy board (draw/discard stacks + tracks) and the chat. Round
+ * detail (current turn, status, election tracker, government) lives behind the
+ * info button; phase actions arrive as modals. State is the server's.
  */
 export function GameScreen() {
   const { nav, game, i18n, settings, animation } = useApp();
@@ -46,6 +47,7 @@ export function GameScreen() {
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [playersOpen, setPlayersOpen] = createSignal(false);
+  const [infoOpen, setInfoOpen] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
 
   let chatScroller: HTMLDivElement | undefined;
@@ -156,21 +158,30 @@ export function GameScreen() {
   const speakerPlayer = () =>
     view()?.players.find((player) => player.id === speaker()?.playerId) ?? null;
 
+  const secondsUntil = (endsAt: number) =>
+    Math.max(0, Math.ceil((endsAt - now()) / 1000));
+
   // Whichever phase clock is running right now, for the compact status row.
   const activeDeadline = () =>
-    view()?.voteDeadline ?? view()?.legislativeDeadline ?? speaker();
+    view()?.voteDeadline ??
+    view()?.legislativeDeadline ??
+    view()?.nominationDeadline ??
+    speaker();
   const activeSecondsLeft = () => {
     const deadline = activeDeadline();
-    return deadline
-      ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000))
-      : null;
+    return deadline ? secondsUntil(deadline.endsAt) : null;
+  };
+  const nominationSecondsLeft = () => {
+    const deadline = view()?.nominationDeadline;
+    return deadline ? secondsUntil(deadline.endsAt) : 0;
   };
 
   function castVote(vote: 'ja' | 'nein'): void {
     game.sendCommand({ kind: 'castVote', vote });
   }
 
-  function endSpeakingTurn(): void {
+  /** President ends the nomination round early (the election fails). */
+  function endRound(): void {
     game.sendCommand({ kind: 'endTurn' });
   }
 
@@ -245,6 +256,14 @@ export function GameScreen() {
               <button
                 type="button"
                 class={styles.menuButton}
+                aria-label={formatMessage('game.infoTitle')}
+                onClick={() => setInfoOpen(true)}
+              >
+                <Icon name="info" size={19} />
+              </button>
+              <button
+                type="button"
+                class={styles.menuButton}
                 aria-label={formatMessage('settings.title')}
                 onClick={() => setMenuOpen(true)}
               >
@@ -267,43 +286,33 @@ export function GameScreen() {
                 />
               </Show>
 
-              <Show when={speakerPlayer()}>
-                {(player) => (
-                  <TurnBanner
-                    speakerId={player().id}
-                    name={player().name}
-                    avatar={player().avatar}
-                    isMyTurn={isMySpeakingTurn()}
-                    onEndTurn={endSpeakingTurn}
-                    formatMessage={formatMessage}
-                  />
-                )}
-              </Show>
-
               <PolicyBoard board={state().board} formatMessage={formatMessage} />
-
-              <div class={styles.government}>
-                <div class={styles.governmentCard}>
-                  <span class={styles.governmentLabel}>
-                    {formatMessage('game.president')}
-                  </span>
-                  <span class={styles.governmentName}>
-                    {playerName(state().board.president)}
-                  </span>
-                </div>
-                <div class={styles.governmentCard}>
-                  <span class={styles.governmentLabel}>
-                    {formatMessage('game.chancellor')}
-                  </span>
-                  <span class={styles.governmentName}>
-                    {playerName(state().board.chancellor)}
-                  </span>
-                </div>
-              </div>
             </section>
 
+            <Show
+              when={
+                state().phase === Phase.Nomination &&
+                !iAmPresident() &&
+                !!game.you()?.isAlive
+              }
+            >
+              <p class={styles.hint}>
+                {formatMessage('game.nominateWaiting', {
+                  name: playerName(state().board.president),
+                })}
+              </p>
+            </Show>
+
             <Show when={state().phase === Phase.Nomination && iAmPresident()}>
-              <p class={styles.hint}>{formatMessage('game.nominateHint')}</p>
+              <NominationModal
+                players={state().players}
+                youId={state().you.id}
+                secondsLeft={nominationSecondsLeft()}
+                canNominate={canNominate}
+                onNominate={nominate}
+                onEndRound={endRound}
+                formatMessage={formatMessage}
+              />
             </Show>
 
             <Show when={revealedPolicy()}>
@@ -511,9 +520,45 @@ export function GameScreen() {
               players={state().players}
               youId={state().you.id}
               formatMessage={formatMessage}
-              canNominate={canNominate}
-              onNominate={nominate}
+              canNominate={() => false}
+              onNominate={() => {}}
               onClose={() => setPlayersOpen(false)}
+            />
+
+            <InfoPanel
+              open={infoOpen()}
+              formatMessage={formatMessage}
+              onClose={() => setInfoOpen(false)}
+              rows={[
+                {
+                  label: formatMessage('game.status'),
+                  value: formatMessage(`phase.${state().phase}`),
+                },
+                {
+                  label: formatMessage('game.currentTurn'),
+                  value: speakerPlayer()?.name ?? formatMessage('game.none'),
+                },
+                {
+                  label: formatMessage('game.electionTracker'),
+                  value: `${state().board.electionTracker}/3`,
+                },
+                {
+                  label: formatMessage('game.president'),
+                  value: playerName(state().board.president),
+                },
+                {
+                  label: formatMessage('game.chancellor'),
+                  value: playerName(state().board.chancellor),
+                },
+                {
+                  label: formatMessage('game.currentTrack'),
+                  value: `${formatMessage('game.liberal')} ${
+                    state().board.liberalPolicies
+                  } · ${formatMessage('game.fascist')} ${
+                    state().board.fascistPolicies
+                  }`,
+                },
+              ]}
             />
 
             <GameMenu
