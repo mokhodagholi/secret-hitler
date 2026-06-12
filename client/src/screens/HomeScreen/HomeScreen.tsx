@@ -8,7 +8,8 @@ import { Silhouettes } from './Silhouettes';
 import styles from './HomeScreen.module.scss';
 
 export function HomeScreen() {
-  const { nav } = useApp();
+  const { nav, i18n } = useApp();
+  const { formatMessage } = i18n;
   return (
     <Screen nav={LANDING_NAV}>
       <div class={styles.home}>
@@ -19,7 +20,7 @@ export function HomeScreen() {
         </div>
         <div class={styles.cta}>
           <Button size="lg" onClick={() => nav.navigate('play')}>
-            Play
+            {formatMessage('home.play')}
           </Button>
         </div>
       </div>

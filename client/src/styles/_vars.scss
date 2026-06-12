@@ -24,8 +24,12 @@ $red-bright: #e2603f;
 $red-deep: #8a2f23;
 $blue-liberal: #4f8fd0;
 
-$font-display: 'Oswald', 'Avenir Next Condensed', 'Arial Narrow', sans-serif;
-$font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+// 'Vazirmatn' is the Persian fallback — Latin display/body fonts carry no
+// Persian glyphs, so Farsi text falls through to it automatically.
+$font-display: 'Oswald', 'Avenir Next Condensed', 'Arial Narrow', 'Vazirmatn',
+  sans-serif;
+$font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Vazirmatn',
+  sans-serif;
 
 $radius-sm: 8px;
 $radius: 12px;

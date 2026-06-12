@@ -1,4 +1,5 @@
 import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
+import { DEFAULT_LANGUAGE, type Language } from '../i18n';
 
 export interface SettingsState {
   playerCount: number;
@@ -6,6 +7,7 @@ export interface SettingsState {
   timerEnabled: boolean;
   confirmActions: boolean;
   theme: 'classic-blue';
+  language: Language;
   music: boolean;
   soundEffects: boolean;
 }
@@ -16,6 +18,7 @@ const DEFAULTS: SettingsState = {
   timerEnabled: false,
   confirmActions: true,
   theme: 'classic-blue',
+  language: DEFAULT_LANGUAGE,
   music: true,
   soundEffects: true,
 };

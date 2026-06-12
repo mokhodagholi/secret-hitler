@@ -9,95 +9,119 @@ import { SettingRow } from '../../components/SettingRow/SettingRow';
 import styles from './SettingsScreen.module.scss';
 
 export function SettingsScreen() {
-  const { nav, settings } = useApp();
-  const s = settings.settings;
+  const { nav, settings, i18n } = useApp();
+  const state = settings.settings;
+  const { formatMessage } = i18n;
+
+  const activeLanguageName = () =>
+    i18n.available().find((language) => language.code === state.language)!
+      .nativeName;
 
   return (
     <Screen nav={APP_NAV}>
       <ScreenHeader
-        title="Settings"
+        title={formatMessage('settings.title')}
         right={
-          <button class={styles.gear} aria-label="Settings">
+          <button
+            class={styles.gear}
+            aria-label={formatMessage('settings.headerLabel')}
+          >
             <Icon name="gear" size={22} />
           </button>
         }
       />
 
-      <SectionTitle>Game Settings</SectionTitle>
+      <SectionTitle>{formatMessage('settings.gameSettings')}</SectionTitle>
       <SettingRow
         kind="value"
         icon="people"
-        label="Player Count"
-        value={`${s.playerCount} Players`}
+        label={formatMessage('settings.playerCount')}
+        value={formatMessage('settings.players', { count: state.playerCount })}
         onClick={() => settings.cyclePlayerCount()}
       />
       <SettingRow
         kind="toggle"
         icon="masks"
-        label="Show Roles in Game"
-        checked={s.showRoles}
-        onChange={(v) => settings.set('showRoles', v)}
+        label={formatMessage('settings.showRoles')}
+        checked={state.showRoles}
+        onChange={(value) => settings.set('showRoles', value)}
       />
       <SettingRow
         kind="value"
         icon="clock"
-        label="Timer"
-        value={s.timerEnabled ? 'Enabled' : 'Disabled'}
+        label={formatMessage('settings.timer')}
+        value={formatMessage(
+          state.timerEnabled ? 'settings.enabled' : 'settings.disabled',
+        )}
         onClick={() => settings.toggleTimer()}
       />
       <SettingRow
         kind="toggle"
         icon="chat"
-        label="Confirm Actions"
-        checked={s.confirmActions}
-        onChange={(v) => settings.set('confirmActions', v)}
+        label={formatMessage('settings.confirmActions')}
+        checked={state.confirmActions}
+        onChange={(value) => settings.set('confirmActions', value)}
       />
 
-      <SectionTitle>Display</SectionTitle>
-      <SettingRow kind="value" icon="palette" label="Theme" value="Classic Blue" />
+      <SectionTitle>{formatMessage('settings.display')}</SectionTitle>
+      <SettingRow
+        kind="value"
+        icon="palette"
+        label={formatMessage('settings.theme')}
+        value={formatMessage('settings.classicBlue')}
+      />
+      <SettingRow
+        kind="value"
+        icon="globe"
+        label={formatMessage('settings.language')}
+        value={activeLanguageName()}
+        onClick={() => settings.set('language', i18n.next(state.language))}
+      />
       <SettingRow
         kind="toggle"
         icon="music"
-        label="Music"
-        checked={s.music}
-        onChange={(v) => settings.set('music', v)}
+        label={formatMessage('settings.music')}
+        checked={state.music}
+        onChange={(value) => settings.set('music', value)}
       />
       <SettingRow
         kind="toggle"
         icon="speaker"
-        label="Sound Effects"
-        checked={s.soundEffects}
-        onChange={(v) => settings.set('soundEffects', v)}
+        label={formatMessage('settings.soundEffects')}
+        checked={state.soundEffects}
+        onChange={(value) => settings.set('soundEffects', value)}
       />
 
-      <SectionTitle>Other</SectionTitle>
+      <SectionTitle>{formatMessage('settings.other')}</SectionTitle>
       <SettingRow
         kind="link"
         icon="question"
-        label="How to Play"
+        label={formatMessage('settings.howToPlay')}
         onClick={() => nav.navigate('how-to-play')}
       />
       <SettingRow
         kind="link"
         icon="info"
-        label="About"
+        label={formatMessage('settings.about')}
         onClick={() => nav.navigate('about')}
       />
       <SettingRow
         kind="link"
         icon="refresh"
-        label="Reset Tutorials"
+        label={formatMessage('settings.resetTutorials')}
         onClick={() => settings.resetTutorials()}
       />
       <SettingRow
         kind="link"
         icon="trash"
-        label="Clear Local Data"
+        label={formatMessage('settings.clearLocalData')}
         onClick={() => settings.clearLocalData()}
       />
 
       <div class={styles.restore}>
-        <Button variant="outline">Restore Purchases</Button>
+        <Button variant="outline">
+          {formatMessage('settings.restorePurchases')}
+        </Button>
       </div>
     </Screen>
   );

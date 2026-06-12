@@ -42,4 +42,9 @@
 
 .chevron {
   color: $gold;
+
+  // The chevron points "forward"; flip it to match RTL reading direction.
+  :global([dir='rtl']) & {
+    transform: scaleX(-1);
+  }
 }

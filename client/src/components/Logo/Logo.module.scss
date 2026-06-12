@@ -14,8 +14,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  // shift right slightly so wide letter-spacing stays visually centered
-  margin-right: -0.45em;
+  // shift slightly so wide letter-spacing stays visually centered
+  margin-inline-end: -0.45em;
 
   &::before,
   &::after {
@@ -61,12 +61,13 @@
   color: $red-bright;
   text-align: center;
   line-height: 1.7;
+  white-space: pre-line; // render the locale's "\n" as a line break
 }
 
 .large {
   .secret {
     @include display(1.2rem, 0.5em);
-    margin-right: -0.5em;
+    margin-inline-end: -0.5em;
 
     &::before,
     &::after {

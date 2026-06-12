@@ -27,3 +27,11 @@ button {
   border: none;
   cursor: pointer;
 }
+
+// Letter-spacing breaks the cursive joins of Persian/Arabic script, so the
+// condensed-display tracking used throughout the LTR design is neutralised for
+// any RTL locale. The (0,1,1) specificity outranks the single-class module
+// rules that set tracking, without needing !important.
+[dir='rtl'] body * {
+  letter-spacing: 0;
+}

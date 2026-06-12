@@ -1,4 +1,5 @@
 import { Show } from 'solid-js';
+import { useApp } from '../../services/AppContext';
 import { Icon } from '../Icon/Icon';
 import styles from './Logo.module.scss';
 
@@ -9,6 +10,7 @@ export interface LogoProps {
 
 /** Art-deco "SECRET HITLER" wordmark with winged flanks and star. */
 export function Logo(props: LogoProps) {
+  const { formatMessage } = useApp().i18n;
   return (
     <div
       classList={{
@@ -16,19 +18,15 @@ export function Logo(props: LogoProps) {
         [styles.large]: props.size === 'large',
       }}
     >
-      <span class={styles.secret}>Secret</span>
+      <span class={styles.secret}>{formatMessage('logo.secret')}</span>
       <div class={styles.row}>
         <Wing />
-        <span class={styles.hitler}>Hitler</span>
+        <span class={styles.hitler}>{formatMessage('logo.hitler')}</span>
         <Wing flip />
       </div>
       <Icon name="star" size={props.size === 'large' ? 16 : 11} class={styles.star} />
       <Show when={props.tagline}>
-        <p class={styles.tagline}>
-          A game of deduction,
-          <br />
-          deception, and fascism
-        </p>
+        <p class={styles.tagline}>{formatMessage('logo.tagline')}</p>
       </Show>
     </div>
   );

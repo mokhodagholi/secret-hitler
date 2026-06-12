@@ -6,7 +6,8 @@ import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen/PlaceholderScreen';
 
 function Router() {
-  const { nav } = useApp();
+  const { nav, i18n } = useApp();
+  const { formatMessage } = i18n;
   return (
     <Switch fallback={<HomeScreen />}>
       <Match when={nav.screen() === 'home'}>
@@ -19,13 +20,13 @@ function Router() {
         <SettingsScreen />
       </Match>
       <Match when={nav.screen() === 'how-to-play'}>
-        <PlaceholderScreen title="How to Play" />
+        <PlaceholderScreen title={formatMessage('screens.howToPlay')} />
       </Match>
       <Match when={nav.screen() === 'about'}>
-        <PlaceholderScreen title="About" />
+        <PlaceholderScreen title={formatMessage('screens.about')} />
       </Match>
       <Match when={nav.screen() === 'play'}>
-        <PlaceholderScreen title="Play" />
+        <PlaceholderScreen title={formatMessage('screens.play')} />
       </Match>
     </Switch>
   );

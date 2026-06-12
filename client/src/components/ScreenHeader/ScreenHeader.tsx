@@ -11,14 +11,14 @@ export interface ScreenHeaderProps {
 
 /** Inner-screen header: back button, small logo, screen title, optional right action. */
 export function ScreenHeader(props: ScreenHeaderProps) {
-  const { nav } = useApp();
+  const { nav, i18n } = useApp();
   return (
     <header class={styles.header}>
       <button
         type="button"
         class={styles.back}
         onClick={() => nav.back()}
-        aria-label="Go back"
+        aria-label={i18n.formatMessage('common.goBack')}
       >
         <Icon name="arrowLeft" size={24} />
       </button>

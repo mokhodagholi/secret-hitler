@@ -1,31 +1,34 @@
 import { For } from 'solid-js';
 import { useApp } from '../../services/AppContext';
+import type { MessageKey } from '../../i18n';
 import type { ScreenName } from '../../services/NavigationService';
 import { Icon, type IconName } from '../Icon/Icon';
 import styles from './BottomNav.module.scss';
 
 export interface NavItem {
   icon: IconName;
-  label: string;
+  /** Message id for the tab label — resolved per active language. */
+  labelKey: MessageKey;
   screen: ScreenName;
 }
 
 /** Landing screen variant: Rules | How to Play | Settings */
 export const LANDING_NAV: NavItem[] = [
-  { icon: 'book', label: 'Rules', screen: 'rules' },
-  { icon: 'people', label: 'How to Play', screen: 'how-to-play' },
-  { icon: 'gear', label: 'Settings', screen: 'settings' },
+  { icon: 'book', labelKey: 'nav.rules', screen: 'rules' },
+  { icon: 'people', labelKey: 'nav.howToPlay', screen: 'how-to-play' },
+  { icon: 'gear', labelKey: 'nav.settings', screen: 'settings' },
 ];
 
 /** Inner screens variant: Rules | Home | Settings */
 export const APP_NAV: NavItem[] = [
-  { icon: 'book', label: 'Rules', screen: 'rules' },
-  { icon: 'home', label: 'Home', screen: 'home' },
-  { icon: 'gear', label: 'Settings', screen: 'settings' },
+  { icon: 'book', labelKey: 'nav.rules', screen: 'rules' },
+  { icon: 'home', labelKey: 'nav.home', screen: 'home' },
+  { icon: 'gear', labelKey: 'nav.settings', screen: 'settings' },
 ];
 
 export function BottomNav(props: { items: NavItem[] }) {
-  const { nav } = useApp();
+  const { nav, i18n } = useApp();
+  const { formatMessage } = i18n;
   return (
     <nav class={styles.nav}>
       <For each={props.items}>
@@ -39,7 +42,7 @@ export function BottomNav(props: { items: NavItem[] }) {
             onClick={() => nav.navigate(item.screen)}
           >
             <Icon name={item.icon} size={22} />
-            <span>{item.label}</span>
+            <span>{formatMessage(item.labelKey)}</span>
           </button>
         )}
       </For>

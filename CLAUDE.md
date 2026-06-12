@@ -4,6 +4,14 @@
 
 A real-time multiplayer Secret Hitler board game played in the browser, with voice chat, heavy animations, and high performance as top priorities.
 
+## Agent Conventions
+
+Project coding conventions and rules live in the [`.agents/`](.agents/) directory — read and follow them. (Tool permissions stay in `.claude/settings.local.json`.)
+
+- [`.agents/rules/naming.md`](.agents/rules/naming.md) — use descriptive names, not 1–2 character abbreviations.
+
+@.agents/rules/naming.md
+
 ## Tech Stack
 
 ### Package Manager

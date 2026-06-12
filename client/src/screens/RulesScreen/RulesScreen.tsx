@@ -1,4 +1,6 @@
 import { For } from 'solid-js';
+import { useApp } from '../../services/AppContext';
+import type { FormatMessage } from '../../i18n';
 import { APP_NAV } from '../../components/BottomNav/BottomNav';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
@@ -8,70 +10,55 @@ import { ComponentCard, type ComponentCardProps } from './ComponentCard';
 import { RuleStep, type RuleStepProps } from './RuleStep';
 import styles from './RulesScreen.module.scss';
 
-const COMPONENTS: ComponentCardProps[] = [
-  { icon: 'people', label: '17 Role Cards', tone: 'gold' },
-  { icon: 'cards', label: 'Policy Deck', tone: 'fascist' },
-  { icon: 'scroll', label: 'Policy Tracker', tone: 'liberal' },
-  { icon: 'envelope', label: 'Envelope', tone: 'neutral' },
-];
+function buildComponentCards(formatMessage: FormatMessage): ComponentCardProps[] {
+  return [
+    { icon: 'people', label: formatMessage('rules.componentCards.roleCards'), tone: 'gold' },
+    { icon: 'cards', label: formatMessage('rules.componentCards.policyDeck'), tone: 'fascist' },
+    { icon: 'scroll', label: formatMessage('rules.componentCards.policyTracker'), tone: 'liberal' },
+    { icon: 'envelope', label: formatMessage('rules.componentCards.envelope'), tone: 'neutral' },
+  ];
+}
 
-const STEPS: RuleStepProps[] = [
-  {
-    number: 1,
-    icon: 'people',
-    title: 'Deal Roles',
-    body: 'Each player is secretly assigned a role.',
-  },
-  {
-    number: 2,
-    icon: 'star',
-    title: 'Elect a President',
-    body: 'Players elect a President and Chancellor.',
-  },
-  {
-    number: 3,
-    icon: 'scroll',
-    title: 'Enact Policies',
-    body: 'The government draws and enacts policies. Track the policies on the board.',
-  },
-  {
-    number: 4,
-    icon: 'skull',
-    title: 'Achieve Your Agenda',
-    body: 'Liberals win by passing 5 Liberal policies. Fascists win by passing 6 Fascist policies or electing Hitler as Chancellor after 3 Fascist policies.',
-  },
-];
+function buildRuleSteps(formatMessage: FormatMessage): RuleStepProps[] {
+  return [
+    { number: 1, icon: 'people', title: formatMessage('rules.steps.deal.title'), body: formatMessage('rules.steps.deal.body') },
+    { number: 2, icon: 'star', title: formatMessage('rules.steps.elect.title'), body: formatMessage('rules.steps.elect.body') },
+    { number: 3, icon: 'scroll', title: formatMessage('rules.steps.enact.title'), body: formatMessage('rules.steps.enact.body') },
+    { number: 4, icon: 'skull', title: formatMessage('rules.steps.agenda.title'), body: formatMessage('rules.steps.agenda.body') },
+  ];
+}
 
 export function RulesScreen() {
+  const { formatMessage } = useApp().i18n;
   return (
     <Screen nav={APP_NAV}>
-      <ScreenHeader title="Rules" />
+      <ScreenHeader title={formatMessage('rules.title')} />
 
-      <SectionTitle centered>Overview</SectionTitle>
+      <SectionTitle centered>{formatMessage('rules.overview')}</SectionTitle>
       <div class={styles.overview}>
         <Icon name="capitol" size={56} class={styles.capitol} />
-        <p>
-          Secret Hitler is a game of hidden identities and suspicion. Liberals
-          must pass policies and elect a Liberal government. Hitler and the
-          Fascists must sabotage the government and pass Fascist policies.
-        </p>
+        <p>{formatMessage('rules.overviewBody')}</p>
       </div>
 
-      <SectionTitle centered>Components</SectionTitle>
+      <SectionTitle centered>{formatMessage('rules.components')}</SectionTitle>
       <div class={styles.componentGrid}>
-        <For each={COMPONENTS}>{(c) => <ComponentCard {...c} />}</For>
+        <For each={buildComponentCards(formatMessage)}>
+          {(componentCard) => <ComponentCard {...componentCard} />}
+        </For>
       </div>
 
-      <SectionTitle centered>How to Play</SectionTitle>
+      <SectionTitle centered>{formatMessage('rules.howToPlay')}</SectionTitle>
       <ol class={styles.steps}>
-        <For each={STEPS}>{(step) => <RuleStep {...step} />}</For>
+        <For each={buildRuleSteps(formatMessage)}>
+          {(ruleStep) => <RuleStep {...ruleStep} />}
+        </For>
       </ol>
 
-      <SectionTitle centered>Remember</SectionTitle>
+      <SectionTitle centered>{formatMessage('rules.remember')}</SectionTitle>
       <p class={styles.remember}>
-        Deduction, deception, and discussion are your greatest weapons.
+        {formatMessage('rules.rememberBody')}
         <br />
-        <strong>Trust no one.</strong>
+        <strong>{formatMessage('rules.trustNoOne')}</strong>
       </p>
     </Screen>
   );

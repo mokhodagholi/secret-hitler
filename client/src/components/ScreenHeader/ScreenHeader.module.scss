@@ -12,22 +12,27 @@
 
 .back {
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   top: 6px;
   padding: 8px;
   color: $gold;
   @include pressable;
+
+  // The arrow glyph itself points left; mirror it under RTL.
+  :global([dir='rtl']) & {
+    transform: scaleX(-1);
+  }
 }
 
 .right {
   position: absolute;
-  right: 0;
+  inset-inline-end: 0;
   top: 6px;
 }
 
 .title {
   @include display(1.05rem, 0.3em);
   margin-top: 10px;
-  margin-right: -0.3em;
+  margin-inline-end: -0.3em;
   color: $text-light;
 }
