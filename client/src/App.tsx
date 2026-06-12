@@ -8,6 +8,7 @@ import { PlayScreen } from './screens/PlayScreen/PlayScreen';
 import { CreateRoomScreen } from './screens/CreateRoomScreen/CreateRoomScreen';
 import { JoinGameScreen } from './screens/JoinGameScreen/JoinGameScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
+import { GameScreen } from './screens/GameScreen/GameScreen';
 
 function Router() {
   const { nav, i18n } = useApp();
@@ -42,7 +43,7 @@ function Router() {
         <WaitingRoomScreen />
       </Match>
       <Match when={nav.screen() === 'game'}>
-        <PlaceholderScreen title={formatMessage('screens.play')} />
+        <GameScreen />
       </Match>
     </Switch>
   );

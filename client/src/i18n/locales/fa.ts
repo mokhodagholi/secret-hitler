@@ -126,6 +126,8 @@ export const fa = {
   'game.electionTracker': 'شمارندهٔ انتخابات',
   'game.drawPile': 'دستهٔ کشیدن',
   'game.discardPile': 'دستهٔ دور ریخته',
+  'game.nominateHint':
+    'شما رئیس‌جمهور هستید — برای معرفی صدراعظم روی یک بازیکن بزنید.',
 
   'role.liberal': 'لیبرال',
   'role.fascist': 'فاشیست',

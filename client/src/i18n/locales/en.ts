@@ -125,6 +125,8 @@ export const en = {
   'game.electionTracker': 'Election Tracker',
   'game.drawPile': 'Draw',
   'game.discardPile': 'Discard',
+  'game.nominateHint':
+    'You are the President — tap a player to nominate them as Chancellor.',
 
   'role.liberal': 'Liberal',
   'role.fascist': 'Fascist',

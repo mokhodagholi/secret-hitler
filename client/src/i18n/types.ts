@@ -114,6 +114,7 @@ export type MessageKey =
   | 'game.electionTracker'
   | 'game.drawPile'
   | 'game.discardPile'
+  | 'game.nominateHint'
   | 'role.liberal'
   | 'role.fascist'
   | 'role.hitler'
