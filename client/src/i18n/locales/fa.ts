@@ -240,6 +240,10 @@ export const fa = {
       agree: 'موافقت',
       reject: 'رد',
     },
+    over: {
+      liberalsWin: 'لیبرال‌ها برنده شدند!',
+      fascistsWin: 'فاشیست‌ها برنده شدند!',
+    },
   },
   vote: {
     ja: 'موافق',

@@ -21,6 +21,7 @@ import { Screen } from '../../components/Screen/Screen';
 import { PlayerSeat } from './PlayerSeat';
 import { VotingOverlay } from './VotingOverlay';
 import { PowerPanel } from './PowerPanel';
+import { GameOverOverlay } from './GameOverOverlay';
 import { PolicyRevealOverlay } from './PolicyRevealOverlay';
 import styles from './GameScreen.module.scss';
 
@@ -612,6 +613,18 @@ export function GameScreen() {
               onConfirm={leaveRoom}
               onCancel={() => setConfirmingLeave(false)}
             />
+
+            <Show when={state().phase === Phase.GameOver && state().winner}>
+              <GameOverOverlay
+                formatMessage={formatMessage}
+                winner={state().winner!}
+                players={state().players}
+                onLeave={() => {
+                  game.leaveRoom();
+                  nav.navigate('play');
+                }}
+              />
+            </Show>
           </div>
         )}
       </Show>

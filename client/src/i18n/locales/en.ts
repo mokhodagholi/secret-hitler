@@ -244,6 +244,10 @@ export const en = {
       agree: 'Agree',
       reject: 'Reject',
     },
+    over: {
+      liberalsWin: 'The Liberals win!',
+      fascistsWin: 'The Fascists win!',
+    },
   },
   vote: {
     ja: 'Ja',

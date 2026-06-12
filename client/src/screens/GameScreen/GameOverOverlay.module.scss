@@ -1,0 +1,81 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 8, 16, 0.85);
+}
+
+.dialog {
+  @include card;
+  width: 100%;
+  max-width: 360px;
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+}
+
+.headline {
+  @include display(1.6rem, 0.08em);
+  text-align: center;
+}
+
+.liberal {
+  color: $blue-liberal;
+}
+
+.fascist {
+  color: $red-bright;
+}
+
+.roles {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: $radius-sm;
+  background: rgba($navy-700, 0.5);
+}
+
+.name {
+  color: $text-light;
+  font-size: 0.92rem;
+}
+
+.role {
+  @include display(0.72rem, 0.1em);
+}
+
+.roleLiberal {
+  color: $blue-liberal;
+}
+
+.roleFascist {
+  color: $red-bright;
+}
+
+.leave {
+  @include display(0.85rem, 0.12em);
+  @include pressable;
+  width: 100%;
+  padding: 13px;
+  border-radius: $radius;
+  color: $navy-950;
+  background: linear-gradient(180deg, $gold-bright, $gold-dark);
+}
