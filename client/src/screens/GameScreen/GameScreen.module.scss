@@ -294,6 +294,16 @@
   background: linear-gradient(180deg, $gold-bright, $gold-dark);
 }
 
+.vetoButton {
+  @include display(0.75rem, 0.08em);
+  @include pressable;
+  padding: 8px 16px;
+  border-radius: $radius-sm;
+  color: $red-bright;
+  border: 1px solid rgba($red-bright, 0.55);
+  background: rgba($red-bright, 0.08);
+}
+
 .policyCard {
   @include display(0.78rem, 0.08em);
   @include pressable;

@@ -179,6 +179,14 @@ export function GameScreen() {
     }
   }
 
+  const iAmChancellor = () => {
+    const state = view();
+    return state != null && state.board.chancellor === state.you.id;
+  };
+  const proposeVeto = () => game.sendCommand({ kind: 'vetoRequest' });
+  const respondVeto = (agree: boolean) =>
+    game.sendCommand({ kind: 'vetoConsent', agree });
+
   const powerTargets = () => {
     const state = view();
     if (!state) return [];
@@ -326,43 +334,92 @@ export function GameScreen() {
             <Show when={isLegislative()}>
               <div class={styles.votePanel}>
                 <Show
-                  when={myPolicies().length > 0}
+                  when={state().vetoRequested}
                   fallback={
-                    <span class={styles.voteWaiting}>
-                      {state().phase === Phase.PresidentLegislative
-                        ? formatMessage('game.presidentChoosing', {
-                            name: playerName(state().board.president),
-                          })
-                        : formatMessage('game.chancellorChoosing', {
-                            name: playerName(state().board.chancellor),
-                          })}
-                    </span>
+                    <Show
+                      when={myPolicies().length > 0}
+                      fallback={
+                        <span class={styles.voteWaiting}>
+                          {state().phase === Phase.PresidentLegislative
+                            ? formatMessage('game.presidentChoosing', {
+                                name: playerName(state().board.president),
+                              })
+                            : formatMessage('game.chancellorChoosing', {
+                                name: playerName(state().board.chancellor),
+                              })}
+                        </span>
+                      }
+                    >
+                      <span class={styles.votePrompt}>
+                        {formatMessage(
+                          state().phase === Phase.PresidentLegislative
+                            ? 'game.presidentDiscardHint'
+                            : 'game.chancellorEnactHint',
+                        )}
+                      </span>
+                      <div class={styles.policyCards}>
+                        <For each={myPolicies()}>
+                          {(policy, index) => (
+                            <button
+                              type="button"
+                              classList={{
+                                [styles.policyCard]: true,
+                                [styles.policyLiberal]: policy === 'liberal',
+                                [styles.policyFascist]: policy === 'fascist',
+                              }}
+                              onClick={() => chooseLegislative(index())}
+                            >
+                              {formatMessage(`game.${policy}`)}
+                            </button>
+                          )}
+                        </For>
+                      </div>
+                      <Show
+                        when={
+                          state().phase === Phase.ChancellorLegislative &&
+                          state().vetoUnlocked &&
+                          iAmChancellor()
+                        }
+                      >
+                        <button
+                          type="button"
+                          class={styles.vetoButton}
+                          onClick={proposeVeto}
+                        >
+                          {formatMessage('game.veto.propose')}
+                        </button>
+                      </Show>
+                    </Show>
                   }
                 >
                   <span class={styles.votePrompt}>
-                    {formatMessage(
-                      state().phase === Phase.PresidentLegislative
-                        ? 'game.presidentDiscardHint'
-                        : 'game.chancellorEnactHint',
-                    )}
+                    {formatMessage('game.veto.consentPrompt')}
                   </span>
-                  <div class={styles.policyCards}>
-                    <For each={myPolicies()}>
-                      {(policy, index) => (
-                        <button
-                          type="button"
-                          classList={{
-                            [styles.policyCard]: true,
-                            [styles.policyLiberal]: policy === 'liberal',
-                            [styles.policyFascist]: policy === 'fascist',
-                          }}
-                          onClick={() => chooseLegislative(index())}
-                        >
-                          {formatMessage(`game.${policy}`)}
-                        </button>
-                      )}
-                    </For>
-                  </div>
+                  <Show
+                    when={iAmPresident()}
+                    fallback={
+                      <span class={styles.voteWaiting}>
+                        {formatMessage('game.veto.waiting')}
+                      </span>
+                    }
+                  >
+                    <div class={styles.voteButtons}>
+                      <button
+                        type="button"
+                        class={styles.voteJa}
+                        onClick={() => respondVeto(true)}
+                      >
+                        {formatMessage('game.veto.agree')}
+                      </button>
+                      <button
+                        type="button"
+                        class={styles.voteNein}
+                        onClick={() => respondVeto(false)}
+                      >
+                        {formatMessage('game.veto.reject')}
+                      </button>
+                    </div>
+                  </Show>
                 </Show>
               </div>
             </Show>

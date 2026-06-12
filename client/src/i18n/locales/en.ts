@@ -237,6 +237,13 @@ export const en = {
       inProgress: '{name} is using a presidential power…',
       continue: 'Continue',
     },
+    veto: {
+      propose: 'Propose Veto',
+      consentPrompt: 'The Chancellor proposes to veto both policies.',
+      waiting: 'Waiting for the President to decide…',
+      agree: 'Agree',
+      reject: 'Reject',
+    },
   },
   vote: {
     ja: 'Ja',
