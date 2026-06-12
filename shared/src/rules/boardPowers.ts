@@ -1,9 +1,6 @@
-/** Executive powers a fascist policy can grant the President. */
-export type ExecutivePower =
-  | 'investigate'
-  | 'specialElection'
-  | 'policyPeek'
-  | 'execution';
+import type { ExecutivePower } from '../types/GameState';
+
+export type { ExecutivePower };
 
 // Power granted when the Nth fascist policy (1–5) is enacted, by player-count
 // band. Index 0 = first fascist policy. The 6th fascist policy ends the game,

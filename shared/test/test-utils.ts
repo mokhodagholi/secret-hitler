@@ -16,6 +16,10 @@ export class StackedDeck extends PolicyDeck {
   override drawTiles(count: number): Policy[] {
     return this.tiles.splice(0, count);
   }
+
+  override peekTop(count: number): Policy[] {
+    return this.tiles.slice(0, count);
+  }
 }
 
 export function makeRoom(

@@ -1,6 +1,7 @@
 import {
   Phase,
   type BoardState,
+  type ExecutivePower,
   type Faction,
   type GameStateView,
   type Player,
@@ -49,6 +50,16 @@ export class Room {
   speakerEndsAt = 0;
   voteStartedAt = 0;
   voteEndsAt = 0;
+  /** Executive power awaiting the President's use, else null. */
+  activePower: ExecutivePower | null = null;
+  /** Players already investigated this game (each may be investigated once). */
+  investigatedIds: string[] = [];
+  /** Top three policies held for the President during Policy Peek. */
+  peekedPolicies: Policy[] = [];
+  /** Last investigation result, private to the President until acknowledged. */
+  investigation: { targetId: string; party: Faction } | null = null;
+  /** After a special election, the round rotation resumes after this player. */
+  specialElectionResumeAfterId: string | null = null;
 
   constructor(args: {
     id: string;
@@ -168,13 +179,25 @@ export class Room {
           : null,
       ineligibleChancellors:
         this.phase === Phase.Nomination ? this.ineligibleChancellorIds() : [],
+      activePower: this.activePower,
       you: {
         id: viewerId,
         role: viewer?.role ?? null,
         vote: this.votes.get(viewerId) ?? null,
         policies: this.policiesFor(viewerId),
+        peek: viewerId === this.presidentId ? [...this.peekedPolicies] : [],
+        investigation: this.investigationFor(viewerId),
       },
     };
+  }
+
+  /** Investigation result, shown only to the President who ran it. */
+  private investigationFor(
+    viewerId: string,
+  ): { name: string; party: Faction } | null {
+    if (!this.investigation || viewerId !== this.presidentId) return null;
+    const target = this.findPlayer(this.investigation.targetId);
+    return target ? { name: target.name, party: this.investigation.party } : null;
   }
 
   /** The legislative hand a viewer may currently see (President or Chancellor). */

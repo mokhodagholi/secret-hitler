@@ -10,6 +10,13 @@ export type Policy = 'liberal' | 'fascist';
 
 export type Vote = 'ja' | 'nein';
 
+/** Executive power a fascist policy can grant the President. */
+export type ExecutivePower =
+  | 'investigate'
+  | 'specialElection'
+  | 'policyPeek'
+  | 'execution';
+
 export enum Phase {
   Lobby = 'lobby',
   Nomination = 'nomination',
@@ -108,6 +115,8 @@ export interface GameStateView {
   voteDeadline: { startedAt: number; endsAt: number } | null;
   /** Player ids that may not be nominated as Chancellor (term limits). */
   ineligibleChancellors: string[];
+  /** The power the President must use during the SpecialPower phase, else null. */
+  activePower: ExecutivePower | null;
   /** Private data for the recipient only. */
   you: {
     id: string;
@@ -115,6 +124,10 @@ export interface GameStateView {
     vote: Vote | null;
     /** Policies in your hand if you're the active legislator, else empty. */
     policies: Policy[];
+    /** Top three policies, shown only to the President during Policy Peek. */
+    peek: Policy[];
+    /** Investigation result, shown only to the President after investigating. */
+    investigation: { name: string; party: Faction } | null;
   };
 }
 

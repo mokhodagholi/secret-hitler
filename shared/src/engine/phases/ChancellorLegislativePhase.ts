@@ -1,6 +1,7 @@
 import { Phase } from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
+import { powerForFascistPolicy } from '../../rules/boardPowers';
 import type { GamePhase, PhaseHost } from './GamePhase';
 
 /** The Chancellor holds the remaining two policies and enacts one. */
@@ -26,7 +27,15 @@ export class ChancellorLegislativePhase implements GamePhase {
     room.drawnPolicies = [];
     this.host.log(`A ${enacted} policy is enacted.`);
     this.host.enactPolicy(enacted);
-    this.host.advanceRound(); // no-op if the policy ended the game
+    if (room.phase === Phase.GameOver) return null;
+
+    // A fascist policy may grant the President an executive power.
+    const power =
+      enacted === 'fascist'
+        ? powerForFascistPolicy(room.players.length, room.fascistPolicies)
+        : null;
+    if (power) this.host.grantPower(power);
+    else this.host.advanceRound();
     return null;
   }
 }

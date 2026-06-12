@@ -39,6 +39,12 @@ export class PolicyDeck {
     return this.draw.splice(0, count);
   }
 
+  /** Look at the top `count` tiles without removing them (Policy Peek). */
+  peekTop(count: number): Policy[] {
+    if (this.draw.length < count) this.reshuffleDiscard();
+    return this.draw.slice(0, count);
+  }
+
   discardTiles(tiles: Policy[]): void {
     this.discard.push(...tiles);
   }

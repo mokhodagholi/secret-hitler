@@ -3,6 +3,7 @@ import {
   SPEAKING_TURN_MS,
   VOTE_DURATION_MS,
   type ChatMessage,
+  type ExecutivePower,
   type Faction,
   type LogEntry,
   type Player,
@@ -21,6 +22,7 @@ import { GameOverPhase } from './phases/GameOverPhase';
 import { LobbyPhase } from './phases/LobbyPhase';
 import { NominationPhase } from './phases/NominationPhase';
 import { PresidentLegislativePhase } from './phases/PresidentLegislativePhase';
+import { SpecialPowerPhase } from './phases/SpecialPowerPhase';
 import { VotingPhase } from './phases/VotingPhase';
 
 /** Events the engine emits; the server subscribes and fans them out over WS. */
@@ -56,6 +58,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       [Phase.Voting]: new VotingPhase(this),
       [Phase.PresidentLegislative]: new PresidentLegislativePhase(this),
       [Phase.ChancellorLegislative]: new ChancellorLegislativePhase(this),
+      [Phase.SpecialPower]: new SpecialPowerPhase(this),
       [Phase.GameOver]: new GameOverPhase(this),
     };
     this.currentPhase = this.phaseFor(room.phase);
@@ -184,6 +187,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.winner = null;
     room.lastElectedPresidentId = null;
     room.lastElectedChancellorId = null;
+    room.activePower = null;
+    room.investigatedIds = [];
+    room.peekedPolicies = [];
+    room.investigation = null;
+    room.specialElectionResumeAfterId = null;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.transitionTo(Phase.Nomination);
 
@@ -236,8 +244,32 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   advanceRound(): void {
-    if (this.room.phase === Phase.GameOver) return;
-    this.room.presidentId = this.nextPresidentId();
+    const room = this.room;
+    if (room.phase === Phase.GameOver) return;
+    // A special election runs one round out of turn; afterwards the normal
+    // rotation resumes from the player who invoked it.
+    const resumeAfter = room.specialElectionResumeAfterId;
+    room.specialElectionResumeAfterId = null;
+    room.presidentId = resumeAfter
+      ? this.nextLivingAfter(resumeAfter)
+      : this.nextPresidentId();
+    this.transitionTo(Phase.Nomination);
+  }
+
+  grantPower(power: ExecutivePower): void {
+    const room = this.room;
+    room.activePower = power;
+    room.investigation = null;
+    room.peekedPolicies = power === 'policyPeek' ? room.deck.peekTop(3) : [];
+    this.clearSpeaker();
+    this.transitionTo(Phase.SpecialPower);
+    this.changed();
+  }
+
+  startSpecialElection(playerId: string): void {
+    const room = this.room;
+    room.specialElectionResumeAfterId = room.presidentId;
+    room.presidentId = playerId;
     this.transitionTo(Phase.Nomination);
   }
 
@@ -255,11 +287,15 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       .sort((a, b) => a.seat - b.seat);
   }
 
-  /** Next living player after the current president, wrapping around. */
   private nextPresidentId(): string | null {
+    return this.nextLivingAfter(this.room.presidentId);
+  }
+
+  /** Next living player by seat after `playerId`, wrapping around. */
+  private nextLivingAfter(playerId: string | null): string | null {
     const living = this.livingInSeatOrder();
     if (living.length === 0) return null;
-    const currentIndex = living.findIndex((p) => p.id === this.room.presidentId);
+    const currentIndex = living.findIndex((p) => p.id === playerId);
     return living[(currentIndex + 1) % living.length].id;
   }
 

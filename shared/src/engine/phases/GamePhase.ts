@@ -1,4 +1,9 @@
-import type { Faction, Phase, Policy } from '../../types/GameState';
+import type {
+  ExecutivePower,
+  Faction,
+  Phase,
+  Policy,
+} from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import type { Room } from '../../domain/Room';
 import type { EngineError } from '../errors';
@@ -18,6 +23,10 @@ export interface PhaseHost {
   openVote(): void;
   /** Close the vote window (vote resolved) and cancel its deadline. */
   closeVote(): void;
+  /** Enter the SpecialPower phase with the President's pending power. */
+  grantPower(power: ExecutivePower): void;
+  /** Special election: hand the presidency to `playerId` for the next round. */
+  startSpecialElection(playerId: string): void;
 }
 
 /**
