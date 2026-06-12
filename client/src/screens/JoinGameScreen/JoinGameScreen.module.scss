@@ -1,0 +1,90 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.refresh {
+  padding: 8px;
+  color: $gold;
+  @include pressable;
+}
+
+.empty {
+  @include card;
+  padding: 18px 16px;
+  color: $text-dim;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.roomList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.room {
+  @include card;
+  @include pressable;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: start;
+}
+
+.selected {
+  border-color: rgba($gold, 0.8);
+  background: linear-gradient(180deg, rgba($gold, 0.12), $navy-850);
+}
+
+.unavailable {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.roomName {
+  @include display(0.9rem, 0.08em);
+  color: $text-light;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inProgress {
+  font-size: 0.72rem;
+  color: $red-bright;
+  border: 1px solid rgba($red-bright, 0.5);
+  border-radius: $radius-sm;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.roomMeta {
+  font-size: 0.8rem;
+  color: $text-dim;
+  flex-shrink: 0;
+}
+
+.lock {
+  color: $gold;
+  flex-shrink: 0;
+}
+
+.form {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.error {
+  @include card;
+  border-color: rgba($red-bright, 0.6);
+  color: $red-bright;
+  font-size: 0.85rem;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}

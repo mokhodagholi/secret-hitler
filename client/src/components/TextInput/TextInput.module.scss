@@ -1,0 +1,56 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.label {
+  @include display(0.78rem, 0.12em);
+  color: $text-dim;
+}
+
+.box {
+  @include card;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+
+  &:focus-within {
+    border-color: rgba($gold, 0.7);
+  }
+}
+
+.invalid {
+  border-color: rgba($red-bright, 0.7);
+}
+
+.icon {
+  color: $gold;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: $cream;
+  font: inherit;
+  font-size: 0.95rem;
+
+  &::placeholder {
+    color: rgba($text-dim, 0.6);
+  }
+}
+
+.error {
+  font-size: 0.8rem;
+  color: $red-bright;
+}

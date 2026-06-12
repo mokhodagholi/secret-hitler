@@ -6,7 +6,11 @@ export type ScreenName =
   | 'settings'
   | 'how-to-play'
   | 'about'
-  | 'play';
+  | 'play'
+  | 'create-room'
+  | 'join-game'
+  | 'waiting-room'
+  | 'game';
 
 /**
  * Signal-based screen switcher — no router library.

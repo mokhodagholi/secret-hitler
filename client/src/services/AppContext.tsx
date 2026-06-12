@@ -7,21 +7,28 @@ import {
 import { NavigationService } from './NavigationService';
 import { SettingsService } from './SettingsService';
 import { I18nService } from './I18nService';
+import { WebSocketService } from './WebSocketService';
+import { GameStateService } from './GameStateService';
 
 export interface AppServices {
   nav: NavigationService;
   settings: SettingsService;
   i18n: I18nService;
+  socket: WebSocketService;
+  game: GameStateService;
 }
 
 const AppContext = createContext<AppServices>();
 
 export function AppProvider(props: ParentProps) {
   const settings = new SettingsService();
+  const socket = new WebSocketService();
   const services: AppServices = {
     nav: new NavigationService(),
     settings,
     i18n: new I18nService(() => settings.settings.language),
+    socket,
+    game: new GameStateService(socket),
   };
 
   // Keep the document's language and reading direction in sync with the

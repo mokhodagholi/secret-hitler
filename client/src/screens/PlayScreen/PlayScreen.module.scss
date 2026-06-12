@@ -1,0 +1,61 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.option {
+  @include card;
+  @include pressable;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 18px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.optionIcon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba($gold, 0.12);
+  border: 1.5px solid rgba($gold, 0.5);
+  color: $gold;
+  flex-shrink: 0;
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.optionTitle {
+  @include display(1.05rem, 0.1em);
+  color: $gold;
+}
+
+.optionDescription {
+  font-size: 0.85rem;
+  color: $text-dim;
+  line-height: 1.5;
+}
+
+.chevron {
+  color: $gold;
+  flex-shrink: 0;
+
+  // The chevron points "forward"; flip it to match RTL reading direction.
+  :global([dir='rtl']) & {
+    transform: scaleX(-1);
+  }
+}
