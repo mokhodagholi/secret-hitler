@@ -192,6 +192,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.peekedPolicies = [];
     room.investigation = null;
     room.specialElectionResumeAfterId = null;
+    room.vetoRequested = false;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.transitionTo(Phase.Nomination);
 
@@ -241,6 +242,24 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       this.log('Six Fascist policies enacted — the Fascists win!');
       this.endGame('fascist');
     }
+  }
+
+  /** A failed government: advance the tracker, chaos-enact on the third, next round. */
+  failElection(): void {
+    const room = this.room;
+    room.electionTracker += 1;
+    if (room.electionTracker >= 3) {
+      const [policy] = room.deck.drawTiles(1);
+      if (policy) {
+        this.log('Three elections failed — the top policy is enacted.');
+        this.enactPolicy(policy);
+      }
+      room.electionTracker = 0;
+      // Chaos clears term limits — every player is eligible again.
+      room.lastElectedPresidentId = null;
+      room.lastElectedChancellorId = null;
+    }
+    this.advanceRound();
   }
 
   advanceRound(): void {

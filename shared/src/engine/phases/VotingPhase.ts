@@ -81,23 +81,7 @@ export class VotingPhase implements GamePhase {
       this.host.log(`${chancellor.name}'s government takes office.`);
       this.host.transitionTo(Phase.PresidentLegislative);
     } else {
-      room.electionTracker += 1;
-      if (room.electionTracker >= 3) this.enactChaosPolicy();
-      this.host.advanceRound();
+      this.host.failElection();
     }
-  }
-
-  /** Three failed elections — the top policy is enacted automatically. */
-  private enactChaosPolicy(): void {
-    const room = this.host.room;
-    const [policy] = room.deck.drawTiles(1);
-    if (policy) {
-      this.host.log('Three elections failed — the top policy is enacted.');
-      this.host.enactPolicy(policy);
-    }
-    room.electionTracker = 0;
-    // Chaos clears term limits — every player is eligible again.
-    room.lastElectedPresidentId = null;
-    room.lastElectedChancellorId = null;
   }
 }

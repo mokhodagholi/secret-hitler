@@ -7,6 +7,7 @@ import {
   type PublicPlayer,
   type ServerMessage,
 } from '@secret-hitler/shared';
+import { AnimationService } from '../src/services/AnimationService';
 import { AppProvider, type AppServices } from '../src/services/AppContext';
 import { GameStateService, type RoomSession } from '../src/services/GameStateService';
 import { I18nService } from '../src/services/I18nService';
@@ -99,6 +100,7 @@ export function buildHarness(
     socket: socket as unknown as WebSocketService,
     game,
     sound: new SoundService(settings),
+    animation: new AnimationService(settings),
   };
   return {
     services,
@@ -161,7 +163,17 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     speaker: null,
     voteDeadline: null,
     ineligibleChancellors: [],
-    you: { id: 'you', role: null, vote: null, policies: [] },
+    activePower: null,
+    vetoUnlocked: false,
+    vetoRequested: false,
+    you: {
+      id: 'you',
+      role: null,
+      vote: null,
+      policies: [],
+      peek: [],
+      investigation: null,
+    },
     ...overrides,
   };
 }

@@ -441,3 +441,56 @@ describe('GameEngine — legislative session', () => {
     expect(error).toMatchObject({ code: 'INVALID_ACTION' });
   });
 });
+
+describe('GameEngine — veto', () => {
+  function reachChancellorLegislative() {
+    const deck = new StackedDeck(['liberal', 'liberal', 'liberal']);
+    const game = startGame(['Ana', 'Ben', 'Cal', 'Dan', 'Eve'], deck);
+    const [president, chancellor] = game.players;
+    chancellor.role = 'liberal'; // avoid the Hitler-Chancellor shortcut
+    game.room.fascistPolicies = 5; // veto unlocked
+    electGovernment(game, chancellor);
+    game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 0 });
+    return { game, president, chancellor };
+  }
+
+  it('Should fail the government when the President agrees to a veto', () => {
+    const { game, president, chancellor } = reachChancellorLegislative();
+    expect(game.room.viewFor(president.id).vetoUnlocked).toBe(true);
+
+    game.engine.handleCommand(chancellor.id, { kind: 'vetoRequest' });
+    expect(game.room.vetoRequested).toBe(true);
+
+    game.engine.handleCommand(president.id, { kind: 'vetoConsent', agree: true });
+    expect(game.room.drawnPolicies).toEqual([]);
+    expect(game.room.phase).toBe(Phase.Nomination);
+    expect(game.room.electionTracker).toBe(1);
+  });
+
+  it('Should require the Chancellor to enact when the President rejects', () => {
+    const { game, president, chancellor } = reachChancellorLegislative();
+    game.engine.handleCommand(chancellor.id, { kind: 'vetoRequest' });
+    game.engine.handleCommand(president.id, { kind: 'vetoConsent', agree: false });
+
+    expect(game.room.vetoRequested).toBe(false);
+    expect(game.room.phase).toBe(Phase.ChancellorLegislative);
+    const error = game.engine.handleCommand(chancellor.id, {
+      kind: 'enactPolicy',
+      index: 0,
+    });
+    expect(error).toBeNull();
+    expect(game.room.liberalPolicies).toBe(1);
+  });
+
+  it('Should reject a veto before five fascist policies', () => {
+    const deck = new StackedDeck(['liberal', 'liberal', 'liberal']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck);
+    const [president, chancellor] = game.players;
+    chancellor.role = 'liberal';
+    electGovernment(game, chancellor);
+    game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 0 });
+
+    const error = game.engine.handleCommand(chancellor.id, { kind: 'vetoRequest' });
+    expect(error).toMatchObject({ code: 'INVALID_ACTION' });
+  });
+});

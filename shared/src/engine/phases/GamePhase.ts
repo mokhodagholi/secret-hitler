@@ -16,6 +16,8 @@ export interface PhaseHost {
   transitionTo(phase: Phase): void;
   enactPolicy(policy: Policy): void;
   advanceRound(): void;
+  /** A government failed: advance the tracker, enact on chaos, next round. */
+  failElection(): void;
   endGame(winner: Faction): void;
   startSpeakingTurnAt(playerId: string | null): void;
   clearSpeaker(): void;

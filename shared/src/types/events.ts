@@ -22,7 +22,8 @@ export type GameCommand =
   | { kind: 'discardPolicy'; index: number }
   | { kind: 'enactPolicy'; index: number }
   | { kind: 'useSpecialPower'; targetId: string }
-  | { kind: 'vetoRequest' };
+  | { kind: 'vetoRequest' }
+  | { kind: 'vetoConsent'; agree: boolean };
 
 // ---------------------------------------------------------------------------
 // Client -> Server

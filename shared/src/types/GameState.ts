@@ -117,6 +117,10 @@ export interface GameStateView {
   ineligibleChancellors: string[];
   /** The power the President must use during the SpecialPower phase, else null. */
   activePower: ExecutivePower | null;
+  /** Veto is available (5 fascist policies enacted). */
+  vetoUnlocked: boolean;
+  /** The Chancellor has proposed a veto, awaiting the President's consent. */
+  vetoRequested: boolean;
   /** Private data for the recipient only. */
   you: {
     id: string;

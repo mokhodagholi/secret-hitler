@@ -13,6 +13,7 @@ import {
   type Vote,
 } from '../types/GameState';
 import { PolicyDeck } from './PolicyDeck';
+import { VETO_UNLOCK_FASCIST_POLICIES } from '../rules/boardPowers';
 
 /**
  * Authoritative in-memory room: players, options, policy board and current
@@ -60,6 +61,8 @@ export class Room {
   investigation: { targetId: string; party: Faction } | null = null;
   /** After a special election, the round rotation resumes after this player. */
   specialElectionResumeAfterId: string | null = null;
+  /** The Chancellor has proposed a veto this legislative session. */
+  vetoRequested = false;
 
   constructor(args: {
     id: string;
@@ -180,6 +183,8 @@ export class Room {
       ineligibleChancellors:
         this.phase === Phase.Nomination ? this.ineligibleChancellorIds() : [],
       activePower: this.activePower,
+      vetoUnlocked: this.fascistPolicies >= VETO_UNLOCK_FASCIST_POLICIES,
+      vetoRequested: this.vetoRequested,
       you: {
         id: viewerId,
         role: viewer?.role ?? null,
