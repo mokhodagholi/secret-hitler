@@ -338,21 +338,40 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.setSpeaker(next ?? null);
   }
 
-  /** Pass the talking stick to the next eligible player (discussion only). */
+  /**
+   * Pass the talking stick to the next player who hasn't spoken this round.
+   * Once everyone eligible has had a turn, discussion ends and the President's
+   * nomination window opens.
+   */
   advanceSpeaker(): void {
+    const room = this.room;
     if (!this.isDiscussionPhase()) return this.setSpeaker(null);
-    const eligible = this.speakingEligible();
-    if (eligible.length === 0) return this.setSpeaker(null);
-    const currentIndex = eligible.findIndex((p) => p.id === this.room.speakerId);
-    this.setSpeaker(eligible[(currentIndex + 1) % eligible.length]);
+    if (room.speakerId && !room.discussionSpokenIds.includes(room.speakerId)) {
+      room.discussionSpokenIds.push(room.speakerId);
+    }
+    const remaining = this.speakingEligible().filter(
+      (p) => !room.discussionSpokenIds.includes(p.id),
+    );
+    if (remaining.length === 0) return this.beginNomination();
+    this.setSpeaker(remaining[0]);
+  }
+
+  /** Discussion is over: drop the talking stick and start the nomination clock. */
+  private beginNomination(): void {
+    this.clearSpeaker();
+    this.openNominationTimer();
+    this.changed();
   }
 
   clearSpeaker(): void {
     this.setSpeaker(null);
   }
 
+  /** True during the talking-stick discussion that precedes nomination. */
   private isDiscussionPhase(): boolean {
-    return this.room.phase === Phase.Nomination;
+    return (
+      this.room.phase === Phase.Nomination && this.room.nominationEndsAt === 0
+    );
   }
 
   // --- Vote timer (PhaseHost) ------------------------------------------------

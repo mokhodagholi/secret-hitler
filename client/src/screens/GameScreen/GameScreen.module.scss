@@ -353,6 +353,35 @@
   overflow-wrap: anywhere;
 }
 
+.speakerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: $radius-sm;
+  background: rgba($navy-700, 0.6);
+  border: 1px solid $line-soft;
+  font-size: 0.76rem;
+  color: $text-dim;
+}
+
+.speakerMine {
+  border-color: rgba($gold, 0.6);
+  background: rgba($gold, 0.1);
+  color: $gold;
+}
+
+.speakerEnd {
+  @include display(0.6rem, 0.08em);
+  @include pressable;
+  padding: 6px 12px;
+  border-radius: $radius-sm;
+  color: $navy-950;
+  background: linear-gradient(180deg, $gold-bright, $gold-dark);
+  flex-shrink: 0;
+}
+
 .chatComposer {
   display: flex;
   gap: 8px;

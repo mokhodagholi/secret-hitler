@@ -9,13 +9,13 @@ export class NominationPhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
-  /** A fresh round: the President has a timed window to nominate a Chancellor. */
+  /** A fresh round: discussion runs first (talking stick), then nomination. */
   enter(): void {
     const room = this.host.room;
     room.chancellorId = null;
     room.votes.clear();
+    room.discussionSpokenIds = [];
     this.host.startSpeakingTurnAt(room.presidentId);
-    this.host.openNominationTimer();
   }
 
   exit(): void {
@@ -29,10 +29,14 @@ export class NominationPhase implements GamePhase {
 
   handle(playerId: string, command: GameCommand): EngineError | null {
     const room = this.host.room;
-    // endTurn ends the round: the President fails the election early; any other
-    // speaker simply passes the talking stick.
+    const nominating = room.nominationEndsAt > 0;
     if (command.kind === 'endTurn') {
-      if (playerId === room.presidentId) {
+      // During nomination, endTurn ends the round (the President fails the
+      // election early); during discussion it passes the talking stick on.
+      if (nominating) {
+        if (playerId !== room.presidentId) {
+          return err('INVALID_ACTION', 'Only the President can end the round.');
+        }
         this.host.failElection();
         return null;
       }

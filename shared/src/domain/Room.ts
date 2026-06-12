@@ -67,6 +67,8 @@ export class Room {
   specialElectionResumeAfterId: string | null = null;
   /** The Chancellor has proposed a veto this legislative session. */
   vetoRequested = false;
+  /** Players who have taken their discussion turn this round, before nomination. */
+  discussionSpokenIds: string[] = [];
 
   constructor(args: {
     id: string;

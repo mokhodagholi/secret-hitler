@@ -88,16 +88,22 @@ function openPlayers() {
   fireEvent.click(screen.getByRole('button', { name: en.game.playersTitle }));
 }
 
+// A nomination view where it's the viewer's turn to nominate (window open).
+function nominationView() {
+  const view = votingView();
+  return {
+    ...view,
+    phase: Phase.Nomination,
+    board: { ...view.board, president: 'you', chancellor: null },
+    nominationDeadline: { startedAt: 0, endsAt: Date.now() + 10_000 },
+  };
+}
+
 describe('GameScreen — nomination', () => {
   it('Should nominate a player from the nomination modal', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
-    const view = votingView();
-    harness.pushState({
-      ...view,
-      phase: Phase.Nomination,
-      board: { ...view.board, president: 'you', chancellor: null },
-    });
+    harness.pushState(nominationView());
 
     // The nomination modal auto-opens for the President — no need to open it.
     fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
@@ -105,6 +111,23 @@ describe('GameScreen — nomination', () => {
       type: 'command',
       command: { kind: 'nominateChancellor', targetId: 'cal' },
     });
+  });
+
+  it('Should keep the nomination modal closed during discussion', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    // Discussion: speaker is set, but the nomination window has not opened.
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, president: 'you', chancellor: null },
+      speaker: { playerId: 'you', startedAt: 0, endsAt: Date.now() + 20_000 },
+      nominationDeadline: null,
+    });
+
+    expect(screen.queryByText(en.game.nominateTitle)).toBeNull();
+    expect(screen.getByText(en.game.yourTurn)).toBeTruthy();
   });
 
   it('Should notify the table when a government fails', () => {
@@ -124,12 +147,7 @@ describe('GameScreen — nomination', () => {
   it('Should end the round from the nomination modal', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
-    const view = votingView();
-    harness.pushState({
-      ...view,
-      phase: Phase.Nomination,
-      board: { ...view.board, president: 'you', chancellor: null },
-    });
+    harness.pushState(nominationView());
 
     fireEvent.click(screen.getByRole('button', { name: en.game.endRound }));
     expect(harness.socket.lastSent('command')).toEqual({

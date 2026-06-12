@@ -278,10 +278,31 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.speakerId).toBe(ben.id);
   });
 
+  it('Should open nomination only after every player has spoken', () => {
+    const { engine, room, players } = startGame();
+    const [president, ben, cal] = players;
+    expect(room.speakerId).toBe(president.id);
+    expect(room.nominationEndsAt).toBe(0);
+
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    expect(room.speakerId).toBe(ben.id);
+    engine.handleCommand(ben.id, { kind: 'endTurn' });
+    expect(room.speakerId).toBe(cal.id);
+    engine.handleCommand(cal.id, { kind: 'endTurn' });
+
+    // Discussion is over — the talking stick drops and the clock starts.
+    expect(room.speakerId).toBeNull();
+    expect(room.nominationEndsAt).toBeGreaterThan(0);
+  });
+
   it('Should fail the election when the President ends the round', () => {
     const { engine, room, players } = startGame();
-    const [president, ben] = players;
-    expect(room.presidentId).toBe(president.id);
+    const [president, ben, cal] = players;
+    // Run discussion to completion so the nomination window opens.
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    engine.handleCommand(ben.id, { kind: 'endTurn' });
+    engine.handleCommand(cal.id, { kind: 'endTurn' });
+    expect(room.nominationEndsAt).toBeGreaterThan(0);
 
     expect(engine.handleCommand(president.id, { kind: 'endTurn' })).toBeNull();
     expect(room.electionTracker).toBe(1);

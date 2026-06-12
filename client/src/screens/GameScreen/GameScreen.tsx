@@ -186,10 +186,18 @@ export function GameScreen() {
     game.sendCommand({ kind: 'castVote', vote });
   }
 
-  /** President ends the nomination round early (the election fails). */
-  function endRound(): void {
+  // endTurn passes the discussion turn; in the nomination window the President's
+  // endTurn ends the round (the engine decides which by phase).
+  function sendEndTurn(): void {
     game.sendCommand({ kind: 'endTurn' });
   }
+
+  const inDiscussion = () =>
+    view()?.phase === Phase.Nomination &&
+    speaker() != null &&
+    view()?.nominationDeadline == null;
+  const inNomination = () =>
+    view()?.phase === Phase.Nomination && view()?.nominationDeadline != null;
 
   const isLegislative = () => {
     const phase = view()?.phase;
@@ -295,13 +303,7 @@ export function GameScreen() {
               <PolicyBoard board={state().board} formatMessage={formatMessage} />
             </section>
 
-            <Show
-              when={
-                state().phase === Phase.Nomination &&
-                !iAmPresident() &&
-                !!game.you()?.isAlive
-              }
-            >
+            <Show when={inNomination() && !iAmPresident() && !!game.you()?.isAlive}>
               <p class={styles.hint}>
                 {formatMessage('game.nominateWaiting', {
                   name: playerName(state().board.president),
@@ -309,14 +311,14 @@ export function GameScreen() {
               </p>
             </Show>
 
-            <Show when={state().phase === Phase.Nomination && iAmPresident()}>
+            <Show when={inNomination() && iAmPresident()}>
               <NominationModal
                 players={state().players}
                 youId={state().you.id}
                 secondsLeft={nominationSecondsLeft()}
                 canNominate={canNominate}
                 onNominate={nominate}
-                onEndRound={endRound}
+                onEndRound={sendEndTurn}
                 formatMessage={formatMessage}
               />
             </Show>
@@ -489,6 +491,31 @@ export function GameScreen() {
               </div>
 
               <Show when={activeTab() === 'chat'}>
+                <Show when={inDiscussion()}>
+                  <div
+                    classList={{
+                      [styles.speakerBar]: true,
+                      [styles.speakerMine]: isMySpeakingTurn(),
+                    }}
+                  >
+                    <span>
+                      {isMySpeakingTurn()
+                        ? formatMessage('game.yourTurn')
+                        : formatMessage('game.speakingNow', {
+                            name: playerName(speaker()!.playerId),
+                          })}
+                    </span>
+                    <Show when={isMySpeakingTurn()}>
+                      <button
+                        type="button"
+                        class={styles.speakerEnd}
+                        onClick={sendEndTurn}
+                      >
+                        {formatMessage('game.endTurn')}
+                      </button>
+                    </Show>
+                  </div>
+                </Show>
                 <div class={styles.chatComposer}>
                   <textarea
                     class={styles.chatInput}
@@ -555,14 +582,6 @@ export function GameScreen() {
                 {
                   label: formatMessage('game.chancellor'),
                   value: playerName(state().board.chancellor),
-                },
-                {
-                  label: formatMessage('game.currentTrack'),
-                  value: `${formatMessage('game.liberal')} ${
-                    state().board.liberalPolicies
-                  } · ${formatMessage('game.fascist')} ${
-                    state().board.fascistPolicies
-                  }`,
                 },
               ]}
             />
