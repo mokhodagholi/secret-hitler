@@ -3,6 +3,8 @@ import {
   type ChatMessage,
   type LogEntry,
   type Player,
+  type Policy,
+  type Vote,
 } from '../types/GameState';
 import type { GameCommand, ServerErrorCode } from '../types/events';
 import { TypedEmitter } from './EventEmitter';
@@ -125,9 +127,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
 
     this.dealRoles(players);
     room.deck.reset();
-    room.phase = Phase.Nomination;
-    // First president: lowest seat among the living.
-    room.presidentId = players[0]?.id ?? null;
+    room.liberalPolicies = 0;
+    room.fascistPolicies = 0;
+    room.electionTracker = 0;
+    room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
+    this.beginNomination();
 
     this.log('The game has started. Roles have been dealt.');
     this.emit('gameStarted', { room });
@@ -151,16 +155,141 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     this.emit('chat', { message });
   }
 
-  // --- In-game commands (extension point) --------------------------------
+  // --- In-game commands --------------------------------------------------
 
-  /**
-   * Entry point for every in-game {@link GameCommand}. The GamePhase state
-   * machine (Nomination → Voting → Legislative → SpecialPower → GameOver)
-   * plugs in here: validate against the current phase, mutate the room, then
-   * call `this.changed()`. Returns an error while the engine is unimplemented.
-   */
-  handleCommand(_playerId: string, _command: GameCommand): EngineError | null {
-    return err('INVALID_ACTION', 'In-game actions are not available yet.');
+  /** Dispatches an in-game {@link GameCommand} to the matching phase handler. */
+  handleCommand(playerId: string, command: GameCommand): EngineError | null {
+    switch (command.kind) {
+      case 'nominateChancellor':
+        return this.nominateChancellor(playerId, command.targetId);
+      case 'castVote':
+        return this.castVote(playerId, command.vote);
+      default:
+        // Legislative / special-power commands are not implemented yet.
+        return err('INVALID_ACTION', 'That action is not available yet.');
+    }
+  }
+
+  private nominateChancellor(playerId: string, targetId: string): EngineError | null {
+    const room = this.room;
+    if (room.phase !== Phase.Nomination || playerId !== room.presidentId) {
+      return err('INVALID_ACTION', 'You cannot nominate right now.');
+    }
+    const target = room.findPlayer(targetId);
+    if (!target || !target.isAlive || target.id === playerId) {
+      return err('INVALID_ACTION', 'That player cannot be nominated.');
+    }
+
+    room.chancellorId = targetId;
+    room.phase = Phase.Voting;
+    room.votes.clear();
+    this.log(
+      `${room.findPlayer(playerId)?.name} nominated ${target.name} as Chancellor.`,
+    );
+    this.changed();
+    return null;
+  }
+
+  private castVote(playerId: string, vote: Vote): EngineError | null {
+    const room = this.room;
+    const player = room.findPlayer(playerId);
+    if (room.phase !== Phase.Voting || !player?.isAlive) {
+      return err('INVALID_ACTION', 'There is no vote in progress.');
+    }
+
+    room.votes.set(playerId, vote);
+    const voters = room.players.filter((p) => p.isAlive && p.connected);
+    if (voters.every((p) => room.votes.has(p.id))) {
+      this.resolveElection(voters);
+    } else {
+      this.changed();
+    }
+    return null;
+  }
+
+  // --- Election resolution -----------------------------------------------
+
+  private resolveElection(voters: Player[]): void {
+    const room = this.room;
+    const ja = voters.filter((p) => room.votes.get(p.id) === 'ja').length;
+    const elected = ja * 2 > voters.length;
+    const chancellor = room.findPlayer(room.chancellorId ?? '');
+    this.log(`The vote ${elected ? 'passed' : 'failed'} (${ja}/${voters.length} Ja).`);
+
+    if (elected && chancellor) {
+      room.electionTracker = 0;
+      if (room.fascistPolicies >= 3 && chancellor.role === 'hitler') {
+        this.log(`${chancellor.name} was Hitler — the Fascists win!`);
+        this.endGame();
+        return;
+      }
+      // Legislative session is the next milestone; for now advance the round.
+      this.log(`${chancellor.name}'s government takes office.`);
+      this.advanceRound();
+    } else {
+      room.electionTracker += 1;
+      if (room.electionTracker >= 3) this.enactChaosPolicy();
+      this.advanceRound();
+    }
+  }
+
+  /** Three failed elections — the top policy is enacted automatically. */
+  private enactChaosPolicy(): void {
+    const [policy] = this.room.deck.drawTiles(1);
+    if (policy) {
+      this.log('Three elections failed — the top policy is enacted.');
+      this.enactPolicy(policy);
+    }
+    this.room.electionTracker = 0;
+  }
+
+  private enactPolicy(policy: Policy): void {
+    const room = this.room;
+    if (policy === 'liberal') room.liberalPolicies += 1;
+    else room.fascistPolicies += 1;
+    room.lastEnacted = [...room.lastEnacted, policy].slice(-5);
+
+    if (room.liberalPolicies >= 5) {
+      this.log('Five Liberal policies enacted — the Liberals win!');
+      this.endGame();
+    } else if (room.fascistPolicies >= 6) {
+      this.log('Six Fascist policies enacted — the Fascists win!');
+      this.endGame();
+    }
+  }
+
+  private advanceRound(): void {
+    if (this.room.phase === Phase.GameOver) return;
+    this.room.presidentId = this.nextPresidentId();
+    this.beginNomination();
+    this.changed();
+  }
+
+  private beginNomination(): void {
+    this.room.phase = Phase.Nomination;
+    this.room.chancellorId = null;
+    this.room.votes.clear();
+  }
+
+  private endGame(): void {
+    this.room.phase = Phase.GameOver;
+    this.emit('gameOver', { room: this.room });
+    this.changed();
+  }
+
+  /** Living players ordered by seat — the presidential rotation order. */
+  private livingInSeatOrder(): Player[] {
+    return this.room.players
+      .filter((p) => p.isAlive)
+      .sort((a, b) => a.seat - b.seat);
+  }
+
+  /** Next living player after the current president, wrapping around. */
+  private nextPresidentId(): string | null {
+    const living = this.livingInSeatOrder();
+    if (living.length === 0) return null;
+    const currentIndex = living.findIndex((p) => p.id === this.room.presidentId);
+    return living[(currentIndex + 1) % living.length].id;
   }
 
   // --- Internals ---------------------------------------------------------

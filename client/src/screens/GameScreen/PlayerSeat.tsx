@@ -26,6 +26,7 @@ export function PlayerSeat(props: PlayerSeatProps) {
         [styles.offline]: !props.player.connected,
         [styles.you]: props.isYou,
         [styles.nominatable]: props.nominatable,
+        [styles.voted]: props.player.hasVoted,
       }}
       style={{ left: `${props.x}%`, top: `${props.y}%` }}
       disabled={!props.nominatable}

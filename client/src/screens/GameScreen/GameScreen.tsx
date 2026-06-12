@@ -80,6 +80,18 @@ export function GameScreen() {
     );
   };
 
+  const me = () => {
+    const state = view();
+    return state?.players.find((player) => player.id === state.you.id) ?? null;
+  };
+  const voters = () =>
+    view()?.players.filter((player) => player.isAlive && player.connected) ?? [];
+  const votedCount = () => voters().filter((player) => player.hasVoted).length;
+
+  function castVote(vote: 'ja' | 'nein'): void {
+    game.sendCommand({ kind: 'castVote', vote });
+  }
+
   /** Seat centre on the table ellipse — seat 0 at the top, clockwise. */
   const seatPosition = (seatIndex: number, seatCount: number) => {
     const angle = -Math.PI / 2 + (2 * Math.PI * seatIndex) / seatCount;
@@ -185,6 +197,50 @@ export function GameScreen() {
 
             <Show when={state().phase === Phase.Nomination && iAmPresident()}>
               <p class={styles.hint}>{formatMessage('game.nominateHint')}</p>
+            </Show>
+
+            <Show when={state().phase === Phase.Voting}>
+              <div class={styles.votePanel}>
+                <span class={styles.votePrompt}>
+                  {formatMessage('game.votePrompt', {
+                    name: playerName(state().board.chancellor),
+                  })}
+                </span>
+                <Show
+                  when={state().you.vote == null && me()?.isAlive}
+                  fallback={
+                    <span class={styles.voteWaiting}>
+                      <Show when={state().you.vote}>
+                        {formatMessage('game.youVoted', {
+                          vote: formatMessage(`vote.${state().you.vote!}`),
+                        })}
+                        {' · '}
+                      </Show>
+                      {formatMessage('game.voteProgress', {
+                        count: votedCount(),
+                        total: voters().length,
+                      })}
+                    </span>
+                  }
+                >
+                  <div class={styles.voteButtons}>
+                    <button
+                      type="button"
+                      class={styles.voteJa}
+                      onClick={() => castVote('ja')}
+                    >
+                      {formatMessage('game.voteJa')}
+                    </button>
+                    <button
+                      type="button"
+                      class={styles.voteNein}
+                      onClick={() => castVote('nein')}
+                    >
+                      {formatMessage('game.voteNein')}
+                    </button>
+                  </div>
+                </Show>
+              </div>
             </Show>
 
             <Show when={game.lastError()}>

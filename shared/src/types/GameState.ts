@@ -57,6 +57,8 @@ export interface PublicPlayer {
   isAlive: boolean;
   isPresident: boolean;
   isChancellor: boolean;
+  /** Has cast a vote this election (the vote itself stays secret). */
+  hasVoted: boolean;
   /** Revealed role, or null when still hidden to the viewer. */
   role: Role | null;
 }
@@ -102,6 +104,7 @@ export interface GameStateView {
   you: {
     id: string;
     role: Role | null;
+    vote: Vote | null;
   };
 }
 

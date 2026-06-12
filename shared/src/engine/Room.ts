@@ -7,6 +7,7 @@ import {
   type Role,
   type RoomOptions,
   type RoomSummary,
+  type Vote,
 } from '../types/GameState';
 import { PolicyDeck } from './PolicyDeck';
 
@@ -33,6 +34,7 @@ export class Room {
   presidentId: string | null = null;
   chancellorId: string | null = null;
   lastEnacted: BoardState['lastEnacted'] = [];
+  votes = new Map<string, Vote>();
 
   constructor(args: {
     id: string;
@@ -97,6 +99,7 @@ export class Room {
       isAlive: p.isAlive,
       isPresident: p.id === this.presidentId,
       isChancellor: p.id === this.chancellorId,
+      hasVoted: this.votes.has(p.id),
       role: this.roleVisibleTo(viewer, p),
     };
   }
@@ -117,7 +120,11 @@ export class Room {
       maxPlayers: this.options.maxPlayers,
       players,
       board: this.board(),
-      you: { id: viewerId, role: viewer?.role ?? null },
+      you: {
+        id: viewerId,
+        role: viewer?.role ?? null,
+        vote: this.votes.get(viewerId) ?? null,
+      },
     };
   }
 

@@ -96,6 +96,11 @@
   opacity: 0.5;
 }
 
+.voted .seatAvatar {
+  border-color: #7fd08a;
+  box-shadow: 0 0 8px rgba(127, 208, 138, 0.6);
+}
+
 .offline {
   opacity: 0.45;
 }
@@ -197,6 +202,53 @@
   font-size: 0.82rem;
   color: $gold;
   line-height: 1.5;
+}
+
+.votePanel {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-color: rgba($gold, 0.5);
+}
+
+.votePrompt {
+  @include display(0.85rem, 0.08em);
+  color: $text-light;
+  text-align: center;
+}
+
+.voteButtons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.voteJa,
+.voteNein {
+  @include display(1rem, 0.1em);
+  @include pressable;
+  flex: 1;
+  padding: 12px;
+  border-radius: $radius;
+  color: $white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.voteJa {
+  background: linear-gradient(180deg, $blue-liberal, #2f6aa6);
+}
+
+.voteNein {
+  background: linear-gradient(180deg, $red-bright, $red-deep);
+}
+
+.voteWaiting {
+  font-size: 0.82rem;
+  color: $text-dim;
+  text-align: center;
 }
 
 .error {
