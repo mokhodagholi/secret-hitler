@@ -64,6 +64,27 @@ export class GameEngine extends TypedEmitter<EngineEvents> {
     return player;
   }
 
+  /**
+   * Permanently vacate a seat (explicit leave, not a network drop). Only
+   * meaningful in the lobby — in-game leavers are treated as disconnected so
+   * their seat survives a possible rejoin. A leaving host is handled at the
+   * server layer by destroying the whole room before this is reached, but the
+   * host seat is migrated here too as a safety net.
+   */
+  removePlayer(playerId: string): void {
+    const room = this.room;
+    if (room.phase !== Phase.Lobby) return;
+    const index = room.players.findIndex((player) => player.id === playerId);
+    if (index === -1) return;
+
+    const [removed] = room.players.splice(index, 1);
+    room.players.forEach((player, seat) => (player.seat = seat));
+    if (room.hostId === removed.id) this.maybeMigrateHost();
+
+    this.log(`${removed.name} left the room.`);
+    this.changed();
+  }
+
   setConnected(playerId: string, connected: boolean): void {
     const player = this.room.findPlayer(playerId);
     if (!player || player.connected === connected) return;

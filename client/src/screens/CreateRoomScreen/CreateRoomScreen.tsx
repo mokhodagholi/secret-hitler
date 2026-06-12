@@ -16,7 +16,9 @@ export function CreateRoomScreen() {
 
   const [roomName, setRoomName] = createSignal('');
   const [password, setPassword] = createSignal('');
-  const [hostName, setHostName] = createSignal(game.playerName);
+  // Asked only once — afterwards the profile name from Settings is used.
+  const profileMissing = settings.settings.profileName.trim().length === 0;
+  const [hostName, setHostName] = createSignal(settings.settings.profileName);
   const [submitting, setSubmitting] = createSignal(false);
   const [errorKey, setErrorKey] = createSignal<MessageKey | null>(null);
 
@@ -27,6 +29,7 @@ export function CreateRoomScreen() {
     if (!canSubmit()) return;
     setSubmitting(true);
     setErrorKey(null);
+    settings.set('profileName', hostName().trim());
     try {
       await game.createRoom({
         name: roomName().trim(),
@@ -69,14 +72,16 @@ export function CreateRoomScreen() {
           onInput={setPassword}
           onSubmit={submit}
         />
-        <TextInput
-          label={formatMessage('createRoom.yourName')}
-          placeholder={formatMessage('createRoom.yourNamePlaceholder')}
-          icon="people"
-          value={hostName()}
-          onInput={setHostName}
-          onSubmit={submit}
-        />
+        <Show when={profileMissing}>
+          <TextInput
+            label={formatMessage('createRoom.yourName')}
+            placeholder={formatMessage('createRoom.yourNamePlaceholder')}
+            icon="people"
+            value={hostName()}
+            onInput={setHostName}
+            onSubmit={submit}
+          />
+        </Show>
 
         <Show when={errorKey()}>
           <p class={styles.error}>{formatMessage(errorKey()!)}</p>

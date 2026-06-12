@@ -10,6 +10,7 @@ import { Phase, type PublicPlayer } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { MessageKey } from '../../i18n';
 import { BoardRenderer } from '../../canvas/BoardRenderer';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { PlayerSeat } from './PlayerSeat';
@@ -28,6 +29,7 @@ export function GameScreen() {
   const view = game.view;
   const [activeTab, setActiveTab] = createSignal<'chat' | 'log'>('chat');
   const [chatDraft, setChatDraft] = createSignal('');
+  const [confirmingLeave, setConfirmingLeave] = createSignal(false);
 
   let boardCanvas!: HTMLCanvasElement;
   let chatScroller: HTMLDivElement | undefined;
@@ -101,6 +103,7 @@ export function GameScreen() {
   }
 
   function leaveRoom(): void {
+    setConfirmingLeave(false);
     game.leaveRoom();
     nav.navigate('play');
   }
@@ -270,7 +273,11 @@ export function GameScreen() {
             </Show>
 
             <footer class={styles.footer}>
-              <button type="button" class={styles.leave} onClick={leaveRoom}>
+              <button
+                type="button"
+                class={styles.leave}
+                onClick={() => setConfirmingLeave(true)}
+              >
                 {formatMessage('game.leaveRoom')}
               </button>
               <button
@@ -281,6 +288,17 @@ export function GameScreen() {
                 {formatMessage('game.viewRules')}
               </button>
             </footer>
+
+            <ConfirmDialog
+              open={confirmingLeave()}
+              message={formatMessage(
+                game.isHost() ? 'leaveDialog.hostMessage' : 'leaveDialog.message',
+              )}
+              confirmLabel={formatMessage('leaveDialog.confirm')}
+              cancelLabel={formatMessage('common.cancel')}
+              onConfirm={leaveRoom}
+              onCancel={() => setConfirmingLeave(false)}
+            />
           </div>
         )}
       </Show>

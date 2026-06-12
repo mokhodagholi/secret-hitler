@@ -9,6 +9,21 @@ import { CreateRoomScreen } from './screens/CreateRoomScreen/CreateRoomScreen';
 import { JoinGameScreen } from './screens/JoinGameScreen/JoinGameScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
 import { GameScreen } from './screens/GameScreen/GameScreen';
+import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
+
+/** Shown on every screen — the room can be closed under any of them. */
+function RoomClosedNotice() {
+  const { game, i18n } = useApp();
+  const { formatMessage } = i18n;
+  return (
+    <ConfirmDialog
+      open={game.roomClosedNotice() != null}
+      message={formatMessage('roomClosed.hostLeft')}
+      confirmLabel={formatMessage('common.ok')}
+      onConfirm={() => game.clearRoomClosedNotice()}
+    />
+  );
+}
 
 function Router() {
   const { nav, i18n } = useApp();
@@ -53,6 +68,7 @@ export function App() {
   return (
     <AppProvider>
       <Router />
+      <RoomClosedNotice />
     </AppProvider>
   );
 }

@@ -12,6 +12,7 @@ import {
   type LogEntry,
   type PublicPlayer,
   type Role,
+  type RoomClosedReason,
   type RoomSummary,
   type ServerErrorCode,
   type ServerMessage,
@@ -43,7 +44,6 @@ export interface ServerError {
 }
 
 const SESSION_KEY = 'sh:session';
-const PLAYER_NAME_KEY = 'sh:playerName';
 const MAX_CHAT_ENTRIES = 200;
 
 /**
@@ -60,12 +60,15 @@ export class GameStateService {
   readonly chatMessages: Accessor<ChatMessage[]>;
   readonly logEntries: Accessor<LogEntry[]>;
   readonly lastError: Accessor<ServerError | null>;
+  /** Set when the server destroys the room (e.g. the host left). */
+  readonly roomClosedNotice: Accessor<RoomClosedReason | null>;
 
   private readonly setView: Setter<GameStateView | null>;
   private readonly setRole: Setter<Role | null>;
   private readonly setChatMessages: Setter<ChatMessage[]>;
   private readonly setLogEntries: Setter<LogEntry[]>;
   private readonly setLastError: Setter<ServerError | null>;
+  private readonly setRoomClosedNotice: Setter<RoomClosedReason | null>;
 
   private session: RoomSession | null = null;
 
@@ -75,6 +78,8 @@ export class GameStateService {
     const [chatMessages, setChatMessages] = createSignal<ChatMessage[]>([]);
     const [logEntries, setLogEntries] = createSignal<LogEntry[]>([]);
     const [lastError, setLastError] = createSignal<ServerError | null>(null);
+    const [roomClosedNotice, setRoomClosedNotice] =
+      createSignal<RoomClosedReason | null>(null);
     this.view = view;
     this.setView = setView;
     this.role = role;
@@ -85,6 +90,8 @@ export class GameStateService {
     this.setLogEntries = setLogEntries;
     this.lastError = lastError;
     this.setLastError = setLastError;
+    this.roomClosedNotice = roomClosedNotice;
+    this.setRoomClosedNotice = setRoomClosedNotice;
 
     socket.onMessage((message) => this.onServerMessage(message));
     this.restoreSession();
@@ -122,24 +129,18 @@ export class GameStateService {
     return this.session;
   }
 
-  /** Last player name used to create/join a room, for prefilling inputs. */
-  get playerName(): string {
-    return localStorage.getItem(PLAYER_NAME_KEY) ?? '';
-  }
-
-  set playerName(name: string) {
-    localStorage.setItem(PLAYER_NAME_KEY, name.trim());
-  }
-
   clearError(): void {
     this.setLastError(null);
+  }
+
+  clearRoomClosedNotice(): void {
+    this.setRoomClosedNotice(null);
   }
 
   // --- HTTP ----------------------------------------------------------------
 
   async createRoom(request: CreateRoomRequest): Promise<RoomSession> {
     const response = await this.post<CreateRoomResponse>('/api/rooms', request);
-    this.playerName = request.hostName;
     return this.beginSession({ ...response, shareLink: response.shareLink });
   }
 
@@ -148,7 +149,6 @@ export class GameStateService {
       `/api/rooms/${encodeURIComponent(idOrCode)}/join`,
       request,
     );
-    this.playerName = request.name;
     return this.beginSession(response);
   }
 
@@ -184,8 +184,9 @@ export class GameStateService {
     this.socket.send({ type: 'command', command });
   }
 
-  /** Drop the session and reset all state (the seat empties on the server). */
+  /** Tell the server we're leaving, then drop the session and reset state. */
   leaveRoom(): void {
+    this.socket.send({ type: 'room:leave' });
     this.socket.disconnect();
     this.session = null;
     sessionStorage.removeItem(SESSION_KEY);
@@ -237,6 +238,14 @@ export class GameStateService {
         this.setLogEntries((entries) =>
           [...entries, message.entry].slice(-MAX_CHAT_ENTRIES),
         );
+        break;
+      case 'room:closed':
+        // The leaving host may catch its own broadcast — only players still
+        // holding a session were actually kicked.
+        if (this.session) {
+          this.setRoomClosedNotice(message.reason);
+          this.leaveRoom();
+        }
         break;
       case 'error':
         if (message.code === 'AUTH_FAILED') {

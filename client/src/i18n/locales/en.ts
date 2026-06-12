@@ -15,6 +15,8 @@ export const en = {
 
   'common.comingSoon': 'Coming soon.',
   'common.goBack': 'Go back',
+  'common.ok': 'OK',
+  'common.cancel': 'Cancel',
 
   'rules.title': 'Rules',
   'rules.overview': 'Overview',
@@ -43,6 +45,9 @@ export const en = {
 
   'settings.title': 'Settings',
   'settings.headerLabel': 'Settings',
+  'settings.profile': 'Profile',
+  'settings.profileName': 'Player Name',
+  'settings.profileNamePlaceholder': 'Shown to other players',
   'settings.gameSettings': 'Game Settings',
   'settings.playerCount': 'Player Count',
   'settings.players': '{count} Players',
@@ -127,6 +132,12 @@ export const en = {
   'game.discardPile': 'Discard',
   'game.nominateHint':
     'You are the President — tap a player to nominate them as Chancellor.',
+
+  'leaveDialog.message': 'Do you want to leave the room?',
+  'leaveDialog.hostMessage':
+    'You are the host — if you leave, the room will be closed for everyone.',
+  'leaveDialog.confirm': 'Leave Room',
+  'roomClosed.hostLeft': 'The host has left the room.',
 
   'role.liberal': 'Liberal',
   'role.fascist': 'Fascist',

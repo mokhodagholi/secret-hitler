@@ -3,7 +3,7 @@ import { MIN_PLAYERS, Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { MessageKey } from '../../i18n';
 import { Button } from '../../components/Button/Button';
-import { Icon } from '../../components/Icon/Icon';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import styles from './WaitingRoomScreen.module.scss';
@@ -18,6 +18,7 @@ export function WaitingRoomScreen() {
   const { formatMessage } = i18n;
 
   const [copied, setCopied] = createSignal(false);
+  const [confirmingLeave, setConfirmingLeave] = createSignal(false);
 
   const view = game.view;
   const shareLink = () =>
@@ -46,6 +47,7 @@ export function WaitingRoomScreen() {
   }
 
   function leaveRoom(): void {
+    setConfirmingLeave(false);
     game.leaveRoom();
     nav.navigate('play');
   }
@@ -148,10 +150,25 @@ export function WaitingRoomScreen() {
                 </Show>
               </Show>
 
-              <button type="button" class={styles.leave} onClick={leaveRoom}>
+              <button
+                type="button"
+                class={styles.leave}
+                onClick={() => setConfirmingLeave(true)}
+              >
                 {formatMessage('waiting.leaveRoom')}
               </button>
             </div>
+
+            <ConfirmDialog
+              open={confirmingLeave()}
+              message={formatMessage(
+                game.isHost() ? 'leaveDialog.hostMessage' : 'leaveDialog.message',
+              )}
+              confirmLabel={formatMessage('leaveDialog.confirm')}
+              cancelLabel={formatMessage('common.cancel')}
+              onConfirm={leaveRoom}
+              onCancel={() => setConfirmingLeave(false)}
+            />
           </>
         )}
       </Show>

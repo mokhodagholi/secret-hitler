@@ -36,6 +36,8 @@ export type ClientMessage =
   | { type: 'game:start' }
   | { type: 'chat:message'; text: string }
   | { type: 'command'; command: GameCommand }
+  /** Explicit leave — host: destroys the room; guest: vacates the seat. */
+  | { type: 'room:leave' }
   | { type: 'ping' };
 
 // ---------------------------------------------------------------------------
@@ -53,6 +55,8 @@ export type ServerErrorCode =
   | 'NOT_ENOUGH_PLAYERS'
   | 'INVALID_ACTION';
 
+export type RoomClosedReason = 'HOST_LEFT';
+
 export type ServerMessage =
   /** Sent once after a successful auth handshake. */
   | { type: 'authed'; playerId: string }
@@ -62,6 +66,8 @@ export type ServerMessage =
   | { type: 'private'; role: Role }
   | { type: 'chat'; message: ChatMessage }
   | { type: 'log'; entry: LogEntry }
+  /** The room was destroyed — everyone is kicked (e.g. the host left). */
+  | { type: 'room:closed'; reason: RoomClosedReason }
   | { type: 'error'; code: ServerErrorCode; message: string }
   | { type: 'pong' };
 

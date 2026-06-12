@@ -41,4 +41,13 @@ export class ConnectionRegistry {
       ws.send(JSON.stringify(message));
     }
   }
+
+  /** Unbind and close a player's socket (e.g. their room was destroyed). */
+  close(playerId: string): void {
+    const ws = this.byPlayer.get(playerId);
+    if (!ws) return;
+    this.byPlayer.delete(playerId);
+    this.bySocket.delete(ws);
+    ws.close();
+  }
 }

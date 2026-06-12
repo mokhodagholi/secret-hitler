@@ -14,12 +14,14 @@ import styles from './JoinGameScreen.module.scss';
 
 /** Join Game — public room list, password entry for locked rooms. */
 export function JoinGameScreen() {
-  const { nav, game, i18n } = useApp();
+  const { nav, settings, game, i18n } = useApp();
   const { formatMessage } = i18n;
 
   const [rooms, { refetch }] = createResource(() => game.listRooms());
   const [selectedRoomId, setSelectedRoomId] = createSignal<string | null>(null);
-  const [playerName, setPlayerName] = createSignal(game.playerName);
+  // Asked only once — afterwards the profile name from Settings is used.
+  const profileMissing = settings.settings.profileName.trim().length === 0;
+  const [playerName, setPlayerName] = createSignal(settings.settings.profileName);
   const [password, setPassword] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
   const [errorKey, setErrorKey] = createSignal<MessageKey | null>(null);
@@ -38,6 +40,7 @@ export function JoinGameScreen() {
     if (!room || !canSubmit()) return;
     setSubmitting(true);
     setErrorKey(null);
+    settings.set('profileName', playerName().trim());
     try {
       await game.joinRoom(room.id, {
         name: playerName().trim(),
@@ -113,13 +116,15 @@ export function JoinGameScreen() {
 
       <Show when={selectedRoom()}>
         <div class={styles.form}>
-          <TextInput
-            label={formatMessage('joinGame.yourName')}
-            icon="people"
-            value={playerName()}
-            onInput={setPlayerName}
-            onSubmit={submit}
-          />
+          <Show when={profileMissing}>
+            <TextInput
+              label={formatMessage('joinGame.yourName')}
+              icon="people"
+              value={playerName()}
+              onInput={setPlayerName}
+              onSubmit={submit}
+            />
+          </Show>
           <Show when={selectedRoom()!.hasPassword}>
             <TextInput
               label={formatMessage('joinGame.password')}

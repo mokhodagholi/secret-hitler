@@ -6,6 +6,7 @@ import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { SectionTitle } from '../../components/SectionTitle/SectionTitle';
 import { SettingRow } from '../../components/SettingRow/SettingRow';
+import { TextInput } from '../../components/TextInput/TextInput';
 import styles from './SettingsScreen.module.scss';
 
 export function SettingsScreen() {
@@ -29,6 +30,15 @@ export function SettingsScreen() {
             <Icon name="gear" size={22} />
           </button>
         }
+      />
+
+      <SectionTitle>{formatMessage('settings.profile')}</SectionTitle>
+      <TextInput
+        label={formatMessage('settings.profileName')}
+        placeholder={formatMessage('settings.profileNamePlaceholder')}
+        icon="people"
+        value={state.profileName}
+        onInput={(value) => settings.set('profileName', value)}
       />
 
       <SectionTitle>{formatMessage('settings.gameSettings')}</SectionTitle>

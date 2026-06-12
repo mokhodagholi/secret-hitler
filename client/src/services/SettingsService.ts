@@ -2,6 +2,8 @@ import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
 import { DEFAULT_LANGUAGE, type Language } from '../i18n';
 
 export interface SettingsState {
+  /** Display name used for every room you create or join. */
+  profileName: string;
   playerCount: number;
   showRoles: boolean;
   timerEnabled: boolean;
@@ -13,6 +15,7 @@ export interface SettingsState {
 }
 
 const DEFAULTS: SettingsState = {
+  profileName: '',
   playerCount: 7,
   showRoles: false,
   timerEnabled: false,

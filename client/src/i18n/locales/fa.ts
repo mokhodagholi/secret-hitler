@@ -15,6 +15,8 @@ export const fa = {
 
   'common.comingSoon': 'به‌زودی.',
   'common.goBack': 'بازگشت',
+  'common.ok': 'باشه',
+  'common.cancel': 'انصراف',
 
   'rules.title': 'قوانین',
   'rules.overview': 'مرور کلی',
@@ -44,6 +46,9 @@ export const fa = {
 
   'settings.title': 'تنظیمات',
   'settings.headerLabel': 'تنظیمات',
+  'settings.profile': 'پروفایل',
+  'settings.profileName': 'نام بازیکن',
+  'settings.profileNamePlaceholder': 'به بازیکنان دیگر نمایش داده می‌شود',
   'settings.gameSettings': 'تنظیمات بازی',
   'settings.playerCount': 'تعداد بازیکنان',
   'settings.players': '{count} بازیکن',
@@ -128,6 +133,12 @@ export const fa = {
   'game.discardPile': 'دستهٔ دور ریخته',
   'game.nominateHint':
     'شما رئیس‌جمهور هستید — برای معرفی صدراعظم روی یک بازیکن بزنید.',
+
+  'leaveDialog.message': 'می‌خواهید از اتاق خارج شوید؟',
+  'leaveDialog.hostMessage':
+    'شما میزبان هستید — اگر خارج شوید، اتاق برای همه بسته می‌شود.',
+  'leaveDialog.confirm': 'خروج از اتاق',
+  'roomClosed.hostLeft': 'میزبان اتاق را ترک کرد!',
 
   'role.liberal': 'لیبرال',
   'role.fascist': 'فاشیست',

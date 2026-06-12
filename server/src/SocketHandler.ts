@@ -98,10 +98,30 @@ export class SocketHandler {
         if (error) this.sendError(ws, error.code, error.message);
         break;
       }
+      case 'room:leave': {
+        const player = entry.room.findPlayer(playerId);
+        if (player?.isHost) {
+          // The host owns the room — leaving destroys it for everyone.
+          this.broadcast(roomId, { type: 'room:closed', reason: 'HOST_LEFT' });
+          this.destroyRoom(entry);
+        } else {
+          engine.removePlayer(playerId);
+          this.connections.close(playerId);
+        }
+        break;
+      }
       case 'ping':
         this.sendTo(ws, { type: 'pong' });
         break;
     }
+  }
+
+  /** Kick every remaining connection and drop the room from the repository. */
+  private destroyRoom(entry: RoomEntry): void {
+    for (const player of entry.room.players) {
+      this.connections.close(player.id);
+    }
+    this.repo.remove(entry.room.id);
   }
 
   private onAuth(ws: WebSocket, token: string): void {
