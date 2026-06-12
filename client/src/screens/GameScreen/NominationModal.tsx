@@ -1,4 +1,4 @@
-import { For } from 'solid-js';
+import { Index } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -53,17 +53,17 @@ export function NominationModal(props: NominationModalProps) {
         </header>
 
         <div class={styles.list}>
-          <For each={seated()}>
+          <Index each={seated()}>
             {(player) => (
               <PlayerRow
-                player={player}
-                isYou={player.id === props.youId}
-                nominatable={props.canNominate(player)}
-                onNominate={() => props.onNominate(player)}
+                player={player()}
+                isYou={player().id === props.youId}
+                nominatable={props.canNominate(player())}
+                onNominate={() => props.onNominate(player())}
                 formatMessage={formatMessage}
               />
             )}
-          </For>
+          </Index>
         </div>
 
         <button

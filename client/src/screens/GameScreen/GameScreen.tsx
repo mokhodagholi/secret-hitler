@@ -59,7 +59,7 @@ export function GameScreen() {
   });
 
   onMount(() => {
-    const ticker = setInterval(() => setNow(Date.now()), 500);
+    const ticker = setInterval(() => setNow(Date.now()), 1000);
     onCleanup(() => clearInterval(ticker));
   });
 

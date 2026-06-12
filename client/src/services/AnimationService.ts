@@ -2,8 +2,12 @@ import { ANIMATIONS, type AnimationName } from '../animations/registry';
 import type { SettingsService } from './SettingsService';
 
 // jsdom (and SSR) have no Web Animations API or matchMedia; degrade to no-ops.
-const canQueryMotionPreference =
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+// Query the OS preference once and reuse it — `matchMedia` allocates a new
+// MediaQueryList per call, and `motionEnabled()` runs on every timer tick.
+const reducedMotionQuery =
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
 
 /** One paint frame from now; falls back to a macrotask where rAF is missing. */
 const nextFrame: (callback: () => void) => void =
@@ -28,10 +32,7 @@ export class AnimationService {
   /** False when the user (or their OS) asked for reduced motion. */
   motionEnabled(): boolean {
     if (this.settings.settings.reduceMotion) return false;
-    return !(
-      canQueryMotionPreference &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    );
+    return !reducedMotionQuery?.matches;
   }
 
   /**
