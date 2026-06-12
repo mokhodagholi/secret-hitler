@@ -115,8 +115,6 @@ export type MessageKey =
   | 'tip.hitler'
   | 'game.roomLabel'
   | 'game.currentTrack'
-  | 'game.voiceChat'
-  | 'game.voiceConnected'
   | 'game.endTurn'
   | 'game.youArePresident'
   | 'game.president'

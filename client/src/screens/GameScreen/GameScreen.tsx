@@ -18,9 +18,9 @@ import styles from './GameScreen.module.scss';
 
 /**
  * Main game board: players around the wooden table, the canvas policy board,
- * president/chancellor cards, chat/log panel beside the voice + role column,
- * and the phase action footer. All state is the server's — this screen
- * renders the latest GameStateView and sends commands back.
+ * president/chancellor cards, chat/log panel beside the role column, and the
+ * phase action footer. State is the server's; this screen renders the latest
+ * GameStateView and sends commands back.
  */
 export function GameScreen() {
   const { nav, game, socket, i18n } = useApp();
@@ -269,24 +269,6 @@ export function GameScreen() {
               </section>
 
               <div class={styles.sideColumn}>
-                <section class={styles.voicePanel}>
-                  <span class={styles.panelHeading}>
-                    {formatMessage('game.voiceChat')}
-                  </span>
-                  <span
-                    classList={{
-                      [styles.voiceStatus]: true,
-                      [styles.voiceOnline]: socket.status() === 'connected',
-                    }}
-                  >
-                    {formatMessage(`connection.${socket.status()}` as MessageKey)}
-                  </span>
-                  {/* Voice chat lands in Phase 7 — the mic is visual only. */}
-                  <span class={styles.micButton} aria-hidden="true">
-                    <Icon name="mic" size={22} />
-                  </span>
-                </section>
-
                 <Show when={game.role()}>
                   <section class={styles.roleCard}>
                     <span class={styles.panelHeading}>

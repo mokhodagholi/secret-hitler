@@ -1,7 +1,6 @@
 import { Show } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
-import { Icon } from '../../components/Icon/Icon';
 import styles from './GameScreen.module.scss';
 
 export interface PlayerSeatProps {
@@ -41,11 +40,7 @@ export function PlayerSeat(props: PlayerSeatProps) {
           <span class={styles.seatBadge}>C</span>
         </Show>
       </span>
-      <span class={styles.seatName}>
-        {props.player.name}
-        {/* Voice activity indicator — wired up in the voice-chat phase. */}
-        <Icon name="mic" size={10} class={styles.seatMic} />
-      </span>
+      <span class={styles.seatName}>{props.player.name}</span>
       <Show when={props.player.role}>
         <span
           classList={{

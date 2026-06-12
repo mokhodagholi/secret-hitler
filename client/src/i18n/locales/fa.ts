@@ -130,8 +130,6 @@ export const fa = {
 
   "game.roomLabel": "اتاق: {name}",
   "game.currentTrack": "وضعیت فعلی",
-  "game.voiceChat": "چت صوتی",
-  "game.voiceConnected": "{count} متصل",
   "game.endTurn": "پایان نوبت",
   "game.youArePresident": "شما رئیس‌جمهور هستید",
   "game.president": "رئیس‌جمهور",

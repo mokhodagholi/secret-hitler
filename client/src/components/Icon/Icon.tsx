@@ -25,7 +25,6 @@ export type IconName =
   | 'scroll'
   | 'skull'
   | 'door'
-  | 'mic'
   | 'crown'
   | 'share';
 
@@ -183,14 +182,6 @@ const glyphs: Record<IconName, () => JSX.Element> = {
       <path d="M13 3h6a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-6" />
       <path d="M13 21 4 19V5l9-2z" />
       <circle cx="10.5" cy="12" r="0.75" fill="currentColor" />
-    </>
-  ),
-  mic: () => (
-    <>
-      <rect x="9" y="2" width="6" height="12" rx="3" />
-      <path d="M5 10a7 7 0 0 0 14 0" />
-      <path d="M12 17v5" />
-      <path d="M8 22h8" />
     </>
   ),
   crown: () => (

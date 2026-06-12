@@ -145,11 +145,6 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
-.seatMic {
-  color: $blue-liberal;
-  flex-shrink: 0;
-}
-
 .seatRole {
   @include display(0.55rem, 0.08em);
 }
@@ -333,36 +328,6 @@
   background: linear-gradient(180deg, $gold-bright, $gold-dark);
   color: $navy-950;
   cursor: pointer;
-}
-
-.voicePanel {
-  @include card;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border-color: rgba($gold, 0.4);
-}
-
-.voiceStatus {
-  font-size: 0.72rem;
-  color: $text-dim;
-}
-
-.voiceOnline {
-  color: #7fd08a;
-}
-
-.micButton {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: linear-gradient(180deg, $gold-bright, $gold-dark);
-  color: $navy-950;
-  box-shadow: 0 3px 0 $gold-deep;
 }
 
 .roleCard {

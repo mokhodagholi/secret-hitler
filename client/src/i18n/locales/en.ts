@@ -128,8 +128,6 @@ export const en = {
 
   'game.roomLabel': 'Room: {name}',
   'game.currentTrack': 'Current Track',
-  'game.voiceChat': 'Voice Chat',
-  'game.voiceConnected': '{count} connected',
   'game.endTurn': 'End Turn',
   'game.youArePresident': 'You are the President',
   'game.president': 'President',
