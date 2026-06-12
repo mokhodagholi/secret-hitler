@@ -2,7 +2,11 @@ import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { GameScreen } from './GameScreen';
+import { en } from '../../i18n/locales/en';
 import { buildHarness, makePlayer, makeView, renderWithApp } from '../../../test/test-utils';
+
+// Sourced from the catalog so the assertion follows the i18n text, not a literal.
+const SECONDS_PATTERN = new RegExp(`^${en.game.secondsLeft.replace('{seconds}', '\\d+')}$`);
 
 function votingView() {
   return makeView({
@@ -76,5 +80,25 @@ describe('GameScreen — voting', () => {
 
     expect(screen.getByText('Your Role')).toBeTruthy();
     expect(screen.getByText('Find and stop Hitler. Pass 5 Liberal policies to win.')).toBeTruthy();
+  });
+});
+
+describe('GameScreen — timer setting', () => {
+  it('Should hide the vote countdown when the Timer setting is off', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('timerEnabled', false);
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(screen.queryByText(SECONDS_PATTERN)).toBeNull();
+  });
+
+  it('Should show the vote countdown when the Timer setting is on', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('timerEnabled', true);
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(screen.getByText(SECONDS_PATTERN)).toBeTruthy();
   });
 });

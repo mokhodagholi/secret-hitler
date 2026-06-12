@@ -12,6 +12,8 @@ export interface VotingOverlayProps {
   yourVote: Vote | null;
   votedCount: number;
   totalVoters: number;
+  /** Show the countdown bar (the room's Timer setting is enabled). */
+  showTimer: boolean;
   secondsLeft: number;
   /** Fraction of the window remaining, 0–1. */
   progress: number;
@@ -27,12 +29,14 @@ export function VotingOverlay(props: VotingOverlayProps) {
         <span class={styles.title}>{formatMessage('game.voteTitle')}</span>
         <p class={styles.prompt}>{props.prompt}</p>
 
-        <div class={styles.timer}>
-          <div class={styles.timerBar} style={{ width: `${props.progress * 100}%` }} />
-          <span class={styles.timerLabel}>
-            {formatMessage('game.secondsLeft', { seconds: props.secondsLeft })}
-          </span>
-        </div>
+        <Show when={props.showTimer}>
+          <div class={styles.timer}>
+            <div class={styles.timerBar} style={{ width: `${props.progress * 100}%` }} />
+            <span class={styles.timerLabel}>
+              {formatMessage('game.secondsLeft', { seconds: props.secondsLeft })}
+            </span>
+          </div>
+        </Show>
 
         <Show
           when={props.canVote}

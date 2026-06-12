@@ -28,8 +28,9 @@ import styles from './GameScreen.module.scss';
  * GameStateView and sends commands back.
  */
 export function GameScreen() {
-  const { nav, game, socket, i18n } = useApp();
+  const { nav, game, socket, i18n, settings } = useApp();
   const { formatMessage } = i18n;
+  const showTimer = () => settings.settings.timerEnabled;
 
   const view = game.view;
   const [activeTab, setActiveTab] = createSignal<'chat' | 'log'>('chat');
@@ -253,6 +254,7 @@ export function GameScreen() {
                 yourVote={state().you.vote}
                 votedCount={votedCount()}
                 totalVoters={voters().length}
+                showTimer={showTimer()}
                 secondsLeft={voteSecondsLeft()}
                 progress={voteProgress()}
                 onVote={castVote}
@@ -375,11 +377,13 @@ export function GameScreen() {
                               name: playerName(speaker()!.playerId),
                             })}
                       </span>
-                      <span class={styles.speakerTimer}>
-                        {formatMessage('game.secondsLeft', {
-                          seconds: secondsLeft(),
-                        })}
-                      </span>
+                      <Show when={showTimer()}>
+                        <span class={styles.speakerTimer}>
+                          {formatMessage('game.secondsLeft', {
+                            seconds: secondsLeft(),
+                          })}
+                        </span>
+                      </Show>
                     </div>
                   </Show>
                   <div class={styles.chatComposer}>
