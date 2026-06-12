@@ -1,124 +1,183 @@
-# Game Rules & Round Flow
+# Secret Hitler — Official Rules
 
-The canonical Secret Hitler rules (from the official rulebook, `Secret-Hitler.pdf`)
-plus how this implementation structures a round. Reference:
-[Secret Hitler (whitesho.com)](https://whitesho.com/SecretHitlerGame).
+A faithful reference of the rules as written in `Secret-Hitler.pdf` (the Persian
+rulebook). This describes the tabletop game itself; it is not implementation
+notes.
 
-## Players & roles
+## Setting
 
-- **5–10 players.** Each is secretly a **Liberal**, a **Fascist**, or **Hitler**
-  (Hitler is a Fascist with a hidden identity).
-- Role counts by player count:
+It is 1932, Germany, before the Second World War. Players are secretly split
+into two parties — **Liberals** and **Fascists** — and one of the Fascists is
+secretly **Hitler**. The Liberals are the majority but do not know who anyone
+is. The Fascists know one another and must reach their goal through hidden
+sabotage while concealing their identities.
 
-  | Players | Liberals | Fascists (excl. Hitler) | Hitler |
-  |---|---|---|---|
-  | 5 | 3 | 1 | 1 |
-  | 6 | 4 | 1 | 1 |
-  | 7 | 4 | 2 | 1 |
-  | 8 | 5 | 2 | 1 |
-  | 9 | 5 | 3 | 1 |
-  | 10 | 6 | 3 | 1 |
+## Objective
 
-- **Knowledge at setup:** the Fascists learn each other and who Hitler is. In a
-  **5–6 player** game Hitler also learns who the Fascists are; in a **7–10**
-  player game Hitler does **not** know the Fascists.
+Each player has a secret goal as a member of one party.
 
-## A round
+- **Liberals win if** five **Liberal** policies are enacted, **or** Hitler is
+  assassinated (executed).
+- **Fascists win if** six **Fascist** policies are enacted, **or** Hitler is
+  elected Chancellor after **three or more** Fascist policies have been enacted.
 
-1. **Discussion** — players talk. In this app discussion is turn-based: a
-   talking stick passes to each player for a fixed window (`SPEAKING_TURN_MS`,
-   20s); only the current speaker may chat.
-2. **Nomination** — the President (rotates clockwise each round) nominates an
-   **eligible** player as Chancellor (see term limits below).
-3. **Election (vote)** — every living player votes Ja/Nein. A strict majority of
-   Ja elects the government. Voting is time-boxed (`VOTE_DURATION_MS`, 30s);
-   not voting before the timer expires counts as **Nein**. If the elected
-   Chancellor is Hitler once **3+ fascist** policies are enacted, the Fascists
-   win immediately.
-4. **Legislative session** (only if elected):
-   - The President draws **3** policies and **discards 1** (face down).
-   - The Chancellor receives the remaining **2** and **enacts 1** (or vetoes —
-     see below). Hands are private; the President and Chancellor may not
-     communicate during this step.
-5. **Executive action** — if the policy just enacted is on a fascist board slot
-   that grants a power, the President must use it before the next round.
-6. The presidency passes to the next living player by seat and a new round
-   begins.
+Each time a Fascist policy is enacted, a special power may be granted to the
+President, to be used before the next round begins.
 
-When the draw pile has fewer than 3 cards, the discard pile is shuffled back in.
+## Components
 
-## Term limits (nomination eligibility)
+- **17 policy tiles:** 6 Liberal, 11 Fascist.
+- Secret **role cards** (Liberal / Fascist / Hitler) and **party membership
+  cards** (Liberal / Fascist only).
+- **Ja** and **Nein** vote cards for every player.
+- The **Liberal** and **Fascist** policy boards and an election tracker.
+- President and Chancellor placards, and "previous President / Chancellor"
+  markers.
+- Envelopes to keep each player's cards hidden.
 
-The **last elected Chancellor** may not be nominated as Chancellor. With **more
-than 5 living players** the **last elected President** is also ineligible. The
-sitting President can never nominate themselves. These restrictions reset when a
-policy is enacted through the chaos rule (three failed elections).
+> A player's **party membership card** shows only their party (Liberal or
+> Fascist) and never their secret role. **Hitler's party card reads Fascist.**
+> This matters for the Investigate power, which reveals the party card, not the
+> secret role.
 
-## Failed elections & the election tracker
+## Setup
 
-Each failed vote advances the **election tracker** by one. After **3**
-consecutive failed governments the country falls into chaos: the **top policy is
-enacted automatically** (no power is granted), the tracker resets, and term-limit
-restrictions clear.
+Choose Fascist/Hitler role cards according to the player count and combine the
+correct number of Liberal cards. Shuffle the 17 policy tiles and place them face
+down as the draw pile.
 
-## Fascist board powers (executive actions)
+| Players | Liberals | Fascists (+ Hitler) |
+|---|---|---|
+| 5 | 3 | 1 + Hitler |
+| 6 | 4 | 1 + Hitler |
+| 7 | 4 | 2 + Hitler |
+| 8 | 5 | 2 + Hitler |
+| 9 | 5 | 3 + Hitler |
+| 10 | 6 | 3 + Hitler |
 
-Each fascist policy slot may grant the President a one-time power when a fascist
-policy lands on it. The layout depends on the player count:
+**The secret reveal (eyes closed):**
+
+- **5–6 players:** everyone closes their eyes; the **Fascists and Hitler** open
+  their eyes and identify one another, then close again. (Hitler knows the
+  Fascists.)
+- **7–10 players:** everyone closes their eyes; the **Fascists (not Hitler)**
+  open their eyes and identify each other and Hitler; Hitler keeps their eyes
+  closed and raises a thumb so the Fascists can recognize them. (Hitler does
+  **not** learn who the Fascists are.)
+
+## Round flow
+
+The game is played in successive rounds. Each round: an **election** forms a
+government, then a **legislative session** enacts one policy, then the President
+takes any **executive action** the enacted policy granted.
+
+### 1. Presidential candidate
+
+At the start of each round the role of presidential candidate passes **clockwise**
+to the next player.
+
+### 2. Nominate a Chancellor
+
+The presidential candidate nominates an **eligible** player as Chancellor and may
+discuss the choice with the table to improve the government's chances.
+
+**Eligibility (term limits):** the last President and last Chancellor who formed
+a government by majority vote **may not be nominated as Chancellor** in the next
+election. Eligibility restrictions apply only to the Chancellor — the presidency
+always rotates normally. **Exception:** when only **5 players remain**, only the
+last Chancellor is ineligible (the last President is eligible again).
+
+### 3. Vote to form the government
+
+Every player (including the President and the nominated Chancellor) votes
+simultaneously with **Ja** or **Nein**.
+
+- A **strict majority of Ja** elects the government. A **tie is a failure**.
+- If the elected Chancellor is **Hitler** and **3+ Fascist** policies are on the
+  board, the **Fascists win immediately**.
+
+**Election tracker:** every failed government advances the tracker by one. If
+**three governments fail in a row**, the country falls into chaos: the **top
+policy is enacted automatically** (granting **no** power), the tracker resets,
+and all term-limit restrictions are cleared.
+
+### 4. Legislative session
+
+If the government is elected:
+
+- The **President** draws the top **3** policies, secretly reviews them, and
+  discards **1** face down into the discard ("burned laws") pile.
+- The **President** passes the remaining **2** to the **Chancellor**, who
+  secretly reviews them, enacts **1** on the board, and discards the other.
+
+No verbal or non-verbal communication is allowed during this step, and no player
+may reveal or imply which tiles were drawn. Discarded tiles are never revealed
+during the game. When fewer than **3** tiles remain in the draw pile, shuffle the
+discard pile back in.
+
+### 5. Executive action
+
+If the policy just enacted grants the President a power (see the board below),
+the President **must** use it before the next round — it cannot be deferred.
+Then the President placard passes on and a new round begins.
+
+## Fascist board powers
+
+A Fascist policy landing on a board slot may grant a one-time power. The layout
+depends on the player count:
 
 | Fascist policy # | 5–6 players | 7–8 players | 9–10 players |
 |---|---|---|---|
-| 1 | — | — | Investigate |
-| 2 | — | Investigate | Investigate |
-| 3 | Policy Peek | Special Election | Special Election |
+| 1 | — | — | Investigate Loyalty |
+| 2 | — | Investigate Loyalty | Investigate Loyalty |
+| 3 | Policy Peek | Call Special Election | Call Special Election |
 | 4 | Execution | Execution | Execution |
-| 5 | Execution | Execution | Execution |
-| 6 | **Fascist win** | **Fascist win** | **Fascist win** |
+| 5 | Execution (+ Veto unlocks) | Execution (+ Veto unlocks) | Execution (+ Veto unlocks) |
+| 6 | **Fascists win** | **Fascists win** | **Fascists win** |
 
-The powers:
+**The powers:**
 
-- **Investigate Loyalty** — the President sees a chosen player's **party
-  membership** (Liberal or Fascist; Hitler's card reads Fascist). Each player may
-  be investigated only once.
-- **Call Special Election** — the President picks any other player to be the next
-  President. Afterwards the rotation resumes from the player to the special
-  President's left (i.e. ordinary order continues from the original seat).
-- **Policy Peek** — the President secretly looks at the top 3 policies in the
-  draw pile.
-- **Execution** — the President kills a player, who is removed from the game and
-  reveals nothing. If the executed player is **Hitler, the Liberals win
-  immediately**.
+- **Investigate Loyalty** — the President chooses a player, who secretly shows
+  their **party membership card** (Liberal or Fascist; Hitler's reads Fascist) —
+  *not* their secret role. The President may share or lie about the result. No
+  player may be investigated more than once.
+- **Call Special Election** — the President names any player as the next
+  presidential candidate. After that special round, the candidacy returns to the
+  normal clockwise rotation from where it left off.
+- **Policy Peek** — the President secretly looks at the top **3** tiles of the
+  draw pile and returns them in the same order.
+- **Execution** — the President formally executes a player, who leaves the game.
+  If that player is **Hitler, the game ends and the Liberals win**. Otherwise the
+  game continues; the executed player does not reveal their role, has no vote,
+  and cannot be a candidate, but remains at the table in silence.
 
 ## Veto power
 
-Once **5 fascist policies** are enacted, a veto unlocks. During the legislative
-session the Chancellor may propose to veto the two policies in hand; if the
-President agrees, both are discarded and the government counts as failed (the
-election tracker advances). If the President refuses, the Chancellor must enact
-one of the two as usual.
+Once **five Fascist** policies are enacted, the veto becomes available for all
+later legislative sessions. During the session the **Chancellor** may, instead of
+enacting a policy, declare a veto. If the **President agrees**, both tiles are
+discarded face down and the government counts as **failed** (the election tracker
+advances by one). If the President does **not** agree, the Chancellor must enact
+one of the two tiles as normal.
 
-## Win conditions
+## Round summary
 
-- **Liberals win** when **5 liberal** policies are enacted, **or** Hitler is
-  executed.
-- **Fascists win** when **6 fascist** policies are enacted, **or** Hitler is
-  elected Chancellor once **3 or more fascist** policies are on the board.
+1. The presidential candidate nominates an eligible Chancellor. The previous
+   government's President and Chancellor are not eligible as Chancellor.
+2. Everyone votes. A failed vote passes the candidacy to the next player and
+   advances the election tracker.
+3. The elected government enacts one policy (President draws 3 → discards 1;
+   Chancellor enacts 1 of 2).
+4. The President uses any power the enacted Fascist policy granted.
+5. The President placard passes on and a new round begins.
 
-## Implementation status
+## Commonly forgotten rules
 
-Implemented: lobby with ready-up, role dealing, talking-stick discussion,
-nomination, the timed voting screen, the legislative session (draw 3 / discard /
-enact), the election tracker and chaos rule, and the 5/6-policy and
-Hitler-Chancellor win conditions. Driven by the `GamePhase` state machine
-(`shared/src/engine/phases/`).
-
-In progress (this milestone): Hitler-knows-Fascists in 5–6 player games, term
-limits, the four executive powers with the per-player-count board layout,
-Hitler-execution liberal win, and the veto power.
-
-## Dev notes
-
-- Minimum players to start is env-configurable: `MIN_PLAYERS=3 pnpm dev:server`
-  (production keeps the standard 5). See `.env.example`.
-- The server is authoritative; clients send commands and render the broadcast
-  `GameStateView`.
+- A **tie vote is a failure** (a strict Ja majority is required).
+- **Three consecutive failed governments** enact the top policy automatically
+  (no power) and reset the tracker and term limits.
+- **Hitler elected Chancellor with 3+ Fascist policies** wins for the Fascists.
+- A player may be **investigated only once**.
+- After a **special election**, the presidency returns to its normal rotation.
+- **Executed players** stay at the table but cannot vote, speak as a player, or
+  be nominated.
