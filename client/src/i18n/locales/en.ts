@@ -195,6 +195,8 @@ export const en = {
   },
   game: {
     roomLabel: 'Room: {name}',
+    players: 'Players',
+    timeLeft: 'Time Left',
     currentTrack: 'Current Track',
     endTurn: 'End Turn',
     youArePresident: 'You are the President',
@@ -252,6 +254,12 @@ export const en = {
   vote: {
     ja: 'Ja',
     nein: 'Nein',
+  },
+  gameMenu: {
+    roomInfo: 'Room Info',
+    audio: 'Audio',
+    muteMusic: 'Mute Music',
+    muteEffects: 'Mute Effects',
   },
   policyReveal: {
     liberal: 'A Liberal Policy was enacted',

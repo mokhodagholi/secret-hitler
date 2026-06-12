@@ -26,7 +26,8 @@ export type IconName =
   | 'skull'
   | 'door'
   | 'crown'
-  | 'share';
+  | 'share'
+  | 'close';
 
 const glyphs: Record<IconName, () => JSX.Element> = {
   book: () => (
@@ -195,6 +196,7 @@ const glyphs: Record<IconName, () => JSX.Element> = {
       <path d="m8.7 10.6 6.6-3.2M8.7 13.4l6.6 3.2" />
     </>
   ),
+  close: () => <path d="M18 6 6 18M6 6l12 12" />,
 };
 
 export interface IconProps {

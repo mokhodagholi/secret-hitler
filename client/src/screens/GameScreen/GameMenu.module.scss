@@ -1,0 +1,71 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 85; // under the vote (90) and reveal (95) overlays — play goes on
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 12, 22, 0.78);
+}
+
+.sheet {
+  @include card;
+  width: min(380px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  border-color: rgba($gold, 0.45);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid $line-soft;
+}
+
+.title {
+  @include display(0.95rem, 0.18em);
+  color: $gold;
+}
+
+.close {
+  @include pressable;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  color: $text-dim;
+  border: 1px solid $line-soft;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 14px 16px;
+  overflow-y: auto;
+}
+
+.leave {
+  @include card;
+  @include pressable;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border-color: rgba($red-bright, 0.5);
+  color: $red-bright;
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+}
+
+.leaveIcon {
+  flex-shrink: 0;
+}

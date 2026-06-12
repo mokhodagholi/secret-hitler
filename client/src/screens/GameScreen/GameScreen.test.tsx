@@ -83,6 +83,81 @@ describe('GameScreen — voting', () => {
   });
 });
 
+describe('GameScreen — player list', () => {
+  it('Should nominate a player by tapping their row during Nomination', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, president: 'you', chancellor: null },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'nominateChancellor', targetId: 'cal' },
+    });
+  });
+
+  it('Should hide role labels the server has not revealed', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    // Other players' roles are null in the view — no role label rendered.
+    expect(screen.queryByText(en.role.hitler)).toBeNull();
+  });
+
+  it('Should show a revealed role label in the player list', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cal' ? { ...player, role: 'hitler' as const } : player,
+      ),
+    });
+
+    expect(screen.getByText(en.role.hitler)).toBeTruthy();
+  });
+});
+
+describe('GameScreen — board', () => {
+  it('Should show the election tracker', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(screen.getByText(en.game.electionTracker)).toBeTruthy();
+  });
+});
+
+describe('GameScreen — in-game menu', () => {
+  it('Should open the settings menu from the gear button', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
+    expect(screen.getByText(en.gameMenu.muteMusic)).toBeTruthy();
+    expect(screen.getByText(en.gameMenu.muteEffects)).toBeTruthy();
+    expect(screen.getByText(en.settings.language)).toBeTruthy();
+  });
+
+  it('Should ask for confirmation when leaving from the menu', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
+    fireEvent.click(screen.getByText(en.game.leaveRoom));
+    expect(screen.getByText(en.leaveDialog.message)).toBeTruthy();
+  });
+});
+
 describe('GameScreen — timer setting', () => {
   it('Should hide the vote countdown when the Timer setting is off', () => {
     const harness = buildHarness({ seated: true });

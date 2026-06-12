@@ -8,33 +8,23 @@
   min-height: 100%;
 }
 
-// --- Room bar ---------------------------------------------------------------
+// --- Top bar -----------------------------------------------------------------
 
-.roomBar {
-  @include card;
+.topBar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 8px 14px;
-  border-color: rgba($gold, 0.4);
+  gap: 10px;
+  padding: 2px 2px 0;
 }
 
 .roomName {
-  @include display(0.78rem, 0.12em);
+  @include display(0.82rem, 0.12em);
+  flex: 1;
+  min-width: 0;
   color: $text-light;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.roomCount {
-  @include display(0.78rem, 0.06em);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: $gold;
-  flex-shrink: 0;
 }
 
 .connection {
@@ -49,114 +39,104 @@
   background: #7fd08a;
 }
 
-// --- Wooden table + seats ------------------------------------------------------
-
-.table {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1.04;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 38%, #6b4a2f 0%, #553823 55%, #3f2818 100%);
-  border: 6px solid #33200f;
-  box-shadow:
-    inset 0 4px 18px rgba(0, 0, 0, 0.45),
-    0 6px 22px rgba(0, 0, 0, 0.4);
+.menuButton {
+  @include pressable;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: $radius-sm;
+  color: $text-dim;
+  border: 1px solid $line-soft;
+  background: rgba($navy-800, 0.6);
+  flex-shrink: 0;
 }
 
-.board {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 64%;
+// --- Board + sidebar -----------------------------------------------------------
+
+.main {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
 }
 
-.seat {
-  position: absolute;
-  transform: translate(-50%, -50%);
+.boardColumn {
+  @include card;
+  flex: 1.2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.sidebar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+// --- Government cards ------------------------------------------------------------
+
+.government {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.governmentCard {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  width: 66px;
-  cursor: default;
+  padding: 7px 8px;
+  border-radius: $radius-sm;
+  border: 1px solid rgba($gold, 0.4);
+  background: rgba($navy-900, 0.6);
 }
 
-.nominatable {
-  cursor: pointer;
-
-  .seatAvatar {
-    border-color: $gold;
-    box-shadow: 0 0 10px rgba($gold, 0.6);
-  }
+.governmentLabel {
+  @include display(0.58rem, 0.14em);
+  color: $text-dim;
 }
 
-.dead {
-  filter: grayscale(1);
-  opacity: 0.5;
-}
-
-.voted .seatAvatar {
-  border-color: #7fd08a;
-  box-shadow: 0 0 8px rgba(127, 208, 138, 0.6);
-}
-
-.speaking .seatAvatar {
-  border-color: $gold-bright;
-  box-shadow: 0 0 0 3px rgba($gold, 0.45), 0 0 12px rgba($gold, 0.7);
-}
-
-.offline {
-  opacity: 0.45;
-}
-
-.seatAvatar {
-  @include display(0.95rem, 0);
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: $navy-800;
-  border: 2px solid rgba($gold, 0.55);
+.governmentName {
+  font-size: 0.85rem;
+  font-weight: 600;
   color: $gold;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
-}
-
-.you .seatAvatar {
-  background: rgba($gold, 0.3);
-}
-
-.seatBadge {
-  @include display(0.6rem, 0);
-  position: absolute;
-  top: -6px;
-  inset-inline-end: -6px;
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: $gold;
-  color: $navy-950;
-}
-
-.seatName {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 0.66rem;
-  color: $white;
-  max-width: 66px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
-.seatRole {
-  @include display(0.55rem, 0.08em);
+// --- Sidebar: role card, stats, player list ----------------------------------------
+
+.panelHeading {
+  @include display(0.66rem, 0.14em);
+  color: $text-dim;
+}
+
+.roleCard {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-color: rgba($blue-liberal, 0.5);
+}
+
+.roleName {
+  @include display(0.95rem, 0.1em);
+}
+
+.roleDescription {
+  font-size: 0.72rem;
+  color: $text-dim;
+  line-height: 1.5;
 }
 
 .roleLiberal {
@@ -167,38 +147,138 @@
   color: $red-bright;
 }
 
-// --- Government cards ------------------------------------------------------------
-
-.government {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.governmentCard {
+.stats {
   @include card;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 12px;
-  border-color: rgba($gold, 0.4);
+  gap: 8px;
+  padding: 10px 12px;
 }
 
-.governmentLabel {
-  @include display(0.62rem, 0.16em);
+.statRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.statIcon {
+  color: $gold;
+  flex-shrink: 0;
+}
+
+.statLabel {
+  @include display(0.62rem, 0.1em);
+  flex: 1;
   color: $text-dim;
 }
 
-.governmentName {
-  font-size: 0.9rem;
-  font-weight: 600;
+.statValue {
+  @include display(0.72rem, 0.06em);
+  color: $text-light;
+}
+
+.statUrgent {
+  color: $red-bright;
+}
+
+.playersPanel {
+  @include card;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  min-height: 0;
+}
+
+.playerList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+}
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: $radius-sm;
+  border: 1px solid transparent;
+  text-align: start;
+  cursor: default;
+}
+
+.nominatable {
+  cursor: pointer;
+  border-color: rgba($gold, 0.55);
+  background: rgba($gold, 0.07);
+}
+
+.dead {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.offline {
+  opacity: 0.45;
+}
+
+.voted .playerAvatar {
+  border-color: #7fd08a;
+  box-shadow: 0 0 7px rgba(127, 208, 138, 0.55);
+}
+
+.you .playerAvatar {
+  background: rgba($gold, 0.3);
+}
+
+.playerAvatar {
+  @include display(0.82rem, 0);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: $navy-800;
+  border: 2px solid rgba($gold, 0.55);
   color: $gold;
-  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.playerInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.playerName {
+  font-size: 0.76rem;
+  color: $white;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.playerRole {
+  @include display(0.55rem, 0.08em);
+}
+
+.playerBadge {
+  @include display(0.6rem, 0);
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: $gold;
+  color: $navy-950;
+  flex-shrink: 0;
+}
+
+// --- Phase panels ----------------------------------------------------------------
 
 .hint {
   @include card;
@@ -335,35 +415,14 @@
   cursor: pointer;
 }
 
-// --- Chat panel + side column -------------------------------------------------------
-
-.panels {
-  display: flex;
-  gap: 10px;
-  align-items: stretch;
-}
+// --- Chat ------------------------------------------------------------------------
 
 .chatPanel {
   @include card;
-  flex: 1.45;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   padding: 10px;
   gap: 8px;
-}
-
-.sideColumn {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.panelHeading {
-  @include display(0.66rem, 0.14em);
-  color: $text-dim;
 }
 
 .tabs {
@@ -390,7 +449,7 @@
 .feed {
   flex: 1;
   min-height: 130px;
-  max-height: 170px;
+  max-height: 190px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -399,7 +458,7 @@
 
 .chatMessage,
 .logEntry {
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   color: $text-light;
   line-height: 1.45;
 }
@@ -420,46 +479,21 @@
   overflow-wrap: anywhere;
 }
 
-.speakerBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: $radius-sm;
-  background: rgba($navy-700, 0.6);
-  border: 1px solid $line-soft;
-  font-size: 0.74rem;
-  color: $text-dim;
-}
-
-.speakerMine {
-  border-color: rgba($gold, 0.6);
-  background: rgba($gold, 0.1);
-  color: $gold;
-}
-
-.speakerTimer {
-  @include display(0.78rem, 0.05em);
-  color: $gold;
-  flex-shrink: 0;
-}
-
 .chatComposer {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .chatInput {
   flex: 1;
   min-width: 0;
-  padding: 8px 11px;
+  padding: 13px 14px;
   background: $navy-900;
   border: 1px solid $line-soft;
-  border-radius: $radius-sm;
+  border-radius: $radius;
   color: $cream;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   outline: none;
 
   &:focus {
@@ -480,88 +514,14 @@
   @include pressable;
   display: grid;
   place-items: center;
-  width: 38px;
-  border-radius: $radius-sm;
+  width: 48px;
+  border-radius: $radius;
   background: linear-gradient(180deg, $gold-bright, $gold-dark);
   color: $navy-950;
   cursor: pointer;
-}
-
-.roleCard {
-  @include card;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  border-color: rgba($blue-liberal, 0.5);
-}
-
-.roleName {
-  @include display(1rem, 0.1em);
-}
-
-.roleDescription {
-  font-size: 0.74rem;
-  color: $text-dim;
-  line-height: 1.55;
-}
-
-// --- Footer ------------------------------------------------------------------
-
-.footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-
-.leave {
-  @include display(0.7rem, 0.08em);
-  color: $red-bright;
-  padding: 8px 4px;
-  @include pressable;
-}
-
-.rules {
-  @include display(0.7rem, 0.08em);
-  color: $gold;
-  padding: 8px 4px;
-  margin-inline-start: auto;
-  @include pressable;
-}
-
-.endTurn {
-  @include display(0.95rem, 0.12em);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 10px 16px;
-  border-radius: $radius;
-  color: $navy-950;
-  background: linear-gradient(180deg, $gold-bright, $gold-dark);
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 4px 0 $gold-deep;
 
   &:disabled {
-    opacity: 0.75;
-    cursor: default;
+    opacity: 0.5;
+    cursor: not-allowed;
   }
-}
-
-.endTurnLabel {
-  line-height: 1.2;
-}
-
-.endTurnSub {
-  font-size: 0.6rem;
-  letter-spacing: 0.06em;
-  text-transform: none;
-  font-weight: 600;
-  opacity: 0.8;
 }

@@ -192,6 +192,8 @@ export const fa = {
   },
   game: {
     roomLabel: 'اتاق: {name}',
+    players: 'بازیکنان',
+    timeLeft: 'زمان باقی‌مانده',
     currentTrack: 'وضعیت فعلی',
     endTurn: 'پایان نوبت',
     youArePresident: 'شما رئیس‌جمهور هستید',
@@ -248,6 +250,12 @@ export const fa = {
   vote: {
     ja: 'موافق',
     nein: 'مخالف',
+  },
+  gameMenu: {
+    roomInfo: 'اطلاعات اتاق',
+    audio: 'صدا',
+    muteMusic: 'قطع موسیقی',
+    muteEffects: 'قطع جلوه‌های صوتی',
   },
   policyReveal: {
     liberal: 'یک سیاست لیبرال تصویب شد',
