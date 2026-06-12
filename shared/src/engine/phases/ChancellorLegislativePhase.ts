@@ -37,7 +37,7 @@ export class ChancellorLegislativePhase implements GamePhase {
     const [enacted] = room.drawnPolicies.splice(command.index, 1);
     room.deck.discardTiles(room.drawnPolicies);
     room.drawnPolicies = [];
-    this.host.log(`A ${enacted} policy is enacted.`);
+    this.host.log(enacted === 'liberal' ? 'liberalEnacted' : 'fascistEnacted');
     this.host.enactPolicy(enacted);
     if (room.phase === Phase.GameOver) return null;
 
@@ -60,7 +60,7 @@ export class ChancellorLegislativePhase implements GamePhase {
       return err('INVALID_ACTION', 'Veto is not available yet.');
     }
     room.vetoRequested = true;
-    this.host.log('The Chancellor proposes a veto.');
+    this.host.log('vetoProposed');
     this.host.changed();
     return null;
   }
@@ -72,14 +72,14 @@ export class ChancellorLegislativePhase implements GamePhase {
     }
     room.vetoRequested = false;
     if (!agree) {
-      this.host.log('The President rejects the veto.');
+      this.host.log('vetoRejected');
       this.host.changed();
       return null;
     }
     // Veto agreed: both policies discarded, the government fails.
     room.deck.discardTiles(room.drawnPolicies);
     room.drawnPolicies = [];
-    this.host.log('The President agrees to the veto — the government fails.');
+    this.host.log('vetoAgreed');
     this.host.failElection();
     return null;
   }

@@ -14,7 +14,7 @@ export class PresidentLegislativePhase implements GamePhase {
     const room = this.host.room;
     room.drawnPolicies = room.deck.drawTiles(3);
     this.host.clearSpeaker();
-    this.host.log('The President draws three policies.');
+    this.host.log('presidentDraws');
     this.host.changed();
   }
 
@@ -33,7 +33,7 @@ export class PresidentLegislativePhase implements GamePhase {
     const [discarded] = room.drawnPolicies.splice(command.index, 1);
     room.deck.discardTiles([discarded]);
     this.host.transitionTo(Phase.ChancellorLegislative);
-    this.host.log('The President passes two policies to the Chancellor.');
+    this.host.log('presidentPasses');
     this.host.changed();
     return null;
   }

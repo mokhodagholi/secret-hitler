@@ -89,9 +89,39 @@ export interface ChatMessage {
   at: number;
 }
 
+/** A localizable game-report line. The client formats `log.<code>` with
+ *  `params` so the report follows each viewer's language. */
+export type LogCode =
+  | 'joined'
+  | 'left'
+  | 'reconnected'
+  | 'disconnected'
+  | 'gameStarted'
+  | 'liberalsWin'
+  | 'fascistsWin'
+  | 'chaos'
+  | 'newHost'
+  | 'nominated'
+  | 'votePassed'
+  | 'voteFailed'
+  | 'hitlerChancellor'
+  | 'governmentElected'
+  | 'presidentDraws'
+  | 'presidentPasses'
+  | 'liberalEnacted'
+  | 'fascistEnacted'
+  | 'vetoProposed'
+  | 'vetoRejected'
+  | 'vetoAgreed'
+  | 'investigated'
+  | 'executed'
+  | 'hitlerExecuted';
+
 export interface LogEntry {
   id: string;
-  text: string;
+  code: LogCode;
+  /** Player names / counts substituted into the localized template. */
+  params?: Record<string, string | number>;
   at: number;
 }
 

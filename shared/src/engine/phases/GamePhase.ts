@@ -1,6 +1,7 @@
 import type {
   ExecutivePower,
   Faction,
+  LogCode,
   Phase,
   Policy,
 } from '../../types/GameState';
@@ -11,7 +12,7 @@ import type { EngineError } from '../errors';
 /** Engine services available to phases. Implemented by GameEngine. */
 export interface PhaseHost {
   readonly room: Room;
-  log(text: string): void;
+  log(code: LogCode, params?: Record<string, string | number>): void;
   changed(): void;
   transitionTo(phase: Phase): void;
   enactPolicy(policy: Policy): void;

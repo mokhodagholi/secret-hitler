@@ -55,7 +55,7 @@ export class SpecialPowerPhase implements GamePhase {
     }
     room.investigatedIds.push(target.id);
     room.investigation = { targetId: target.id, party: partyOf(target) };
-    this.host.log(`The President investigated ${target.name}'s loyalty.`);
+    this.host.log('investigated', { name: target.name });
     this.host.changed();
     return null;
   }
@@ -64,9 +64,9 @@ export class SpecialPowerPhase implements GamePhase {
     const target = this.livingTarget(playerId, targetId);
     if (!target) return err('INVALID_ACTION', 'That player cannot be executed.');
     target.isAlive = false;
-    this.host.log(`${target.name} was executed.`);
+    this.host.log('executed', { name: target.name });
     if (target.role === 'hitler') {
-      this.host.log('Hitler was executed — the Liberals win!');
+      this.host.log('hitlerExecuted');
       this.host.endGame('liberal');
       return null;
     }

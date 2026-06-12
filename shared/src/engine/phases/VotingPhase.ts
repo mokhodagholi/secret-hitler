@@ -64,21 +64,22 @@ export class VotingPhase implements GamePhase {
     const ja = voters.filter((p) => room.votes.get(p.id) === 'ja').length;
     const elected = ja * 2 > voters.length;
     const chancellor = room.findPlayer(room.chancellorId ?? '');
-    this.host.log(
-      `The vote ${elected ? 'passed' : 'failed'} (${ja}/${voters.length} Ja).`,
-    );
+    this.host.log(elected ? 'votePassed' : 'voteFailed', {
+      ja,
+      total: voters.length,
+    });
 
     if (elected && chancellor) {
       room.electionTracker = 0;
       if (room.fascistPolicies >= 3 && chancellor.role === 'hitler') {
-        this.host.log(`${chancellor.name} was Hitler — the Fascists win!`);
+        this.host.log('hitlerChancellor', { name: chancellor.name });
         this.host.endGame('fascist');
         return;
       }
       // This government is term-limited from the next nomination.
       room.lastElectedPresidentId = room.presidentId;
       room.lastElectedChancellorId = chancellor.id;
-      this.host.log(`${chancellor.name}'s government takes office.`);
+      this.host.log('governmentElected', { name: chancellor.name });
       this.host.transitionTo(Phase.PresidentLegislative);
     } else {
       this.host.failElection();

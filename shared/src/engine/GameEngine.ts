@@ -5,6 +5,7 @@ import {
   type ChatMessage,
   type ExecutivePower,
   type Faction,
+  type LogCode,
   type LogEntry,
   type Player,
   type Policy,
@@ -96,7 +97,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.players.push(player);
     if (isHost) room.hostId = player.id;
 
-    this.log(`${player.name} joined the room.`);
+    this.log('joined', { name: player.name });
     this.changed();
     return player;
   }
@@ -118,7 +119,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.players.forEach((player, seat) => (player.seat = seat));
     if (room.hostId === removed.id) this.maybeMigrateHost();
 
-    this.log(`${removed.name} left the room.`);
+    this.log('left', { name: removed.name });
     this.changed();
   }
 
@@ -126,7 +127,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     const player = this.room.findPlayer(playerId);
     if (!player || player.connected === connected) return;
     player.connected = connected;
-    this.log(`${player.name} ${connected ? 'reconnected' : 'disconnected'}.`);
+    this.log(connected ? 'reconnected' : 'disconnected', { name: player.name });
     // A disconnected speaker must not hold everyone's chat hostage.
     if (!connected && this.room.speakerId === playerId) this.advanceSpeaker();
     // Reopen a discussion that stalled with nobody eligible to speak.
@@ -196,7 +197,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.transitionTo(Phase.Nomination);
 
-    this.log('The game has started. Roles have been dealt.');
+    this.log('gameStarted');
     this.emit('gameStarted', { room });
     this.changed();
     return null;
@@ -236,10 +237,10 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.lastEnacted = [...room.lastEnacted, policy].slice(-5);
 
     if (room.liberalPolicies >= 5) {
-      this.log('Five Liberal policies enacted — the Liberals win!');
+      this.log('liberalsWin');
       this.endGame('liberal');
     } else if (room.fascistPolicies >= 6) {
-      this.log('Six Fascist policies enacted — the Fascists win!');
+      this.log('fascistsWin');
       this.endGame('fascist');
     }
   }
@@ -251,7 +252,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (room.electionTracker >= 3) {
       const [policy] = room.deck.drawTiles(1);
       if (policy) {
-        this.log('Three elections failed — the top policy is enacted.');
+        this.log('chaos');
         this.enactPolicy(policy);
       }
       room.electionTracker = 0;
@@ -393,7 +394,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.room.players.forEach((p) => (p.isHost = p.id === successor.id));
     this.room.hostId = successor.id;
     successor.ready = true;
-    this.log(`${successor.name} is now the host.`);
+    this.log('newHost', { name: successor.name });
     return true;
   }
 
@@ -407,8 +408,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     });
   }
 
-  log(text: string): void {
-    this.emit('log', { entry: { id: makeId(), text, at: Date.now() } });
+  log(code: LogCode, params?: Record<string, string | number>): void {
+    this.emit('log', { entry: { id: makeId(), code, params, at: Date.now() } });
   }
 
   changed(): void {

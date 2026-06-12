@@ -467,7 +467,7 @@ export function GameScreen() {
                       {(entry) => (
                         <p class={styles.logEntry}>
                           <span class={styles.time}>{timestamp(entry.at)}</span>
-                          {entry.text}
+                          {formatMessage(`log.${entry.code}`, entry.params)}
                         </p>
                       )}
                     </For>

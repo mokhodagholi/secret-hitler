@@ -35,9 +35,10 @@ export class NominationPhase implements GamePhase {
 
     room.chancellorId = target.id;
     this.host.transitionTo(Phase.Voting);
-    this.host.log(
-      `${room.findPlayer(playerId)?.name} nominated ${target.name} as Chancellor.`,
-    );
+    this.host.log('nominated', {
+      president: room.findPlayer(playerId)?.name ?? '',
+      chancellor: target.name,
+    });
     this.host.changed();
     return null;
   }
