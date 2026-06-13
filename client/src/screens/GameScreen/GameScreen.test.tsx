@@ -209,17 +209,17 @@ describe('GameScreen — legislative modal', () => {
   });
 });
 
-describe('GameScreen — info panel', () => {
-  it('Should reveal round details behind the info button', () => {
+describe('GameScreen — government', () => {
+  it('Should show the president, chancellor and election tracker on the board', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
-    // Election tracker and government live in the info panel, not the board.
-    expect(screen.queryByText(en.game.electionTracker)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: en.game.infoTitle }));
-    expect(screen.getByText(en.game.electionTracker)).toBeTruthy();
     expect(screen.getByText(en.game.president)).toBeTruthy();
+    expect(screen.getByText(en.game.chancellor)).toBeTruthy();
+    expect(screen.getByText(en.game.electionTracker)).toBeTruthy();
+    // The seated president's name is surfaced, no info panel to open.
+    expect(screen.getByText('Ana')).toBeTruthy();
   });
 });
 
@@ -243,6 +243,41 @@ describe('GameScreen — in-game menu', () => {
     fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
     fireEvent.click(screen.getByRole('button', { name: en.gameMenu.quit }));
     expect(screen.getByText(en.leaveDialog.message)).toBeTruthy();
+  });
+});
+
+describe('GameScreen — chat page', () => {
+  it('Should open the chat page from the chat button', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.openChat }));
+    expect(harness.services.nav.screen()).toBe('chat');
+  });
+
+  it('Should track unread chat while the player is on the board', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    harness.socket.emit({
+      type: 'chat',
+      message: { id: 'm1', playerId: 'cal', name: 'Cal', text: 'hi', at: 0 },
+    });
+    expect(harness.services.game.unreadChat()).toBe(1);
+  });
+
+  it('Should not badge the player for their own message', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    harness.socket.emit({
+      type: 'chat',
+      message: { id: 'm1', playerId: 'you', name: 'You', text: 'mine', at: 0 },
+    });
+    expect(harness.services.game.unreadChat()).toBe(0);
   });
 });
 

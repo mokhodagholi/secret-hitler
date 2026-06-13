@@ -9,6 +9,15 @@ export function faNum(value: number | string): string {
 }
 
 /**
+ * Wrap text in Unicode isolates so its own direction can't reorder the line it
+ * sits in — e.g. an English name embedded in a Persian (RTL) log sentence.
+ */
+export function isolateBidi(value: string): string {
+  // U+2068 First Strong Isolate … U+2069 Pop Directional Isolate.
+  return `⁨${value}⁩`;
+}
+
+/**
  * Substitute `{token}` placeholders in a template with values from `data`.
  * An unmatched token is left intact so missing values are visible, not blank.
  */

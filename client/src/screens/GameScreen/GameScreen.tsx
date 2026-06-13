@@ -1,11 +1,4 @@
-import {
-  For,
-  Show,
-  createEffect,
-  createSignal,
-  onCleanup,
-  onMount,
-} from 'solid-js';
+import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import {
   Phase,
   VOTE_DURATION_MS,
@@ -14,14 +7,16 @@ import {
 } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { ERROR_MESSAGE_KEYS } from '../../i18n';
+import { isolateBidi } from '../../i18n/utils';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
+import { Toast } from '../../components/Toast/Toast';
 import { PolicyBoard } from './PolicyBoard';
+import { SpeakerBar } from './SpeakerBar';
 import { StatusRow } from './StatusRow';
 import { PlayersModal } from './PlayersModal';
 import { NominationModal } from './NominationModal';
-import { InfoPanel } from './InfoPanel';
 import { GameMenu } from './GameMenu';
 import { LegislativeModal } from './LegislativeModal';
 import { VotingOverlay } from './VotingOverlay';
@@ -32,9 +27,11 @@ import styles from './GameScreen.module.scss';
 
 /**
  * Main game screen, kept deliberately minimal: a status row (role, players,
- * timer), the policy board (draw/discard stacks + tracks) and the chat. Round
- * detail (current turn, status, election tracker, government) lives behind the
- * info button; phase actions arrive as modals. State is the server's.
+ * timer) and the policy board (draw/discard stacks + tracks). Chat and the game
+ * log live on their own page behind the chat button; round detail (current
+ * turn, status, election tracker, government) lives behind the info button.
+ * Phase actions arrive as modals; turn changes raise a toast. State is the
+ * server's.
  */
 export function GameScreen() {
   const { nav, game, i18n, settings, animation } = useApp();
@@ -42,15 +39,11 @@ export function GameScreen() {
   const showTimer = () => settings.settings.timerEnabled;
 
   const view = game.view;
-  const [activeTab, setActiveTab] = createSignal<'chat' | 'log'>('chat');
-  const [chatDraft, setChatDraft] = createSignal('');
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [playersOpen, setPlayersOpen] = createSignal(false);
-  const [infoOpen, setInfoOpen] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
 
-  let chatScroller: HTMLDivElement | undefined;
   let boardElement: HTMLElement | undefined;
 
   // Session dropped (left / expired) → back to the play menu.
@@ -63,18 +56,55 @@ export function GameScreen() {
     onCleanup(() => clearInterval(ticker));
   });
 
-  const speaker = () => view()?.speaker ?? null;
-  const isMySpeakingTurn = () => {
-    const state = view();
-    return state?.speaker?.playerId === state?.you.id;
-  };
-  const chatLocked = () => speaker() != null && !isMySpeakingTurn();
+  // --- Turn-change toasts ---------------------------------------------------
+  // A strong cue when the floor reaches this player, a quiet one as it leaves.
+  const [toast, setToast] = createSignal<{
+    title?: string;
+    message: string;
+    variant: 'prominent' | 'subtle';
+  } | null>(null);
+  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastSpeakerId: string | null = null;
+  let sawSpeakerBaseline = false;
 
-  // Keep the chat pinned to the newest message.
+  function showToast(next: NonNullable<ReturnType<typeof toast>>): void {
+    clearTimeout(toastTimer);
+    setToast(next);
+    toastTimer = setTimeout(
+      () => setToast(null),
+      next.variant === 'prominent' ? 4200 : 2600,
+    );
+  }
+  onCleanup(() => clearTimeout(toastTimer));
+
   createEffect(() => {
-    game.chatMessages();
-    game.logEntries();
-    if (chatScroller) chatScroller.scrollTop = chatScroller.scrollHeight;
+    const state = view();
+    const currentSpeakerId = state?.speaker?.playerId ?? null;
+    if (currentSpeakerId === lastSpeakerId) return;
+    const previousSpeakerId = lastSpeakerId;
+    lastSpeakerId = currentSpeakerId;
+    // Skip the first observed turn (join/rejoin) so we don't announce history.
+    if (!sawSpeakerBaseline) {
+      sawSpeakerBaseline = true;
+      return;
+    }
+    const youId = state?.you.id;
+    if (currentSpeakerId && currentSpeakerId === youId) {
+      showToast({
+        variant: 'prominent',
+        title: formatMessage('game.turnStartTitle'),
+        message: formatMessage('game.turnStartBody'),
+      });
+    } else if (previousSpeakerId === youId) {
+      showToast({
+        variant: 'subtle',
+        message: currentSpeakerId
+          ? formatMessage('game.turnEnded', {
+              name: isolateBidi(playerName(currentSpeakerId)),
+            })
+          : formatMessage('game.turnOver'),
+      });
+    }
   });
 
   // --- Policy enactment reveal ----------------------------------------------
@@ -162,7 +192,8 @@ export function GameScreen() {
     Math.max(0, Math.min(1, (voteSecondsLeft() * 1000) / VOTE_DURATION_MS));
 
   const speakerPlayer = () =>
-    view()?.players.find((player) => player.id === speaker()?.playerId) ?? null;
+    view()?.players.find((player) => player.id === game.speaker()?.playerId) ??
+    null;
 
   const secondsUntil = (endsAt: number) =>
     Math.max(0, Math.ceil((endsAt - now()) / 1000));
@@ -172,7 +203,7 @@ export function GameScreen() {
     view()?.voteDeadline ??
     view()?.legislativeDeadline ??
     view()?.nominationDeadline ??
-    speaker();
+    game.speaker();
   const activeSecondsLeft = () => {
     const deadline = activeDeadline();
     return deadline ? secondsUntil(deadline.endsAt) : null;
@@ -192,10 +223,6 @@ export function GameScreen() {
     game.sendCommand({ kind: 'endTurn' });
   }
 
-  const inDiscussion = () =>
-    view()?.phase === Phase.Nomination &&
-    speaker() != null &&
-    view()?.nominationDeadline == null;
   const inNomination = () =>
     view()?.phase === Phase.Nomination && view()?.nominationDeadline != null;
 
@@ -242,18 +269,6 @@ export function GameScreen() {
   const playerName = (playerId: string | null) =>
     view()?.players.find((player) => player.id === playerId)?.name ?? '—';
 
-  const timestamp = (at: number) =>
-    new Date(at).toLocaleTimeString(i18n.lang(), {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-  function sendChat(): void {
-    if (chatLocked()) return;
-    game.sendChat(chatDraft());
-    setChatDraft('');
-  }
-
   function leaveRoom(): void {
     setConfirmingLeave(false);
     game.leaveRoom();
@@ -270,10 +285,13 @@ export function GameScreen() {
               <button
                 type="button"
                 class={styles.menuButton}
-                aria-label={formatMessage('game.infoTitle')}
-                onClick={() => setInfoOpen(true)}
+                aria-label={formatMessage('game.openChat')}
+                onClick={() => nav.navigate('chat')}
               >
-                <Icon name="info" size={19} />
+                <Icon name="chat" size={19} />
+                <Show when={game.unreadChat() > 0}>
+                  <span class={styles.badge} />
+                </Show>
               </button>
               <button
                 type="button"
@@ -300,13 +318,28 @@ export function GameScreen() {
                 />
               </Show>
 
-              <PolicyBoard board={state().board} formatMessage={formatMessage} />
+              <PolicyBoard
+                board={state().board}
+                presidentName={playerName(state().board.president)}
+                chancellorName={playerName(state().board.chancellor)}
+                formatMessage={formatMessage}
+              />
             </section>
+
+            <Show when={game.inDiscussion()}>
+              <SpeakerBar
+                isMine={game.isMySpeakingTurn()}
+                speakerName={speakerPlayer()?.name ?? ''}
+                secondsLeft={activeSecondsLeft()}
+                onEndTurn={sendEndTurn}
+                formatMessage={formatMessage}
+              />
+            </Show>
 
             <Show when={inNomination() && !iAmPresident() && !!game.you()?.isAlive}>
               <p class={styles.hint}>
                 {formatMessage('game.nominateWaiting', {
-                  name: playerName(state().board.president),
+                  name: isolateBidi(playerName(state().board.president)),
                 })}
               </p>
             </Show>
@@ -337,7 +370,7 @@ export function GameScreen() {
               <VotingOverlay
                 formatMessage={formatMessage}
                 prompt={formatMessage('game.votePrompt', {
-                  name: playerName(state().board.chancellor),
+                  name: isolateBidi(playerName(state().board.chancellor)),
                 })}
                 canVote={state().you.vote == null && !!game.you()?.isAlive}
                 yourVote={state().you.vote}
@@ -391,10 +424,12 @@ export function GameScreen() {
                     <span class={styles.voteWaiting}>
                       {state().phase === Phase.PresidentLegislative
                         ? formatMessage('game.presidentChoosing', {
-                            name: playerName(state().board.president),
+                            name: isolateBidi(playerName(state().board.president)),
                           })
                         : formatMessage('game.chancellorChoosing', {
-                            name: playerName(state().board.chancellor),
+                            name: isolateBidi(
+                              playerName(state().board.chancellor),
+                            ),
                           })}
                     </span>
                   </div>
@@ -440,113 +475,15 @@ export function GameScreen() {
               </p>
             </Show>
 
-            <section class={styles.chatPanel}>
-              <div class={styles.tabs}>
-                <button
-                  type="button"
-                  classList={{
-                    [styles.tab]: true,
-                    [styles.tabActive]: activeTab() === 'chat',
-                  }}
-                  onClick={() => setActiveTab('chat')}
-                >
-                  {formatMessage('game.chat')}
-                </button>
-                <button
-                  type="button"
-                  classList={{
-                    [styles.tab]: true,
-                    [styles.tabActive]: activeTab() === 'log',
-                  }}
-                  onClick={() => setActiveTab('log')}
-                >
-                  {formatMessage('game.gameLog')}
-                </button>
-              </div>
-
-              <div class={styles.feed} ref={chatScroller}>
-                <Show
-                  when={activeTab() === 'chat'}
-                  fallback={
-                    <For each={game.logEntries()}>
-                      {(entry) => (
-                        <p class={styles.logEntry}>
-                          <span class={styles.time}>{timestamp(entry.at)}</span>
-                          {formatMessage(`log.${entry.code}`, entry.params)}
-                        </p>
-                      )}
-                    </For>
-                  }
-                >
-                  <For each={game.chatMessages()}>
-                    {(message) => (
-                      <p class={styles.chatMessage}>
-                        <span class={styles.chatAuthor}>{message.name}</span>
-                        <span class={styles.time}>{timestamp(message.at)}</span>
-                        <span class={styles.chatText}>{message.text}</span>
-                      </p>
-                    )}
-                  </For>
-                </Show>
-              </div>
-
-              <Show when={activeTab() === 'chat'}>
-                <Show when={inDiscussion()}>
-                  <div
-                    classList={{
-                      [styles.speakerBar]: true,
-                      [styles.speakerMine]: isMySpeakingTurn(),
-                    }}
-                  >
-                    <span>
-                      {isMySpeakingTurn()
-                        ? formatMessage('game.yourTurn')
-                        : formatMessage('game.speakingNow', {
-                            name: playerName(speaker()!.playerId),
-                          })}
-                    </span>
-                    <Show when={isMySpeakingTurn()}>
-                      <button
-                        type="button"
-                        class={styles.speakerEnd}
-                        onClick={sendEndTurn}
-                      >
-                        {formatMessage('game.endTurn')}
-                      </button>
-                    </Show>
-                  </div>
-                </Show>
-                <div class={styles.chatComposer}>
-                  <textarea
-                    class={styles.chatInput}
-                    rows={2}
-                    value={chatDraft()}
-                    disabled={chatLocked()}
-                    placeholder={formatMessage(
-                      chatLocked() ? 'game.chatWaitTurn' : 'game.chatPlaceholder',
-                    )}
-                    maxlength={500}
-                    onInput={(event) => setChatDraft(event.currentTarget.value)}
-                    onKeyDown={(event) => {
-                      // Enter sends; Shift+Enter inserts a newline.
-                      if (event.key === 'Enter' && !event.shiftKey) {
-                        event.preventDefault();
-                        sendChat();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    class={styles.chatSend}
-                    aria-label={formatMessage('game.send')}
-                    disabled={chatLocked()}
-                    onClick={sendChat}
-                  >
-                    <Icon name="chat" size={20} />
-                  </button>
-                </div>
-              </Show>
-            </section>
+            <Show when={toast()}>
+              {(active) => (
+                <Toast
+                  title={active().title}
+                  message={active().message}
+                  variant={active().variant}
+                />
+              )}
+            </Show>
 
             <PlayersModal
               open={playersOpen()}
@@ -556,34 +493,6 @@ export function GameScreen() {
               canNominate={() => false}
               onNominate={() => {}}
               onClose={() => setPlayersOpen(false)}
-            />
-
-            <InfoPanel
-              open={infoOpen()}
-              formatMessage={formatMessage}
-              onClose={() => setInfoOpen(false)}
-              rows={[
-                {
-                  label: formatMessage('game.status'),
-                  value: formatMessage(`phase.${state().phase}`),
-                },
-                {
-                  label: formatMessage('game.currentTurn'),
-                  value: speakerPlayer()?.name ?? formatMessage('game.none'),
-                },
-                {
-                  label: formatMessage('game.electionTracker'),
-                  value: `${state().board.electionTracker}/3`,
-                },
-                {
-                  label: formatMessage('game.president'),
-                  value: playerName(state().board.president),
-                },
-                {
-                  label: formatMessage('game.chancellor'),
-                  value: playerName(state().board.chancellor),
-                },
-              ]}
             />
 
             <GameMenu

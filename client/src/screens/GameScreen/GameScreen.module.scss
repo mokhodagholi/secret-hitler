@@ -29,6 +29,7 @@
 
 .menuButton {
   @include pressable;
+  position: relative;
   display: grid;
   place-items: center;
   width: 34px;
@@ -38,6 +39,18 @@
   border: 1px solid $line-soft;
   background: rgba($navy-800, 0.6);
   flex-shrink: 0;
+}
+
+// Unread-chat dot on the chat button.
+.badge {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $gold;
+  box-shadow: 0 0 0 2px $navy-900;
 }
 
 // --- Board column (full width) --------------------------------------------------
@@ -287,147 +300,4 @@
   background: $gold;
   color: $navy-950;
   flex-shrink: 0;
-}
-
-// --- Chat ------------------------------------------------------------------------
-
-.chatPanel {
-  @include card;
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  gap: 8px;
-}
-
-.tabs {
-  display: flex;
-  gap: 6px;
-}
-
-.tab {
-  @include display(0.68rem, 0.1em);
-  flex: 1;
-  padding: 7px;
-  color: $text-dim;
-  border: 1px solid $line-soft;
-  border-radius: $radius-sm;
-  @include pressable;
-}
-
-.tabActive {
-  color: $gold;
-  border-color: rgba($gold, 0.6);
-  background: rgba($gold, 0.08);
-}
-
-.feed {
-  flex: 1;
-  min-height: 130px;
-  max-height: 190px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.chatMessage,
-.logEntry {
-  font-size: 0.78rem;
-  color: $text-light;
-  line-height: 1.45;
-}
-
-.chatAuthor {
-  color: $gold;
-  font-weight: 600;
-  margin-inline-end: 6px;
-}
-
-.time {
-  font-size: 0.62rem;
-  color: $text-dim;
-  margin-inline-end: 6px;
-}
-
-.chatText {
-  overflow-wrap: anywhere;
-}
-
-.speakerBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: $radius-sm;
-  background: rgba($navy-700, 0.6);
-  border: 1px solid $line-soft;
-  font-size: 0.76rem;
-  color: $text-dim;
-}
-
-.speakerMine {
-  border-color: rgba($gold, 0.6);
-  background: rgba($gold, 0.1);
-  color: $gold;
-}
-
-.speakerEnd {
-  @include display(0.6rem, 0.08em);
-  @include pressable;
-  padding: 6px 12px;
-  border-radius: $radius-sm;
-  color: $navy-950;
-  background: linear-gradient(180deg, $gold-bright, $gold-dark);
-  flex-shrink: 0;
-}
-
-.chatComposer {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.chatInput {
-  flex: 1;
-  min-width: 0;
-  padding: 11px 14px;
-  background: $navy-900;
-  border: 1px solid $line-soft;
-  border-radius: $radius;
-  color: $cream;
-  font: inherit;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  outline: none;
-  resize: none;
-
-  &:focus {
-    border-color: rgba($gold, 0.7);
-  }
-
-  &::placeholder {
-    color: rgba($text-dim, 0.6);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.chatSend {
-  @include pressable;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  border-radius: $radius;
-  background: linear-gradient(180deg, $gold-bright, $gold-dark);
-  color: $navy-950;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 }

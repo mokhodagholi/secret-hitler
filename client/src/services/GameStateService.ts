@@ -71,6 +71,12 @@ export class GameStateService {
   readonly logEntries = this.logSignal[0];
   private readonly setLogEntries = this.logSignal[1];
 
+  // Chat messages arriving while the player is away from the chat page, so the
+  // game screen can badge the chat icon.
+  private readonly unreadSignal = createSignal(0);
+  readonly unreadChat = this.unreadSignal[0];
+  private readonly setUnreadChat = this.unreadSignal[1];
+
   private readonly lastErrorSignal = createSignal<ServerError | null>(null);
   readonly lastError = this.lastErrorSignal[0];
   private readonly setLastError = this.lastErrorSignal[1];
@@ -104,6 +110,36 @@ export class GameStateService {
   isHost(): boolean {
     const state = this.view();
     return state != null && state.hostId === state.you.id;
+  }
+
+  /** Whose discussion turn it is right now, if anyone's. */
+  speaker(): GameStateView['speaker'] {
+    return this.view()?.speaker ?? null;
+  }
+
+  isMySpeakingTurn(): boolean {
+    const state = this.view();
+    return state != null && state.speaker?.playerId === state.you.id;
+  }
+
+  /** Open discussion (speaker rotating) before the nomination window opens. */
+  inDiscussion(): boolean {
+    const state = this.view();
+    return (
+      state?.phase === Phase.Nomination &&
+      state.speaker != null &&
+      state.nominationDeadline == null
+    );
+  }
+
+  /** Someone else holds the talking stick, so this player can't chat yet. */
+  chatLocked(): boolean {
+    return this.speaker() != null && !this.isMySpeakingTurn();
+  }
+
+  /** Clear the unread chat badge — the player is looking at the chat page. */
+  markChatRead(): void {
+    this.setUnreadChat(0);
   }
 
   /** Client mirror of the server's start conditions (server re-checks). */
@@ -191,6 +227,7 @@ export class GameStateService {
     this.setRole(null);
     this.setChatMessages([]);
     this.setLogEntries([]);
+    this.setUnreadChat(0);
     this.setLastError(null);
   }
 
@@ -201,6 +238,7 @@ export class GameStateService {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     this.setChatMessages([]);
     this.setLogEntries([]);
+    this.setUnreadChat(0);
     this.setLastError(null);
     this.socket.connect(session.token);
     return session;
@@ -225,11 +263,15 @@ export class GameStateService {
         if (message.state.you.role) this.setRole(message.state.you.role);
       })
       .on('private', (message) => this.setRole(message.role))
-      .on('chat', (message) =>
+      .on('chat', (message) => {
         this.setChatMessages((messages) =>
           [...messages, message.message].slice(-MAX_CHAT_ENTRIES),
-        ),
-      )
+        );
+        // Don't badge a player for their own message — only others' chat.
+        if (message.message.playerId !== this.view()?.you.id) {
+          this.setUnreadChat((count) => count + 1);
+        }
+      })
       .on('log', (message) =>
         this.setLogEntries((entries) =>
           [...entries, message.entry].slice(-MAX_CHAT_ENTRIES),
