@@ -1,8 +1,8 @@
 import {
+  DISCUSSION_DURATION_MS,
   LEGISLATIVE_DURATION_MS,
   NOMINATION_DURATION_MS,
   Phase,
-  SPEAKING_TURN_MS,
   VOTE_DURATION_MS,
   type ChatMessage,
   type ExecutivePower,
@@ -38,8 +38,8 @@ export interface EngineEvents extends Record<string, unknown> {
   log: { entry: LogEntry };
   gameStarted: { room: Room };
   gameOver: { room: Room };
-  /** Talking stick moved; the server (re)schedules the turn timer. */
-  speakerChanged: { speakerId: string | null };
+  /** Discussion window opened (endsAt set) or closed (null); server (un)schedules. */
+  discussionTimerChanged: { endsAt: number | null };
   /** Vote window opened (endsAt set) or closed (null); server (un)schedules. */
   voteTimerChanged: { endsAt: number | null };
   /** Legislative window opened (endsAt set) or closed (null); server (un)schedules. */
@@ -134,12 +134,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!player || player.connected === connected) return;
     player.connected = connected;
     this.log(connected ? 'reconnected' : 'disconnected', { name: player.name });
-    // A disconnected speaker must not hold everyone's chat hostage.
-    if (!connected && this.room.speakerId === playerId) this.advanceSpeaker();
-    // Reopen a discussion that stalled with nobody eligible to speak.
-    if (connected && !this.room.speakerId && this.isDiscussionPhase()) {
-      this.startSpeakingTurnAt(playerId);
-    }
     this.currentPhase.presenceChanged?.();
     this.changed();
   }
@@ -215,8 +209,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     const player = this.room.findPlayer(playerId);
     const body = text.trim();
     if (!player || !body) return;
-    // While the talking stick is active, only its holder may speak.
-    if (this.room.speakerId && this.room.speakerId !== playerId) return;
     const message: ChatMessage = {
       id: makeId(),
       playerId: player.id,
@@ -287,7 +279,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.activePower = power;
     room.investigation = null;
     room.peekedPolicies = power === 'policyPeek' ? room.deck.peekTop(3) : [];
-    this.clearSpeaker();
     this.transitionTo(Phase.SpecialPower);
     this.changed();
   }
@@ -325,57 +316,35 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     return living[(currentIndex + 1) % living.length].id;
   }
 
-  // --- Speaking turns (talking stick) ----------------------------------------
+  // --- Discussion window (PhaseHost) -----------------------------------------
 
-  private speakingEligible(): Player[] {
-    return this.livingInSeatOrder().filter((p) => p.connected);
-  }
-
-  /** Give the talking stick to a player (or the first eligible). */
-  startSpeakingTurnAt(playerId: string | null): void {
-    const eligible = this.speakingEligible();
-    const next = eligible.find((p) => p.id === playerId) ?? eligible[0];
-    this.setSpeaker(next ?? null);
-  }
-
-  /**
-   * Pass the talking stick to the next player who hasn't spoken this round.
-   * Once everyone eligible has had a turn, discussion ends and the President's
-   * nomination window opens.
-   */
-  advanceSpeaker(): void {
+  /** Open the shared discussion window; everyone may chat until it elapses. */
+  openDiscussion(): void {
     const room = this.room;
-    if (!this.isDiscussionPhase()) return this.setSpeaker(null);
-    if (room.speakerId && !room.discussionSpokenIds.includes(room.speakerId)) {
-      room.discussionSpokenIds.push(room.speakerId);
-    }
-    const remaining = this.speakingEligible().filter(
-      (p) => !room.discussionSpokenIds.includes(p.id),
-    );
-    if (remaining.length === 0) return this.beginNomination();
-    // Continue clockwise from the current speaker's seat, wrapping around —
-    // not back to the lowest seat.
-    const currentSeat = room.findPlayer(room.speakerId ?? '')?.seat ?? -1;
-    const next = remaining.find((p) => p.seat > currentSeat) ?? remaining[0];
-    this.setSpeaker(next);
+    room.discussionStartedAt = Date.now();
+    room.discussionEndsAt = room.discussionStartedAt + DISCUSSION_DURATION_MS;
+    this.emit('discussionTimerChanged', { endsAt: room.discussionEndsAt });
+    this.changed();
   }
 
-  /** Discussion is over: drop the talking stick and start the nomination clock. */
-  private beginNomination(): void {
-    this.clearSpeaker();
+  closeDiscussion(): void {
+    this.room.discussionStartedAt = 0;
+    this.room.discussionEndsAt = 0;
+    this.emit('discussionTimerChanged', { endsAt: null });
+  }
+
+  /** Discussion ended (window elapsed or the President skipped it): open the
+   *  nomination window. No-op once discussion has already closed. */
+  endDiscussion(): void {
+    if (this.room.discussionEndsAt === 0) return;
+    this.closeDiscussion();
     this.openNominationTimer();
     this.changed();
   }
 
-  clearSpeaker(): void {
-    this.setSpeaker(null);
-  }
-
-  /** True during the talking-stick discussion that precedes nomination. */
-  private isDiscussionPhase(): boolean {
-    return (
-      this.room.phase === Phase.Nomination && this.room.nominationEndsAt === 0
-    );
+  /** Server calls this when the discussion window elapses. */
+  resolveDiscussionTimeout(): void {
+    this.endDiscussion();
   }
 
   // --- Vote timer (PhaseHost) ------------------------------------------------
@@ -436,15 +405,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   /** Server calls this when the President's nomination window elapses. */
   resolveNominationTimeout(): void {
     this.currentPhase.timeout?.();
-  }
-
-  private setSpeaker(player: Player | null): void {
-    const room = this.room;
-    room.speakerId = player?.id ?? null;
-    room.speakerStartedAt = player ? Date.now() : 0;
-    room.speakerEndsAt = player ? room.speakerStartedAt + SPEAKING_TURN_MS : 0;
-    this.emit('speakerChanged', { speakerId: room.speakerId });
-    this.changed();
   }
 
   // --- Host migration ----------------------------------------------------------

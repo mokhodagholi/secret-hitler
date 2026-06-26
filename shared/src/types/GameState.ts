@@ -138,8 +138,8 @@ export interface GameStateView {
   board: BoardState;
   /** Winning faction once the game is over, else null. */
   winner: Faction | null;
-  /** Whose turn it is to talk, and when their window closes (epoch ms). */
-  speaker: { playerId: string; startedAt: number; endsAt: number } | null;
+  /** Open discussion window (epoch ms) before the President nominates, else null. */
+  discussionDeadline: { startedAt: number; endsAt: number } | null;
   /** Active vote window (epoch ms) during the Voting phase, else null. */
   voteDeadline: { startedAt: number; endsAt: number } | null;
   /** Active legislative window (epoch ms) while a legislator chooses, else null. */
@@ -184,8 +184,8 @@ export const MIN_PLAYERS = 5;
 export const MAX_PLAYERS = 10;
 /** Lowest count the role distribution supports — the dev floor. */
 export const SUPPORTED_MIN_PLAYERS = 3;
-/** How long each player holds the talking stick, in ms. */
-export const SPEAKING_TURN_MS = 20_000;
+/** Open discussion window each round before nomination — everyone may chat. */
+export const DISCUSSION_DURATION_MS = 180_000;
 /** How long the Ja/Nein vote stays open before unvoted players default to Nein. */
 export const VOTE_DURATION_MS = 30_000;
 /** How long a legislator has to choose before the engine picks at random. */

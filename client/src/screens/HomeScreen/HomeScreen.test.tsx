@@ -20,7 +20,7 @@ describe('HomeScreen', () => {
       harness,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Find Game' }));
     expect(harness.services.nav.screen()).toBe('play');
     expect(screen.getByText('Choose an Option')).toBeTruthy();
   });

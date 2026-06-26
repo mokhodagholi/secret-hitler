@@ -12,13 +12,6 @@ export interface NavItem {
   screen: ScreenName;
 }
 
-/** Landing screen variant: Rules | How to Play | Settings */
-export const LANDING_NAV: NavItem[] = [
-  { icon: 'book', labelKey: 'nav.rules', screen: 'rules' },
-  { icon: 'people', labelKey: 'nav.howToPlay', screen: 'how-to-play' },
-  { icon: 'gear', labelKey: 'nav.settings', screen: 'settings' },
-];
-
 /** Inner screens variant: Rules | Home | Settings */
 export const APP_NAV: NavItem[] = [
   { icon: 'book', labelKey: 'nav.rules', screen: 'rules' },

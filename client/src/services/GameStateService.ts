@@ -112,29 +112,15 @@ export class GameStateService {
     return state != null && state.hostId === state.you.id;
   }
 
-  /** Whose discussion turn it is right now, if anyone's. */
-  speaker(): GameStateView['speaker'] {
-    return this.view()?.speaker ?? null;
+  /** The open discussion window, if discussion is running. */
+  discussionDeadline(): GameStateView['discussionDeadline'] {
+    return this.view()?.discussionDeadline ?? null;
   }
 
-  isMySpeakingTurn(): boolean {
-    const state = this.view();
-    return state != null && state.speaker?.playerId === state.you.id;
-  }
-
-  /** Open discussion (speaker rotating) before the nomination window opens. */
+  /** Open discussion window (everyone may chat) before nomination opens. */
   inDiscussion(): boolean {
     const state = this.view();
-    return (
-      state?.phase === Phase.Nomination &&
-      state.speaker != null &&
-      state.nominationDeadline == null
-    );
-  }
-
-  /** Someone else holds the talking stick, so this player can't chat yet. */
-  chatLocked(): boolean {
-    return this.speaker() != null && !this.isMySpeakingTurn();
+    return state?.phase === Phase.Nomination && state.discussionDeadline != null;
   }
 
   /** Clear the unread chat badge — the player is looking at the chat page. */

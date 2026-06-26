@@ -160,7 +160,7 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
       lastEnacted: [],
     },
     winner: null,
-    speaker: null,
+    discussionDeadline: null,
     voteDeadline: null,
     legislativeDeadline: null,
     nominationDeadline: null,

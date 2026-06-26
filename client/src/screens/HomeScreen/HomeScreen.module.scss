@@ -1,40 +1,381 @@
 @use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
 
 .home {
   position: relative;
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  // Cancel the Screen content padding so the splash is full-bleed and fills the
+  // shell exactly — one view, no scroll.
+  height: calc(100% + 42px);
+  margin: -18px -16px -24px;
+  // Warm, candle-lit brown room with a glow around the character, per the mockup.
+  background:
+    radial-gradient(
+      120% 54% at 50% 42%,
+      rgba(198, 124, 50, 0.5),
+      rgba(198, 124, 50, 0) 62%
+    ),
+    linear-gradient(180deg, #2b1e12 0%, #1d1409 46%, #120b05 100%);
+}
+
+// --- Header bar: star + gem on the left, 3D menu button on the right ---------
+.statusBar {
+  // Pin the physical layout (resources left, menu right) even in RTL locales.
+  direction: ltr;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  flex-shrink: 0;
+  // Warm yellow-brown wooden header bar with a gold edge, per the mockup.
+  background: linear-gradient(180deg, #8a6230 0%, #5d4020 58%, #45301a 100%);
+  border-bottom: 2px solid rgba($gold, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 200, 0.18),
+    0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
+.resources {
+  display: flex;
+  gap: 6px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 3px 2px 5px;
+  border-radius: 999px;
+  background: rgba(26, 17, 8, 0.88);
+  border: 1px solid rgba($gold, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.08);
+  font-size: 0.74rem;
+}
+
+.pillIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.pillValue {
+  min-width: 26px;
+  text-align: center;
+  font-weight: 700;
+  color: $gold-bright;
+  font-variant-numeric: tabular-nums;
+}
+
+.pillPlus {
+  width: 19px;
+  height: 19px;
+  object-fit: contain;
+}
+
+// Raised gold button — bevelled with a top highlight and bottom shade so it
+// reads as a physical, pressable 3D key.
+.menuButton {
+  @include pressable;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  color: #3a2410;
+  background: linear-gradient(180deg, $gold-bright 0%, $gold 52%, $gold-dark 100%);
+  border: 1px solid rgba(255, 244, 214, 0.55);
+  box-shadow:
+    0 5px 9px rgba(0, 0, 0, 0.5),
+    0 2px 3px rgba(0, 0, 0, 0.4),
+    inset 0 2px 1px rgba(255, 250, 232, 0.85),
+    inset 0 -4px 6px rgba(120, 68, 18, 0.55);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.12s ease,
+    filter 0.15s ease;
+}
+
+.menuButton:hover {
+  filter: brightness(1.06);
+}
+
+.menuButton:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    inset 0 2px 1px rgba(255, 250, 232, 0.7),
+    inset 0 -3px 5px rgba(120, 68, 18, 0.5);
+}
+
+// --- Profile: framed portrait hanging off the header's bottom edge + name ----
+.profileRow {
+  // Keep the avatar + name on the physical left, even in RTL locales.
+  direction: ltr;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  // Lift the row so the portrait card straddles the header's lower edge.
+  margin-top: 10px;
+  flex-shrink: 0;
+}
+
+.avatarCard {
+  position: relative;
+  width: 56px;
+  aspect-ratio: 233 / 300;
+  flex-shrink: 0;
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.6));
+}
+
+// The worn placeholder card is the frame; the portrait sits inside its panel.
+.avatarCardFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.avatarPortrait {
+  position: absolute;
+  top: 11%;
+  left: 13.5%;
+  width: 73%;
+  height: 72%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.namePlate {
+  // Sit at the card's lower half so the name reads below the header line.
+  margin-top: 30px;
+  padding: 4px 14px;
+  border-radius: 8px;
+  // Match the wooden header bar.
+  background: linear-gradient(180deg, #8a6230 0%, #5d4020 58%, #45301a 100%);
+  border: 1px solid rgba($gold, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 200, 0.18),
+    0 2px 5px rgba(0, 0, 0, 0.4);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: $cream;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// --- Stage: hero seated at the desk with the boards on it -------------------
+// The desk is pinned to the bottom; the hero is anchored to the desk (not the
+// flex space), so the figure stays glued to it at any viewport height.
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
+  // Let the hero spill out of the stage instead of being clipped.
+  overflow: visible;
 }
 
-.eagle {
-  color: $gold;
-  margin-top: 4px;
+.deskWrap {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
   z-index: 2;
+  // Push the table down so its front edge bleeds off-screen — grounds it
+  // instead of floating as a cutout.
+  transform: translateY(24px);
 }
 
-.art {
+// Soft contact shadow on the desk surface under the hero, so he reads as
+// planted at the table rather than floating in front of it.
+.deskWrap::after {
+  content: '';
   position: absolute;
-  top: 60px;
   left: 50%;
+  bottom: 42%;
+  width: 52%;
+  height: 9%;
   transform: translateX(-50%);
-  width: 112%;
-  max-width: none;
-  color: $navy-700;
-  opacity: 0.9;
-  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0) 70%);
+  filter: blur(5px);
+  z-index: 1;
   pointer-events: none;
 }
 
-.logoWrap {
-  margin-top: 230px;
+// Transparent tabletop — it carries no baked-in shadow, so add one here. The
+// hero sits in front of it (higher z-index below), so it stays behind him.
+.desk {
+  position: relative;
+  display: block;
+  width: 100%;
+  // Crop the tall (≈1:1) tabletop to a band, keeping the front edge.
+  aspect-ratio: 1.1 / 1;
+  object-fit: cover;
+  object-position: center bottom;
+  z-index: 1;
+  filter:
+    drop-shadow(0 14px 18px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 -12px 18px rgba(0, 0, 0, 0.55));
+}
+
+.heroImage {
+  position: absolute;
+  left: 50%;
+  // Sits on the table, above the boards.
+  bottom: 44%;
+  transform: translateX(-50%);
+  width: 82%;
+  max-width: 360px;
+  height: auto;
   z-index: 2;
+  // Cast the figure's own shadow down onto the desk surface.
+  filter: drop-shadow(0 14px 11px rgba(0, 0, 0, 0.5));
+}
+
+// Both boards lie across the very bottom of the desk, wide and centered, tilted
+// back in perspective so they read as lying flat on the table (like the mockup).
+.boards {
+  position: absolute;
+  left: 0;
+  right: 0;
+  // Raised on the table to leave the front edge for the primary CTA below.
+  bottom: 30%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  perspective: 700px;
+  z-index: 3;
+}
+
+// Fascist board (bottom): its image canvas has extra transparent top/bottom
+// padding, so crop to a wide box to drop the dead height while keeping its width.
+.board {
+  width: 98%;
+  max-width: 450px;
+  // Cap at ~2:1 — past this, cover starts clipping the board art itself, not
+  // just the transparent padding.
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  transform: rotateX(50deg);
+  transform-origin: center bottom;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55));
+}
+
+// The liberal board (top): shorter crop, tilts harder, sits just above fascist.
+.board:first-child {
+  width: 76%;
+  aspect-ratio: 2.3 / 1;
+  transform: translateY(100px) rotateX(58deg);
+}
+
+.board:last-child {
+  transform: translateY(15px) rotateX(58deg);
+  width: 96%;
+}
+
+// --- Primary CTA: "Find Game" — a wax-sealed letter on the table ------------
+.ctaWrap {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: calc(100% - 48px);
+  max-width: 360px;
+  z-index: 6;
+}
+
+// Breathing glow behind the button, pulsing every few seconds (opacity only).
+.ctaWrap::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border-radius: 26px;
+  background: radial-gradient(
+    closest-side,
+    rgba(230, 165, 62, 0.6),
+    rgba(230, 165, 62, 0) 80%
+  );
+  filter: blur(7px);
+  opacity: 0;
+  animation: ctaBreath 4.5s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .cta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  margin-top: auto;
-  padding: 28px 4px 8px;
-  z-index: 2;
+  height: 58px;
+  padding: 0 22px;
+  border-radius: 18px;
+  border: 1.5px solid #e3a53e;
+  // Warm orange paper/leather gradient.
+  background: linear-gradient(180deg, #e68a54 0%, #d66b3d 52%, #a84a26 100%);
+  box-shadow:
+    0 9px 20px rgba(0, 0, 0, 0.5), // soft outer shadow
+    inset 0 1px 0 rgba(255, 236, 205, 0.55), // top inner highlight (bevel)
+    inset 0 -2px 6px rgba(120, 40, 10, 0.45); // bottom inner shade (bevel)
+  cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    transform 0.08s ease,
+    box-shadow 0.12s ease;
+}
+
+.cta:hover {
+  filter: brightness(1.08);
+}
+
+.cta:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 236, 205, 0.5),
+    inset 0 -2px 5px rgba(120, 40, 10, 0.4);
+}
+
+.ctaLabel {
+  font-family: $font-display;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff4e3;
+  // Slight emboss: light above, shadow below.
+  text-shadow:
+    0 1px 0 rgba(255, 226, 188, 0.45),
+    0 -1px 1px rgba(95, 32, 10, 0.55);
+}
+
+@keyframes ctaBreath {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+// Respect Reduce Motion — no idle pulsing.
+@media (prefers-reduced-motion: reduce) {
+  .ctaWrap::before {
+    animation: none;
+  }
 }

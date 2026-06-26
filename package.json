@@ -2,7 +2,7 @@
   "name": "secret-hitler",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel --filter server --filter client dev",
+    "dev": "pnpm dev:client && pnpm dev:server",
     "dev:server": "pnpm --filter server dev",
     "dev:client": "pnpm --filter client dev",
     "build:shared": "pnpm --filter shared build",

@@ -1,5 +1,4 @@
 import { For, type JSX } from 'solid-js';
-import { Icon } from '../Icon/Icon';
 import styles from './Swiper.module.scss';
 
 export interface SwiperProps<T> {
@@ -8,9 +7,6 @@ export interface SwiperProps<T> {
   index: number;
   onIndexChange: (index: number) => void;
   children: (item: T, index: number) => JSX.Element;
-  /** Accessible labels for the navigation controls. */
-  prevLabel: string;
-  nextLabel: string;
   label?: string;
 }
 
@@ -18,9 +14,9 @@ export interface SwiperProps<T> {
 const SWIPE_THRESHOLD = 40;
 
 /**
- * Controlled paginated carousel: one slide visible at a time, with arrow
- * buttons, clickable dots, and pointer-drag swiping. Slides translate on
- * `transform` only so the transition stays on the compositor thread.
+ * Controlled paginated carousel: one slide visible at a time, navigated by
+ * clickable dots and pointer-drag swiping. Slides translate on `transform`
+ * only so the transition stays on the compositor thread.
  */
 export function Swiper<T>(props: SwiperProps<T>) {
   let pointerStartX: number | null = null;
@@ -51,16 +47,6 @@ export function Swiper<T>(props: SwiperProps<T>) {
       aria-roledescription="carousel"
       aria-label={props.label}
     >
-      <button
-        type="button"
-        class={`${styles.arrow} ${styles.prev}`}
-        onClick={() => go(props.index - 1)}
-        disabled={props.index === 0}
-        aria-label={props.prevLabel}
-      >
-        <Icon name="arrowLeft" size={22} />
-      </button>
-
       <div
         class={styles.viewport}
         onPointerDown={onPointerDown}
@@ -80,16 +66,6 @@ export function Swiper<T>(props: SwiperProps<T>) {
           </For>
         </div>
       </div>
-
-      <button
-        type="button"
-        class={`${styles.arrow} ${styles.next}`}
-        onClick={() => go(props.index + 1)}
-        disabled={props.index === props.items.length - 1}
-        aria-label={props.nextLabel}
-      >
-        <Icon name="chevronRight" size={22} />
-      </button>
 
       <div class={styles.dots} role="tablist" aria-label={props.label}>
         <For each={props.items}>

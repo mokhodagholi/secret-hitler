@@ -9,11 +9,10 @@ export class PresidentLegislativePhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
-  /** Deal three policies to the President; chat closes during the session. */
+  /** Deal three policies to the President for the legislative session. */
   enter(): void {
     const room = this.host.room;
     room.drawnPolicies = room.deck.drawTiles(3);
-    this.host.clearSpeaker();
     this.host.openLegislativeTimer();
     this.host.log('presidentDraws');
     this.host.changed();

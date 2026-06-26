@@ -9,16 +9,16 @@ export class NominationPhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
-  /** A fresh round: discussion runs first (talking stick), then nomination. */
+  /** A fresh round: open discussion first, then the nomination window. */
   enter(): void {
     const room = this.host.room;
     room.chancellorId = null;
     room.votes.clear();
-    room.discussionSpokenIds = [];
-    this.host.startSpeakingTurnAt(room.presidentId);
+    this.host.openDiscussion();
   }
 
   exit(): void {
+    this.host.closeDiscussion();
     this.host.closeNominationTimer();
   }
 
@@ -29,21 +29,20 @@ export class NominationPhase implements GamePhase {
 
   handle(playerId: string, command: GameCommand): EngineError | null {
     const room = this.host.room;
-    const nominating = room.nominationEndsAt > 0;
+    const discussing = room.discussionEndsAt > 0;
     if (command.kind === 'endTurn') {
-      // During nomination, endTurn ends the round (the President fails the
-      // election early); during discussion it passes the talking stick on.
-      if (nominating) {
-        if (playerId !== room.presidentId) {
-          return err('INVALID_ACTION', 'Only the President can end the round.');
-        }
-        this.host.failElection();
-        return null;
+      // Only the President drives the round on: during discussion endTurn opens
+      // nomination early; once nominating it fails the election.
+      if (playerId !== room.presidentId) {
+        return err(
+          'INVALID_ACTION',
+          discussing
+            ? 'Only the President can start the nomination.'
+            : 'Only the President can end the round.',
+        );
       }
-      if (playerId !== room.speakerId) {
-        return err('INVALID_ACTION', 'It is not your turn to speak.');
-      }
-      this.host.advanceSpeaker();
+      if (discussing) this.host.endDiscussion();
+      else this.host.failElection();
       return null;
     }
     if (command.kind !== 'nominateChancellor') {

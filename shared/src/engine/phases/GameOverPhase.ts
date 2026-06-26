@@ -9,10 +9,6 @@ export class GameOverPhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
-  enter(): void {
-    this.host.clearSpeaker();
-  }
-
   handle(_playerId: string, _command: GameCommand): EngineError | null {
     return err('INVALID_ACTION', 'The game is over.');
   }

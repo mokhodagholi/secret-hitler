@@ -275,7 +275,6 @@ export function WaitingRoomScreen() {
         <div class={styles.tips}>
           <div class={styles.tipsHeading}>
             <Icon name="masks" size={20} />
-            <span>{formatMessage('waiting.tips')}</span>
           </div>
           <p class={styles.tipText}>{formatMessage(TIP_KEYS[tipIndex()])}</p>
           <div class={styles.dots}>

@@ -13,7 +13,7 @@ import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { Toast } from '../../components/Toast/Toast';
 import { PolicyBoard } from './PolicyBoard';
-import { SpeakerBar } from './SpeakerBar';
+import { DiscussionBar } from './DiscussionBar';
 import { StatusRow } from './StatusRow';
 import { PlayersModal } from './PlayersModal';
 import { NominationModal } from './NominationModal';
@@ -56,16 +56,17 @@ export function GameScreen() {
     onCleanup(() => clearInterval(ticker));
   });
 
-  // --- Turn-change toasts ---------------------------------------------------
-  // A strong cue when the floor reaches this player, a quiet one as it leaves.
+  // --- Round-start toasts ---------------------------------------------------
+  // A strong cue when a new round's discussion opens on this player as
+  // President, a quiet one otherwise.
   const [toast, setToast] = createSignal<{
     title?: string;
     message: string;
     variant: 'prominent' | 'subtle';
   } | null>(null);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
-  let lastSpeakerId: string | null = null;
-  let sawSpeakerBaseline = false;
+  let lastDiscussionStart = 0;
+  let sawDiscussionBaseline = false;
 
   function showToast(next: NonNullable<ReturnType<typeof toast>>): void {
     clearTimeout(toastTimer);
@@ -79,30 +80,24 @@ export function GameScreen() {
 
   createEffect(() => {
     const state = view();
-    const currentSpeakerId = state?.speaker?.playerId ?? null;
-    if (currentSpeakerId === lastSpeakerId) return;
-    const previousSpeakerId = lastSpeakerId;
-    lastSpeakerId = currentSpeakerId;
-    // Skip the first observed turn (join/rejoin) so we don't announce history.
-    if (!sawSpeakerBaseline) {
-      sawSpeakerBaseline = true;
+    const start = state?.discussionDeadline?.startedAt ?? 0;
+    if (start === 0 || start === lastDiscussionStart) return;
+    lastDiscussionStart = start;
+    // Skip the first observed window (join/rejoin) so we don't replay history.
+    if (!sawDiscussionBaseline) {
+      sawDiscussionBaseline = true;
       return;
     }
-    const youId = state?.you.id;
-    if (currentSpeakerId && currentSpeakerId === youId) {
+    if (state!.board.president === state!.you.id) {
       showToast({
         variant: 'prominent',
-        title: formatMessage('game.turnStartTitle'),
-        message: formatMessage('game.turnStartBody'),
+        title: formatMessage('game.discussionTitle'),
+        message: formatMessage('game.discussionPresidentBody'),
       });
-    } else if (previousSpeakerId === youId) {
+    } else {
       showToast({
         variant: 'subtle',
-        message: currentSpeakerId
-          ? formatMessage('game.turnEnded', {
-              name: isolateBidi(playerName(currentSpeakerId)),
-            })
-          : formatMessage('game.turnOver'),
+        message: formatMessage('game.discussionBody'),
       });
     }
   });
@@ -191,19 +186,20 @@ export function GameScreen() {
   const voteProgress = () =>
     Math.max(0, Math.min(1, (voteSecondsLeft() * 1000) / VOTE_DURATION_MS));
 
-  const speakerPlayer = () =>
-    view()?.players.find((player) => player.id === game.speaker()?.playerId) ??
-    null;
-
   const secondsUntil = (endsAt: number) =>
     Math.max(0, Math.ceil((endsAt - now()) / 1000));
+
+  const discussionSecondsLeft = () => {
+    const deadline = view()?.discussionDeadline;
+    return deadline ? secondsUntil(deadline.endsAt) : null;
+  };
 
   // Whichever phase clock is running right now, for the compact status row.
   const activeDeadline = () =>
     view()?.voteDeadline ??
     view()?.legislativeDeadline ??
     view()?.nominationDeadline ??
-    game.speaker();
+    view()?.discussionDeadline;
   const activeSecondsLeft = () => {
     const deadline = activeDeadline();
     return deadline ? secondsUntil(deadline.endsAt) : null;
@@ -217,8 +213,8 @@ export function GameScreen() {
     game.sendCommand({ kind: 'castVote', vote });
   }
 
-  // endTurn passes the discussion turn; in the nomination window the President's
-  // endTurn ends the round (the engine decides which by phase).
+  // During discussion the President's endTurn opens nomination; in the
+  // nomination window it ends the round (the engine decides which by state).
   function sendEndTurn(): void {
     game.sendCommand({ kind: 'endTurn' });
   }
@@ -327,11 +323,10 @@ export function GameScreen() {
             </section>
 
             <Show when={game.inDiscussion()}>
-              <SpeakerBar
-                isMine={game.isMySpeakingTurn()}
-                speakerName={speakerPlayer()?.name ?? ''}
-                secondsLeft={activeSecondsLeft()}
-                onEndTurn={sendEndTurn}
+              <DiscussionBar
+                isPresident={iAmPresident()}
+                secondsLeft={discussionSecondsLeft()}
+                onStartNomination={sendEndTurn}
                 formatMessage={formatMessage}
               />
             </Show>

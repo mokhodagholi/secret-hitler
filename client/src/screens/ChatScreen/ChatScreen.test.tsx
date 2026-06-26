@@ -53,16 +53,16 @@ describe('ChatScreen', () => {
     });
   });
 
-  it('Should show the discussion countdown during a speaking turn', () => {
+  it('Should show the discussion countdown while discussion is open', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <ChatScreen />, harness);
     harness.pushState({
       ...seatedView(),
-      speaker: { playerId: 'sadf', startedAt: 0, endsAt: Date.now() + 15_000 },
+      discussionDeadline: { startedAt: 0, endsAt: Date.now() + 15_000 },
       nominationDeadline: null,
     });
 
-    expect(screen.getByText(/^\d+s$/)).toBeTruthy();
+    expect(screen.getByText(/^\d+:\d{2}$/)).toBeTruthy();
   });
 
   it('Should clear the unread chat count while open', () => {

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig } from '@rsbuild/core';
 import { pluginBabel } from '@rsbuild/plugin-babel';
 import { pluginSass } from '@rsbuild/plugin-sass';
@@ -16,6 +17,20 @@ export default defineConfig({
   ],
   html: {
     template: './index.html',
+  },
+  tools: {
+    // Scoped class names read as fileName-styleName; [name] alone keeps the
+    // ".module" segment, so derive the bare file name ourselves.
+    cssLoader(config) {
+      if (typeof config.modules === 'object') {
+        config.modules.getLocalIdent = (context, _localIdentName, localName) => {
+          const fileName = path
+            .basename(context.resourcePath)
+            .replace(/\.module\.\w+$/, '');
+          return `${fileName}-${localName}`;
+        };
+      }
+    },
   },
   source: {
     entry: {

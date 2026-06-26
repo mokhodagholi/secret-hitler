@@ -3,7 +3,6 @@ import {
   HOST_MIGRATION_GRACE_MS,
   MessageRouter,
   Phase,
-  SPEAKING_TURN_MS,
   parseClientMessage,
   type ClientMessage,
   type EngineError,
@@ -38,8 +37,8 @@ export class SocketHandler {
   private readonly connections = new ConnectionRegistry();
   /** Which room a given live socket has authenticated into. */
   private readonly socketRoom = new WeakMap<WebSocket, string>();
-  /** Per-room talking-stick rotation timers. */
-  private readonly turnTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room discussion-window deadline timers. */
+  private readonly discussionTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room vote-window deadline timers. */
   private readonly voteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room legislative choice-window deadline timers. */
@@ -101,14 +100,14 @@ export class SocketHandler {
 
     engine.on('chat', ({ message }) => this.broadcast(room.id, { type: 'chat', message }));
     engine.on('log', ({ entry: e }) => this.broadcast(room.id, { type: 'log', entry: e }));
-    // Each speaker holds the stick for one window; reschedule on every change.
-    engine.on('speakerChanged', ({ speakerId }) => {
-      this.stopTurnTimer(room.id);
-      if (!speakerId) return;
+    // The discussion window closes on its own; the nomination window then opens.
+    engine.on('discussionTimerChanged', ({ endsAt }) => {
+      this.stopDiscussionTimer(room.id);
+      if (endsAt == null) return;
       const timer = setTimeout(() => {
-        this.repo.get(room.id)?.engine.advanceSpeaker();
-      }, SPEAKING_TURN_MS);
-      this.turnTimers.set(room.id, timer);
+        this.repo.get(room.id)?.engine.resolveDiscussionTimeout();
+      }, Math.max(0, endsAt - Date.now()));
+      this.discussionTimers.set(room.id, timer);
     });
     // The vote window closes on its own; unvoted players default to Nein.
     engine.on('voteTimerChanged', ({ endsAt }) => {
@@ -139,11 +138,11 @@ export class SocketHandler {
     });
   }
 
-  private stopTurnTimer(roomId: string): void {
-    const timer = this.turnTimers.get(roomId);
+  private stopDiscussionTimer(roomId: string): void {
+    const timer = this.discussionTimers.get(roomId);
     if (timer) {
       clearTimeout(timer);
-      this.turnTimers.delete(roomId);
+      this.discussionTimers.delete(roomId);
     }
   }
 
@@ -239,7 +238,7 @@ export class SocketHandler {
 
   /** Stop the room's timers, revoke its tokens, and drop it from the repo. */
   private removeRoom(roomId: string): void {
-    this.stopTurnTimer(roomId);
+    this.stopDiscussionTimer(roomId);
     this.stopVoteTimer(roomId);
     this.stopLegislativeTimer(roomId);
     this.stopNominationTimer(roomId);

@@ -24,7 +24,7 @@ export type GameCommand =
   | { kind: 'useSpecialPower'; targetId: string }
   | { kind: 'vetoRequest' }
   | { kind: 'vetoConsent'; agree: boolean }
-  /** The current speaker ends their discussion turn early. */
+  /** The President ends discussion early, or fails the election once nominating. */
   | { kind: 'endTurn' };
 
 // ---------------------------------------------------------------------------

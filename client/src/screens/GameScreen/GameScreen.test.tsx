@@ -117,17 +117,17 @@ describe('GameScreen — nomination', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
-    // Discussion: speaker is set, but the nomination window has not opened.
+    // Discussion is open, but the nomination window has not opened.
     harness.pushState({
       ...view,
       phase: Phase.Nomination,
       board: { ...view.board, president: 'you', chancellor: null },
-      speaker: { playerId: 'you', startedAt: 0, endsAt: Date.now() + 20_000 },
+      discussionDeadline: { startedAt: 0, endsAt: Date.now() + 20_000 },
       nominationDeadline: null,
     });
 
     expect(screen.queryByText(en.game.nominateTitle)).toBeNull();
-    expect(screen.getByText(en.game.yourTurn)).toBeTruthy();
+    expect(screen.getByText(en.game.discussionOpen)).toBeTruthy();
   });
 
   it('Should notify the table when a government fails', () => {

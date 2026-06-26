@@ -24,33 +24,6 @@
   min-width: 0;
 }
 
-.arrow {
-  position: absolute;
-  top: 38%;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  color: $gold;
-  background: rgba($navy-950, 0.55);
-  border: 1px solid rgba($gold, 0.4);
-  @include pressable;
-
-  &:disabled {
-    opacity: 0.3;
-    pointer-events: none;
-  }
-}
-
-.prev {
-  left: -6px;
-}
-.next {
-  right: -6px;
-}
-
 .dots {
   display: flex;
   justify-content: center;

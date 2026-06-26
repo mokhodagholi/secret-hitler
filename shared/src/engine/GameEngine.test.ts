@@ -263,77 +263,54 @@ describe('GameEngine — nomination and voting', () => {
     expect(gameOverSeen).toBe(true);
   });
 
-  it('Should open each round with the talking stick on the President', () => {
+  it('Should open each round with a discussion window before nomination', () => {
     const { room } = startGame();
-    expect(room.speakerId).toBe(room.presidentId);
-    expect(room.speakerEndsAt).toBeGreaterThan(Date.now());
+    expect(room.discussionEndsAt).toBeGreaterThan(Date.now());
+    expect(room.nominationEndsAt).toBe(0);
   });
 
-  it('Should pass the talking stick when the speaker disconnects', () => {
+  it('Should keep discussion open when a player disconnects', () => {
+    const { engine, room, players } = startGame();
+    const [president] = players;
+    engine.setConnected(president.id, false);
+    expect(room.discussionEndsAt).toBeGreaterThan(0);
+  });
+
+  it('Should open the nomination window when the President starts nomination', () => {
     const { engine, room, players } = startGame();
     const [president, ben] = players;
-    expect(room.speakerId).toBe(president.id);
-
-    engine.setConnected(president.id, false);
-    expect(room.speakerId).toBe(ben.id);
-  });
-
-  it('Should open nomination only after every player has spoken', () => {
-    const { engine, room, players } = startGame();
-    const [president, ben, cal] = players;
-    expect(room.speakerId).toBe(president.id);
     expect(room.nominationEndsAt).toBe(0);
 
-    engine.handleCommand(president.id, { kind: 'endTurn' });
-    expect(room.speakerId).toBe(ben.id);
-    engine.handleCommand(ben.id, { kind: 'endTurn' });
-    expect(room.speakerId).toBe(cal.id);
-    engine.handleCommand(cal.id, { kind: 'endTurn' });
+    // Only the President may end discussion early.
+    expect(engine.handleCommand(ben.id, { kind: 'endTurn' })?.code).toBe(
+      'INVALID_ACTION',
+    );
+    expect(room.discussionEndsAt).toBeGreaterThan(0);
 
-    // Discussion is over — the talking stick drops and the clock starts.
-    expect(room.speakerId).toBeNull();
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    expect(room.discussionEndsAt).toBe(0);
     expect(room.nominationEndsAt).toBeGreaterThan(0);
   });
 
-  it('Should pass the talking stick clockwise from the President', () => {
-    const { engine, room, players } = startGame(); // Ana(0), Ben(1), Cal(2)
-    const [ana, ben, cal] = players;
-    // Fail the opening round so Ben (seat 1) becomes the next President.
-    engine.handleCommand(ana.id, { kind: 'endTurn' });
-    engine.handleCommand(ben.id, { kind: 'endTurn' });
-    engine.handleCommand(cal.id, { kind: 'endTurn' });
-    engine.handleCommand(ana.id, { kind: 'endTurn' });
-    expect(room.presidentId).toBe(ben.id);
-    expect(room.speakerId).toBe(ben.id);
+  it('Should open nomination when the discussion window elapses', () => {
+    const { engine, room } = startGame();
+    expect(room.nominationEndsAt).toBe(0);
 
-    // Discussion goes Ben → Cal → Ana, not back to the lowest seat.
-    engine.handleCommand(ben.id, { kind: 'endTurn' });
-    expect(room.speakerId).toBe(cal.id);
-    engine.handleCommand(cal.id, { kind: 'endTurn' });
-    expect(room.speakerId).toBe(ana.id);
+    engine.resolveDiscussionTimeout();
+    expect(room.discussionEndsAt).toBe(0);
+    expect(room.nominationEndsAt).toBeGreaterThan(0);
   });
 
   it('Should fail the election when the President ends the round', () => {
     const { engine, room, players } = startGame();
-    const [president, ben, cal] = players;
-    // Run discussion to completion so the nomination window opens.
+    const [president, ben] = players;
+    // End discussion so the nomination window opens.
     engine.handleCommand(president.id, { kind: 'endTurn' });
-    engine.handleCommand(ben.id, { kind: 'endTurn' });
-    engine.handleCommand(cal.id, { kind: 'endTurn' });
     expect(room.nominationEndsAt).toBeGreaterThan(0);
 
     expect(engine.handleCommand(president.id, { kind: 'endTurn' })).toBeNull();
     expect(room.electionTracker).toBe(1);
     expect(room.presidentId).toBe(ben.id);
-  });
-
-  it('Should reject ending a turn that is not yours', () => {
-    const { engine, room, players } = startGame();
-    const [president, ben] = players;
-
-    const error = engine.handleCommand(ben.id, { kind: 'endTurn' });
-    expect(error?.code).toBe('INVALID_ACTION');
-    expect(room.speakerId).toBe(president.id);
   });
 
   it('Should fail the election when the nomination window elapses', () => {
@@ -357,23 +334,22 @@ describe('GameEngine — nomination and voting', () => {
     expect(game.room.electionTracker).toBe(0);
   });
 
-  it('Should clear the talking stick during the legislative session', () => {
+  it('Should close discussion during the legislative session', () => {
     const game = startGame();
     electGovernment(game, game.players[1]);
     expect(game.room.phase).toBe(Phase.PresidentLegislative);
-    expect(game.room.speakerId).toBeNull();
+    expect(game.room.discussionEndsAt).toBe(0);
   });
 
-  it('Should silence everyone but the talking stick holder', () => {
-    const { engine, room, players } = startGame();
+  it('Should broadcast chat from any player during discussion', () => {
+    const { engine, players } = startGame();
     const [president, ben] = players;
     const heard: string[] = [];
     engine.on('chat', ({ message }) => heard.push(message.name));
 
     engine.postChat(ben.id, 'psst');
-    engine.postChat(president.id, 'I am speaking');
-    expect(heard).toEqual([president.name]);
-    expect(room.speakerId).toBe(president.id);
+    engine.postChat(president.id, 'over here');
+    expect(heard).toEqual([ben.name, president.name]);
   });
 });
 
@@ -455,9 +431,9 @@ describe('GameEngine — legislative session', () => {
     expect(game.room.lastEnacted).toEqual(['liberal']);
     expect(game.room.drawnPolicies).toEqual([]);
     expect(game.room.phase).toBe(Phase.Nomination);
-    // Presidency rotates to the next seat and discussion reopens on them.
+    // Presidency rotates to the next seat and a fresh discussion opens.
     expect(game.room.presidentId).toBe(game.players[1].id);
-    expect(game.room.speakerId).toBe(game.players[1].id);
+    expect(game.room.discussionEndsAt).toBeGreaterThan(0);
   });
 
   it('Should reject an out-of-range policy index', () => {

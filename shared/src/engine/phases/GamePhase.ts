@@ -20,10 +20,12 @@ export interface PhaseHost {
   /** A government failed: advance the tracker, enact on chaos, next round. */
   failElection(): void;
   endGame(winner: Faction): void;
-  startSpeakingTurnAt(playerId: string | null): void;
-  /** Pass the talking stick to the next eligible player (discussion only). */
-  advanceSpeaker(): void;
-  clearSpeaker(): void;
+  /** Open the 3-minute discussion window before nomination (everyone may chat). */
+  openDiscussion(): void;
+  /** Cancel the discussion window without opening nomination (phase exit). */
+  closeDiscussion(): void;
+  /** End discussion early and open the nomination window. */
+  endDiscussion(): void;
   /** Open the vote window and schedule its deadline on the server. */
   openVote(): void;
   /** Close the vote window (vote resolved) and cancel its deadline. */

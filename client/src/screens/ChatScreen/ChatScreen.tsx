@@ -12,7 +12,7 @@ import { isolateBidi } from '../../i18n/utils';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
-import { SpeakerBar } from '../GameScreen/SpeakerBar';
+import { DiscussionBar } from '../GameScreen/DiscussionBar';
 import styles from './ChatScreen.module.scss';
 
 /**
@@ -53,8 +53,8 @@ export function ChatScreen() {
     onCleanup(() => clearInterval(ticker));
   });
 
-  const speakerSecondsLeft = () => {
-    const endsAt = game.speaker()?.endsAt;
+  const discussionSecondsLeft = () => {
+    const endsAt = game.discussionDeadline()?.endsAt;
     return endsAt != null ? Math.max(0, Math.ceil((endsAt - now()) / 1000)) : null;
   };
 
@@ -74,12 +74,12 @@ export function ChatScreen() {
     return isolated;
   };
 
-  const speakerName = () =>
-    game.view()?.players.find((player) => player.id === game.speaker()?.playerId)
-      ?.name ?? '';
+  const iAmPresident = () => {
+    const state = game.view();
+    return state != null && state.board.president === state.you.id;
+  };
 
   function sendChat(): void {
-    if (game.chatLocked()) return;
     game.sendChat(chatDraft());
     setChatDraft('');
   }
@@ -140,11 +140,10 @@ export function ChatScreen() {
 
         <Show when={activeTab() === 'chat'}>
           <Show when={game.inDiscussion()}>
-            <SpeakerBar
-              isMine={game.isMySpeakingTurn()}
-              speakerName={speakerName()}
-              secondsLeft={speakerSecondsLeft()}
-              onEndTurn={() => game.sendCommand({ kind: 'endTurn' })}
+            <DiscussionBar
+              isPresident={iAmPresident()}
+              secondsLeft={discussionSecondsLeft()}
+              onStartNomination={() => game.sendCommand({ kind: 'endTurn' })}
               formatMessage={formatMessage}
             />
           </Show>
@@ -153,10 +152,7 @@ export function ChatScreen() {
               class={styles.chatInput}
               rows={1}
               value={chatDraft()}
-              disabled={game.chatLocked()}
-              placeholder={formatMessage(
-                game.chatLocked() ? 'game.chatWaitTurn' : 'game.chatPlaceholder',
-              )}
+              placeholder={formatMessage('game.chatPlaceholder')}
               maxlength={500}
               onInput={(event) => setChatDraft(event.currentTarget.value)}
               onKeyDown={(event) => {
@@ -171,7 +167,7 @@ export function ChatScreen() {
               type="button"
               class={styles.chatSend}
               aria-label={formatMessage('game.send')}
-              disabled={game.chatLocked() || chatDraft().trim() === ''}
+              disabled={chatDraft().trim() === ''}
               onClick={sendChat}
             >
               <Icon name="chat" size={18} />

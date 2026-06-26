@@ -9,10 +9,9 @@ export class VotingPhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
-  /** Open a fresh vote: no talking stick, a countdown runs server-side. */
+  /** Open a fresh vote; a countdown runs server-side. */
   enter(): void {
     this.host.room.votes.clear();
-    this.host.clearSpeaker();
     this.host.openVote();
   }
 

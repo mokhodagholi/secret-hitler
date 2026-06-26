@@ -46,9 +46,8 @@ export class Room {
   votes = new Map<string, Vote>();
   /** Policies in the active legislator's hand (3 President, then 2 Chancellor). */
   drawnPolicies: Policy[] = [];
-  speakerId: string | null = null;
-  speakerStartedAt = 0;
-  speakerEndsAt = 0;
+  discussionStartedAt = 0;
+  discussionEndsAt = 0;
   voteStartedAt = 0;
   voteEndsAt = 0;
   legislativeStartedAt = 0;
@@ -67,8 +66,6 @@ export class Room {
   specialElectionResumeAfterId: string | null = null;
   /** The Chancellor has proposed a veto this legislative session. */
   vetoRequested = false;
-  /** Players who have taken their discussion turn this round, before nomination. */
-  discussionSpokenIds: string[] = [];
 
   constructor(args: {
     id: string;
@@ -175,13 +172,10 @@ export class Room {
       players,
       board: this.board(),
       winner: this.winner,
-      speaker: this.speakerId
-        ? {
-            playerId: this.speakerId,
-            startedAt: this.speakerStartedAt,
-            endsAt: this.speakerEndsAt,
-          }
-        : null,
+      discussionDeadline:
+        this.discussionEndsAt > 0
+          ? { startedAt: this.discussionStartedAt, endsAt: this.discussionEndsAt }
+          : null,
       voteDeadline:
         this.phase === Phase.Voting && this.voteEndsAt > 0
           ? { startedAt: this.voteStartedAt, endsAt: this.voteEndsAt }

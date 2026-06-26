@@ -10,6 +10,7 @@ export type IconName =
   | 'chat'
   | 'palette'
   | 'globe'
+  | 'menu'
   | 'music'
   | 'speaker'
   | 'question'
@@ -85,6 +86,11 @@ const glyphs: Record<IconName, () => JSX.Element> = {
       <circle cx="12" cy="12" r="9" />
       <path d="M3 12h18" />
       <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" />
+    </>
+  ),
+  menu: () => (
+    <>
+      <path d="M4 6h16M4 12h16M4 18h16" />
     </>
   ),
   music: () => (

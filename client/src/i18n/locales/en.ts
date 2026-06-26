@@ -17,6 +17,12 @@ export const en = {
   },
   home: {
     play: 'Play',
+    findGame: 'Find Game',
+    tagline: 'One night, a thousand secrets, one winner!',
+    guest: 'Guest',
+    rank: 'Rookie',
+    live: 'Live',
+    events: 'Events',
   },
   common: {
     comingSoon: 'Coming soon.',
@@ -30,32 +36,75 @@ export const en = {
     title: 'Rules',
     overview: 'Overview',
     overviewBody:
-      'Secret Hitler is a game of hidden identities and suspicion. Liberals must pass policies and elect a Liberal government. Hitler and the Fascists must sabotage the government and pass Fascist policies.',
+      'Secret Hitler is a hidden-identity game for 5–10 players set in 1930s Germany. The Liberals are the majority but know no one; the Fascists know each other, and one of them is secretly Hitler. Liberals win by enacting Liberal policies or assassinating Hitler. The Fascists scheme to enact Fascist policies — or to sweep Hitler into the chancellorship.',
     components: 'Components',
     componentCards: {
-      roleCards: '17 Role Cards',
-      policyDeck: 'Policy Deck',
-      policyTracker: 'Policy Tracker',
-      envelope: 'Envelope',
+      policyTiles: '17 Policy Tiles',
+      roleCards: 'Role Cards',
+      boards: 'Policy Boards',
+      envelope: 'Secret Envelopes',
     },
-    howToPlay: 'How to Play',
+    setup: 'Setup',
+    setupBody:
+      'Roles are dealt face down according to the player count: there is always exactly one Hitler, with more Fascists added as the table grows. The 17 policy tiles (6 Liberal, 11 Fascist) are shuffled into the draw pile.',
+    setupPoints: {
+      small:
+        'In 5–6 player games, Hitler and the Fascists secretly learn one another.',
+      large:
+        'In 7–10 player games, the Fascists learn each other and Hitler — but Hitler never learns who the Fascists are.',
+      liberals:
+        'Liberals start the game knowing nothing — not even who the other Liberals are.',
+    },
+    roundTitle: 'Each Round',
     steps: {
-      deal: {
-        title: 'Deal Roles',
-        body: 'Each player is secretly assigned a role.',
+      nominate: {
+        title: 'Nominate a Chancellor',
+        body: 'The presidency passes clockwise each round. The President nominates a Chancellor, but the last elected President and Chancellor are ineligible (only the last Chancellor in a 5-player game).',
       },
       elect: {
-        title: 'Elect a President',
-        body: 'Players elect a President and Chancellor.',
+        title: 'Vote',
+        body: 'Everyone votes Ja or Nein at once. A strict majority elects the government — a tie fails. If Hitler is elected Chancellor once 3+ Fascist policies are enacted, the Fascists win instantly.',
       },
       enact: {
-        title: 'Enact Policies',
-        body: 'The government draws and enacts policies. Track the policies on the board.',
+        title: 'Legislative Session',
+        body: 'The President draws 3 policies and discards 1 face down. The Chancellor enacts 1 of the remaining 2 and discards the other. No talking is allowed, and discarded tiles are never revealed.',
       },
-      agenda: {
-        title: 'Achieve Your Agenda',
-        body: 'Liberals win by passing 5 Liberal policies. Fascists win by passing 6 Fascist policies or electing Hitler as Chancellor after 3 Fascist policies.',
+      executive: {
+        title: 'Executive Action',
+        body: 'If the enacted Fascist policy grants a power, the President must use it before the next round begins.',
       },
+    },
+    failTitle: 'Failed Governments',
+    failBody:
+      'Every failed vote advances the election tracker. After three failures in a row the country falls into chaos: the top policy is enacted automatically with no power, the tracker resets, and all term limits clear.',
+    powersTitle: 'Presidential Powers',
+    powers: {
+      investigate: {
+        title: 'Investigate Loyalty',
+        body: 'Secretly see a player’s party card — Hitler’s reads Fascist. Each player can be investigated only once.',
+      },
+      special: {
+        title: 'Call Special Election',
+        body: 'Name any player as the next presidential candidate; the normal clockwise rotation resumes afterward.',
+      },
+      peek: {
+        title: 'Policy Peek',
+        body: 'Secretly look at the top 3 policies of the draw pile.',
+      },
+      execute: {
+        title: 'Execution',
+        body: 'Formally kill a player. If it is Hitler, the game ends and the Liberals win.',
+      },
+      veto: {
+        title: 'Veto Power',
+        body: 'After 5 Fascist policies, the Chancellor may veto; if the President agrees, both tiles are discarded and the government fails.',
+      },
+    },
+    winningTitle: 'How to Win',
+    winning: {
+      liberal: 'Liberals win by enacting 5 Liberal policies, or by executing Hitler.',
+      fascist:
+        'Fascists win by enacting 6 Fascist policies, or by electing Hitler Chancellor after 3 Fascist policies.',
     },
     remember: 'Remember',
     rememberBody:
@@ -66,37 +115,80 @@ export const en = {
     title: 'How to Play',
     counter: '{current}/{total}',
     steps: {
-      deal: {
-        title: 'Deal Roles',
-        subtitle: 'Each player is secretly assigned a role.',
+      roles: {
+        title: 'Roles & Secrets',
+        subtitle: 'Each player is secretly a Liberal, a Fascist, or Hitler.',
         points: {
-          fascists: 'Fascists secretly know one another and who Hitler is.',
-          liberals: 'Liberals know no one — not even each other.',
+          liberals:
+            'Liberals are the majority but know no one — they must deduce who to trust.',
+          fascists: 'Fascists secretly know each other and who Hitler is.',
+          hitler:
+            'In 5–6 player games Hitler knows the Fascists; in 7–10 player games Hitler is on their own.',
         },
       },
       elect: {
         title: 'Elect a Government',
-        subtitle: 'Players elect a President and a Chancellor.',
+        subtitle: 'Every round opens with an election for President and Chancellor.',
         points: {
-          nominate: 'The presidential candidate nominates a Chancellor.',
-          vote: 'Everyone votes Ja or Nein — a majority forms the government.',
+          rotate: 'The role of presidential candidate rotates clockwise each round.',
+          nominate: 'The President nominates an eligible player as Chancellor.',
+          vote: 'Everyone votes Ja or Nein at once — a strict majority elects them, a tie fails.',
+          term:
+            'The last elected President and Chancellor cannot be nominated as Chancellor next round.',
+        },
+      },
+      fail: {
+        title: 'When Elections Fail',
+        subtitle: 'A failed government pushes the country toward chaos.',
+        points: {
+          tracker: 'Each failed vote advances the election tracker by one.',
+          chaos:
+            'After three failures in a row the top policy is enacted automatically — with no power — and term limits reset.',
         },
       },
       enact: {
-        title: 'Enact Policies',
-        subtitle: 'The elected government enacts one policy.',
+        title: 'Enact a Policy',
+        subtitle: 'The elected government secretly passes one policy.',
         points: {
-          president: 'The President draws 3 policies and discards 1.',
-          chancellor: 'The Chancellor enacts 1 of the remaining 2.',
+          president: 'The President draws 3 policies and discards 1 face down.',
+          chancellor: 'The Chancellor enacts 1 of the remaining 2 and discards the other.',
+          silence:
+            'No talking during this step, and discarded policies are never revealed.',
+          veto:
+            'After 5 Fascist policies, the Chancellor and President may agree to veto both tiles.',
+        },
+      },
+      powers: {
+        title: 'Presidential Powers',
+        subtitle: 'Enacting a Fascist policy can grant the President a one-time power.',
+        points: {
+          investigate: 'Investigate Loyalty — secretly see a player’s party (once per player).',
+          special: 'Special Election — choose the next presidential candidate.',
+          peek: 'Policy Peek — secretly view the top 3 policies.',
+          execute: 'Execution — kill a player; if it is Hitler, the Liberals win instantly.',
         },
       },
       agenda: {
         title: 'Achieve Your Agenda',
-        subtitle: 'Each party has its own path to victory.',
+        subtitle: 'Each side has two paths to victory.',
         points: {
-          liberal: 'Liberals win with 5 Liberal policies, or by executing Hitler.',
-          fascist:
-            'Fascists win with 6 Fascist policies, or by electing Hitler Chancellor after 3 Fascist policies.',
+          liberalPolicies: 'Liberals win by enacting 5 Liberal policies…',
+          liberalExecute: '…or by executing Hitler.',
+          fascistPolicies: 'Fascists win by enacting 6 Fascist policies…',
+          fascistHitler:
+            '…or by electing Hitler as Chancellor once 3 Fascist policies are down.',
+        },
+      },
+      tips: {
+        title: 'Tips & Strategy',
+        subtitle: 'Reading the table matters more than the cards.',
+        points: {
+          watch: 'Watch who talks, not just what they say — trust is a weapon.',
+          hitler:
+            'As Hitler, play like a Liberal until the moment you can seize the chancellorship.',
+          fascist: 'As a Fascist, sow doubt and protect Hitler — never look too eager.',
+          liberal:
+            'As a Liberal, track who passed which policy; a forced Fascist tile can expose a lying government.',
         },
       },
     },
@@ -182,7 +274,6 @@ export const en = {
     waitingForPlayers: 'Waiting for players…',
     waitingToJoin: 'Waiting for players to join…',
     needMore: 'Waiting for {count} more players to start…',
-    tips: 'Tips',
     autoStartGuestNote: 'The game starts once everyone is ready',
     leaveRoom: 'Leave Room',
   },
@@ -208,16 +299,14 @@ export const en = {
     status: 'Status',
     none: '—',
     currentTrack: 'Current Track',
-    endTurn: 'End Turn',
     youArePresident: 'You are the President',
-    yourTurn: 'Your turn to speak',
-    speakingNow: '{name} is speaking',
-    turnStartTitle: 'Your turn',
-    turnStartBody: "You're up — speak or send a message.",
-    turnEnded: 'Turn passed to {name}.',
-    turnOver: 'Your turn has ended.',
+    discussionOpen: 'Discussion — everyone can chat',
+    discussionLeft: '{time}',
+    startNomination: 'Start Nomination',
+    discussionTitle: 'You are the President',
+    discussionPresidentBody: 'Open the floor, then start the nomination.',
+    discussionBody: 'Discussion is open — everyone can chat.',
     secondsLeft: '{seconds}s',
-    chatWaitTurn: 'Wait for your turn to speak…',
     voteTitle: 'Vote',
     votePrompt: 'Elect {name} as Chancellor?',
     voteJa: 'Ja!',

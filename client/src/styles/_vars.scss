@@ -1,18 +1,21 @@
-// Color palette — dark navy + gold art-deco theme
-$navy-950: #071527;
-$navy-900: #0c2036;
-$navy-850: #102941;
-$navy-800: #143049;
-$navy-700: #1b3d5e;
-$navy-600: #27517a;
+// Color palette — deep blue + orange theme.
+// Variable names are kept ($navy-*, $gold*) so the ~250 existing references
+// stay valid; only the values changed. $navy-* = the deep-blue surfaces,
+// $gold* = the orange accent.
+$navy-950: #051528;
+$navy-900: #0a2344;
+$navy-850: #0e2c54;
+$navy-800: #123563;
+$navy-700: #1b4a85;
+$navy-600: #2a63ad;
 
 $line-soft: rgba(106, 154, 199, 0.25);
 $line-strong: rgba(106, 154, 199, 0.45);
 
-$gold: #f0c14b;
-$gold-bright: #ffd76e;
-$gold-dark: #c0903a;
-$gold-deep: #7d6020;
+$gold: #f5852a;
+$gold-bright: #ff9f4d;
+$gold-dark: #c5631d;
+$gold-deep: #7a3d11;
 
 $cream: #f3e7c9;
 $white: #fbfaf7;
