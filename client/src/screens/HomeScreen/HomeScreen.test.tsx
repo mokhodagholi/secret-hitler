@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { HomeScreen } from './HomeScreen';
-import { PlayScreen } from '../PlayScreen/PlayScreen';
+import { RoomsScreen } from '../RoomsScreen/RoomsScreen';
 import { Show } from 'solid-js';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
 
@@ -12,7 +12,7 @@ describe('HomeScreen', () => {
       () => (
         <Show
           when={harness.services.nav.screen() === 'home'}
-          fallback={<PlayScreen />}
+          fallback={<RoomsScreen initialTab="create" />}
         >
           <HomeScreen />
         </Show>
@@ -22,6 +22,6 @@ describe('HomeScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Find Game' }));
     expect(harness.services.nav.screen()).toBe('play');
-    expect(screen.getByText('Choose an Option')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Create Room' })).toBeTruthy();
   });
 });

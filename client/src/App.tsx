@@ -5,9 +5,7 @@ import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen/PlaceholderScreen';
 import { HowToPlayScreen } from './screens/HowToPlayScreen/HowToPlayScreen';
-import { PlayScreen } from './screens/PlayScreen/PlayScreen';
-import { CreateRoomScreen } from './screens/CreateRoomScreen/CreateRoomScreen';
-import { JoinGameScreen } from './screens/JoinGameScreen/JoinGameScreen';
+import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
 import { GameScreen } from './screens/GameScreen/GameScreen';
 import { ChatScreen } from './screens/ChatScreen/ChatScreen';
@@ -48,13 +46,13 @@ function Router() {
         <PlaceholderScreen title={formatMessage('screens.about')} />
       </Match>
       <Match when={nav.screen() === 'play'}>
-        <PlayScreen />
+        <RoomsScreen initialTab="create" />
       </Match>
       <Match when={nav.screen() === 'create-room'}>
-        <CreateRoomScreen />
+        <RoomsScreen initialTab="create" />
       </Match>
       <Match when={nav.screen() === 'join-game'}>
-        <JoinGameScreen />
+        <RoomsScreen initialTab="join" />
       </Match>
       <Match when={nav.screen() === 'waiting-room'}>
         <WaitingRoomScreen />
