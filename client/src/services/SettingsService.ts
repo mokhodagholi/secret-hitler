@@ -1,6 +1,7 @@
 import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
 import { MAX_PLAYERS, MIN_PLAYERS } from '@secret-hitler/shared';
 import { DEFAULT_LANGUAGE, type Language } from '../i18n';
+import type { RaviWho } from './RaviService';
 
 export interface SettingsState {
   /** Display name used for every room you create or join. */
@@ -12,6 +13,10 @@ export interface SettingsState {
   language: Language;
   music: boolean;
   soundEffects: boolean;
+  /** Spoken Ravi lines. Subtitles still run when this is off. */
+  raviVoice: boolean;
+  /** Which recorded host speaks the lines. */
+  raviWho: RaviWho;
   /** Collapse every animation to an instant state change. */
   reduceMotion: boolean;
 }
@@ -25,6 +30,8 @@ const DEFAULTS: SettingsState = {
   language: DEFAULT_LANGUAGE,
   music: true,
   soundEffects: true,
+  raviVoice: true,
+  raviWho: 'farid',
   reduceMotion: false,
 };
 
@@ -57,6 +64,10 @@ export class SettingsService {
 
   toggleTimer(): void {
     this.set('timerEnabled', !this.settings.timerEnabled);
+  }
+
+  cycleRaviWho(): void {
+    this.set('raviWho', this.settings.raviWho === 'farid' ? 'dilara' : 'farid');
   }
 
   resetTutorials(): void {

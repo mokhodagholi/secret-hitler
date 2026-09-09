@@ -96,6 +96,24 @@ export function SettingsScreen() {
       />
       <SettingRow
         kind="toggle"
+        icon="chat"
+        label={formatMessage('settings.raviVoice')}
+        checked={state.raviVoice}
+        onChange={(value) => settings.set('raviVoice', value)}
+      />
+      <SettingRow
+        kind="value"
+        icon="masks"
+        label={formatMessage('settings.raviWho')}
+        value={formatMessage(
+          state.raviWho === 'dilara'
+            ? 'settings.raviDilara'
+            : 'settings.raviFarid',
+        )}
+        onClick={() => settings.cycleRaviWho()}
+      />
+      <SettingRow
+        kind="toggle"
         icon="refresh"
         label={formatMessage('settings.reduceMotion')}
         checked={state.reduceMotion}

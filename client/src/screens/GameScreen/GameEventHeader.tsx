@@ -7,6 +7,8 @@ export interface GameEventHeaderProps {
   governmentLabel: string;
   actionLabel?: string;
   onAction?: () => void;
+  raviSrc?: string;
+  raviSpeaking?: boolean;
 }
 
 const GOVERNMENT_KEYS = [
@@ -41,6 +43,16 @@ export function governmentLabel(
 export function GameEventHeader(props: GameEventHeaderProps) {
   return (
     <header class={styles.header} aria-live="polite">
+      <Show when={props.raviSrc}>
+        <img
+          classList={{
+            [styles.cameo]: true,
+            [styles.cameoSpeaking]: !!props.raviSpeaking,
+          }}
+          src={props.raviSrc}
+          alt=""
+        />
+      </Show>
       <p class={styles.headline} dir="auto">
         {props.headline}
       </p>

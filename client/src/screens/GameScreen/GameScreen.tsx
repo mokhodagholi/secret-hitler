@@ -23,6 +23,9 @@ import { VotingOverlay } from './VotingOverlay';
 import { PowerPanel } from './PowerPanel';
 import { GameOverOverlay } from './GameOverOverlay';
 import { PolicyRevealOverlay } from './PolicyRevealOverlay';
+import { NightOverlay } from './NightOverlay';
+import { RaviNarrator } from './RaviNarrator';
+import { RAVI } from '../../assets/cards';
 import styles from './GameScreen.module.scss';
 
 /**
@@ -31,7 +34,7 @@ import styles from './GameScreen.module.scss';
  * Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
-  const { nav, game, i18n, settings, animation } = useApp();
+  const { nav, game, i18n, settings, animation, ravi } = useApp();
   const { formatMessage } = i18n;
   const showTimer = () => settings.settings.timerEnabled;
 
@@ -43,6 +46,11 @@ export function GameScreen() {
 
   let boardElement: HTMLElement | undefined;
 
+  const CEREMONY_GRACE_MS = 25_000;
+  const [ceremonyOpen, setCeremonyOpen] = createSignal(false);
+  let ceremonyRoomId: string | null = null;
+  let ceremonyDecided = false;
+
   // Session dropped (left / expired) → back to the play menu.
   createEffect(() => {
     if (!game.inRoom()) nav.navigate('play');
@@ -51,6 +59,30 @@ export function GameScreen() {
   onMount(() => {
     const ticker = setInterval(() => setNow(Date.now()), 1000);
     onCleanup(() => clearInterval(ticker));
+  });
+
+  createEffect(() => {
+    const state = view();
+    if (!state) return;
+    if (state.roomId !== ceremonyRoomId) {
+      ceremonyRoomId = state.roomId;
+      ceremonyDecided = false;
+      setCeremonyOpen(false);
+    }
+    if (ceremonyDecided) return;
+    now();
+    const role = game.role() ?? state.you.role;
+    const start = state.discussionDeadline?.startedAt ?? 0;
+    const freshStart =
+      !!role &&
+      state.phase === Phase.Nomination &&
+      start > 0 &&
+      now() - start < CEREMONY_GRACE_MS &&
+      state.board.liberalPolicies === 0 &&
+      state.board.fascistPolicies === 0 &&
+      state.board.electionTracker === 0;
+    ceremonyDecided = true;
+    if (freshStart) setCeremonyOpen(true);
   });
 
   // --- Round-start toasts ---------------------------------------------------
@@ -348,11 +380,13 @@ export function GameScreen() {
         {(state) => (
           <div class={styles.scene}>
             <GameEventHeader
-              headline={helpMessage()}
+              headline={ravi.line() ?? helpMessage()}
               governmentLabel={governmentLabel(
                 state().board.liberalPolicies + state().board.fascistPolicies,
                 formatMessage,
               )}
+              raviSrc={ravi.speaking() ? RAVI.speaking : RAVI.idle}
+              raviSpeaking={ravi.speaking()}
               actionLabel={
                 game.inDiscussion() && iAmPresident()
                   ? formatMessage('game.startNomination')
@@ -376,13 +410,18 @@ export function GameScreen() {
             />
 
             <div class={styles.table} ref={(element) => (boardElement = element)}>
+              <PolicyBoard
+                board={state().board}
+                playerCount={state().players.length}
+                formatMessage={formatMessage}
+              />
+
               <div class={styles.seats} role="list">
                 <For each={topSeats()}>
                   {(player) => (
                     <TableSeat
                       player={player}
                       isYou={player.id === state().you.id}
-                      secretRole={player.id === state().you.id ? game.role() : null}
                       isNext={player.id === nextPresidentId()}
                       nominatable={canNominate(player)}
                       bubble={bubbleFor(player.id)}
@@ -394,19 +433,12 @@ export function GameScreen() {
                 </For>
               </div>
 
-              <PolicyBoard
-                board={state().board}
-                playerCount={state().players.length}
-                formatMessage={formatMessage}
-              />
-
               <div class={styles.seats} role="list">
                 <For each={bottomSeats()}>
                   {(player) => (
                     <TableSeat
                       player={player}
                       isYou={player.id === state().you.id}
-                      secretRole={player.id === state().you.id ? game.role() : null}
                       isNext={player.id === nextPresidentId()}
                       nominatable={canNominate(player)}
                       bubble={bubbleFor(player.id)}
@@ -419,15 +451,36 @@ export function GameScreen() {
               </div>
             </div>
 
-            <HelpBar
-              unreadChat={game.unreadChat() > 0}
-              onOpenChat={() => nav.navigate('chat')}
-              onOpenPlayers={() => setPlayersOpen(true)}
-              onOpenMenu={() => setMenuOpen(true)}
-              onRaiseHand={() => game.sendChat('✋')}
-              onEmoji={(emoji) => game.sendChat(emoji)}
-              formatMessage={formatMessage}
-            />
+            <div class={styles.toolsDock}>
+              <HelpBar
+                unreadChat={game.unreadChat() > 0}
+                onOpenChat={() => nav.navigate('chat')}
+                onOpenPlayers={() => setPlayersOpen(true)}
+                onOpenMenu={() => setMenuOpen(true)}
+                onRaiseHand={() => game.sendChat('✋')}
+                onEmoji={(emoji) => game.sendChat(emoji)}
+                formatMessage={formatMessage}
+              />
+            </div>
+
+            <RaviNarrator ceremonyOpen={ceremonyOpen()} now={now()} />
+
+            <Show when={ceremonyOpen() && game.role()}>
+              {(role) => (
+                <NightOverlay
+                  role={role()}
+                  playerCount={state().players.length}
+                  teammates={state().players.filter(
+                    (player) => player.role != null && player.id !== state().you.id,
+                  )}
+                  presidentName={isolateBidi(playerName(state().board.president))}
+                  onDone={() => {
+                    setCeremonyOpen(false);
+                    void ravi.speak('discuss.start');
+                  }}
+                />
+              )}
+            </Show>
 
             <Show when={revealedPolicy()}>
               {(policy) => (

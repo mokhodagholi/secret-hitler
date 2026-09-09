@@ -72,15 +72,35 @@ describe('GameScreen — voting', () => {
     expect(screen.getByText(/waiting for others/i)).toBeTruthy();
   });
 
-  it('Should show the status row with the player\'s secret role', () => {
+  it('Should hide the secret role on the table after the opening look', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
     harness.socket.emit({ type: 'private', role: 'liberal' });
 
     expect(
-      screen.getByLabelText(en.game.youAreRole.replace('{role}', en.role.liberal)),
-    ).toBeTruthy();
+      screen.queryByLabelText(en.game.youAreRole.replace('{role}', en.role.liberal)),
+    ).toBeNull();
+    expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
+  });
+
+  it('Should open the private role look when the game has just started', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, chancellor: null },
+      discussionDeadline: { startedAt: Date.now(), endsAt: Date.now() + 20_000 },
+      you: { ...view.you, role: 'liberal' },
+    });
+
+    expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.gotIt })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.gotIt }));
+    expect(screen.getByText(en.ravi.private.nightLiberal)).toBeTruthy();
   });
 });
 
@@ -234,6 +254,7 @@ describe('GameScreen — in-game menu', () => {
     fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
     expect(screen.getByRole('button', { name: en.gameMenu.music })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.effects })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.gameMenu.ravi })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.viewRules })).toBeTruthy();
   });
 

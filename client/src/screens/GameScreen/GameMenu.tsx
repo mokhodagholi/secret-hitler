@@ -63,6 +63,12 @@ export function GameMenu(props: GameMenuProps) {
               onClick={() => settings.set('soundEffects', !state.soundEffects)}
             />
             <MenuIcon
+              icon="chat"
+              label={formatMessage('gameMenu.ravi')}
+              active={state.raviVoice}
+              onClick={() => settings.set('raviVoice', !state.raviVoice)}
+            />
+            <MenuIcon
               icon="book"
               label={formatMessage('gameMenu.viewRules')}
               onClick={() => props.onViewRules()}

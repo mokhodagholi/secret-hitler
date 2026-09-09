@@ -12,6 +12,7 @@ import { WebSocketService } from './WebSocketService';
 import { GameStateService } from './GameStateService';
 import { SoundService } from './SoundService';
 import { AnimationService } from './AnimationService';
+import { RaviService } from './RaviService';
 
 export interface AppServices {
   nav: NavigationService;
@@ -21,6 +22,7 @@ export interface AppServices {
   game: GameStateService;
   sound: SoundService;
   animation: AnimationService;
+  ravi: RaviService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -32,14 +34,16 @@ export function AppProvider(
   const overrides = props.services ?? {};
   const settings = overrides.settings ?? new SettingsService();
   const socket = overrides.socket ?? new WebSocketService();
+  const i18n = overrides.i18n ?? new I18nService(() => settings.settings.language);
   const services: AppServices = {
     nav: overrides.nav ?? new NavigationService(),
     settings,
-    i18n: overrides.i18n ?? new I18nService(() => settings.settings.language),
+    i18n,
     socket,
     game: overrides.game ?? new GameStateService(socket),
     sound: overrides.sound ?? new SoundService(settings),
     animation: overrides.animation ?? new AnimationService(settings),
+    ravi: overrides.ravi ?? new RaviService(settings, i18n),
   };
 
   // Keep the document's language and reading direction in sync with the

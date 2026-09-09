@@ -14,6 +14,7 @@ import { I18nService } from '../src/services/I18nService';
 import { NavigationService } from '../src/services/NavigationService';
 import { SettingsService } from '../src/services/SettingsService';
 import { SoundService } from '../src/services/SoundService';
+import { RaviService } from '../src/services/RaviService';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -93,14 +94,16 @@ export function buildHarness(
   settings.set('language', 'en');
   const socket = new FakeSocket();
   const game = new GameStateService(socket as unknown as WebSocketService);
+  const i18n = new I18nService(() => settings.settings.language);
   const services: AppServices = {
     nav: new NavigationService(options.initialPath ?? '/'),
     settings,
-    i18n: new I18nService(() => settings.settings.language),
+    i18n,
     socket: socket as unknown as WebSocketService,
     game,
     sound: new SoundService(settings),
     animation: new AnimationService(settings),
+    ravi: new RaviService(settings, i18n),
   };
   return {
     services,

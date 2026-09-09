@@ -19,11 +19,13 @@ describe('SettingsService', () => {
     expect(settings.settings.playerCount).toBe(MIN_PLAYERS);
   });
 
-  it('Should toggle the timer flag', () => {
+  it('Should cycle the narrator between Farid and Dilara', () => {
     const settings = new SettingsService();
-    const before = settings.settings.timerEnabled;
-    settings.toggleTimer();
-    expect(settings.settings.timerEnabled).toBe(!before);
+    expect(settings.settings.raviWho).toBe('farid');
+    settings.cycleRaviWho();
+    expect(settings.settings.raviWho).toBe('dilara');
+    settings.cycleRaviWho();
+    expect(settings.settings.raviWho).toBe('farid');
   });
 
   it('Should restore defaults when local data is cleared', () => {

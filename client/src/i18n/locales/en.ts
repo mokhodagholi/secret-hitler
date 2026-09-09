@@ -213,6 +213,10 @@ export const en = {
     language: 'Language',
     music: 'Music',
     soundEffects: 'Sound Effects',
+    raviVoice: 'Ravi Voice',
+    raviWho: 'Narrator',
+    raviFarid: 'Farid',
+    raviDilara: 'Dilara',
     reduceMotion: 'Reduce Motion',
     other: 'Other',
     howToPlay: 'How to Play',
@@ -393,6 +397,8 @@ export const en = {
     nextPresident: 'Next',
     presidentialCandidate: 'Presidential candidate',
     pileCount: '×{count}',
+    seatNumber: '{n}',
+    gotIt: 'Got it',
   },
   vote: {
     ja: 'Ja',
@@ -401,9 +407,97 @@ export const en = {
   gameMenu: {
     music: 'Music',
     effects: 'Sound Effects',
+    ravi: 'Ravi',
     roomName: 'Room',
     viewRules: 'Rules',
     quit: 'Quit',
+  },
+  ravi: {
+    deal: {
+      start: 'It is time to deal the roles.',
+      look: 'Look at your role. Show it to no one.',
+    },
+    night: {
+      start: 'Night has fallen. Those who must look, look now.',
+      end: 'Morning. Hide your cards.',
+    },
+    president: {
+      first: '{name} is President this round.',
+      next: 'The presidency passes to {name}.',
+      special: 'Special election — {name} is the next President.',
+    },
+    discuss: {
+      start: 'Okay. Time to talk.',
+      closing: 'Time is almost up.',
+      ended: 'Discussion is over.',
+    },
+    nominate: {
+      start: 'The President chooses a Chancellor.',
+      named: '{president} chose {chancellor} as Chancellor.',
+      timeout: 'No Chancellor was chosen.',
+    },
+    vote: {
+      start: 'Voting has begun.',
+      collecting: 'The votes are being gathered.',
+      count: '{ja} Ja, {nein} Nein.',
+      passed: 'The government is elected. {ja} Ja, {nein} Nein.',
+      failed: 'The government is rejected. {ja} Ja, {nein} Nein.',
+      hitlerChancellor: 'Hitler is Chancellor. The Fascists win.',
+    },
+    tracker: {
+      advance: 'Election tracker {count} of 3.',
+    },
+    chaos: {
+      start: 'Three governments failed in a row. Chaos begins.',
+      enacted: 'The top policy is enacted. The President gets no power.',
+    },
+    law: {
+      draw: 'Three policies are given to the President.',
+      presidentChoosing: 'The President burns one policy.',
+      burned: 'A policy is burned.',
+      pass: 'Two policies pass to the Chancellor.',
+      chancellorChoosing: 'The Chancellor enacts one policy.',
+      liberal: 'A Liberal policy is enacted.',
+      fascist: 'A Fascist policy is enacted.',
+      vetoOffered: 'The Chancellor proposes a veto.',
+      vetoAgreed: 'The veto is accepted. Both policies burn.',
+      vetoRejected: 'The President refuses the veto. A policy must be enacted.',
+      vetoUnlocked: 'The veto is now in play.',
+    },
+    power: {
+      investigate: "The President must check a player's card.",
+      investigated: "The President has seen {name}'s party.",
+      peek: 'The President looks at the top three policies.',
+      peekDone: 'The policies return to the deck.',
+      specialElection: 'The President chooses the next presidential candidate.',
+      execution: 'The President must execute a player.',
+      executed: '{name} has been executed.',
+      hitlerExecuted: 'Hitler has been executed. The Liberals win.',
+    },
+    game: {
+      liberalsWin: {
+        policies: 'Five Liberal policies are enacted. The Liberals win.',
+      },
+      fascistsWin: {
+        policies: 'Six Fascist policies are enacted. The Fascists win.',
+      },
+      reveal: 'The roles are revealed.',
+    },
+    private: {
+      youLiberal:
+        'You are a Liberal. Find Hitler. Win with five Liberal policies, or by executing Hitler.',
+      youFascist:
+        'You are a Fascist. Protect Hitler. Win with six Fascist policies, or by electing Hitler Chancellor after three Fascist policies.',
+      youHitler:
+        'You are Hitler. Stay hidden. Become Chancellor after three Fascist policies.',
+      nightLiberal: 'Keep your eyes closed.',
+      nightFascistSmall: 'See your fellow Fascists and Hitler.',
+      nightFascistLarge:
+        'See the other Fascists and Hitler. Hitler does not see you.',
+      nightHitlerSmall: 'See your Fascists.',
+      nightHitlerLarge:
+        'Raise your hand. The Fascists see you — you do not see them.',
+    },
   },
   policyReveal: {
     liberal: 'A Liberal Policy was enacted',

@@ -3,17 +3,19 @@
 .board {
   direction: ltr;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 68%;
-  max-width: 268px;
-  margin: 0 auto;
-  padding: 0;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px 2px;
+  flex-shrink: 0;
 }
 
 .track {
   position: relative;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .art {
