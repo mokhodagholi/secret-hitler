@@ -2,6 +2,7 @@ import { Show } from 'solid-js';
 import type { PublicPlayer, Role } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { avatarImage } from '../../assets/avatars';
+import { OFFICE_PLACARD, ROLE_FACE } from '../../assets/cards';
 import paperFrame from '../../assets/avatars/avatar_placeholder.png';
 import styles from './TableSeat.module.scss';
 
@@ -66,14 +67,13 @@ export function TableSeat(props: TableSeatProps) {
       <span class={styles.paperWrap}>
         <Show when={office()}>
           {(kind) => (
-            <span
-              classList={{
-                [styles.ribbon]: true,
-                [styles.ribbonPresident]: kind() === 'president',
-                [styles.ribbonChancellor]: kind() === 'chancellor',
-              }}
-            >
-              <span class={styles.ribbonText}>
+            <span class={styles.placard}>
+              <img
+                class={styles.placardArt}
+                src={OFFICE_PLACARD[kind()]}
+                alt=""
+              />
+              <span class={styles.placardText}>
                 {formatMessage(`game.${kind()}`)}
               </span>
             </span>
@@ -98,6 +98,11 @@ export function TableSeat(props: TableSeatProps) {
       <Show when={props.isYou && props.secretRole}>
         {(role) => (
           <span class={styles.youRole}>
+            <img
+              class={styles.youRoleCard}
+              src={ROLE_FACE[role()]}
+              alt=""
+            />
             {formatMessage('game.youAreRole', {
               role: formatMessage(`role.${role()}`),
             })}

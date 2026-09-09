@@ -6,9 +6,9 @@ import {
 } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { Icon, type IconName } from '../../components/Icon/Icon';
-import { POLICY_FACE } from '../../assets/cards';
-import liberalBoard from '../../assets/images/liberal_board.png';
-import fascistBoard from '../../assets/images/facist_board.png';
+import { POLICY_FACE, POWER_SEAL } from '../../assets/cards';
+import liberalBoard from '../../assets/boards/liberal.png';
+import fascistBoard from '../../assets/boards/fascist.png';
 import styles from './PolicyBoard.module.scss';
 
 export interface PolicyBoardProps {
@@ -106,10 +106,10 @@ export function PolicyBoard(props: PolicyBoardProps) {
                   </Show>
                   <Show when={!filled() && power()}>
                     {(granted) => (
-                      <Icon
-                        name={POWER_ICON[granted()]}
-                        size={14}
-                        class={styles.slotEmblem}
+                      <img
+                        class={styles.slotSeal}
+                        src={POWER_SEAL[granted()]}
+                        alt=""
                       />
                     )}
                   </Show>

@@ -14,7 +14,7 @@
 .dialog {
   @include card;
   width: 100%;
-  max-width: 360px;
+  max-width: 420px;
   padding: 26px 22px;
   display: flex;
   flex-direction: column;
@@ -73,22 +73,36 @@
 
 .ja,
 .nein {
-  @include display(1.5rem, 0.08em);
+  @include display(1.05rem, 0.08em);
   @include pressable;
   flex: 1;
-  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 12px;
   border-radius: $radius-lg;
   color: $white;
   border: 2px solid rgba(255, 255, 255, 0.35);
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  background: rgba(8, 16, 28, 0.55);
+}
+
+.cardArt {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+  background: #1a1208;
 }
 
 .ja {
-  background: linear-gradient(180deg, $blue-liberal, #2f6aa6);
+  border-color: rgba($blue-liberal, 0.7);
 }
 
 .nein {
-  background: linear-gradient(180deg, $red-bright, $red-deep);
+  border-color: rgba($red-bright, 0.7);
 }
 
 .waiting {

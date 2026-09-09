@@ -4,3 +4,7 @@ dist
 *.log
 .DS_Store
 .env
+__pycache__/
+*.pyc
+scripts/.venv-ravi
+scripts/.venv-ravi-native

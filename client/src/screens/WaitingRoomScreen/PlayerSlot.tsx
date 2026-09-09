@@ -1,5 +1,5 @@
 import { Show } from 'solid-js';
-import playerPlaceholder from '../../assets/images/lobby/player_placeholder.png';
+import playerPlaceholder from '../../assets/lobby/player-placeholder.png';
 import styles from './PlayerSlot.module.scss';
 
 export interface SlotPlayer {

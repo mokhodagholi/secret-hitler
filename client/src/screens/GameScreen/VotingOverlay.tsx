@@ -2,6 +2,7 @@ import { Show } from 'solid-js';
 import type { Vote } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
+import { VOTE_FACE } from '../../assets/cards';
 import styles from './VotingOverlay.module.scss';
 
 export interface VotingOverlayProps {
@@ -74,14 +75,16 @@ export function VotingOverlay(props: VotingOverlayProps) {
               class={styles.ja}
               onClick={() => props.onVote('ja')}
             >
-              {formatMessage('game.voteJa')}
+              <img class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
+              <span>{formatMessage('game.voteJa')}</span>
             </button>
             <button
               type="button"
               class={styles.nein}
               onClick={() => props.onVote('nein')}
             >
-              {formatMessage('game.voteNein')}
+              <img class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
+              <span>{formatMessage('game.voteNein')}</span>
             </button>
           </div>
           <span class={styles.progress}>

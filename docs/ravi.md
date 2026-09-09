@@ -72,7 +72,7 @@ mp3 per line            ← pre-recorded, named by id (deal.start.mp3, …)
 
 A line id is a string like `deal.start` or `vote.passed`. The client never
 concatenates sentences. If a beat needs a name, the **subtitle** interpolates
-it and the **audio** uses a nameless take (“رئیس‌جمهور این دور انتخاب شد”)
+it and the **audio** uses a nameless take (“رئیس‌جمهور این دور معلوم شد”)
 while the header already shows the name. Spoken player names are the thing
 TTS gets wrong; we do not depend on them.
 
@@ -80,12 +80,12 @@ TTS gets wrong; we do not depend on them.
 
 Public table facts only:
 
-- A phase began or ended (“زمان گفتگوست”).
-- Who holds a **public** office (President, nominated Chancellor).
+- A phase began or ended (“خب، وقت حرف زدنه”).
+- Who holds a **public** office (President, chosen Chancellor).
 - Vote totals after the cards are revealed.
 - Which colour of **enacted** law hit the board (that is public).
-- That a power is in play (“رئیس‌جمهور باید یک نفر را بازرسی کند”) — not
-  the result of the inspection.
+- That a power is in play (“رئیس‌جمهور باید کارت یکی رو چک کنه”) — not
+  the result of the check.
 - Win / loss.
 
 Never:
@@ -128,10 +128,10 @@ end Night for the table.
 | Phase | Ravi |
 |---|---|
 | `Night` (new) | Deal, private look, team glance, first President |
-| `Nomination` | Discussion, then “pick a Chancellor” |
-| `Voting` | “Vote on this government” |
-| `PresidentLegislative` | “Three laws to the President” |
-| `ChancellorLegislative` | “Two laws to the Chancellor” |
+| `Nomination` | Discussion, then “صدراعظم رو انتخاب کنه” |
+| `Voting` | “رای‌گیری آغاز شد” |
+| `PresidentLegislative` | “سه تا قانون می‌ره دست رئیس‌جمهور” |
+| `ChancellorLegislative` | “دو تا قانون می‌ره دست صدراعظم” |
 | `SpecialPower` | The matching power line |
 | `GameOver` | Winner line + role cascade (no voice over secrets until cards are up) |
 
@@ -146,26 +146,40 @@ once we touch that timer; the President may still skip.
 
 ## Audio production
 
-ChatGPT and Gemini **cannot** give us usable Persian voice. Use a TTS
-studio, once, then commit the mp3s.
+Do **not** invent lines at runtime. Bake mp3s once from
+[`ravi-script.md`](./ravi-script.md), then commit them.
 
-**Best fit for this tone**
+Azure Farid/Dilara sound like a GPS. The baked set uses **pocket-tts-farsi**
+(native Persian, short radio lines). Farid is a **male** speaker prompt;
+Dilara is the model’s **female** narrator. Same filenames, two folders.
 
-1. **Azure Neural TTS** — record the pilot **twice**:
-   `fa-IR-FaridNeural` (male, grave) and `fa-IR-DilaraNeural` (female,
-   clear). SSML for rate ~0.9 and a slight pitch down. Both stay in the
-   game; the player picks Ravi’s voice in settings.
-2. **Google Cloud TTS** — `fa-IR-Wavenet-B` / `D` (male) or `A` / `C`
-   (female). Very consistent, a bit more “assistant” than radio.
-3. **ElevenLabs Multilingual v2** — hit-and-miss on Persian; use only if
-   a specific cloned voice is the goal.
-4. Human record — still the gold standard if we can get one actor for
-   ~80 short lines.
+```
+scripts/generate-ravi-voices.py --engine pocket --who farid,dilara
+```
+
+Rebuild one id after a wording change:
+
+```
+scripts/generate-ravi-voices.py --engine pocket --who farid --ids vote.start
+```
+
+TTS cannot read some Persian spellings. The **audio** catalog uses
+`رای` (not `رأی` — otherwise it says «ری»), drops ZWNJ, and says
+`حق وتو` so «وتو» is not read as «و تو». All clips for a voice come
+from the same pocket-tts speaker — do not mix Azure in for a few lines.
+Spoken names stay out of the mp3; the header already shows `{name}`.
 
 Export: **mono mp3, 64–96 kbps, loudness-normalized**, 0.15 s pad at
-head/tail so clips do not click. Drop them in
-`client/src/assets/sounds/ravi/` and register them next to `EFFECTS` (or a
-sibling `RAVI` map) in `SoundService`.
+head/tail. Files live in `client/src/assets/sounds/ravi/farid/` and
+`…/dilara/`. Register them next to `EFFECTS` (or a sibling `RAVI` map)
+in `SoundService` when playback is wired.
+
+ChatGPT / Gemini must not write new lines during a live game. Optional
+bake engines (`gemini`, `eleven`) exist on the script if we ever swap
+studio; the words still come from the catalog.
+
+Human record is still the gold standard if we can get one actor for
+~80 short lines.
 
 Playback rules:
 

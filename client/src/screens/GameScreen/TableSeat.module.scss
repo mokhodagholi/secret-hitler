@@ -126,42 +126,31 @@
   line-height: 14px;
 }
 
-.ribbon {
+.placard {
   position: absolute;
-  top: 16%;
-  left: 0;
+  bottom: calc(100% - 2px);
+  left: 50%;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 58%;
-  padding: 5px 0 10px;
-  transform: translateX(-70%);
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), 50% 100%, 0 calc(100% - 8px));
-  box-shadow:
-    1px 2px 6px rgba(0, 0, 0, 0.4),
-    inset 0 1px rgba(255, 255, 255, 0.28);
+  width: 78px;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-.ribbonText {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  font-family: $font-body;
-  font-size: 0.52rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-  color: #fff8ee;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+.placardArt {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
 }
 
-.ribbonPresident {
-  background: linear-gradient(180deg, #7ed45a 0%, #3e9a32 42%, #24661e 100%);
-}
-
-.ribbonChancellor {
-  background: linear-gradient(180deg, #c9a14a 0%, #8a5a18 48%, #5a3a10 100%);
+.placardText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 
 .name {
@@ -184,13 +173,26 @@
 
 .youRole {
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgba(247, 241, 228, 0.92);
   color: #1a1208;
   font-size: 0.52rem;
   font-weight: 800;
   line-height: 1.35;
+}
+
+.youRoleCard {
+  width: 28px;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: contain;
+  border-radius: 3px;
+  display: block;
 }
 
 .timerTrack {

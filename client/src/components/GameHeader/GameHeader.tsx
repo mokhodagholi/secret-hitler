@@ -1,6 +1,6 @@
 import avatarPortrait from '../../assets/avatars/avatar_1.png';
-import gemIcon from '../../assets/images/gem.png';
-import starIcon from '../../assets/images/star.png';
+import gemIcon from '../../assets/home/gem.png';
+import starIcon from '../../assets/home/star.png';
 import styles from './GameHeader.module.scss';
 
 export interface GameHeaderProps {

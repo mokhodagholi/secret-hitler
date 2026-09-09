@@ -1018,8 +1018,9 @@ all share **1365 × 2048**, portrait 2:3.
 
 ## Audio (not ChatGPT / Gemini)
 
-Do not ask those tools for Ravi’s voice. Record the pilot lines in
-[`ravi-script.md`](./ravi-script.md) **twice** — Azure `fa-IR-FaridNeural`
-and `fa-IR-DilaraNeural` — as described in [`ravi.md`](./ravi.md). Same
-filenames, two folders. If a voice is wrong we change studio; we do not
-change the words.
+Do not ask those tools for Ravi’s voice, and do not invent lines at
+runtime. Bake the catalog in [`ravi-script.md`](./ravi-script.md) with
+`scripts/generate-ravi-voices.py` — pocket-tts-farsi, male Farid and
+female Dilara, same filenames in two folders. Details in
+[`ravi.md`](./ravi.md). If a voice is wrong we change the bake engine; we
+do not change the words in a live game.

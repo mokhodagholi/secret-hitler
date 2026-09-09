@@ -3,13 +3,13 @@ import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import avatarCard from '../../assets/avatars/avatar_placeholder.png';
 import avatarPortrait from '../../assets/avatars/avatar_1.png';
-import heroImage from '../../assets/images/hitler.png';
-import deskImage from '../../assets/images/desk.png';
-import liberalBoard from '../../assets/images/liberal_board.png';
-import fascistBoard from '../../assets/images/facist_board.png';
-import starIcon from '../../assets/images/star.png';
-import gemIcon from '../../assets/images/gem.png';
-import plusIcon from '../../assets/images/plus.png';
+import heroImage from '../../assets/home/hero.png';
+import deskImage from '../../assets/home/desk.png';
+import liberalBoard from '../../assets/boards/liberal.png';
+import fascistBoard from '../../assets/boards/fascist.png';
+import starIcon from '../../assets/home/star.png';
+import gemIcon from '../../assets/home/gem.png';
+import plusIcon from '../../assets/home/plus.png';
 import styles from './HomeScreen.module.scss';
 
 /**

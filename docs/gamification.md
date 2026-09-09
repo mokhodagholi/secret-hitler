@@ -75,8 +75,8 @@ Ceremony:
 ### The President is not random every round
 
 The first President is chosen at deal. After that the placard moves
-**clockwise**, except a Special Election. Ravi should say “رئیس‌جمهور
-این دور {name} است,” not “a random player was chosen,” on later rounds.
+**clockwise**, except a Special Election. Ravi should say “این دور
+{name} رئیس‌جمهوره,” not “a random player was chosen,” on later rounds.
 
 ### “مهره کنگره” is the election tracker
 
@@ -94,7 +94,7 @@ Split the opening:
 | Deal (N face-down cards on the table) | ~3 s | no |
 | Private look at **your** role + party card + short blurb | **12 s** (max 18) | “فهمیدم” ready |
 | Night glance (team / Hitler rules) | **8–10 s** | no (liberals see a closed-eyes wait) |
-| First President + “زمان گفتگوست” | ~4 s | no |
+| First President + “خب، وقت حرف زدنه” | ~4 s | no |
 
 One 15-second dump that also tries to teach Fascists their team will
 feel rushed. Ready-up on the private card is important: veterans should
@@ -115,7 +115,7 @@ screen, so they do not bury the board.
 | Role flip | — | Role art, party art, blurb | Everyone else still sees backs |
 | Night, 5–6p | Closed-eyes wait | Fascists **and Hitler** see each other marked | Liberals |
 | Night, 7–10p | Closed-eyes wait | Fascists see each other + Hitler (Hitler sees a “raise your hand” self-mark, not the Fascists) | Liberals, and Hitler does not see Fascists |
-| Nomination | Ineligible seats dim | Eligible seats pulse + “صدراعظم را انتخاب کنید” | — |
+| Nomination | Ineligible seats dim | Eligible seats pulse + “صدراعظم رو انتخاب کنید” | — |
 | Vote pick | — | Two giant cards | — |
 | Vote flight | Face-down cards to centre | — | Colour of each ballot |
 | Vote count | Ja / Nein **totals** only | — | Who voted which way |
