@@ -1,66 +1,32 @@
 @use '../../styles/vars' as *;
 @use '../../styles/mixins' as *;
 
-.layout {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 100%;
-}
-
-// --- Top bar -----------------------------------------------------------------
-
-.topBar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 2px 0;
-}
-
-.roomName {
-  @include display(0.82rem, 0.12em);
-  flex: 1;
-  min-width: 0;
-  color: $text-light;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.menuButton {
-  @include pressable;
+.scene {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: $radius-sm;
-  color: $text-dim;
-  border: 1px solid $line-soft;
-  background: rgba($navy-800, 0.6);
-  flex-shrink: 0;
-}
-
-// Unread-chat dot on the chat button.
-.badge {
-  position: absolute;
-  top: 4px;
-  inset-inline-end: 4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: $gold;
-  box-shadow: 0 0 0 2px $navy-900;
-}
-
-// --- Board column (full width) --------------------------------------------------
-
-.boardColumn {
-  @include card;
+  height: 100%;
+  margin: -18px -16px -24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  overflow: hidden;
+  background: #2a1c14;
+}
+
+.table {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.seats {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 22px 6px 6px;
+  flex-shrink: 0;
 }
 
 // --- Phase panels ----------------------------------------------------------------

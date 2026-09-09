@@ -15,6 +15,7 @@ export type { RoomCreateArgs } from './factories/RoomFactory';
 
 // Rules
 export { buildRoleBag } from './rules/roleDistribution';
+export { powerForFascistPolicy } from './rules/boardPowers';
 
 // Engine
 export { GameEngine } from './engine/GameEngine';

@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import {
   Phase,
   VOTE_DURATION_MS,
@@ -9,14 +9,14 @@ import { useApp } from '../../services/AppContext';
 import { ERROR_MESSAGE_KEYS } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
-import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { Toast } from '../../components/Toast/Toast';
+import { GameEventHeader, governmentLabel } from './GameEventHeader';
+import { DeckStrip } from './DeckStrip';
+import { TableSeat } from './TableSeat';
+import { HelpBar } from './HelpBar';
 import { PolicyBoard } from './PolicyBoard';
-import { DiscussionBar } from './DiscussionBar';
-import { StatusRow } from './StatusRow';
 import { PlayersModal } from './PlayersModal';
-import { NominationModal } from './NominationModal';
 import { GameMenu } from './GameMenu';
 import { LegislativeModal } from './LegislativeModal';
 import { VotingOverlay } from './VotingOverlay';
@@ -26,12 +26,9 @@ import { PolicyRevealOverlay } from './PolicyRevealOverlay';
 import styles from './GameScreen.module.scss';
 
 /**
- * Main game screen, kept deliberately minimal: a status row (role, players,
- * timer) and the policy board (draw/discard stacks + tracks). Chat and the game
- * log live on their own page behind the chat button; round detail (current
- * turn, status, election tracker, government) lives behind the info button.
- * Phase actions arrive as modals; turn changes raise a toast. State is the
- * server's.
+ * Main game screen. A parchment header with the current instruction, a deck
+ * strip, two rows of seats around the policy boards, and table tools.
+ * Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
   const { nav, game, i18n, settings, animation } = useApp();
@@ -189,25 +186,11 @@ export function GameScreen() {
   const secondsUntil = (endsAt: number) =>
     Math.max(0, Math.ceil((endsAt - now()) / 1000));
 
-  const discussionSecondsLeft = () => {
-    const deadline = view()?.discussionDeadline;
-    return deadline ? secondsUntil(deadline.endsAt) : null;
-  };
-
-  // Whichever phase clock is running right now, for the compact status row.
   const activeDeadline = () =>
     view()?.voteDeadline ??
     view()?.legislativeDeadline ??
     view()?.nominationDeadline ??
     view()?.discussionDeadline;
-  const activeSecondsLeft = () => {
-    const deadline = activeDeadline();
-    return deadline ? secondsUntil(deadline.endsAt) : null;
-  };
-  const nominationSecondsLeft = () => {
-    const deadline = view()?.nominationDeadline;
-    return deadline ? secondsUntil(deadline.endsAt) : 0;
-  };
 
   function castVote(vote: 'ja' | 'nein'): void {
     game.sendCommand({ kind: 'castVote', vote });
@@ -265,6 +248,94 @@ export function GameScreen() {
   const playerName = (playerId: string | null) =>
     view()?.players.find((player) => player.id === playerId)?.name ?? '—';
 
+  const seatedPlayers = () =>
+    [...(view()?.players ?? [])].sort((a, b) => a.seat - b.seat);
+
+  const topSeats = () => {
+    const seated = seatedPlayers();
+    return seated.slice(0, Math.ceil(seated.length / 2));
+  };
+
+  const bottomSeats = () => {
+    const seated = seatedPlayers();
+    return seated.slice(Math.ceil(seated.length / 2));
+  };
+
+  const nextPresidentId = () => {
+    const living = seatedPlayers().filter((player) => player.isAlive);
+    const presidentId = view()?.board.president;
+    if (living.length === 0) return null;
+    const index = living.findIndex((player) => player.id === presidentId);
+    if (index < 0) return living[0].id;
+    return living[(index + 1) % living.length].id;
+  };
+
+  const BUBBLE_MS = 8_000;
+  const bubbleFor = (playerId: string) => {
+    const messages = game.chatMessages();
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].playerId !== playerId) continue;
+      return now() - messages[i].at < BUBBLE_MS ? messages[i].text : undefined;
+    }
+    return undefined;
+  };
+
+  const timerProgress = () => {
+    if (!showTimer()) return null;
+    const deadline = activeDeadline();
+    if (!deadline) return null;
+    const span = deadline.endsAt - deadline.startedAt;
+    if (span <= 0) return null;
+    return Math.max(0, Math.min(1, (deadline.endsAt - now()) / span));
+  };
+
+  function helpMessage(): string {
+    const state = view();
+    if (!state) return formatMessage('game.help.elect');
+    if (state.phase === Phase.GameOver && state.winner) {
+      return formatMessage(
+        state.winner === 'liberal'
+          ? 'game.over.liberalsWin'
+          : 'game.over.fascistsWin',
+      );
+    }
+    if (game.inDiscussion()) return formatMessage('game.discussionOpen');
+    if (inNomination()) {
+      return iAmPresident()
+        ? formatMessage('game.nominateHint')
+        : formatMessage('game.nominateWaiting', {
+            name: isolateBidi(playerName(state.board.president)),
+          });
+    }
+    if (state.phase === Phase.Voting) {
+      return formatMessage('game.help.vote');
+    }
+    if (state.phase === Phase.PresidentLegislative) {
+      return myPolicies().length
+        ? formatMessage('game.presidentDiscardHint')
+        : formatMessage('game.presidentChoosing', {
+            name: isolateBidi(playerName(state.board.president)),
+          });
+    }
+    if (state.phase === Phase.ChancellorLegislative) {
+      return myPolicies().length
+        ? formatMessage('game.chancellorEnactHint')
+        : formatMessage('game.chancellorChoosing', {
+            name: isolateBidi(playerName(state.board.chancellor)),
+          });
+    }
+    if (state.phase === Phase.SpecialPower) {
+      return formatMessage('game.power.inProgress', {
+        name: isolateBidi(playerName(state.board.president)),
+      });
+    }
+    return formatMessage('game.help.elect');
+  }
+
+  function onSeat(player: PublicPlayer): void {
+    if (canNominate(player)) nominate(player);
+  }
+
   function leaveRoom(): void {
     setConfirmingLeave(false);
     game.leaveRoom();
@@ -275,81 +346,88 @@ export function GameScreen() {
     <Screen>
       <Show when={view()}>
         {(state) => (
-          <div class={styles.layout}>
-            <header class={styles.topBar}>
-              <span class={styles.roomName}>{state().name}</span>
-              <button
-                type="button"
-                class={styles.menuButton}
-                aria-label={formatMessage('game.openChat')}
-                onClick={() => nav.navigate('chat')}
-              >
-                <Icon name="chat" size={19} />
-                <Show when={game.unreadChat() > 0}>
-                  <span class={styles.badge} />
-                </Show>
-              </button>
-              <button
-                type="button"
-                class={styles.menuButton}
-                aria-label={formatMessage('settings.title')}
-                onClick={() => setMenuOpen(true)}
-              >
-                <Icon name="gear" size={19} />
-              </button>
-            </header>
+          <div class={styles.scene}>
+            <GameEventHeader
+              headline={helpMessage()}
+              governmentLabel={governmentLabel(
+                state().board.liberalPolicies + state().board.fascistPolicies,
+                formatMessage,
+              )}
+              actionLabel={
+                game.inDiscussion() && iAmPresident()
+                  ? formatMessage('game.startNomination')
+                  : inNomination() && iAmPresident()
+                    ? formatMessage('game.endRound')
+                    : undefined
+              }
+              onAction={
+                (game.inDiscussion() || inNomination()) && iAmPresident()
+                  ? sendEndTurn
+                  : undefined
+              }
+            />
 
-            <section
-              class={styles.boardColumn}
-              ref={(element) => (boardElement = element)}
-            >
-              <Show when={game.role()}>
-                <StatusRow
-                  role={game.role()!}
-                  playerCount={state().players.length}
-                  maxPlayers={state().maxPlayers}
-                  secondsLeft={activeSecondsLeft()}
-                  onOpenPlayers={() => setPlayersOpen(true)}
-                  formatMessage={formatMessage}
-                />
-              </Show>
+            <DeckStrip
+              drawCount={state().board.drawPile}
+              discardCount={state().board.discardPile}
+              electionTracker={state().board.electionTracker}
+              candidateName={playerName(state().board.president)}
+              formatMessage={formatMessage}
+            />
+
+            <div class={styles.table} ref={(element) => (boardElement = element)}>
+              <div class={styles.seats} role="list">
+                <For each={topSeats()}>
+                  {(player) => (
+                    <TableSeat
+                      player={player}
+                      isYou={player.id === state().you.id}
+                      secretRole={player.id === state().you.id ? game.role() : null}
+                      isNext={player.id === nextPresidentId()}
+                      nominatable={canNominate(player)}
+                      bubble={bubbleFor(player.id)}
+                      timerProgress={timerProgress()}
+                      onSelect={() => onSeat(player)}
+                      formatMessage={formatMessage}
+                    />
+                  )}
+                </For>
+              </div>
 
               <PolicyBoard
                 board={state().board}
-                presidentName={playerName(state().board.president)}
-                chancellorName={playerName(state().board.chancellor)}
+                playerCount={state().players.length}
                 formatMessage={formatMessage}
               />
-            </section>
 
-            <Show when={game.inDiscussion()}>
-              <DiscussionBar
-                isPresident={iAmPresident()}
-                secondsLeft={discussionSecondsLeft()}
-                onStartNomination={sendEndTurn}
-                formatMessage={formatMessage}
-              />
-            </Show>
+              <div class={styles.seats} role="list">
+                <For each={bottomSeats()}>
+                  {(player) => (
+                    <TableSeat
+                      player={player}
+                      isYou={player.id === state().you.id}
+                      secretRole={player.id === state().you.id ? game.role() : null}
+                      isNext={player.id === nextPresidentId()}
+                      nominatable={canNominate(player)}
+                      bubble={bubbleFor(player.id)}
+                      timerProgress={timerProgress()}
+                      onSelect={() => onSeat(player)}
+                      formatMessage={formatMessage}
+                    />
+                  )}
+                </For>
+              </div>
+            </div>
 
-            <Show when={inNomination() && !iAmPresident() && !!game.you()?.isAlive}>
-              <p class={styles.hint}>
-                {formatMessage('game.nominateWaiting', {
-                  name: isolateBidi(playerName(state().board.president)),
-                })}
-              </p>
-            </Show>
-
-            <Show when={inNomination() && iAmPresident()}>
-              <NominationModal
-                players={state().players}
-                youId={state().you.id}
-                secondsLeft={nominationSecondsLeft()}
-                canNominate={canNominate}
-                onNominate={nominate}
-                onEndRound={sendEndTurn}
-                formatMessage={formatMessage}
-              />
-            </Show>
+            <HelpBar
+              unreadChat={game.unreadChat() > 0}
+              onOpenChat={() => nav.navigate('chat')}
+              onOpenPlayers={() => setPlayersOpen(true)}
+              onOpenMenu={() => setMenuOpen(true)}
+              onRaiseHand={() => game.sendChat('✋')}
+              onEmoji={(emoji) => game.sendChat(emoji)}
+              formatMessage={formatMessage}
+            />
 
             <Show when={revealedPolicy()}>
               {(policy) => (

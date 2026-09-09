@@ -100,12 +100,12 @@ function nominationView() {
 }
 
 describe('GameScreen — nomination', () => {
-  it('Should nominate a player from the nomination modal', () => {
+  it('Should nominate a player from the table', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(nominationView());
 
-    // The nomination modal auto-opens for the President — no need to open it.
+    // Eligible seats are on the table — no nomination modal.
     fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
@@ -144,7 +144,7 @@ describe('GameScreen — nomination', () => {
     expect(screen.getByText(/election tracker is now 1 of 3/i)).toBeTruthy();
   });
 
-  it('Should end the round from the nomination modal', () => {
+  it('Should end the round from the header', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(nominationView());
@@ -210,7 +210,7 @@ describe('GameScreen — legislative modal', () => {
 });
 
 describe('GameScreen — government', () => {
-  it('Should show the president, chancellor and election tracker on the board', () => {
+  it('Should show the president, chancellor and election tracker on the table', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
@@ -218,8 +218,10 @@ describe('GameScreen — government', () => {
     expect(screen.getByText(en.game.president)).toBeTruthy();
     expect(screen.getByText(en.game.chancellor)).toBeTruthy();
     expect(screen.getByText(en.game.electionTracker)).toBeTruthy();
+    expect(screen.getByLabelText(`${en.game.drawPile}: 17`)).toBeTruthy();
+    expect(screen.getByText(en.game.presidentialCandidate)).toBeTruthy();
     // The seated president's name is surfaced, no info panel to open.
-    expect(screen.getByText('Ana')).toBeTruthy();
+    expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
   });
 });
 
@@ -278,6 +280,70 @@ describe('GameScreen — chat page', () => {
       message: { id: 'm1', playerId: 'you', name: 'You', text: 'mine', at: 0 },
     });
     expect(harness.services.game.unreadChat()).toBe(0);
+  });
+});
+
+describe('GameScreen — event header', () => {
+  it('Should announce the current instruction as the first government', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(screen.getByText(en.game.help.vote)).toBeTruthy();
+    expect(screen.getByText(en.game.government.first)).toBeTruthy();
+  });
+
+  it('Should advance the government label after a fascist policy is enacted', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      board: {
+        ...view.board,
+        fascistPolicies: 1,
+        lastEnacted: ['fascist'],
+      },
+    });
+
+    expect(screen.getByText(en.game.help.vote)).toBeTruthy();
+    expect(screen.getByText(en.game.government.second)).toBeTruthy();
+  });
+
+  it('Should wait on the president during nomination', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState({
+      ...votingView(),
+      phase: Phase.Nomination,
+      board: { ...votingView().board, president: 'pres', chancellor: null },
+      nominationDeadline: { startedAt: 0, endsAt: Date.now() + 10_000 },
+    });
+
+    expect(screen.getByText(/Waiting for.*Ana.*nominate/i)).toBeTruthy();
+  });
+});
+
+describe('GameScreen — help bar', () => {
+  it('Should show the current instruction in the header', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(screen.getByText(en.game.help.vote)).toBeTruthy();
+  });
+
+  it('Should send an emoji through chat', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.emojis }));
+    fireEvent.click(screen.getByRole('button', { name: '👍' }));
+    expect(harness.socket.lastSent('chat:message')).toEqual({
+      type: 'chat:message',
+      text: '👍',
+    });
   });
 });
 

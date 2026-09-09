@@ -1,0 +1,209 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.seat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 78px;
+  padding: 0;
+  overflow: visible;
+  background: none;
+  text-align: center;
+  cursor: default;
+}
+
+.nominatable {
+  cursor: pointer;
+
+  .paper {
+    filter: drop-shadow(0 0 6px rgba($gold, 0.7));
+  }
+}
+
+.dead {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.offline {
+  opacity: 0.5;
+}
+
+.you .paper {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 8px rgba($gold, 0.9));
+}
+
+.voted .paper {
+  filter: drop-shadow(0 0 6px rgba(127, 208, 138, 0.7));
+}
+
+.bubble {
+  position: absolute;
+  bottom: calc(100% - 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  max-width: 140px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f7f1e4;
+  color: #1a1208;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.35;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border: 6px solid transparent;
+    border-top-color: #f7f1e4;
+  }
+}
+
+.next {
+  @include display(0.5rem, 0.06em);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: $gold;
+  color: $navy-950;
+}
+
+.paperWrap {
+  position: relative;
+  width: 54px;
+  flex-shrink: 0;
+}
+
+.paper {
+  position: relative;
+  width: 54px;
+  aspect-ratio: 233 / 300;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+}
+
+.paperFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.face {
+  position: absolute;
+  top: 11%;
+  left: 13.5%;
+  width: 73%;
+  height: 72%;
+  object-fit: cover;
+  border-radius: 3px;
+  display: block;
+}
+
+.badge {
+  position: absolute;
+  top: 14%;
+  left: 16%;
+  z-index: 1;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: rgba(10, 8, 6, 0.72);
+  color: $cream;
+  font-size: 0.52rem;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+.ribbon {
+  position: absolute;
+  top: 16%;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 58%;
+  padding: 5px 0 10px;
+  transform: translateX(-70%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), 50% 100%, 0 calc(100% - 8px));
+  box-shadow:
+    1px 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.ribbonText {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: $font-body;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  color: #fff8ee;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+}
+
+.ribbonPresident {
+  background: linear-gradient(180deg, #7ed45a 0%, #3e9a32 42%, #24661e 100%);
+}
+
+.ribbonChancellor {
+  background: linear-gradient(180deg, #c9a14a 0%, #8a5a18 48%, #5a3a10 100%);
+}
+
+.name {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 7%;
+  z-index: 1;
+  padding: 1px 2px;
+  border-radius: 2px;
+  background: rgba(196, 168, 120, 0.92);
+  color: #1a1208;
+  font-size: 0.52rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.youRole {
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(247, 241, 228, 0.92);
+  color: #1a1208;
+  font-size: 0.52rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.timerTrack {
+  width: 54px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.timerFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7dce5a, #c6e05a);
+}

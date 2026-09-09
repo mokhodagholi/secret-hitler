@@ -1,6 +1,8 @@
-import placeholder from './avatar-placeholder.png';
+import portraitA from './avatars/avatar_1.png';
 
-// Placeholder profile art for every seat — swap for per-avatar images later.
-export function avatarImage(_avatar: number): string {
-  return placeholder;
+/** Seat portraits. Extra illustrated faces can join this list later. */
+const PORTRAITS = [portraitA];
+
+export function avatarImage(avatar: number): string {
+  return PORTRAITS[Math.abs(avatar) % PORTRAITS.length];
 }

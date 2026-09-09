@@ -1,197 +1,70 @@
 @use '../../styles/vars' as *;
-@use '../../styles/mixins' as *;
 
 .board {
-  // The board is a fixed left-to-right diagram; never mirror it in RTL.
   direction: ltr;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-// --- Draw / discard stacks + government / election tracker -----------------------
-
-.topRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.piles {
-  display: flex;
-  gap: 22px;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-// Government + election tracker, sized to fit beside the cards (no extra height).
-.sideInfo {
-  flex: 0 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 7px;
-  text-align: right;
-}
-
-.govRow {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.govLabel {
-  @include display(0.54rem, 0.1em);
-  color: $gold;
-  white-space: nowrap;
-}
-
-.govName {
-  font-size: 0.8rem;
-  color: $text-light;
-  max-width: 130px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.electionRow {
-  display: flex;
-  flex-direction: column;
   gap: 4px;
+  width: 68%;
+  max-width: 268px;
+  margin: 0 auto;
+  padding: 0;
 }
-
-.stack {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-.stackCards {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 64px;
-  aspect-ratio: 2 / 3;
-  // Stacked siblings behind the top card, faked with layered shadows.
-  filter: drop-shadow(3px 3px 0 rgba(7, 21, 39, 0.55))
-    drop-shadow(6px 6px 0 rgba(7, 21, 39, 0.4));
-}
-
-.stackBack {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 7px;
-  object-fit: cover;
-}
-
-.stackCount {
-  @include display(1.05rem, 0.02em);
-  position: relative;
-  color: $cream;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-
-.stackLabel {
-  @include display(0.56rem, 0.12em);
-  max-width: 84px;
-  text-align: center;
-  line-height: 1.3;
-  color: $text-dim;
-}
-
-// --- Election tracker (failed governments) --------------------------------------
-
-.electionMarks {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 7px;
-}
-
-.electionMark {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: rgba(7, 21, 39, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.electionMarkFilled {
-  background: linear-gradient(180deg, $gold-bright, $gold-dark);
-  border-color: rgba($gold, 0.7);
-}
-
-// --- Policy tracks --------------------------------------------------------------
 
 .track {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px 10px;
-  border-radius: $radius;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  position: relative;
+  width: 100%;
 }
 
-.trackLiberal {
-  background: linear-gradient(180deg, rgba(38, 80, 128, 0.85), rgba(24, 56, 94, 0.85));
-
-  .trackLabel {
-    color: $blue-liberal;
-  }
-
-  .slotFilled {
-    background: linear-gradient(180deg, $blue-liberal, #2f6aa6);
-  }
-}
-
-.trackFascist {
-  background: linear-gradient(180deg, rgba(116, 38, 26, 0.85), rgba(76, 24, 16, 0.85));
-
-  .trackLabel {
-    color: $red-bright;
-  }
-
-  .slotFilled {
-    background: linear-gradient(180deg, $red-bright, $red-deep);
-  }
-}
-
-.trackLabel {
-  @include display(0.64rem, 0.16em);
-  text-align: center;
+.art {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
 }
 
 .slots {
+  position: absolute;
   display: flex;
-  gap: 6px;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.trackLiberal .slots {
+  left: 16.5%;
+  right: 16.5%;
+  top: 31%;
+  height: 51%;
+}
+
+.trackFascist .slots {
+  left: 15.5%;
+  right: 15.5%;
+  top: 31%;
+  height: 40%;
 }
 
 .slot {
+  flex: 1;
+  min-width: 0;
   display: grid;
   place-items: center;
-  flex: 1;
-  max-width: 52px;
-  aspect-ratio: 3 / 4;
-  border-radius: 6px;
-  background: rgba(7, 21, 39, 0.6);
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  color: transparent;
 }
 
-.slotFilled {
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.35);
-  color: $cream;
+.slotGlow {
+  filter: drop-shadow(0 0 6px rgba(255, 236, 170, 0.95));
+}
+
+.slotCard {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .slotEmblem {
-  max-width: 80%;
+  color: rgba(255, 236, 210, 0.7);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
 }
