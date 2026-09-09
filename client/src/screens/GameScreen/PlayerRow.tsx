@@ -1,6 +1,7 @@
 import { Show, createEffect, on } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
+import { playerLabel } from '../../i18n/perspective';
 import { useApp } from '../../services/AppContext';
 import { avatarImage } from '../../assets/avatars';
 import styles from './GameScreen.module.scss';
@@ -58,7 +59,9 @@ export function PlayerRow(props: PlayerRowProps) {
         />
       </span>
       <span class={styles.playerInfo}>
-        <span class={styles.playerName}>{props.player.name}</span>
+        <span class={styles.playerName}>
+          {playerLabel(props.isYou, props.player.name, formatMessage)}
+        </span>
         <Show when={props.player.role}>
           <span
             classList={{

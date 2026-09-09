@@ -6,6 +6,7 @@ import styles from './ChancellorReveal.module.scss';
 export interface ChancellorRevealProps {
   chancellorName: string;
   chancellorAvatar: number;
+  isYou: boolean;
   formatMessage: FormatMessage;
 }
 
@@ -24,11 +25,19 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
         class={styles.dialog}
         role="dialog"
         aria-modal="true"
-        aria-label={formatMessage('game.chancellorRevealTitle')}
+        aria-label={formatMessage(
+          props.isYou
+            ? 'game.chancellorRevealTitleYou'
+            : 'game.chancellorRevealTitle',
+        )}
         ref={(element) => void animation.play(element, 'pop-in')}
       >
         <span class={styles.title}>
-          {formatMessage('game.chancellorRevealTitle')}
+          {formatMessage(
+            props.isYou
+              ? 'game.chancellorRevealTitleYou'
+              : 'game.chancellorRevealTitle',
+          )}
         </span>
         <img
           class={styles.face}
@@ -36,9 +45,11 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
           alt=""
         />
         <p class={styles.prompt}>
-          {formatMessage('game.chancellorReveal', {
-            name: props.chancellorName,
-          })}
+          {props.isYou
+            ? formatMessage('game.chancellorRevealYou')
+            : formatMessage('game.chancellorReveal', {
+                name: props.chancellorName,
+              })}
         </p>
       </div>
     </div>

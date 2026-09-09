@@ -45,13 +45,17 @@ LINES: dict[str, str] = {
     "night.start": "شب شد. هر کی باید نگاه کنه، الان نگاه کنه.",
     "night.end": "صبح شد. کارت‌هاتون رو قایم کنید.",
     "president.first": "رئیس‌جمهور این دور معلوم شد.",
+    "president.firstYou": "این دور شما رئیس‌جمهورید.",
     "president.next": "ریاست رسید به نفر بعد.",
+    "president.nextYou": "ریاست رسید به شما.",
     "president.special": "انتخابات ویژه شروع شد.",
     "discuss.start": "خب، وقت حرف زدنه.",
     "discuss.closing": "دیگه وقتتون کمه.",
     "discuss.ended": "دیگه حرف‌ها تموم شد.",
     "nominate.start": "رئیس‌جمهور، صدراعظم رو انتخاب کنه.",
     "nominate.named": "صدراعظم انتخاب شد.",
+    "nominate.namedYou": "شما صدراعظم رو انتخاب کردید.",
+    "nominate.namedAsYou": "شما رو صدراعظم انتخاب کردن.",
     "nominate.timeout": "صدراعظم انتخاب نشد.",
     "vote.start": "رای‌گیری آغاز شد.",
     "vote.collecting": "رای‌ها داره جمع می‌شه.",
@@ -75,11 +79,13 @@ LINES: dict[str, str] = {
     "law.vetoUnlocked": "حق وتو باز شد.",
     "power.investigate": "رئیس‌جمهور باید کارت یکی رو چک کنه.",
     "power.investigated": "کارت چک شد.",
+    "power.investigatedYou": "کارت شما چک شد.",
     "power.peek": "رئیس‌جمهور سه تا قانون بالای دسته رو می‌بینه.",
     "power.peekDone": "قانون‌ها برگشتن روی دسته.",
     "power.specialElection": "رئیس‌جمهور، رئیس بعدی رو خودش انتخاب می‌کنه.",
     "power.execution": "رئیس‌جمهور باید یه نفر رو اعدام کنه.",
     "power.executed": "یکی اعدام شد.",
+    "power.executedYou": "شما اعدام شدید.",
     "power.hitlerExecuted": "هیتلر اعدام شد. لیبرال‌ها برنده شدن.",
     "game.liberalsWin.policies": "پنج تا قانون لیبرال تصویب شد. لیبرال‌ها برنده شدن.",
     "game.fascistsWin.policies": "شش تا قانون فاشیستی تصویب شد. فاشیست‌ها برنده شدن.",
@@ -277,20 +283,21 @@ async def speak_edge(voice: str, text: str, dest: Path) -> None:
         raw.unlink(missing_ok=True)
 
 
-async def run_edge(who: list[str]) -> None:
+async def run_edge(who: list[str], ids: list[str] | None = None) -> None:
     voices = {"farid": "fa-IR-FaridNeural", "dilara": "fa-IR-DilaraNeural"}
+    lines = LINES if not ids else {i: LINES[i] for i in ids}
     sem = asyncio.Semaphore(4)
 
     async def one(name: str, line_id: str, text: str) -> None:
         dest = OUT_DIR / name / f"{line_id}.mp3"
         async with sem:
-            print(f"{name}/{line_id}")
+            print(f"{name}/{line_id}: {text}")
             await speak_edge(voices[name], text, dest)
 
     tasks = [
         one(name, line_id, text)
         for name in who
-        for line_id, text in LINES.items()
+        for line_id, text in lines.items()
     ]
     await asyncio.gather(*tasks)
     print(f"wrote {len(tasks)} files under {OUT_DIR}")
@@ -419,7 +426,7 @@ def main() -> None:
     elif args.engine == "eleven":
         run_eleven(who)
     else:
-        asyncio.run(run_edge(who))
+        asyncio.run(run_edge(who, ids))
 
 
 if __name__ == "__main__":

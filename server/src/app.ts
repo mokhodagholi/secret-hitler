@@ -16,7 +16,10 @@ import type { BaleRuntime } from './bale/webhook';
 const WS_PATH = '/ws';
 
 export interface ServerOptions {
-  /** Server-wide start minimum (env override in dev). */
+  /**
+   * Start minimum for tests only. Production omits this and uses standard
+   * Secret Hitler rules (5).
+   */
   minPlayers?: number;
   logger?: boolean;
   /**

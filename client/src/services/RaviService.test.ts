@@ -42,6 +42,20 @@ describe('RaviService', () => {
     expect(ravi.line()).toBe('Ana is President this round.');
   });
 
+  it('Should speak a first-person line when the beat is about the viewer', async () => {
+    const ravi = makeRavi(false);
+    await ravi.speak('president.firstYou');
+    expect(ravi.line()).toBe('You are President this round.');
+  });
+
+  it('Should play the first-person clip when Ravi Voice is on', async () => {
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+    const ravi = makeRavi(true);
+    await ravi.speak('nominate.namedAsYou', { president: 'Ana' });
+    expect(play).toHaveBeenCalled();
+    expect(ravi.line()).toBe('Ana chose you as Chancellor.');
+  });
+
   it('Should play queued lines one after another', async () => {
     const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
     const ravi = makeRavi(true);

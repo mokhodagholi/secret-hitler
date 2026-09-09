@@ -21,7 +21,6 @@ const FASCIST_SLOTS = 5;
  */
 export function PolicyBoard(props: PolicyBoardProps) {
   const { formatMessage } = props;
-  const last = () => props.board.lastEnacted[props.board.lastEnacted.length - 1];
 
   return (
     <div class={styles.board}>
@@ -33,29 +32,17 @@ export function PolicyBoard(props: PolicyBoardProps) {
         />
         <div class={styles.slots}>
           <Index each={Array.from({ length: LIBERAL_SLOTS })}>
-            {(_slot, index) => {
-              const filled = () => index < props.board.liberalPolicies;
-              const glow = () =>
-                filled() &&
-                last() === 'liberal' &&
-                index === props.board.liberalPolicies - 1;
-              return (
-                <span
-                  classList={{
-                    [styles.slot]: true,
-                    [styles.slotGlow]: glow(),
-                  }}
-                >
-                  <Show when={filled()}>
-                    <img
-                      class={styles.slotCard}
-                      src={POLICY_FACE.liberal}
-                      alt=""
-                    />
-                  </Show>
-                </span>
-              );
-            }}
+            {(_slot, index) => (
+              <span class={styles.slot}>
+                <Show when={index < props.board.liberalPolicies}>
+                  <img
+                    class={styles.slotCard}
+                    src={POLICY_FACE.liberal}
+                    alt=""
+                  />
+                </Show>
+              </span>
+            )}
           </Index>
         </div>
       </div>
@@ -68,29 +55,17 @@ export function PolicyBoard(props: PolicyBoardProps) {
         />
         <div class={styles.slots}>
           <Index each={Array.from({ length: FASCIST_SLOTS })}>
-            {(_slot, index) => {
-              const filled = () => index < props.board.fascistPolicies;
-              const glow = () =>
-                filled() &&
-                last() === 'fascist' &&
-                index === props.board.fascistPolicies - 1;
-              return (
-                <span
-                  classList={{
-                    [styles.slot]: true,
-                    [styles.slotGlow]: glow(),
-                  }}
-                >
-                  <Show when={filled()}>
-                    <img
-                      class={styles.slotCard}
-                      src={POLICY_FACE.fascist}
-                      alt=""
-                    />
-                  </Show>
-                </span>
-              );
-            }}
+            {(_slot, index) => (
+              <span class={styles.slot}>
+                <Show when={index < props.board.fascistPolicies}>
+                  <img
+                    class={styles.slotCard}
+                    src={POLICY_FACE.fascist}
+                    alt=""
+                  />
+                </Show>
+              </span>
+            )}
           </Index>
         </div>
       </div>

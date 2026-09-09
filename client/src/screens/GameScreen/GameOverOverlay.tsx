@@ -1,6 +1,7 @@
 import { For, Show } from 'solid-js';
 import type { Faction, PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
+import { playerLabel } from '../../i18n/perspective';
 import { useApp } from '../../services/AppContext';
 import styles from './GameOverOverlay.module.scss';
 
@@ -13,6 +14,7 @@ export interface GameOverOverlayProps {
   winner: Faction;
   /** Players with roles revealed (the server discloses all roles at GameOver). */
   players: PublicPlayer[];
+  youId: string;
   /** Roles wait until Ravi's "the roles are revealed" line. */
   showRoles: boolean;
   onLeave: () => void;
@@ -60,7 +62,13 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
                     })
                   }
                 >
-                  <span class={styles.name}>{player.name}</span>
+                  <span class={styles.name}>
+                    {playerLabel(
+                      player.id === props.youId,
+                      player.name,
+                      formatMessage,
+                    )}
+                  </span>
                   <span
                     classList={{
                       [styles.role]: true,

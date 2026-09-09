@@ -58,7 +58,9 @@ describe('WaitingRoomScreen', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
-    expect(screen.getByText(/Need at least 3 players/i)).toBeTruthy();
+    expect(
+      screen.getByText(/Only 2 players are in the room. Invite 1 more to start/i),
+    ).toBeTruthy();
     expect(harness.socket.lastSent('game:start')).toBeUndefined();
   });
 
@@ -116,7 +118,14 @@ describe('WaitingRoomScreen', () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole('listitem', { name: 'Ben' }));
+    const hostSeat = screen.getByRole('listitem', { name: 'You' });
+    expect(hostSeat.tagName).not.toBe('BUTTON');
+    fireEvent.click(hostSeat);
+    expect(screen.queryByText(/Kick You from the room/i)).toBeNull();
+
+    const guestSeat = screen.getByRole('listitem', { name: 'Ben' });
+    expect(guestSeat.tagName).toBe('BUTTON');
+    fireEvent.click(guestSeat);
     expect(screen.getByText(/Kick Ben from the room/i)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Kick' }));
     expect(harness.socket.lastSent('player:kick')).toEqual({

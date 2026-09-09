@@ -40,9 +40,6 @@ async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
 }
 
 async function main() {
-  // MIN_PLAYERS env lowers the start minimum for dev; unset = standard rules.
-  const minPlayers = Number(process.env.MIN_PLAYERS) || undefined;
-
   // DATABASE_URL is required — the server does not run without persistence.
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) {
@@ -58,7 +55,7 @@ async function main() {
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
 
-  const { app } = await buildServer({ minPlayers, logger: true, history, publicUrl, bale });
+  const { app } = await buildServer({ logger: true, history, publicUrl, bale });
 
   app.log.info('Game history persistence enabled.');
   if (bale) {

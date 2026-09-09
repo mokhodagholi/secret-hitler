@@ -1,6 +1,7 @@
 import { Show } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
+import { playerLabel } from '../../i18n/perspective';
 import { avatarImage } from '../../assets/avatars';
 import paperFrame from '../../assets/avatars/avatar_placeholder.png';
 import styles from './TableSeat.module.scss';
@@ -46,7 +47,7 @@ export function TableSeat(props: TableSeatProps) {
         [styles.termLocked]: props.termLocked,
         [styles.voted]: props.player.hasVoted,
       }}
-      aria-label={props.player.name}
+      aria-label={playerLabel(props.isYou, props.player.name, formatMessage)}
       data-seat-id={props.player.id}
       aria-disabled={!interactive()}
       tabIndex={interactive() ? 0 : -1}
@@ -90,7 +91,7 @@ export function TableSeat(props: TableSeatProps) {
           {formatMessage('game.seatNumber', { n: props.player.seat + 1 })}
         </span>
         <span class={styles.name} dir="auto">
-          {props.player.name}
+          {playerLabel(props.isYou, props.player.name, formatMessage)}
         </span>
       </span>
     </button>

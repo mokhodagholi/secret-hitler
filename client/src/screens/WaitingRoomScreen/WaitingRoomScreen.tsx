@@ -25,7 +25,7 @@ const TIP_KEYS: MessageKey[] = ['tip.watch', 'tip.numbers', 'tip.hitler'];
 const TIP_ROTATION_MS = 5000;
 
 /**
- * Lobby for a joined room. Compact portrait seats sit in a row over the
+ * Lobby for a joined room. Paper profile cards sit in a row over the
  * briefing-desk art; a rotating tip and the room controls sit at the bottom.
  * Navigates to the game board as soon as the server leaves the lobby phase.
  */
@@ -110,11 +110,16 @@ export function WaitingRoomScreen() {
     game.startGame();
   }
 
+  const startConnectedCount = () => {
+    const state = view();
+    if (!state) return 0;
+    return state.players.filter((player) => player.connected).length;
+  };
+
   const startNeedCount = () => {
     const state = view();
     if (!state) return 0;
-    const connected = state.players.filter((player) => player.connected).length;
-    return Math.max(0, state.minPlayers - connected);
+    return Math.max(0, state.minPlayers - startConnectedCount());
   };
 
   return (
@@ -196,7 +201,7 @@ export function WaitingRoomScreen() {
                 message={
                   startBlock() === 'needPlayers'
                     ? formatMessage('waiting.startNeedPlayers', {
-                        min: view()?.minPlayers ?? 0,
+                        current: startConnectedCount(),
                         count: startNeedCount(),
                       })
                     : formatMessage('waiting.startNotReady')
@@ -243,10 +248,14 @@ export function WaitingRoomScreen() {
             <PlayerSlot
               player={{
                 name: player.name,
+                avatar: player.avatar,
+                seat: player.seat,
                 ready: player.ready,
                 connected: player.connected,
               }}
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
+              isYou={player.id === props.state.you.id}
+              youLabel={formatMessage('game.you')}
               onSelect={
                 game.isHost() && player.id !== props.state.you.id
                   ? () => setKickTarget({ id: player.id, name: player.name })

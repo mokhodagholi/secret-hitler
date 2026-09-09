@@ -9,7 +9,7 @@ export class RoomRepository {
   private readonly rooms = new Map<string, RoomEntry>();
   private readonly byCode = new Map<string, string>();
 
-  /** @param defaultMinPlayers server-wide start minimum (env override in dev). */
+  /** @param defaultMinPlayers tests may pass 3; production omits this (rules = 5). */
   constructor(private readonly defaultMinPlayers?: number) {}
 
   create(args: RoomCreateArgs): RoomEntry {

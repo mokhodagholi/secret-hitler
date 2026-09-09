@@ -27,18 +27,24 @@ import faridLawVetoUnlocked from './farid/law.vetoUnlocked.mp3';
 import faridNightEnd from './farid/night.end.mp3';
 import faridNightStart from './farid/night.start.mp3';
 import faridNominateNamed from './farid/nominate.named.mp3';
+import faridNominateNamedAsYou from './farid/nominate.namedAsYou.mp3';
+import faridNominateNamedYou from './farid/nominate.namedYou.mp3';
 import faridNominateStart from './farid/nominate.start.mp3';
 import faridNominateTimeout from './farid/nominate.timeout.mp3';
 import faridPowerExecuted from './farid/power.executed.mp3';
+import faridPowerExecutedYou from './farid/power.executedYou.mp3';
 import faridPowerExecution from './farid/power.execution.mp3';
 import faridPowerHitlerExecuted from './farid/power.hitlerExecuted.mp3';
 import faridPowerInvestigate from './farid/power.investigate.mp3';
 import faridPowerInvestigated from './farid/power.investigated.mp3';
+import faridPowerInvestigatedYou from './farid/power.investigatedYou.mp3';
 import faridPowerPeek from './farid/power.peek.mp3';
 import faridPowerPeekDone from './farid/power.peekDone.mp3';
 import faridPowerSpecialElection from './farid/power.specialElection.mp3';
 import faridPresidentFirst from './farid/president.first.mp3';
+import faridPresidentFirstYou from './farid/president.firstYou.mp3';
 import faridPresidentNext from './farid/president.next.mp3';
+import faridPresidentNextYou from './farid/president.nextYou.mp3';
 import faridPresidentSpecial from './farid/president.special.mp3';
 import faridTrackerAdvance from './farid/tracker.advance.mp3';
 import faridVoteCollecting from './farid/vote.collecting.mp3';
@@ -72,18 +78,24 @@ import dilaraLawVetoUnlocked from './dilara/law.vetoUnlocked.mp3';
 import dilaraNightEnd from './dilara/night.end.mp3';
 import dilaraNightStart from './dilara/night.start.mp3';
 import dilaraNominateNamed from './dilara/nominate.named.mp3';
+import dilaraNominateNamedAsYou from './dilara/nominate.namedAsYou.mp3';
+import dilaraNominateNamedYou from './dilara/nominate.namedYou.mp3';
 import dilaraNominateStart from './dilara/nominate.start.mp3';
 import dilaraNominateTimeout from './dilara/nominate.timeout.mp3';
 import dilaraPowerExecuted from './dilara/power.executed.mp3';
+import dilaraPowerExecutedYou from './dilara/power.executedYou.mp3';
 import dilaraPowerExecution from './dilara/power.execution.mp3';
 import dilaraPowerHitlerExecuted from './dilara/power.hitlerExecuted.mp3';
 import dilaraPowerInvestigate from './dilara/power.investigate.mp3';
 import dilaraPowerInvestigated from './dilara/power.investigated.mp3';
+import dilaraPowerInvestigatedYou from './dilara/power.investigatedYou.mp3';
 import dilaraPowerPeek from './dilara/power.peek.mp3';
 import dilaraPowerPeekDone from './dilara/power.peekDone.mp3';
 import dilaraPowerSpecialElection from './dilara/power.specialElection.mp3';
 import dilaraPresidentFirst from './dilara/president.first.mp3';
+import dilaraPresidentFirstYou from './dilara/president.firstYou.mp3';
 import dilaraPresidentNext from './dilara/president.next.mp3';
+import dilaraPresidentNextYou from './dilara/president.nextYou.mp3';
 import dilaraPresidentSpecial from './dilara/president.special.mp3';
 import dilaraTrackerAdvance from './dilara/tracker.advance.mp3';
 import dilaraVoteCollecting from './dilara/vote.collecting.mp3';
@@ -118,18 +130,24 @@ const FARID = {
   'night.end': faridNightEnd,
   'night.start': faridNightStart,
   'nominate.named': faridNominateNamed,
+  'nominate.namedAsYou': faridNominateNamedAsYou,
+  'nominate.namedYou': faridNominateNamedYou,
   'nominate.start': faridNominateStart,
   'nominate.timeout': faridNominateTimeout,
   'power.executed': faridPowerExecuted,
+  'power.executedYou': faridPowerExecutedYou,
   'power.execution': faridPowerExecution,
   'power.hitlerExecuted': faridPowerHitlerExecuted,
   'power.investigate': faridPowerInvestigate,
   'power.investigated': faridPowerInvestigated,
+  'power.investigatedYou': faridPowerInvestigatedYou,
   'power.peek': faridPowerPeek,
   'power.peekDone': faridPowerPeekDone,
   'power.specialElection': faridPowerSpecialElection,
   'president.first': faridPresidentFirst,
+  'president.firstYou': faridPresidentFirstYou,
   'president.next': faridPresidentNext,
+  'president.nextYou': faridPresidentNextYou,
   'president.special': faridPresidentSpecial,
   'tracker.advance': faridTrackerAdvance,
   'vote.collecting': faridVoteCollecting,
@@ -165,18 +183,24 @@ const DILARA = {
   'night.end': dilaraNightEnd,
   'night.start': dilaraNightStart,
   'nominate.named': dilaraNominateNamed,
+  'nominate.namedAsYou': dilaraNominateNamedAsYou,
+  'nominate.namedYou': dilaraNominateNamedYou,
   'nominate.start': dilaraNominateStart,
   'nominate.timeout': dilaraNominateTimeout,
   'power.executed': dilaraPowerExecuted,
+  'power.executedYou': dilaraPowerExecutedYou,
   'power.execution': dilaraPowerExecution,
   'power.hitlerExecuted': dilaraPowerHitlerExecuted,
   'power.investigate': dilaraPowerInvestigate,
   'power.investigated': dilaraPowerInvestigated,
+  'power.investigatedYou': dilaraPowerInvestigatedYou,
   'power.peek': dilaraPowerPeek,
   'power.peekDone': dilaraPowerPeekDone,
   'power.specialElection': dilaraPowerSpecialElection,
   'president.first': dilaraPresidentFirst,
+  'president.firstYou': dilaraPresidentFirstYou,
   'president.next': dilaraPresidentNext,
+  'president.nextYou': dilaraPresidentNextYou,
   'president.special': dilaraPresidentSpecial,
   'tracker.advance': dilaraTrackerAdvance,
   'vote.collecting': dilaraVoteCollecting,

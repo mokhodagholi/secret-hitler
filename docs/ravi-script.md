@@ -56,12 +56,24 @@ clear and a bit grave, not a translated newspaper.
 - **EN subtitle:** {name} is President this round.
 - **EN audio:** The President for this round has been chosen.
 
+### `president.firstYou`
+- **When:** First President of the game is you.
+- **FA:** این دور شما رئیس‌جمهورید.
+- **EN:** You are President this round.
+- **Audio:** same as FA.
+
 ### `president.next`
 - **When:** Placard moves clockwise (not a special election).
 - **FA subtitle:** ریاست رسید به {name}.
 - **FA audio:** ریاست رسید به نفر بعد.
 - **EN subtitle:** The presidency passes to {name}.
 - **EN audio:** The presidency passes on.
+
+### `president.nextYou`
+- **When:** The presidency passes to you.
+- **FA:** ریاست رسید به شما.
+- **EN:** The presidency passes to you.
+- **Audio:** same as FA.
 
 ### `president.special`
 - **When:** Special Election names the next candidate.
@@ -105,6 +117,20 @@ clear and a bit grave, not a translated newspaper.
 - **FA audio:** صدراعظم انتخاب شد.
 - **EN subtitle:** {president} chose {chancellor} as Chancellor.
 - **EN audio:** A Chancellor has been chosen.
+
+### `nominate.namedYou`
+- **When:** You nominated the Chancellor.
+- **FA subtitle:** شما {chancellor} رو صدراعظم انتخاب کردید.
+- **FA audio:** شما صدراعظم رو انتخاب کردید.
+- **EN subtitle:** You chose {chancellor} as Chancellor.
+- **EN audio:** You chose a Chancellor.
+
+### `nominate.namedAsYou`
+- **When:** You were nominated Chancellor.
+- **FA subtitle:** {president} شما رو صدراعظم انتخاب کرد.
+- **FA audio:** شما رو صدراعظم انتخاب کردن.
+- **EN subtitle:** {president} chose you as Chancellor.
+- **EN audio:** You have been named Chancellor.
 
 ### `nominate.timeout`
 - **When:** President did not pick in time.
@@ -257,6 +283,12 @@ Speak the *assignment*, never the private result.
 - **EN subtitle:** The President has seen {name}’s party.
 - **EN audio:** The card has been checked.
 
+### `power.investigatedYou`
+- **When:** The President checked your card.
+- **FA:** کارت شما چک شد.
+- **EN:** Your card has been checked.
+- **Audio:** same as FA.
+
 ### `power.peek`
 - **FA:** رئیس‌جمهور سه تا قانون بالای دسته رو می‌بینه.
 - **EN:** The President looks at the top three policies.
@@ -278,6 +310,12 @@ Speak the *assignment*, never the private result.
 - **FA audio:** یکی اعدام شد.
 - **EN subtitle:** {name} has been executed.
 - **EN audio:** The execution is carried out.
+
+### `power.executedYou`
+- **When:** You were executed.
+- **FA:** شما اعدام شدید.
+- **EN:** You have been executed.
+- **Audio:** same as FA. Bake with `--engine edge` — pocket-tts reads `شدید` as *shadid*.
 
 ### `power.hitlerExecuted`
 - **FA:** هیتلر اعدام شد. لیبرال‌ها برنده شدن.

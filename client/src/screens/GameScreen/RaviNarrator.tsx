@@ -4,6 +4,7 @@ import { useApp } from '../../services/AppContext';
 import type { RaviLineId } from '../../services/RaviService';
 import type { MessageValues } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
+import { namedIsYou, raviNominatedLine } from '../../i18n/perspective';
 
 const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
   nominated: 'nominate.named',
@@ -43,7 +44,11 @@ type PendingLine = { id: RaviLineId; params?: MessageValues };
  * Drives Ravi off the snapshot and log. Lines are queued in story order so a
  * failed vote can say the rejection, then the tracker, then the next President.
  */
-export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
+export function RaviNarrator(props: {
+  ceremonyOpen: boolean;
+  now: number;
+  chancellorReveal: boolean;
+}) {
   const { game, ravi } = useApp();
 
   let seenLog = 0;
@@ -54,6 +59,7 @@ export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
   let lastDiscussionStart = 0;
   let lastNominationOpen = false;
   let warnedClosing = false;
+  let heldVoteStart = false;
 
   onCleanup(() => ravi.clear());
 
@@ -61,6 +67,7 @@ export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
     const state = game.view();
     if (!state || props.ceremonyOpen) return;
     props.now;
+    const revealOpen = props.chancellorReveal;
 
     const entries = game.logEntries();
     if (!sawSnapshot) {
@@ -75,10 +82,25 @@ export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
     }
 
     const pending: PendingLine[] = [];
+    const myName =
+      state.players.find((player) => player.id === state.you.id)?.name ?? '';
 
     if (entries.length > seenLog) {
       for (const entry of entries.slice(seenLog)) {
-        const line = LOG_LINE[entry.code];
+        let line = LOG_LINE[entry.code];
+        if (entry.code === 'nominated') {
+          line = raviNominatedLine(entry.params, myName);
+        } else if (
+          entry.code === 'executed' &&
+          namedIsYou(entry.params?.name, myName)
+        ) {
+          line = 'power.executedYou';
+        } else if (
+          entry.code === 'investigated' &&
+          namedIsYou(entry.params?.name, myName)
+        ) {
+          line = 'power.investigatedYou';
+        }
         if (!line) continue;
         pending.push({
           id: line,
@@ -102,7 +124,7 @@ export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
     const presidentId = state.board.president;
     if (presidentId && presidentId !== lastPresident) {
       pending.push({
-        id: 'president.next',
+        id: presidentId === state.you.id ? 'president.nextYou' : 'president.next',
         params: {
           name: named(
             state.players.find((player) => player.id === presidentId)?.name,
@@ -126,13 +148,28 @@ export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
     lastNominationOpen = nominationOpen;
 
     if (state.phase !== lastPhase) {
-      if (state.phase === Phase.Voting) pending.push({ id: 'vote.start' });
+      if (state.phase === Phase.Voting) {
+        // Overlay owns this beat; don't say the vote has begun until it closes.
+        if (lastPhase === Phase.Nomination && state.board.chancellor) {
+          heldVoteStart = true;
+        } else {
+          pending.push({ id: 'vote.start' });
+        }
+      }
       if (state.phase === Phase.SpecialPower && state.activePower) {
         pending.push({ id: POWER_LINE[state.activePower] });
       }
       if (state.phase === Phase.GameOver) pending.push({ id: 'game.reveal' });
       lastPhase = state.phase;
+    } else if (
+      heldVoteStart &&
+      !revealOpen &&
+      state.phase === Phase.Voting
+    ) {
+      heldVoteStart = false;
+      pending.push({ id: 'vote.start' });
     }
+    if (state.phase !== Phase.Voting) heldVoteStart = false;
 
     const endsAt = state.discussionDeadline?.endsAt;
     if (

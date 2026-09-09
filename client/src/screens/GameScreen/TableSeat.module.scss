@@ -9,8 +9,8 @@
   justify-content: center;
   gap: 6px;
   flex: 1 1 0;
-  max-width: 92px;
-  min-width: 52px;
+  max-width: 124px;
+  min-width: 56px;
   max-height: 100%;
   padding: 0;
   overflow: visible;
@@ -142,7 +142,7 @@
 
 .paper {
   position: relative;
-  width: min(84px, 100%, calc(92cqh * 233 / 300));
+  width: min(116px, 100%, calc(94cqh * 233 / 300));
   aspect-ratio: 233 / 300;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
 }

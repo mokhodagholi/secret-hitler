@@ -9,6 +9,7 @@ import {
 import type { LogEntry } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { isolateBidi } from '../../i18n/utils';
+import { logLineKey, playerLabel } from '../../i18n/perspective';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
@@ -120,7 +121,14 @@ export function ChatScreen() {
                 {(entry) => (
                   <p class={styles.logEntry}>
                     <span class={styles.time}>{timestamp(entry.at)}</span>
-                    {formatMessage(`log.${entry.code}`, isolatedParams(entry.params))}
+                    {formatMessage(
+                      logLineKey(
+                        entry.code,
+                        entry.params,
+                        game.you()?.name ?? '',
+                      ),
+                      isolatedParams(entry.params),
+                    )}
                   </p>
                 )}
               </For>
@@ -129,7 +137,13 @@ export function ChatScreen() {
             <For each={game.chatMessages()}>
               {(message) => (
                 <p class={styles.chatMessage}>
-                  <bdi class={styles.chatAuthor}>{message.name}</bdi>
+                  <bdi class={styles.chatAuthor}>
+                    {playerLabel(
+                      message.playerId === game.view()?.you.id,
+                      message.name,
+                      formatMessage,
+                    )}
+                  </bdi>
                   <span class={styles.time}>{timestamp(message.at)}</span>
                   <bdi class={styles.chatText}>{message.text}</bdi>
                 </p>
