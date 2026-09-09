@@ -10,6 +10,8 @@ import { registerRoutes } from './http/routes';
 import { GameResultRecorder } from './history/GameResultRecorder';
 import type { GameHistoryStore } from './history/GameHistoryStore';
 import { InMemoryGameHistoryStore } from './history/InMemoryGameHistoryStore';
+import { BaleSeatIndex } from './bale/BaleSeatIndex';
+import type { BaleRuntime } from './bale/webhook';
 
 const WS_PATH = '/ws';
 
@@ -23,6 +25,10 @@ export interface ServerOptions {
    * default to an in-memory store. The server never runs without a store.
    */
   history?: GameHistoryStore;
+  /** Public HTTPS origin for share links and the Bale mini-app. */
+  publicUrl?: string;
+  /** Present when BALE_BOT_TOKEN is configured. */
+  bale?: BaleRuntime;
 }
 
 export interface BuiltServer {
@@ -30,6 +36,7 @@ export interface BuiltServer {
   repo: RoomRepository;
   tokens: TokenStore;
   sockets: SocketHandler;
+  seats: BaleSeatIndex;
 }
 
 /**
@@ -38,16 +45,27 @@ export interface BuiltServer {
  * so tests can build a fully wired server on an ephemeral port.
  */
 export async function buildServer(options: ServerOptions = {}): Promise<BuiltServer> {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({ logger: options.logger ?? false, trustProxy: true });
+
+  const seats = options.bale?.seats ?? new BaleSeatIndex();
+  const bale = options.bale ? { ...options.bale, seats } : undefined;
 
   const repo = new RoomRepository(options.minPlayers);
   const tokens = new TokenStore();
-  const sockets = new SocketHandler(repo, tokens);
+  const sockets = new SocketHandler(repo, tokens, seats);
   const history = options.history ?? new InMemoryGameHistoryStore();
   const recorder = new GameResultRecorder(history);
 
   app.get('/health', async () => ({ status: 'ok', shared: SHARED_VERSION }));
-  registerRoutes(app, { repo, tokens, sockets, recorder, history });
+  registerRoutes(app, {
+    repo,
+    tokens,
+    sockets,
+    recorder,
+    history,
+    publicUrl: options.publicUrl,
+    bale,
+  });
 
   await app.ready();
 
@@ -63,5 +81,5 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
-  return { app, repo, tokens, sockets };
+  return { app, repo, tokens, sockets, seats };
 }

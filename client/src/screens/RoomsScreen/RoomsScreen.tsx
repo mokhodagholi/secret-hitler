@@ -86,6 +86,7 @@ function Field(props: {
   onInput: (value: string) => void;
   placeholder?: string;
   type?: 'text' | 'password';
+  disabled?: boolean;
   onSubmit?: () => void;
 }) {
   return (
@@ -97,6 +98,8 @@ function Field(props: {
         value={props.value}
         placeholder={props.placeholder}
         maxlength={40}
+        disabled={props.disabled}
+        readOnly={props.disabled}
         onInput={(event) => props.onInput(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') props.onSubmit?.();
@@ -107,19 +110,23 @@ function Field(props: {
 }
 
 function CreateRoomPanel() {
-  const { nav, settings, game, i18n } = useApp();
+  const { nav, settings, game, i18n, bale } = useApp();
   const { formatMessage } = i18n;
 
   const [roomName, setRoomName] = createSignal('');
   const [password, setPassword] = createSignal('');
   const [playerCount, setPlayerCount] = createSignal(settings.settings.playerCount);
-  const profileMissing = settings.settings.profileName.trim().length === 0;
+  const baleName = () => bale.user()?.firstName;
+  const profileMissing = () =>
+    baleName() == null && settings.settings.profileName.trim().length === 0;
   const [hostName, setHostName] = createSignal(settings.settings.profileName);
   const [submitting, setSubmitting] = createSignal(false);
   const [errorKey, setErrorKey] = createSignal<MessageKey | null>(null);
 
+  const resolvedName = () => baleName() ?? hostName().trim();
+
   const canSubmit = () =>
-    roomName().trim().length > 0 && hostName().trim().length > 0 && !submitting();
+    roomName().trim().length > 0 && resolvedName().length > 0 && !submitting();
 
   const stepPlayers = (delta: number) =>
     setPlayerCount((current) =>
@@ -130,17 +137,17 @@ function CreateRoomPanel() {
     if (!canSubmit()) return;
     setSubmitting(true);
     setErrorKey(null);
-    settings.set('profileName', hostName().trim());
+    settings.set('profileName', resolvedName());
     settings.set('playerCount', playerCount());
     try {
       await game.createRoom({
         name: roomName().trim(),
         password: password().trim() || undefined,
-        hostName: hostName().trim(),
+        hostName: resolvedName(),
+        initData: bale.initData(),
         options: {
           maxPlayers: playerCount(),
-          timerEnabled: settings.settings.timerEnabled,
-          confirmActions: settings.settings.confirmActions,
+          timerEnabled: true,
         },
       });
       nav.navigate('waiting-room');
@@ -169,7 +176,7 @@ function CreateRoomPanel() {
         onInput={setPassword}
         onSubmit={submit}
       />
-      <Show when={profileMissing}>
+      <Show when={profileMissing()}>
         <Field
           label={formatMessage('createRoom.yourName')}
           placeholder={formatMessage('createRoom.yourNamePlaceholder')}
@@ -223,13 +230,15 @@ function CreateRoomPanel() {
 }
 
 function JoinRoomPanel() {
-  const { nav, settings, game, i18n } = useApp();
+  const { nav, settings, game, i18n, bale } = useApp();
   const { formatMessage } = i18n;
 
   const [rooms, { refetch }] = createResource(() => game.listRooms());
   const [selectedRoomId, setSelectedRoomId] = createSignal<string | null>(null);
   const [pendingJoinCode, setPendingJoinCode] = createSignal(nav.consumeJoinCode());
-  const profileMissing = settings.settings.profileName.trim().length === 0;
+  const baleName = () => bale.user()?.firstName;
+  const profileMissing = () =>
+    baleName() == null && settings.settings.profileName.trim().length === 0;
   const [playerName, setPlayerName] = createSignal(settings.settings.profileName);
   const [password, setPassword] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
@@ -249,7 +258,7 @@ function JoinRoomPanel() {
     setPendingJoinCode(null);
   });
 
-  const needsDetails = (room: RoomSummary) => room.hasPassword || profileMissing;
+  const needsDetails = (room: RoomSummary) => room.hasPassword || profileMissing();
 
   function pick(room: RoomSummary): void {
     if (!joinable(room)) return;
@@ -260,14 +269,16 @@ function JoinRoomPanel() {
 
   async function submit(room?: RoomSummary | null): Promise<void> {
     const target = room ?? selectedRoom();
-    if (!target || submitting() || playerName().trim().length === 0) return;
+    const name = baleName() ?? playerName().trim();
+    if (!target || submitting() || name.length === 0) return;
     setSubmitting(true);
     setErrorKey(null);
-    settings.set('profileName', playerName().trim());
+    settings.set('profileName', name);
     try {
       await game.joinRoom(target.id, {
-        name: playerName().trim(),
+        name,
         password: password().trim() || undefined,
+        initData: bale.initData(),
       });
       nav.navigate('waiting-room');
     } catch (error) {
@@ -341,7 +352,7 @@ function JoinRoomPanel() {
 
       <Show when={selectedRoom() && needsDetails(selectedRoom()!)}>
         <div class={styles.form}>
-          <Show when={profileMissing}>
+          <Show when={profileMissing()}>
             <Field
               label={formatMessage('joinGame.yourName')}
               value={playerName()}

@@ -1,0 +1,52 @@
+{
+  "name": "bale-bot",
+  "version": "0.1.0",
+  "description": "TypeScript client for the Bale messenger Bot API (tapi.bale.ai).",
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./encore": {
+      "types": "./dist/encore.d.ts",
+      "import": "./dist/encore.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@types/node": "^18.19.0 || ^20.0.0 || ^22.0.0"
+  },
+  "peerDependencies": {
+    "encore.dev": ">=1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "encore.dev": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  },
+  "keywords": [
+    "bale",
+    "bale.ai",
+    "bot",
+    "encore",
+    "encore.dev",
+    "messenger",
+    "telegram-compatible"
+  ],
+  "license": "MIT"
+}

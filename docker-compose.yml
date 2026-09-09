@@ -1,5 +1,6 @@
-# Local Postgres for game-history persistence. Start with `docker compose up -d`
-# then point the server at it via DATABASE_URL (see .env.example).
+# Production stack for mrfantastic.ir: postgres + game server + nginx (TLS, SPA, API, WS).
+# Local Postgres for `pnpm` on the host is published on loopback only.
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,7 +11,7 @@ services:
       POSTGRES_PASSWORD: secret_hitler
       POSTGRES_DB: secret_hitler
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -18,6 +19,41 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: secret-hitler-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: '3001'
+      DATABASE_URL: postgres://secret_hitler:secret_hitler@postgres:5432/secret_hitler
+      PUBLIC_URL: ${PUBLIC_URL:-https://mrfantastic.ir}
+      BALE_WEBHOOK_URL: ${BALE_WEBHOOK_URL:-https://mrfantastic.ir/api/bale/webhook}
+      BALE_BOT_USERNAME: ${BALE_BOT_USERNAME:-@secret_hitler_bot}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - '3001'
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: secret-hitler-nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # Put fullchain.pem and privkey.pem in ./ssl on the host.
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - server
 
 volumes:
   postgres-data:

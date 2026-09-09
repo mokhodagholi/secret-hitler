@@ -11,6 +11,7 @@ export interface TextInputProps {
   icon?: IconName;
   maxLength?: number;
   error?: string;
+  disabled?: boolean;
   onSubmit?: () => void;
 }
 
@@ -29,6 +30,8 @@ export function TextInput(props: TextInputProps) {
           value={props.value}
           placeholder={props.placeholder}
           maxlength={props.maxLength ?? 40}
+          disabled={props.disabled}
+          readOnly={props.disabled}
           onInput={(event) => props.onInput(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') props.onSubmit?.();

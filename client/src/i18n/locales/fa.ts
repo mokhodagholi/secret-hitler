@@ -195,6 +195,7 @@ export const fa = {
     profile: 'پروفایل',
     profileName: 'نام بازیکن',
     profileNamePlaceholder: 'به بازیکنان دیگر نمایش داده می‌شود',
+    profileNameFromBale: 'از حساب بله شما گرفته شده',
     gameSettings: 'تنظیمات بازی',
     playerCount: 'تعداد بازیکنان',
     players: '{count} بازیکن',
@@ -218,6 +219,8 @@ export const fa = {
     about: 'درباره',
     resetTutorials: 'بازنشانی آموزش‌ها',
     clearLocalData: 'پاک کردن داده‌های محلی',
+    clearLocalDataMessage:
+      'نام، صداها و بقیهٔ تنظیمات ذخیره‌شده روی همین گوشی پاک می‌شه. اتاق‌ها و تاریخچهٔ بازی روی سرور نمی‌ره.',
     restorePurchases: 'بازیابی خریدها',
   },
   screens: {
@@ -286,6 +289,11 @@ export const fa = {
     needMore: 'منتظر {count} نفر دیگه برای شروع…',
     autoStartGuestNote: 'بازی وقتی شروع می‌شه که همه آماده باشن',
     leaveRoom: 'خروج از اتاق',
+    startNeedPlayers:
+      'برای شروع حداقل {min} بازیکن لازم است. {count} نفر دیگر دعوت کنید.',
+    startNotReady: 'قبل از شروع باید همه بازیکنان آماده باشند.',
+    kickConfirm: '{name} از اتاق اخراج بشه؟',
+    kick: 'اخراج',
   },
   tip: {
     watch: 'ببینید کی حرف می‌زنه، نه فقط چی می‌گه. اعتماد یه اسلحه‌ست.',
@@ -311,13 +319,15 @@ export const fa = {
     youArePresident: 'شما رئیس‌جمهورید',
     discussionOpen: 'وقت حرف زدنه — همه می‌تونن چت کنن',
     discussionLeft: '{time}',
-    startNomination: 'شروع نامزدی',
+    startNomination: 'انتخاب صدراعظم',
     discussionTitle: 'شما رئیس‌جمهورید',
     discussionPresidentBody: 'بحث رو باز کنید، بعد نامزدی رو شروع کنید.',
     discussionBody: 'وقت حرف زدنه — همه می‌تونن چت کنن.',
     secondsLeft: '{seconds} ثانیه',
     voteTitle: 'رأی‌گیری',
     votePrompt: '{name} صدراعظم بشه؟',
+    chancellorRevealTitle: 'صدراعظم معرفی شد',
+    chancellorReveal: '{name} به‌عنوان صدراعظم انتخاب شد.',
     voteJa: 'موافق',
     voteNein: 'مخالف',
     youVoted: 'رأی شما: {vote} — منتظر بقیه',
@@ -339,6 +349,7 @@ export const fa = {
     drawPile: 'دستهٔ کشیدن',
     discardPile: 'دستهٔ دور ریخته',
     nominateHint: 'شما رئیس‌جمهورید — برای صدراعظم روی یه بازیکن بزنید.',
+    nominateIneligible: 'از دولت قبلی نمی‌شه صدراعظم انتخاب کرد.',
     presidentDiscardHint: 'برای دور انداختن، روی یه قانون بزنید',
     chancellorEnactHint: 'برای تصویب، روی یه قانون بزنید',
     presidentChoosing: '{name} داره یکی رو دور می‌ندازه…',
@@ -362,6 +373,12 @@ export const fa = {
     over: {
       liberalsWin: 'لیبرال‌ها برنده شدن!',
       fascistsWin: 'فاشیست‌ها برنده شدن!',
+    },
+    killed: {
+      title: 'شما اعدام شدید',
+      message: 'می‌تونید بمونید و بقیهٔ بازی رو تماشا کنید، یا از میز خارج بشید.',
+      stay: 'می‌مونم و تماشا می‌کنم',
+      leave: 'خارج می‌شم',
     },
     government: {
       first: 'دولت اول',
@@ -502,6 +519,8 @@ export const fa = {
     gameStarted: 'بازی شروع شد. نقش‌ها پخش شدن.',
     liberalsWin: 'پنج تا قانون لیبرال تصویب شد — لیبرال‌ها برنده شدن!',
     fascistsWin: 'شش تا قانون فاشیستی تصویب شد — فاشیست‌ها برنده شدن!',
+    fascistsWinNumbers:
+      'فاشیست‌ها با لیبرال‌ها برابر شدن یا بیشتر شدن — فاشیست‌ها برنده شدن!',
     chaos: 'سه دولت پشت هم رأی نیاورد — قانون بالای دسته تصویب می‌شه.',
     newHost: '{name} الان میزبانه.',
     nominated: '{president} {chancellor} رو صدراعظم نامزد کرد.',
@@ -527,6 +546,7 @@ export const fa = {
   },
   roomClosed: {
     hostLeft: 'میزبان اتاق را ترک کرد!',
+    kicked: 'میزبان شما را از اتاق اخراج کرد.',
   },
   role: {
     liberal: 'لیبرال',

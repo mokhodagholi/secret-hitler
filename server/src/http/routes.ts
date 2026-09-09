@@ -12,6 +12,8 @@ import type { TokenStore } from '../rooms/TokenStore';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
 import type { GameHistoryStore } from '../history/GameHistoryStore';
 import { hashPassword, verifyPassword } from './password';
+import { validateBaleInitData } from '../bale/initData';
+import { handleBaleWebhook, type BaleRuntime } from '../bale/webhook';
 
 export interface RouteDeps {
   repo: RoomRepository;
@@ -21,6 +23,8 @@ export interface RouteDeps {
   recorder: GameResultRecorder;
   /** Reads finished games for the history endpoint. */
   history: GameHistoryStore;
+  publicUrl?: string;
+  bale?: BaleRuntime;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -30,9 +34,28 @@ const LIMIT_WINDOW_MS = 60_000;
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history } = deps;
+  const { repo, tokens, sockets, recorder, history, publicUrl, bale } = deps;
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
   const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
+
+  app.post('/api/auth/bale', async (req, reply) => {
+    if (!bale) {
+      return reply.code(503).send({ error: 'Bale bot is not configured', code: 'BALE_DISABLED' });
+    }
+    const initData =
+      typeof (req.body as { initData?: unknown } | null)?.initData === 'string'
+        ? (req.body as { initData: string }).initData
+        : '';
+    const user = validateBaleInitData(initData, bale.botToken);
+    if (!user) {
+      return reply.code(401).send({ error: 'Invalid Bale login', code: 'AUTH_FAILED' });
+    }
+    return { id: user.id, firstName: user.firstName };
+  });
+
+  app.post('/api/bale/webhook', async (req, reply) => {
+    return handleBaleWebhook(req, reply, repo, bale);
+  });
 
   // Create a room and seat the host.
   app.post('/api/rooms', async (req, reply) => {
@@ -66,10 +89,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     }
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: host.id });
+    bindBaleSeat(bale, body.initData, host.id, entry.room.id, entry.room.code, entry.room.options.name);
     const res: CreateRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
-      shareLink: shareLink(req, entry.room.code),
+      shareLink: shareLink(req, entry.room.code, publicUrl),
       token,
       playerId: host.id,
     };
@@ -113,6 +137,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     }
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: player.id });
+    bindBaleSeat(bale, body.initData, player.id, entry.room.id, entry.room.code, entry.room.options.name);
     const res: JoinRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
@@ -123,7 +148,24 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   });
 }
 
-function shareLink(req: FastifyRequest, code: string): string {
+function bindBaleSeat(
+  bale: BaleRuntime | undefined,
+  initData: string | undefined,
+  playerId: string,
+  roomId: string,
+  code: string,
+  roomName: string,
+): void {
+  if (!bale || !initData) return;
+  const user = validateBaleInitData(initData, bale.botToken);
+  if (!user) return;
+  bale.seats.occupy(user.id, { roomId, code, playerId, roomName });
+}
+
+function shareLink(req: FastifyRequest, code: string, publicUrl?: string): string {
+  if (publicUrl) {
+    return `${publicUrl.replace(/\/$/, '')}/join/${code}`;
+  }
   const proto = (req.headers['x-forwarded-proto'] as string) ?? 'http';
   const host = req.headers.host ?? 'localhost:3001';
   return `${proto}://${host}/join/${code}`;

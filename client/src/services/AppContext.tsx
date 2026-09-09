@@ -13,6 +13,7 @@ import { GameStateService } from './GameStateService';
 import { SoundService } from './SoundService';
 import { AnimationService } from './AnimationService';
 import { RaviService } from './RaviService';
+import { BaleService } from './BaleService';
 
 export interface AppServices {
   nav: NavigationService;
@@ -23,6 +24,7 @@ export interface AppServices {
   sound: SoundService;
   animation: AnimationService;
   ravi: RaviService;
+  bale: BaleService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -44,7 +46,12 @@ export function AppProvider(
     sound: overrides.sound ?? new SoundService(settings),
     animation: overrides.animation ?? new AnimationService(settings),
     ravi: overrides.ravi ?? new RaviService(settings, i18n),
+    bale: overrides.bale ?? new BaleService(),
   };
+
+  if (!overrides.bale) {
+    void services.bale.boot(settings, services.nav);
+  }
 
   // Keep the document's language and reading direction in sync with the
   // active language so Persian (and any future RTL locale) renders correctly.

@@ -39,6 +39,8 @@ export type ClientMessage =
   | { type: 'game:start' }
   | { type: 'chat:message'; text: string }
   | { type: 'command'; command: GameCommand }
+  /** Host removes a guest from the lobby. */
+  | { type: 'player:kick'; playerId: string }
   /** Explicit leave — host: destroys the room; guest: vacates the seat. */
   | { type: 'room:leave' }
   | { type: 'ping' };
@@ -59,7 +61,7 @@ export type ServerErrorCode =
   | 'RATE_LIMITED'
   | 'INVALID_ACTION';
 
-export type RoomClosedReason = 'HOST_LEFT';
+export type RoomClosedReason = 'HOST_LEFT' | 'KICKED';
 
 export type ServerMessage =
   /** Sent once after a successful auth handshake. */
@@ -88,6 +90,8 @@ export interface CreateRoomRequest {
     timerEnabled?: boolean;
     confirmActions?: boolean;
   };
+  /** Raw Bale `WebApp.initData` so the bot can /invite this player's room. */
+  initData?: string;
 }
 
 export interface CreateRoomResponse {
@@ -101,6 +105,8 @@ export interface CreateRoomResponse {
 export interface JoinRoomRequest {
   name: string;
   password?: string;
+  /** Raw Bale `WebApp.initData` so the bot can /invite this player's room. */
+  initData?: string;
 }
 
 export interface JoinRoomResponse {

@@ -1,6 +1,9 @@
 import { resolve } from 'node:path';
 import { buildServer } from './app';
 import { DrizzleGameHistoryStore } from './history/DrizzleGameHistoryStore';
+import { BaleSeatIndex } from './bale/BaleSeatIndex';
+import { registerBaleCommands, type BaleRuntime } from './bale/webhook';
+import { drizzleFolder, migrateDatabase } from './db/migrate';
 
 // Load the repo-root .env for dev. Anchored to this file (not cwd) so it works
 // the same under `tsx` and the built `dist/`. Production may inject env directly.
@@ -11,6 +14,30 @@ try {
 }
 
 const PORT = Number(process.env.PORT ?? 3001);
+
+async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
+  const botToken = process.env.BALE_BOT_TOKEN?.trim();
+  if (!botToken) return undefined;
+
+  const { BaleBot } = await import('bale-bot');
+  const bot = new BaleBot({ token: botToken });
+  const webhookUrl = process.env.BALE_WEBHOOK_URL?.trim();
+  const botUsername = process.env.BALE_BOT_USERNAME?.trim() || '@secret_hitler_bot';
+  const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
+
+  if (webhookUrl) {
+    await bot.setWebhook({ url: webhookUrl });
+  }
+  await registerBaleCommands(bot);
+
+  return {
+    bot,
+    botToken,
+    publicUrl,
+    botUsername,
+    seats: new BaleSeatIndex(),
+  };
+}
 
 async function main() {
   // MIN_PLAYERS env lowers the start minimum for dev; unset = standard rules.
@@ -25,11 +52,18 @@ async function main() {
         '@secret-hitler/server db:migrate).',
     );
   }
-  const history = DrizzleGameHistoryStore.fromUrl(databaseUrl);
 
-  const { app } = await buildServer({ minPlayers, logger: true, history });
+  await migrateDatabase(databaseUrl, drizzleFolder(__dirname));
+  const history = DrizzleGameHistoryStore.fromUrl(databaseUrl);
+  const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
+  const bale = await createBaleRuntime();
+
+  const { app } = await buildServer({ minPlayers, logger: true, history, publicUrl, bale });
 
   app.log.info('Game history persistence enabled.');
+  if (bale) {
+    app.log.info('Bale bot webhook ready.');
+  }
   await app.listen({ port: PORT, host: '0.0.0.0' });
   app.log.info(`WebSocket endpoint ready at ws://localhost:${PORT}/ws`);
 }

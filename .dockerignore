@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.rsbuild
+*.log
+.DS_Store
+.env
+ssl
+**/__pycache__
+scripts/.venv-ravi
+scripts/.venv-ravi-native
+bale-bot/node_modules
+client/node_modules
+server/node_modules
+shared/node_modules

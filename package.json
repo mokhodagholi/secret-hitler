@@ -6,10 +6,11 @@
     "dev:server": "pnpm --filter server dev",
     "dev:client": "pnpm --filter client dev",
     "build:shared": "pnpm --filter shared build",
+    "build:bale-bot": "pnpm --filter bale-bot build",
     "build:server": "pnpm --filter server build",
     "build:client": "pnpm --filter client build",
-    "build": "pnpm build:shared && pnpm build:server && pnpm build:client",
-    "test": "pnpm build:shared && pnpm -r test"
+    "build": "pnpm build:shared && pnpm build:bale-bot && pnpm build:server && pnpm build:client",
+    "test": "pnpm build:shared && pnpm build:bale-bot && pnpm -r test"
   },
   "devDependencies": {
     "typescript": "^5.5.4"

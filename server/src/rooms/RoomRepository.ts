@@ -50,6 +50,11 @@ export class RoomRepository {
       .map((e) => e.room.summary())
       .filter((s) => s.phase === 'lobby');
   }
+
+  /** Every live room, including games already in progress. */
+  listAll() {
+    return [...this.rooms.values()].map((e) => e.room.summary());
+  }
 }
 
 export interface RoomEntry {

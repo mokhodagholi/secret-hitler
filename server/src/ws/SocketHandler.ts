@@ -14,6 +14,7 @@ import { ConnectionRegistry } from './ConnectionRegistry';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomEntry, RoomRepository } from '../rooms/RoomRepository';
 import type { TokenStore } from '../rooms/TokenStore';
+import type { BaleSeatIndex } from '../bale/BaleSeatIndex';
 
 /** Resolved per-message context for an authenticated socket. */
 interface GameContext {
@@ -53,6 +54,7 @@ export class SocketHandler {
   constructor(
     private readonly repo: RoomRepository,
     private readonly tokens: TokenStore,
+    private readonly seats: BaleSeatIndex | null = null,
   ) {
     this.router = this.buildRouter();
   }
@@ -63,6 +65,7 @@ export class SocketHandler {
       .on('player:ready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, true))
       .on('player:unready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, false))
       .on('game:start', (_m, ctx) => this.fail(ctx, ctx.engine.startGame(ctx.playerId)))
+      .on('player:kick', (m, ctx) => this.kickPlayer(ctx, m.playerId))
       .on('chat:message', (m, ctx) => {
         if (!this.chatLimiter.allow(ctx.playerId)) {
           this.sendError(ctx.ws, 'RATE_LIMITED', 'You are sending messages too quickly.');
@@ -214,6 +217,21 @@ export class SocketHandler {
     if (error) this.sendError(context.ws, error.code, error.message);
   }
 
+  /** Host removes a lobby guest and closes their seat. */
+  private kickPlayer(context: GameContext, targetId: string): void {
+    const error = context.engine.kickPlayer(context.playerId, targetId);
+    if (error) {
+      this.fail(context, error);
+      return;
+    }
+    this.connections.sendAndClose(targetId, {
+      type: 'room:closed',
+      reason: 'KICKED',
+    });
+    this.tokens.revokePlayer(targetId);
+    this.seats?.releasePlayer(targetId);
+  }
+
   /** Host leave destroys the room; a guest just vacates their seat. */
   private leaveRoom(context: GameContext): void {
     const { entry, engine, playerId } = context;
@@ -223,7 +241,10 @@ export class SocketHandler {
     } else {
       engine.removePlayer(playerId);
       // In-game leavers keep their seat (and token) for a possible rejoin.
-      if (entry.room.phase === Phase.Lobby) this.tokens.revokePlayer(playerId);
+      if (entry.room.phase === Phase.Lobby) {
+        this.tokens.revokePlayer(playerId);
+        this.seats?.releasePlayer(playerId);
+      }
       this.connections.close(playerId);
     }
   }
@@ -244,6 +265,7 @@ export class SocketHandler {
     this.stopNominationTimer(roomId);
     this.cancelHostGrace(roomId);
     this.tokens.revokeRoom(roomId);
+    this.seats?.releaseRoom(roomId);
     this.repo.remove(roomId);
   }
 

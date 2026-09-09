@@ -200,6 +200,7 @@ export const en = {
     profile: 'Profile',
     profileName: 'Player Name',
     profileNamePlaceholder: 'Shown to other players',
+    profileNameFromBale: 'Taken from your Bale account',
     gameSettings: 'Game Settings',
     playerCount: 'Player Count',
     players: '{count} Players',
@@ -223,6 +224,8 @@ export const en = {
     about: 'About',
     resetTutorials: 'Reset Tutorials',
     clearLocalData: 'Clear Local Data',
+    clearLocalDataMessage:
+      'This erases your name, sound toggles, and other prefs saved on this phone. It does not delete rooms or game history on the server.',
     restorePurchases: 'Restore Purchases',
   },
   screens: {
@@ -291,6 +294,11 @@ export const en = {
     needMore: 'Waiting for {count} more players to start…',
     autoStartGuestNote: 'The game starts once everyone is ready',
     leaveRoom: 'Leave Room',
+    startNeedPlayers:
+      'Need at least {min} players to start. Invite {count} more.',
+    startNotReady: 'Every player must be ready before the game can start.',
+    kickConfirm: 'Kick {name} from the room?',
+    kick: 'Kick',
   },
   tip: {
     watch: 'Watch who talks, not just what they say. Trust is a weapon.',
@@ -318,13 +326,15 @@ export const en = {
     youArePresident: 'You are the President',
     discussionOpen: 'Discussion — everyone can chat',
     discussionLeft: '{time}',
-    startNomination: 'Start Nomination',
+    startNomination: 'Choose Chancellor',
     discussionTitle: 'You are the President',
     discussionPresidentBody: 'Open the floor, then start the nomination.',
     discussionBody: 'Discussion is open — everyone can chat.',
     secondsLeft: '{seconds}s',
     voteTitle: 'Vote',
     votePrompt: 'Elect {name} as Chancellor?',
+    chancellorRevealTitle: 'Chancellor named',
+    chancellorReveal: '{name} is chosen as Chancellor.',
     voteJa: 'Ja!',
     voteNein: 'Nein!',
     youVoted: 'You voted {vote} — waiting for others',
@@ -347,6 +357,8 @@ export const en = {
     discardPile: 'Discard',
     nominateHint:
       'You are the President — tap a player to nominate them as Chancellor.',
+    nominateIneligible:
+      'That player served in the last government and cannot be Chancellor.',
     presidentDiscardHint: 'Tap a policy to discard',
     chancellorEnactHint: 'Tap a policy to enact',
     presidentChoosing: '{name} is choosing a policy to discard…',
@@ -370,6 +382,12 @@ export const en = {
     over: {
       liberalsWin: 'The Liberals win!',
       fascistsWin: 'The Fascists win!',
+    },
+    killed: {
+      title: 'You were executed',
+      message: 'You can stay and watch the rest of the game, or leave the table.',
+      stay: 'Stay and watch',
+      leave: 'Leave',
     },
     government: {
       first: 'First Government',
@@ -511,6 +529,8 @@ export const en = {
     gameStarted: 'The game has started. Roles have been dealt.',
     liberalsWin: 'Five Liberal policies enacted — the Liberals win!',
     fascistsWin: 'Six Fascist policies enacted — the Fascists win!',
+    fascistsWinNumbers:
+      'Fascists now equal or outnumber Liberals — the Fascists win!',
     chaos: 'Three elections failed — the top policy is enacted.',
     newHost: '{name} is now the host.',
     nominated: '{president} nominated {chancellor} as Chancellor.',
@@ -537,6 +557,7 @@ export const en = {
   },
   roomClosed: {
     hostLeft: 'The host has left the room.',
+    kicked: 'The host removed you from the room.',
   },
   role: {
     liberal: 'Liberal',

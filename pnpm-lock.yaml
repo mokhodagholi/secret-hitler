@@ -12,6 +12,19 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
 
+  bale-bot:
+    dependencies:
+      '@types/node':
+        specifier: ^18.19.0 || ^20.0.0 || ^22.0.0
+        version: 22.19.17
+      encore.dev:
+        specifier: '>=1.40.0'
+        version: 1.57.4
+    devDependencies:
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
   client:
     dependencies:
       '@secret-hitler/shared':
@@ -60,6 +73,9 @@ importers:
       '@secret-hitler/shared':
         specifier: workspace:*
         version: link:../shared
+      bale-bot:
+        specifier: workspace:*
+        version: link:../bale-bot
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@types/pg@8.20.0)(pg@8.21.0)
@@ -1586,6 +1602,10 @@ packages:
   emojis-list@3.0.0:
     resolution: {integrity: sha512-/kyM18EfinwXZbno9FyUGeFh87KC8HRQBQGildHZbEuRyWFOmv1U10o9BBp8XVZDVNNuQKyIGIu5ZYAAXJ0V2Q==}
     engines: {node: '>= 4'}
+
+  encore.dev@1.57.4:
+    resolution: {integrity: sha512-VwoCxxUXS40tnoKWTglApHQlhtgTI6oQ7DXNWTFRI7wcZvNiqMEgMOnDFp8Go9Gj6w+V8mpaO0FTrGr47qHi7Q==}
+    engines: {node: '>=18.0.0'}
 
   entities@6.0.1:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
@@ -3411,6 +3431,8 @@ snapshots:
   electron-to-chromium@1.5.349: {}
 
   emojis-list@3.0.0: {}
+
+  encore.dev@1.57.4: {}
 
   entities@6.0.1: {}
 

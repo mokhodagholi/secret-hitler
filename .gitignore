@@ -4,6 +4,10 @@ dist
 *.log
 .DS_Store
 .env
+ssl/*.pem
+ssl/*.key
+ssl/*.crt
+!ssl/.gitkeep
 __pycache__/
 *.pyc
 scripts/.venv-ravi

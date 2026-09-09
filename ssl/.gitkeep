@@ -1,0 +1,3 @@
+# Put your TLS files here (mounted into nginx by docker-compose):
+#   ssl/fullchain.pem
+#   ssl/privkey.pem

@@ -27,7 +27,13 @@ export class NavigationService {
   private pendingJoinCode: string | null;
 
   constructor(initialPath: string = location.pathname) {
-    this.pendingJoinCode = JOIN_LINK_PATTERN.exec(initialPath)?.[1] ?? null;
+    const fromPath = JOIN_LINK_PATTERN.exec(initialPath)?.[1] ?? null;
+    const fromQuery =
+      typeof location !== 'undefined'
+        ? new URLSearchParams(location.search).get('tgWebAppStartParam')
+        : null;
+    this.pendingJoinCode =
+      fromPath ?? (fromQuery && /^[A-Za-z0-9]{6}$/.test(fromQuery) ? fromQuery : null);
     const [screen, setScreen] = createSignal<ScreenName>(
       this.pendingJoinCode ? 'join-game' : 'home',
     );
@@ -35,6 +41,13 @@ export class NavigationService {
     this.setScreen = setScreen;
     // Clean the URL so a refresh lands on the app shell, not a stale link.
     if (this.pendingJoinCode) history.replaceState(null, '', '/');
+  }
+
+  /** Mini-app `startapp` / start_param — same as a `/join/CODE` share link. */
+  offerJoinCode(code: string): void {
+    if (this.pendingJoinCode) return;
+    this.pendingJoinCode = code;
+    if (this.screen() === 'home') this.setScreen('join-game');
   }
 
   navigate(next: ScreenName): void {
