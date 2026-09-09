@@ -42,6 +42,23 @@ export class ConnectionRegistry {
     }
   }
 
+  /**
+   * Deliver one last frame, then close. The close waits until the payload
+   * is flushed so the client can show why they were removed.
+   */
+  sendAndClose(playerId: string, message: ServerMessage): void {
+    const ws = this.byPlayer.get(playerId);
+    if (!ws) return;
+    this.byPlayer.delete(playerId);
+    this.bySocket.delete(ws);
+    const payload = JSON.stringify(message);
+    if (ws.readyState === ws.OPEN) {
+      ws.send(payload, () => ws.close());
+    } else {
+      ws.close();
+    }
+  }
+
   /** Unbind and close a player's socket (e.g. their room was destroyed). */
   close(playerId: string): void {
     const ws = this.byPlayer.get(playerId);

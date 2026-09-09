@@ -16,6 +16,10 @@ describe('parseClientMessage', () => {
         '{"type":"command","command":{"kind":"castVote","vote":"ja"}}',
       ),
     ).toEqual({ type: 'command', command: { kind: 'castVote', vote: 'ja' } });
+    expect(
+      parseClientMessage('{"type":"player:kick","playerId":"p1"}'),
+    ).toEqual({ type: 'player:kick', playerId: 'p1' });
+    expect(parseClientMessage('{"type":"player:kick"}')).toBeNull();
     for (const type of ['player:ready', 'player:unready', 'game:start', 'room:leave', 'ping']) {
       expect(parseClientMessage(JSON.stringify({ type }))).toEqual({ type });
     }

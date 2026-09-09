@@ -67,7 +67,7 @@ export class SettingsService {
   }
 
   cycleRaviWho(): void {
-    this.set('raviWho', this.settings.raviWho === 'farid' ? 'dilara' : 'farid');
+    this.set('raviWho', 'farid');
   }
 
   resetTutorials(): void {
@@ -82,7 +82,9 @@ export class SettingsService {
   private static load(): SettingsState {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+      const loaded = raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+      loaded.raviWho = 'farid';
+      return loaded;
     } catch {
       return { ...DEFAULTS };
     }

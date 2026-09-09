@@ -25,3 +25,11 @@
 .withNav {
   padding-bottom: $nav-height + 40px;
 }
+
+// Full-bleed column for screens that own the viewport (the table).
+.fill {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

@@ -68,8 +68,9 @@
   aspect-ratio: 2 / 3;
   border-radius: $radius;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.35);
+  border: none;
   padding: 0;
+  background: transparent;
 
   &:disabled {
     cursor: default;

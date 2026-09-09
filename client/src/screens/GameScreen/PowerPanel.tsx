@@ -1,9 +1,5 @@
 import { For, Show } from 'solid-js';
-import type {
-  ExecutivePower,
-  Policy,
-  PublicPlayer,
-} from '@secret-hitler/shared';
+import type { ExecutivePower, Policy } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import styles from './GameScreen.module.scss';
@@ -13,13 +9,8 @@ export interface PowerPanelProps {
   power: ExecutivePower;
   isPresident: boolean;
   presidentName: string;
-  /** Top three policies, only populated for the President during Policy Peek. */
   peek: Policy[];
-  /** Investigation result, only set for the President after investigating. */
   investigation: { name: string; party: 'liberal' | 'fascist' } | null;
-  /** Living players the President may target (already excludes themselves). */
-  targets: PublicPlayer[];
-  onTarget: (playerId: string) => void;
   onContinue: () => void;
 }
 
@@ -30,14 +21,12 @@ const HINT_KEY = {
   specialElection: 'game.power.electHint',
 } as const;
 
-/** The President's executive-action UI during the SpecialPower phase. */
+/** President's power UI. Seat taps on the table pick the target. */
 export function PowerPanel(props: PowerPanelProps) {
   const { formatMessage } = props;
   const { animation } = useApp();
-  const needsTarget = () =>
-    (props.power === 'investigate' && !props.investigation) ||
-    props.power === 'execution' ||
-    props.power === 'specialElection';
+  const needsAck = () =>
+    props.power === 'policyPeek' || props.investigation != null;
 
   return (
     <div class={styles.votePanel}>
@@ -64,7 +53,6 @@ export function PowerPanel(props: PowerPanelProps) {
                   ref={(element) =>
                     void animation.play(element, 'card-flip-in', {
                       delay: index() * 150,
-                      // Hold the hidden first frame through the delay.
                       fill: 'backwards',
                     })
                   }
@@ -87,23 +75,7 @@ export function PowerPanel(props: PowerPanelProps) {
           )}
         </Show>
 
-        <Show when={needsTarget()}>
-          <div class={styles.powerTargets}>
-            <For each={props.targets}>
-              {(player) => (
-                <button
-                  type="button"
-                  class={styles.powerTarget}
-                  onClick={() => props.onTarget(player.id)}
-                >
-                  {player.name}
-                </button>
-              )}
-            </For>
-          </div>
-        </Show>
-
-        <Show when={!needsTarget()}>
+        <Show when={needsAck()}>
           <button
             type="button"
             class={styles.powerContinue}

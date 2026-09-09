@@ -1,4 +1,4 @@
-import { For } from 'solid-js';
+import { For, Show } from 'solid-js';
 import type { Faction, PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -13,10 +13,12 @@ export interface GameOverOverlayProps {
   winner: Faction;
   /** Players with roles revealed (the server discloses all roles at GameOver). */
   players: PublicPlayer[];
+  /** Roles wait until Ravi's "the roles are revealed" line. */
+  showRoles: boolean;
   onLeave: () => void;
 }
 
-/** End-of-game screen: the winning faction and every player's revealed role. */
+/** End-of-game screen: the winning faction, then every player's revealed role. */
 export function GameOverOverlay(props: GameOverOverlayProps) {
   const { formatMessage } = props;
   const { animation } = useApp();
@@ -45,33 +47,34 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
           )}
         </span>
 
-        <ul class={styles.roles}>
-          <For each={[...props.players].sort((a, b) => a.seat - b.seat)}>
-            {(player, index) => (
-              <li
-                class={styles.roleRow}
-                ref={(element) =>
-                  void animation.play(element, 'card-flip-in', {
-                    delay: CASCADE_START_MS + index() * CASCADE_STEP_MS,
-                    // Hold the hidden first frame through the delay.
-                    fill: 'backwards',
-                  })
-                }
-              >
-                <span class={styles.name}>{player.name}</span>
-                <span
-                  classList={{
-                    [styles.role]: true,
-                    [styles.roleLiberal]: player.role === 'liberal',
-                    [styles.roleFascist]: player.role !== 'liberal',
-                  }}
+        <Show when={props.showRoles}>
+          <ul class={styles.roles}>
+            <For each={[...props.players].sort((a, b) => a.seat - b.seat)}>
+              {(player, index) => (
+                <li
+                  class={styles.roleRow}
+                  ref={(element) =>
+                    void animation.play(element, 'card-flip-in', {
+                      delay: CASCADE_START_MS + index() * CASCADE_STEP_MS,
+                      fill: 'backwards',
+                    })
+                  }
                 >
-                  {player.role ? formatMessage(`role.${player.role}`) : '—'}
-                </span>
-              </li>
-            )}
-          </For>
-        </ul>
+                  <span class={styles.name}>{player.name}</span>
+                  <span
+                    classList={{
+                      [styles.role]: true,
+                      [styles.roleLiberal]: player.role === 'liberal',
+                      [styles.roleFascist]: player.role !== 'liberal',
+                    }}
+                  >
+                    {player.role ? formatMessage(`role.${player.role}`) : '—'}
+                  </span>
+                </li>
+              )}
+            </For>
+          </ul>
+        </Show>
 
         <button type="button" class={styles.leave} onClick={() => props.onLeave()}>
           {formatMessage('game.leaveRoom')}

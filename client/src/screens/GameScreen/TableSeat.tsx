@@ -9,9 +9,11 @@ export interface TableSeatProps {
   player: PublicPlayer;
   isYou: boolean;
   isNext: boolean;
-  nominatable: boolean;
+  /** Eligible pick — sways so the President can see who to tap. */
+  selectable: boolean;
+  /** Previous-government lock: clickable so we can explain why not. */
+  termLocked: boolean;
   bubble?: string;
-  timerProgress?: number | null;
   onSelect: () => void;
   formatMessage: FormatMessage;
 }
@@ -30,6 +32,8 @@ export function TableSeat(props: TableSeatProps) {
         ? 'chancellor'
         : null;
 
+  const interactive = () => props.selectable || props.termLocked;
+
   return (
     <button
       type="button"
@@ -38,12 +42,17 @@ export function TableSeat(props: TableSeatProps) {
         [styles.dead]: !props.player.isAlive,
         [styles.offline]: !props.player.connected,
         [styles.you]: props.isYou,
-        [styles.nominatable]: props.nominatable,
+        [styles.selectable]: props.selectable,
+        [styles.termLocked]: props.termLocked,
         [styles.voted]: props.player.hasVoted,
       }}
       aria-label={props.player.name}
-      disabled={!props.nominatable}
-      onClick={() => props.onSelect()}
+      data-seat-id={props.player.id}
+      aria-disabled={!interactive()}
+      tabIndex={interactive() ? 0 : -1}
+      onClick={() => {
+        if (interactive()) props.onSelect();
+      }}
     >
       <Show when={props.bubble}>
         <span class={styles.bubble} dir="auto">
@@ -84,15 +93,6 @@ export function TableSeat(props: TableSeatProps) {
           {props.player.name}
         </span>
       </span>
-
-      <Show when={props.timerProgress != null}>
-        <span class={styles.timerTrack} aria-hidden="true">
-          <span
-            class={styles.timerFill}
-            style={{ width: `${Math.round((props.timerProgress ?? 0) * 100)}%` }}
-          />
-        </span>
-      </Show>
     </button>
   );
 }

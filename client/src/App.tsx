@@ -18,7 +18,11 @@ function RoomClosedNotice() {
   return (
     <ConfirmDialog
       open={game.roomClosedNotice() != null}
-      message={formatMessage('roomClosed.hostLeft')}
+      message={formatMessage(
+        game.roomClosedNotice() === 'KICKED'
+          ? 'roomClosed.kicked'
+          : 'roomClosed.hostLeft',
+      )}
       confirmLabel={formatMessage('common.ok')}
       onConfirm={() => game.clearRoomClosedNotice()}
     />

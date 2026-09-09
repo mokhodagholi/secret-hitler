@@ -94,6 +94,26 @@ export const ANIMATIONS = {
     options: { duration: 320, easing: 'ease-out' },
   },
 
+  /** Membership card flips from the back to the party face. */
+  'card-flip-face': {
+    keyframes: [
+      { opacity: 1, transform: 'perspective(700px) rotateY(90deg) scale(0.92)' },
+      { opacity: 1, transform: 'perspective(700px) rotateY(0deg) scale(1.04)', offset: 0.7 },
+      { opacity: 1, transform: 'perspective(700px) rotateY(0deg) scale(1)' },
+    ],
+    options: { duration: 480, easing: 'ease-out' },
+  },
+
+  /** Chancellor placard lands on the nominated seat. */
+  'placard-present': {
+    keyframes: [
+      { opacity: 0, transform: 'translateY(-18px) scale(0.7)' },
+      { opacity: 1, transform: 'translateY(6px) scale(1.08)', offset: 0.55 },
+      { opacity: 1, transform: 'translateY(0) scale(1)' },
+    ],
+    options: { duration: 700, easing: 'ease-out' },
+  },
+
   /** A chosen card flies up toward the board after the Chancellor enacts it. */
   'card-to-board': {
     keyframes: [

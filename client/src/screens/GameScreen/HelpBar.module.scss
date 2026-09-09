@@ -3,8 +3,21 @@
 
 .bar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 10px;
   padding: 8px 10px 10px;
+}
+
+.action {
+  @include display(0.72rem, 0.06em);
+  @include pressable;
+  margin-inline-end: auto;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #1a1208;
+  background: linear-gradient(180deg, #f3d27a, #c9a14a);
+  white-space: nowrap;
 }
 
 .tools {

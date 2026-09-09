@@ -54,6 +54,10 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       return isGameCommand(message.command)
         ? { type: 'command', command: message.command }
         : null;
+    case 'player:kick':
+      return typeof message.playerId === 'string'
+        ? { type: 'player:kick', playerId: message.playerId }
+        : null;
     case 'player:ready':
     case 'player:unready':
     case 'game:start':

@@ -114,6 +114,21 @@ describe('GameEngine — lobby', () => {
     expect(cal.seat).toBe(1);
   });
 
+  it('Should let the host kick a guest from the lobby', () => {
+    const engine = new GameEngine(makeRoom());
+    const [host, ben] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
+    expect(engine.kickPlayer(host.id, ben.id)).toBeNull();
+    expect(engine.room.findPlayer(ben.id)).toBeUndefined();
+    expect(engine.room.players.map((p) => p.name)).toEqual(['Ana', 'Cal']);
+  });
+
+  it('Should refuse a kick from anyone but the host', () => {
+    const engine = new GameEngine(makeRoom());
+    const [, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
+    expect(engine.kickPlayer(ben.id, cal.id)).toMatchObject({ code: 'NOT_HOST' });
+    expect(engine.room.findPlayer(cal.id)).toBeTruthy();
+  });
+
   it('Should migrate the host to a connected player after the grace call', () => {
     const engine = new GameEngine(makeRoom());
     const [host, ben] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
@@ -274,6 +289,67 @@ describe('GameEngine — nomination and voting', () => {
     const [president] = players;
     engine.setConnected(president.id, false);
     expect(room.discussionEndsAt).toBeGreaterThan(0);
+  });
+
+  it('Should keep playing after a disconnect until the next round', () => {
+    const { engine, room, players } = startGame([
+      'Ana',
+      'Ben',
+      'Cal',
+      'Dia',
+      'Eli',
+    ]);
+    const presidentId = room.presidentId;
+    const liberal = players.find(
+      (player) => player.role === 'liberal' && player.id !== presidentId,
+    )!;
+    engine.setConnected(liberal.id, false);
+    expect(room.winner).toBeNull();
+    expect(room.phase).toBe(Phase.Nomination);
+  });
+
+  it('Should hand the Fascists victory next round when leavers tie the table', () => {
+    const { engine, room, players } = startGame([
+      'Ana',
+      'Ben',
+      'Cal',
+      'Dia',
+      'Eli',
+    ]);
+    const presidentId = room.presidentId!;
+    const liberal = players.find(
+      (player) => player.role === 'liberal' && player.id !== presidentId,
+    )!;
+    engine.setConnected(liberal.id, false);
+
+    const president = room.findPlayer(presidentId)!;
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+
+    expect(room.winner).toBe('fascist');
+    expect(room.phase).toBe(Phase.GameOver);
+  });
+
+  it('Should keep playing when a Fascist leaves and Liberals still lead', () => {
+    const { engine, room, players } = startGame([
+      'Ana',
+      'Ben',
+      'Cal',
+      'Dia',
+      'Eli',
+    ]);
+    const presidentId = room.presidentId!;
+    const fascist = players.find(
+      (player) => player.role !== 'liberal' && player.id !== presidentId,
+    )!;
+    engine.setConnected(fascist.id, false);
+
+    const president = room.findPlayer(presidentId)!;
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+
+    expect(room.winner).toBeNull();
+    expect(room.phase).toBe(Phase.Nomination);
   });
 
   it('Should open the nomination window when the President starts nomination', () => {

@@ -3,8 +3,9 @@
 
 .scene {
   position: relative;
-  height: 100%;
-  margin: -18px -16px -24px;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -16,20 +17,29 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding-bottom: 56px;
+  container-type: size;
+}
+
+.players {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .seats {
   display: flex;
   justify-content: space-evenly;
   align-items: center;
-  gap: 6px;
-  padding: 22px 6px 8px;
-  flex: 1;
+  gap: 4px;
+  padding: 4px;
+  flex: 1 1 0;
   min-height: 0;
-}
-
-.seats:last-of-type {
-  padding-bottom: 54px;
+  container-type: size;
 }
 
 .toolsDock {
@@ -38,6 +48,24 @@
   left: 0;
   right: 0;
   z-index: 5;
+}
+
+.powerDock {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 56px;
+  z-index: 6;
+}
+
+.overlayLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 16px 16px 72px;
+  background: rgba(4, 12, 22, 0.62);
 }
 
 // --- Phase panels ----------------------------------------------------------------
@@ -175,6 +203,11 @@
 
 .error {
   @include card;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 88px;
+  z-index: 30;
   border-color: rgba($red-bright, 0.6);
   color: $red-bright;
   font-size: 0.85rem;

@@ -2,6 +2,7 @@ import { createEffect, onCleanup } from 'solid-js';
 import { Phase, type LogCode } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { RaviLineId } from '../../services/RaviService';
+import type { MessageValues } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
 
 const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
@@ -11,8 +12,6 @@ const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
   hitlerChancellor: 'vote.hitlerChancellor',
   presidentDraws: 'law.draw',
   presidentPasses: 'law.pass',
-  liberalEnacted: 'law.liberal',
-  fascistEnacted: 'law.fascist',
   vetoProposed: 'law.vetoOffered',
   vetoRejected: 'law.vetoRejected',
   vetoAgreed: 'law.vetoAgreed',
@@ -21,6 +20,7 @@ const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
   hitlerExecuted: 'power.hitlerExecuted',
   liberalsWin: 'game.liberalsWin.policies',
   fascistsWin: 'game.fascistsWin.policies',
+  fascistsWinNumbers: 'game.fascistsWin.policies',
   chaos: 'chaos.start',
 };
 
@@ -37,10 +37,11 @@ function named(value: string | number | undefined): string | number {
   return typeof value === 'string' ? isolateBidi(value) : (value ?? '');
 }
 
+type PendingLine = { id: RaviLineId; params?: MessageValues };
+
 /**
- * Drives Ravi off the snapshot and log. The opening overlay speaks its own
- * lines; this waits until that overlay has closed, then ignores the first
- * snapshot so a rejoin does not replay the current beat.
+ * Drives Ravi off the snapshot and log. Lines are queued in story order so a
+ * failed vote can say the rejection, then the tracker, then the next President.
  */
 export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
   const { game, ravi } = useApp();
@@ -73,39 +74,63 @@ export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
       return;
     }
 
+    const pending: PendingLine[] = [];
+
     if (entries.length > seenLog) {
       for (const entry of entries.slice(seenLog)) {
         const line = LOG_LINE[entry.code];
         if (!line) continue;
-        void ravi.speak(line, {
-          ...entry.params,
-          name: named(entry.params?.name),
-          president: named(entry.params?.president),
-          chancellor: named(entry.params?.chancellor),
+        pending.push({
+          id: line,
+          params: {
+            ...entry.params,
+            name: named(entry.params?.name),
+            president: named(entry.params?.president),
+            chancellor: named(entry.params?.chancellor),
+          },
         });
       }
       seenLog = entries.length;
+    }
+
+    const tracker = state.board.electionTracker;
+    if (tracker > lastTracker) {
+      pending.push({ id: 'tracker.advance', params: { count: tracker } });
+    }
+    lastTracker = tracker;
+
+    const presidentId = state.board.president;
+    if (presidentId && presidentId !== lastPresident) {
+      pending.push({
+        id: 'president.next',
+        params: {
+          name: named(
+            state.players.find((player) => player.id === presidentId)?.name,
+          ),
+        },
+      });
+      lastPresident = presidentId;
     }
 
     const discussionStart = state.discussionDeadline?.startedAt ?? 0;
     if (discussionStart && discussionStart !== lastDiscussionStart) {
       lastDiscussionStart = discussionStart;
       warnedClosing = false;
-      void ravi.speak('discuss.start');
+      pending.push({ id: 'discuss.start' });
     }
 
     const nominationOpen = state.nominationDeadline != null;
     if (nominationOpen && !lastNominationOpen) {
-      void ravi.speak('nominate.start');
+      pending.push({ id: 'nominate.start' });
     }
     lastNominationOpen = nominationOpen;
 
     if (state.phase !== lastPhase) {
-      if (state.phase === Phase.Voting) void ravi.speak('vote.start');
+      if (state.phase === Phase.Voting) pending.push({ id: 'vote.start' });
       if (state.phase === Phase.SpecialPower && state.activePower) {
-        void ravi.speak(POWER_LINE[state.activePower]);
+        pending.push({ id: POWER_LINE[state.activePower] });
       }
-      if (state.phase === Phase.GameOver) void ravi.speak('game.reveal');
+      if (state.phase === Phase.GameOver) pending.push({ id: 'game.reveal' });
       lastPhase = state.phase;
     }
 
@@ -117,23 +142,12 @@ export function RaviNarrator(props: { ceremonyOpen: boolean; now: number }) {
       endsAt - props.now > 0
     ) {
       warnedClosing = true;
-      void ravi.speak('discuss.closing');
+      pending.push({ id: 'discuss.closing' });
     }
 
-    const presidentId = state.board.president;
-    if (presidentId && presidentId !== lastPresident) {
-      const name = named(
-        state.players.find((player) => player.id === presidentId)?.name,
-      );
-      void ravi.speak('president.next', { name });
-      lastPresident = presidentId;
+    for (const line of pending) {
+      void ravi.speak(line.id, line.params);
     }
-
-    const tracker = state.board.electionTracker;
-    if (tracker > lastTracker) {
-      void ravi.speak('tracker.advance', { count: tracker });
-    }
-    lastTracker = tracker;
   });
 
   return null;

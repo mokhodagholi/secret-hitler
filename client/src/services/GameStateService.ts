@@ -190,6 +190,10 @@ export class GameStateService {
     this.socket.send({ type: ready ? 'player:ready' : 'player:unready' });
   }
 
+  kickPlayer(playerId: string): void {
+    this.socket.send({ type: 'player:kick', playerId });
+  }
+
   startGame(): void {
     this.socket.send({ type: 'game:start' });
   }

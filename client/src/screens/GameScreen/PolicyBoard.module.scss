@@ -3,19 +3,24 @@
 .board {
   direction: ltr;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 6px;
-  width: 100%;
-  margin: 0;
-  padding: 6px 8px 2px;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 4px;
+  // Art is 600 wide; stacked tracks are 300+400 plus the 4px gap.
+  // Size from table height so the stack stays compact at the top.
+  width: 58%;
+  width: min(92%, calc((40cqh - 4px) * 6 / 7));
+  max-width: none;
+  margin: 0 auto;
+  padding: 4px 0 0;
   flex-shrink: 0;
 }
 
 .track {
   position: relative;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .art {
@@ -23,6 +28,8 @@
   height: auto;
   display: block;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .slots {
@@ -30,29 +37,32 @@
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  gap: 3px;
   pointer-events: none;
 }
 
+// Liberal art is 600×300. Wells run x 94–504, y 88–220.
 .trackLiberal .slots {
-  left: 16.5%;
-  right: 16.5%;
-  top: 31%;
-  height: 51%;
+  left: 15.7%;
+  right: 16%;
+  top: 29.5%;
+  height: 44%;
 }
 
+// Fascist art is 600×400 with five wells: x 99–502, y 124–268.
 .trackFascist .slots {
-  left: 15.5%;
-  right: 15.5%;
+  left: 16.5%;
+  right: 16.3%;
   top: 31%;
-  height: 40%;
+  height: 36%;
 }
 
 .slot {
   flex: 1;
   min-width: 0;
+  height: 100%;
   display: grid;
   place-items: center;
+  padding: 1.5% 2.4%;
 }
 
 .slotGlow {
@@ -63,14 +73,9 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center;
   display: block;
-}
-
-.slotSeal {
-  width: 78%;
-  height: auto;
-  max-height: 90%;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }

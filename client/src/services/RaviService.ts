@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js';
+import { RAVI_CLIPS } from '../assets/sounds/ravi/clips';
 import type { MessageKey, MessageValues } from '../i18n';
 import type { I18nService } from './I18nService';
 import type { SettingsService } from './SettingsService';
@@ -52,33 +53,9 @@ export type RaviLineId =
   | 'game.fascistsWin.policies'
   | 'game.reveal';
 
-const FARID_CLIPS = import.meta.glob('../assets/sounds/ravi/farid/*.mp3', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-
-const DILARA_CLIPS = import.meta.glob('../assets/sounds/ravi/dilara/*.mp3', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-
 const HOLD_WITHOUT_CLIP_MS = 1_200;
 
 const canPlayAudio = typeof Audio !== 'undefined';
-
-function indexClips(modules: Record<string, string>): Record<string, string> {
-  const catalog: Record<string, string> = {};
-  for (const [path, src] of Object.entries(modules)) {
-    const file = path.split('/').pop() ?? '';
-    catalog[file.replace(/\.mp3$/, '')] = src;
-  }
-  return catalog;
-}
-
-const CLIPS: Record<RaviWho, Record<string, string>> = {
-  farid: indexClips(FARID_CLIPS),
-  dilara: indexClips(DILARA_CLIPS),
-};
 
 /**
  * Table narrator: a subtitle for the header and an optional spoken clip.
@@ -89,12 +66,18 @@ export class RaviService {
   readonly line = this.lineSignal[0];
   private readonly setLine = this.lineSignal[1];
 
+  private readonly lineIdSignal = createSignal<RaviLineId | null>(null);
+  readonly lineId = this.lineIdSignal[0];
+  private readonly setLineId = this.lineIdSignal[1];
+
   private readonly speakingSignal = createSignal(false);
   readonly speaking = this.speakingSignal[0];
   private readonly setSpeaking = this.speakingSignal[1];
 
   private current: HTMLAudioElement | null = null;
   private generation = 0;
+  private epoch = 0;
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly settings: SettingsService,
@@ -103,8 +86,34 @@ export class RaviService {
 
   /** Resolve the line into the header and play the matching clip if voice is on. */
   speak(id: RaviLineId, params?: MessageValues): Promise<void> {
+    const epoch = this.epoch;
+    const run = this.queue.then(() => {
+      if (this.epoch !== epoch) return;
+      return this.deliver(id, params);
+    });
+    this.queue = run.catch(() => {});
+    return run;
+  }
+
+  /** Drop the current clip so a new beat can take the speaker. */
+  cancel(): void {
+    this.epoch += 1;
+    this.generation += 1;
+    this.stopCurrent();
+    this.setSpeaking(false);
+    this.queue = Promise.resolve();
+  }
+
+  clear(): void {
+    this.cancel();
+    this.setLine(null);
+    this.setLineId(null);
+  }
+
+  private deliver(id: RaviLineId, params?: MessageValues): Promise<void> {
     const subtitle = this.i18n.formatMessage(`ravi.${id}` as MessageKey, params);
     this.setLine(subtitle);
+    this.setLineId(id);
     this.generation += 1;
     const generation = this.generation;
     this.stopCurrent();
@@ -138,20 +147,9 @@ export class RaviService {
     });
   }
 
-  /** Drop the current clip so a new beat can take the speaker. */
-  cancel(): void {
-    this.generation += 1;
-    this.stopCurrent();
-    this.setSpeaking(false);
-  }
-
-  clear(): void {
-    this.cancel();
-    this.setLine(null);
-  }
-
   private clipSrc(id: RaviLineId): string | undefined {
-    return CLIPS[this.settings.settings.raviWho][id];
+    // Dilara is parked — Farid is the only table voice for now.
+    return RAVI_CLIPS.farid[id];
   }
 
   private stopCurrent(): void {

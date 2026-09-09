@@ -1,35 +1,23 @@
 import { Index, Show } from 'solid-js';
-import {
-  powerForFascistPolicy,
-  type BoardState,
-  type ExecutivePower,
-} from '@secret-hitler/shared';
+import type { BoardState } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
-import { Icon, type IconName } from '../../components/Icon/Icon';
-import { POLICY_FACE, POWER_SEAL } from '../../assets/cards';
+import { POLICY_FACE } from '../../assets/cards';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
 import styles from './PolicyBoard.module.scss';
 
 export interface PolicyBoardProps {
   board: BoardState;
-  playerCount: number;
   formatMessage: FormatMessage;
 }
 
 const LIBERAL_SLOTS = 5;
-const FASCIST_SLOTS = 6;
-
-const POWER_ICON: Record<ExecutivePower, IconName> = {
-  investigate: 'question',
-  specialElection: 'crown',
-  policyPeek: 'cards',
-  execution: 'skull',
-};
+/** The painted Fascist board has five wells; the sixth policy ends the game. */
+const FASCIST_SLOTS = 5;
 
 /**
  * Liberal and Fascist tracks, using the painted board art. Enacted policy
- * cards sit in the printed wells; empty Fascist wells show the power icon.
+ * cards sit in the printed wells.
  */
 export function PolicyBoard(props: PolicyBoardProps) {
   const { formatMessage } = props;
@@ -86,10 +74,6 @@ export function PolicyBoard(props: PolicyBoardProps) {
                 filled() &&
                 last() === 'fascist' &&
                 index === props.board.fascistPolicies - 1;
-              const power = () =>
-                index < 5
-                  ? powerForFascistPolicy(props.playerCount, index + 1)
-                  : null;
               return (
                 <span
                   classList={{
@@ -103,18 +87,6 @@ export function PolicyBoard(props: PolicyBoardProps) {
                       src={POLICY_FACE.fascist}
                       alt=""
                     />
-                  </Show>
-                  <Show when={!filled() && power()}>
-                    {(granted) => (
-                      <img
-                        class={styles.slotSeal}
-                        src={POWER_SEAL[granted()]}
-                        alt=""
-                      />
-                    )}
-                  </Show>
-                  <Show when={!filled() && index === FASCIST_SLOTS - 1}>
-                    <Icon name="skull" size={14} class={styles.slotEmblem} />
                   </Show>
                 </span>
               );

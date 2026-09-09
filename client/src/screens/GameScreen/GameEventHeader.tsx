@@ -1,14 +1,9 @@
-import { Show } from 'solid-js';
-import type { FormatMessage, MessageKey } from '../../i18n';
+import type { FormatMessage } from '../../i18n';
 import styles from './GameEventHeader.module.scss';
 
 export interface GameEventHeaderProps {
   headline: string;
   governmentLabel: string;
-  actionLabel?: string;
-  onAction?: () => void;
-  raviSrc?: string;
-  raviSpeaking?: boolean;
 }
 
 const GOVERNMENT_KEYS = [
@@ -43,24 +38,9 @@ export function governmentLabel(
 export function GameEventHeader(props: GameEventHeaderProps) {
   return (
     <header class={styles.header} aria-live="polite">
-      <Show when={props.raviSrc}>
-        <img
-          classList={{
-            [styles.cameo]: true,
-            [styles.cameoSpeaking]: !!props.raviSpeaking,
-          }}
-          src={props.raviSrc}
-          alt=""
-        />
-      </Show>
       <p class={styles.headline} dir="auto">
         {props.headline}
       </p>
-      <Show when={props.actionLabel && props.onAction}>
-        <button type="button" class={styles.action} onClick={props.onAction}>
-          {props.actionLabel}
-        </button>
-      </Show>
       <span class={styles.divider} aria-hidden="true" />
       <div class={styles.government}>
         <span class={styles.governmentLabel} dir="auto">

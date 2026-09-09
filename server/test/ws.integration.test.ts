@@ -168,6 +168,21 @@ describe('WebSocket gameplay', () => {
     expect(server.repo.listPublic()).toHaveLength(0);
   });
 
+  it('Should let the host kick a guest from the lobby', async () => {
+    server = await listenServer();
+    const { ben, hostWs, benWs } = await seatThreePlayers();
+
+    hostWs.send({ type: 'player:kick', playerId: ben.playerId });
+    const closed = await benWs.waitFor('room:closed');
+    expect(closed.reason).toBe('KICKED');
+
+    const hostState = await hostWs.waitFor(
+      'state',
+      (m) => !m.state.players.some((p) => p.id === ben.playerId),
+    );
+    expect(hostState.state.players.map((p) => p.name)).toEqual(['Ana', 'Cal']);
+  });
+
   it('Should rate-limit chat flooding', async () => {
     server = await listenServer();
     const { hostWs } = await seatThreePlayers();

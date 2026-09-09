@@ -45,6 +45,19 @@ export class AnimationService {
     name: AnimationName,
     overrides?: KeyframeAnimationOptions,
   ): Promise<void> {
+    const { keyframes, options } = ANIMATIONS[name];
+    return this.playCustom(element, keyframes, { ...options, ...overrides });
+  }
+
+  /**
+   * Runtime keyframes (FLIP flights) with the same motion gate as `play`.
+   * Prefer a registry name unless the path depends on live layout.
+   */
+  playCustom(
+    element: HTMLElement | null | undefined,
+    keyframes: Keyframe[],
+    options: KeyframeAnimationOptions,
+  ): Promise<void> {
     if (!element || !this.motionEnabled() || typeof element.animate !== 'function') {
       return Promise.resolve();
     }
@@ -55,25 +68,24 @@ export class AnimationService {
       return new Promise((resolve) => {
         nextFrame(() => {
           if (element.isConnected) {
-            this.run(element, name, overrides).then(resolve);
+            this.run(element, keyframes, options).then(resolve);
           } else {
             resolve(); // never mounted — leave it at its natural state
           }
         });
       });
     }
-    return this.run(element, name, overrides);
+    return this.run(element, keyframes, options);
   }
 
   private run(
     element: HTMLElement,
-    name: AnimationName,
-    overrides?: KeyframeAnimationOptions,
+    keyframes: Keyframe[],
+    options: KeyframeAnimationOptions,
   ): Promise<void> {
-    const { keyframes, options } = ANIMATIONS[name];
     // Promote to the compositor for the animation only (project rule).
     element.style.willChange = 'transform, opacity';
-    const animation = element.animate(keyframes, { ...options, ...overrides });
+    const animation = element.animate(keyframes, options);
     return animation.finished
       .catch(() => {}) // cancelled mid-flight (e.g. unmount) is not an error
       .finally(() => {

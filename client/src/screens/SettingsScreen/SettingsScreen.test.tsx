@@ -1,36 +1,32 @@
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { SettingsScreen } from './SettingsScreen';
+import { en } from '../../i18n/locales/en';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
 
 describe('SettingsScreen', () => {
-  it('Should cycle the player count when the row is tapped', () => {
+  it('Should keep player count, timer, theme and language off the page', () => {
     const harness = buildHarness();
-    harness.services.settings.set('playerCount', 7);
     renderWithApp(() => <SettingsScreen />, harness);
 
-    fireEvent.click(screen.getByText('Player Count'));
-    expect(harness.services.settings.settings.playerCount).toBe(8);
-    expect(screen.getByText('8 Players')).toBeTruthy();
+    expect(screen.queryByText(en.settings.playerCount)).toBeNull();
+    expect(screen.queryByText(en.settings.timer)).toBeNull();
+    expect(screen.queryByText(en.settings.theme)).toBeNull();
+    expect(screen.queryByText(en.settings.language)).toBeNull();
+    expect(screen.queryByText(en.settings.confirmActions)).toBeNull();
   });
 
-  it('Should flip the timer between disabled and enabled', () => {
+  it('Should ask before clearing local data', () => {
     const harness = buildHarness();
+    harness.services.settings.set('profileName', 'Ana');
     renderWithApp(() => <SettingsScreen />, harness);
 
-    expect(screen.getByText('Disabled')).toBeTruthy();
-    fireEvent.click(screen.getByText('Timer'));
-    expect(harness.services.settings.settings.timerEnabled).toBe(true);
-    expect(screen.getByText('Enabled')).toBeTruthy();
-  });
-
-  it('Should switch the interface language and re-render in Persian', () => {
-    const harness = buildHarness();
-    renderWithApp(() => <SettingsScreen />, harness);
-
-    fireEvent.click(screen.getByText('Language'));
-    expect(harness.services.settings.settings.language).toBe('fa');
-    // The Profile section title is now Persian — proves the tree re-rendered.
-    expect(screen.getByText('پروفایل')).toBeTruthy();
+    fireEvent.click(screen.getByText(en.settings.clearLocalData));
+    expect(screen.getByText(en.settings.clearLocalDataMessage)).toBeTruthy();
+    const confirm = screen
+      .getAllByRole('button', { name: en.settings.clearLocalData })
+      .at(-1);
+    fireEvent.click(confirm!);
+    expect(harness.services.settings.settings.profileName).toBe('');
   });
 });

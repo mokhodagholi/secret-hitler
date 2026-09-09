@@ -14,7 +14,7 @@ export interface VotingOverlayProps {
   yourVote: Vote | null;
   votedCount: number;
   totalVoters: number;
-  /** Show the countdown bar (the room's Timer setting is enabled). */
+  /** Show the vote countdown. The engine always times this phase. */
   showTimer: boolean;
   secondsLeft: number;
   /** Fraction of the window remaining, 0–1. */

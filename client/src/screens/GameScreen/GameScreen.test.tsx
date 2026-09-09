@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
-import { fireEvent, screen } from '@solidjs/testing-library';
+import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { GameScreen } from './GameScreen';
 import { en } from '../../i18n/locales/en';
@@ -102,6 +102,24 @@ describe('GameScreen — voting', () => {
     fireEvent.click(screen.getByRole('button', { name: en.game.gotIt }));
     expect(screen.getByText(en.ravi.private.nightLiberal)).toBeTruthy();
   });
+
+  it('Should dismiss the night look when voting starts', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, chancellor: null },
+      discussionDeadline: { startedAt: Date.now(), endsAt: Date.now() + 20_000 },
+      you: { ...view.you, role: 'liberal' },
+    });
+    expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
+
+    harness.pushState(votingView());
+    expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
+    expect(screen.getByText(en.game.chancellorRevealTitle)).toBeTruthy();
+  });
 });
 
 function openPlayers() {
@@ -131,6 +149,37 @@ describe('GameScreen — nomination', () => {
       type: 'command',
       command: { kind: 'nominateChancellor', targetId: 'cal' },
     });
+  });
+
+  it('Should explain why a previous-government player cannot be Chancellor', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState({
+      ...nominationView(),
+      ineligibleChancellors: ['cal'],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.getByText(en.game.nominateIneligible)).toBeTruthy();
+    expect(harness.socket.lastSent('command')).toBeUndefined();
+  });
+
+  it('Should explain the term limit even before nomination opens', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, president: 'you', chancellor: null },
+      discussionDeadline: { startedAt: 0, endsAt: Date.now() + 20_000 },
+      nominationDeadline: null,
+      ineligibleChancellors: ['cal'],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.getByText(en.game.nominateIneligible)).toBeTruthy();
+    expect(harness.socket.lastSent('command')).toBeUndefined();
   });
 
   it('Should keep the nomination modal closed during discussion', () => {
@@ -164,7 +213,26 @@ describe('GameScreen — nomination', () => {
     expect(screen.getByText(/election tracker is now 1 of 3/i)).toBeTruthy();
   });
 
-  it('Should end the round from the header', () => {
+  it('Should dismiss the failed-election notice when a new overlay opens', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const base = votingView();
+    harness.pushState(base);
+    harness.pushState({
+      ...base,
+      phase: Phase.Nomination,
+      board: { ...base.board, electionTracker: 1 },
+    });
+    expect(screen.getByText(/election tracker is now 1 of 3/i)).toBeTruthy();
+
+    harness.pushState(votingView());
+    expect(screen.queryByText(/election tracker is now 1 of 3/i)).toBeNull();
+    expect(
+      screen.getByText(en.game.chancellorRevealTitle),
+    ).toBeTruthy();
+  });
+
+  it('Should end the round from the table tools', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(nominationView());
@@ -173,6 +241,26 @@ describe('GameScreen — nomination', () => {
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
       command: { kind: 'endTurn' },
+    });
+  });
+});
+
+describe('GameScreen — presidential power', () => {
+  it('Should investigate a player from the table', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'investigate',
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'useSpecialPower', targetId: 'cal' },
     });
   });
 });
@@ -256,6 +344,7 @@ describe('GameScreen — in-game menu', () => {
     expect(screen.getByRole('button', { name: en.gameMenu.effects })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.ravi })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.viewRules })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
   });
 
   it('Should ask for confirmation when quitting from the menu', () => {
@@ -368,22 +457,82 @@ describe('GameScreen — help bar', () => {
   });
 });
 
-describe('GameScreen — timer setting', () => {
-  it('Should hide the vote countdown when the Timer setting is off', () => {
+describe('GameScreen — vote timer', () => {
+  it('Should show the vote countdown on the ballot', () => {
     const harness = buildHarness({ seated: true });
-    harness.services.settings.set('timerEnabled', false);
     renderWithApp(() => <GameScreen />, harness);
-    harness.pushState(votingView());
-
-    expect(screen.queryByText(SECONDS_PATTERN)).toBeNull();
-  });
-
-  it('Should show the vote countdown when the Timer setting is on', () => {
-    const harness = buildHarness({ seated: true });
-    harness.services.settings.set('timerEnabled', true);
-    renderWithApp(() => <GameScreen />, harness);
-    harness.pushState(votingView());
+    harness.pushState({
+      ...votingView(),
+      voteDeadline: { startedAt: Date.now(), endsAt: Date.now() + 30_000 },
+    });
 
     expect(screen.getByText(SECONDS_PATTERN)).toBeTruthy();
+  });
+});
+
+describe('GameScreen — execution', () => {
+  it('Should let the executed player stay and watch', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, chancellor: null },
+    });
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, chancellor: null },
+      players: view.players.map((player) =>
+        player.id === 'you' ? { ...player, isAlive: false } : player,
+      ),
+    });
+
+    expect(screen.getByText(en.game.killed.title)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.killed.stay }));
+    expect(screen.queryByText(en.game.killed.title)).toBeNull();
+  });
+});
+
+describe('GameScreen — game over', () => {
+  it('Should wait for Ravi to reveal roles before listing them', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, chancellor: null },
+    });
+    harness.socket.emit({
+      type: 'log',
+      entry: { id: 'win-1', code: 'liberalsWin', at: Date.now() },
+    });
+    harness.pushState({
+      ...view,
+      phase: Phase.GameOver,
+      winner: 'liberal',
+      players: view.players.map((player) => ({
+        ...player,
+        role:
+          player.id === 'pres'
+            ? 'hitler'
+            : player.id === 'cal'
+              ? 'fascist'
+              : 'liberal',
+      })),
+    });
+
+    expect(screen.getAllByText(en.game.over.liberalsWin).length).toBeGreaterThan(0);
+    expect(screen.queryByText(en.role.hitler)).toBeNull();
+
+    await waitFor(
+      () => {
+        expect(screen.getByText(en.role.hitler)).toBeTruthy();
+      },
+      { timeout: 3_000 },
+    );
   });
 });

@@ -35,13 +35,20 @@ export function WaitingRoomScreen() {
 
   const [copied, setCopied] = createSignal(false);
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
+  const [startBlock, setStartBlock] = createSignal<
+    'needPlayers' | 'notReady' | null
+  >(null);
+  const [kickTarget, setKickTarget] = createSignal<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [tipIndex, setTipIndex] = createSignal(0);
   let tipEl: HTMLParagraphElement | undefined;
 
   const view = game.view;
-  const shareLink = () =>
-    game.currentSession()?.shareLink ??
-    `${location.origin}/join/${view()?.code ?? ''}`;
+  // Always the origin that's actually serving this page — PUBLIC_URL on the
+  // server is the production nginx host, which is wrong while developing locally.
+  const shareLink = () => `${location.origin}/join/${view()?.code ?? ''}`;
   const amReady = () => game.you()?.ready ?? false;
 
   // Session dropped (left room / token expired) → back to the play menu.
@@ -87,6 +94,28 @@ export function WaitingRoomScreen() {
     game.leaveRoom();
     nav.navigate('play');
   }
+
+  function tryStart(): void {
+    const state = view();
+    if (!state) return;
+    const connected = state.players.filter((player) => player.connected);
+    if (connected.length < state.minPlayers) {
+      setStartBlock('needPlayers');
+      return;
+    }
+    if (!connected.every((player) => player.ready)) {
+      setStartBlock('notReady');
+      return;
+    }
+    game.startGame();
+  }
+
+  const startNeedCount = () => {
+    const state = view();
+    if (!state) return 0;
+    const connected = state.players.filter((player) => player.connected).length;
+    return Math.max(0, state.minPlayers - connected);
+  };
 
   return (
     <Screen>
@@ -140,10 +169,7 @@ export function WaitingRoomScreen() {
                       </Button>
                     }
                   >
-                    <Button
-                      disabled={!game.canStart()}
-                      onClick={() => game.startGame()}
-                    >
+                    <Button onClick={tryStart}>
                       {formatMessage('waiting.startGame')}
                     </Button>
                   </Show>
@@ -163,6 +189,35 @@ export function WaitingRoomScreen() {
                 cancelLabel={formatMessage('common.cancel')}
                 onConfirm={leaveRoom}
                 onCancel={() => setConfirmingLeave(false)}
+              />
+
+              <ConfirmDialog
+                open={startBlock() != null}
+                message={
+                  startBlock() === 'needPlayers'
+                    ? formatMessage('waiting.startNeedPlayers', {
+                        min: view()?.minPlayers ?? 0,
+                        count: startNeedCount(),
+                      })
+                    : formatMessage('waiting.startNotReady')
+                }
+                confirmLabel={formatMessage('common.ok')}
+                onConfirm={() => setStartBlock(null)}
+              />
+
+              <ConfirmDialog
+                open={kickTarget() != null}
+                message={formatMessage('waiting.kickConfirm', {
+                  name: kickTarget()?.name ?? '',
+                })}
+                confirmLabel={formatMessage('waiting.kick')}
+                cancelLabel={formatMessage('common.cancel')}
+                onConfirm={() => {
+                  const target = kickTarget();
+                  if (target) game.kickPlayer(target.id);
+                  setKickTarget(null);
+                }}
+                onCancel={() => setKickTarget(null)}
               />
             </>
           )}
@@ -192,6 +247,11 @@ export function WaitingRoomScreen() {
                 connected: player.connected,
               }}
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
+              onSelect={
+                game.isHost() && player.id !== props.state.you.id
+                  ? () => setKickTarget({ id: player.id, name: player.name })
+                  : undefined
+              }
             />
           )}
         </For>

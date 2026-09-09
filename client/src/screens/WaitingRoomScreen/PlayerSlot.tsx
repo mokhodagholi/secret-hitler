@@ -11,6 +11,8 @@ export interface SlotPlayer {
 export interface PlayerSlotProps {
   player?: SlotPlayer;
   awaitingLabel: string;
+  /** Host tapping a guest to kick them. */
+  onSelect?: () => void;
 }
 
 /**
@@ -33,23 +35,36 @@ export function PlayerSlot(props: PlayerSlotProps) {
         </div>
       }
     >
-      {(player) => (
-        <div
-          role="listitem"
-          aria-label={player().name}
-          classList={{ [styles.slot]: true, [styles.offline]: !player().connected }}
-        >
-          <div
+      {(player) => {
+        const kickable = () => props.onSelect != null;
+        return (
+          <button
+            type="button"
+            role="listitem"
+            aria-label={player().name}
+            disabled={!kickable()}
             classList={{
-              [styles.avatar]: true,
-              [styles.avatarReady]: player().ready,
-              [styles.avatarNotReady]: !player().ready,
+              [styles.slot]: true,
+              [styles.offline]: !player().connected,
+              [styles.kickable]: kickable(),
             }}
+            onClick={() => props.onSelect?.()}
           >
-            <img class={styles.avatarImage} src={playerPlaceholder} alt="" />
-          </div>
-        </div>
-      )}
+            <div
+              classList={{
+                [styles.avatar]: true,
+                [styles.avatarReady]: player().ready,
+                [styles.avatarNotReady]: !player().ready,
+              }}
+            >
+              <img class={styles.avatarImage} src={playerPlaceholder} alt="" />
+            </div>
+            <span class={styles.name} dir="auto">
+              {player().name}
+            </span>
+          </button>
+        );
+      }}
     </Show>
   );
 }

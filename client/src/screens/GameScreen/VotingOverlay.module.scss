@@ -61,8 +61,8 @@
   display: grid;
   place-items: center;
   height: 100%;
-  color: $navy-950;
-  mix-blend-mode: hard-light;
+  color: $cream;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
 .buttons {
@@ -83,26 +83,18 @@
   padding: 8px 8px 12px;
   border-radius: $radius-lg;
   color: $white;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
-  background: rgba(8, 16, 28, 0.55);
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .cardArt {
   width: 100%;
   aspect-ratio: 3 / 2;
   object-fit: contain;
-  border-radius: 8px;
   display: block;
-  background: #1a1208;
-}
-
-.ja {
-  border-color: rgba($blue-liberal, 0.7);
-}
-
-.nein {
-  border-color: rgba($red-bright, 0.7);
+  background: transparent;
+  mix-blend-mode: lighten;
 }
 
 .waiting {

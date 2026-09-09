@@ -1,0 +1,49 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 8, 16, 0.82);
+}
+
+.dialog {
+  @include card;
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border-color: rgba($gold, 0.5);
+}
+
+.title {
+  @include display(1rem, 0.22em);
+  color: $gold;
+}
+
+.face {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid rgba($gold, 0.55);
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.prompt {
+  margin: 0;
+  font-size: 1.02rem;
+  color: $text-light;
+  text-align: center;
+  line-height: 1.5;
+}

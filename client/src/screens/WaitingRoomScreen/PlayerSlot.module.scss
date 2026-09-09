@@ -1,5 +1,18 @@
 .slot {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+}
+
+.kickable {
+  cursor: pointer;
 }
 
 .offline {
@@ -12,11 +25,11 @@
 }
 
 .avatar {
-  width: 52px;
-  height: 52px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid rgba(210, 200, 180, 0.55);
+  border: 3px solid rgba(210, 200, 180, 0.55);
   background: #1a140e;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
@@ -24,15 +37,15 @@
 .avatarReady {
   border-color: #7dce5a;
   box-shadow:
-    0 0 0 1px rgba(125, 206, 90, 0.35),
-    0 0 8px rgba(125, 206, 90, 0.45);
+    0 0 0 2px rgba(125, 206, 90, 0.35),
+    0 0 10px rgba(125, 206, 90, 0.5);
 }
 
 .avatarNotReady {
   border-color: #e85a3c;
   box-shadow:
-    0 0 0 1px rgba(232, 90, 60, 0.3),
-    0 0 8px rgba(232, 90, 60, 0.4);
+    0 0 0 2px rgba(232, 90, 60, 0.3),
+    0 0 10px rgba(232, 90, 60, 0.45);
 }
 
 .avatarEmpty {
@@ -45,4 +58,20 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.name {
+  max-width: 88px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f3e7c9;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }

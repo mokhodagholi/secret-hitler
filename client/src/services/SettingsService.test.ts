@@ -19,12 +19,12 @@ describe('SettingsService', () => {
     expect(settings.settings.playerCount).toBe(MIN_PLAYERS);
   });
 
-  it('Should cycle the narrator between Farid and Dilara', () => {
+  it('Should ignore a stored Dilara narrator and use Farid', () => {
+    localStorage.setItem(
+      'sh:settings',
+      JSON.stringify({ raviWho: 'dilara', music: false }),
+    );
     const settings = new SettingsService();
-    expect(settings.settings.raviWho).toBe('farid');
-    settings.cycleRaviWho();
-    expect(settings.settings.raviWho).toBe('dilara');
-    settings.cycleRaviWho();
     expect(settings.settings.raviWho).toBe('farid');
   });
 

@@ -5,6 +5,8 @@ import styles from './HelpBar.module.scss';
 
 export interface HelpBarProps {
   unreadChat: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
   onOpenChat: () => void;
   onOpenPlayers: () => void;
   onOpenMenu: () => void;
@@ -30,6 +32,11 @@ export function HelpBar(props: HelpBarProps) {
 
   return (
     <footer class={styles.bar}>
+      <Show when={props.actionLabel && props.onAction}>
+        <button type="button" class={styles.action} onClick={props.onAction}>
+          {props.actionLabel}
+        </button>
+      </Show>
       <div class={styles.tools}>
         <button
           type="button"

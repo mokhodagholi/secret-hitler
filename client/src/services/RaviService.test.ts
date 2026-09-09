@@ -41,4 +41,15 @@ describe('RaviService', () => {
     await ravi.speak('president.first', { name: 'Ana' });
     expect(ravi.line()).toBe('Ana is President this round.');
   });
+
+  it('Should play queued lines one after another', async () => {
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+    const ravi = makeRavi(true);
+    await Promise.all([
+      ravi.speak('vote.failed'),
+      ravi.speak('tracker.advance', { count: 1 }),
+    ]);
+    expect(play).toHaveBeenCalledTimes(2);
+    expect(ravi.line()).toBe('Election tracker 1 of 3.');
+  });
 });

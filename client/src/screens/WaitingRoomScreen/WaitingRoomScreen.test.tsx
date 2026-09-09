@@ -43,7 +43,26 @@ describe('WaitingRoomScreen', () => {
     });
   });
 
-  it('Should keep the host start button disabled until everyone is ready', () => {
+  it('Should tell the host why the game cannot start yet', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        minPlayers: 3,
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true, ready: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: true }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    expect(screen.getByText(/Need at least 3 players/i)).toBeTruthy();
+    expect(harness.socket.lastSent('game:start')).toBeUndefined();
+  });
+
+  it('Should tell the host when a player is not ready', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
@@ -52,14 +71,15 @@ describe('WaitingRoomScreen', () => {
         players: [
           makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true, ready: true }),
           makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: false }),
-          makePlayer({ id: 'cal', name: 'Cal', seat: 2, ready: false }),
+          makePlayer({ id: 'cal', name: 'Cal', seat: 2, ready: true }),
         ],
       }),
     );
 
-    const start = screen.getByRole('button', { name: 'Start Game' }) as HTMLButtonElement;
-    expect(start.disabled).toBe(true);
-    fireEvent.click(start);
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    expect(
+      screen.getByText(/Every player must be ready before the game can start/i),
+    ).toBeTruthy();
     expect(harness.socket.lastSent('game:start')).toBeUndefined();
   });
 
@@ -81,6 +101,28 @@ describe('WaitingRoomScreen', () => {
     expect(start.disabled).toBe(false);
     fireEvent.click(start);
     expect(harness.socket.lastSent('game:start')).toEqual({ type: 'game:start' });
+  });
+
+  it('Should ask the host before kicking a guest', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true, ready: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: false }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('listitem', { name: 'Ben' }));
+    expect(screen.getByText(/Kick Ben from the room/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Kick' }));
+    expect(harness.socket.lastSent('player:kick')).toEqual({
+      type: 'player:kick',
+      playerId: 'ben',
+    });
   });
 
   it('Should navigate to the game board once the lobby phase ends', () => {

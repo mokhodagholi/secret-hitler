@@ -82,5 +82,9 @@ export async function handleBaleWebhook(
 
 export async function registerBaleCommands(bot: BaleMessenger): Promise<void> {
   if (!bot.setMyCommands) return;
-  await bot.setMyCommands({ commands: BALE_BOT_COMMANDS });
+  try {
+    await bot.setMyCommands({ commands: BALE_BOT_COMMANDS });
+  } catch {
+    // Bale's Bot API still returns HTTP 501 for setMyCommands.
+  }
 }

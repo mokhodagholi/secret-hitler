@@ -99,6 +99,7 @@ export type LogCode =
   | 'gameStarted'
   | 'liberalsWin'
   | 'fascistsWin'
+  | 'fascistsWinNumbers'
   | 'chaos'
   | 'newHost'
   | 'nominated'
@@ -189,7 +190,7 @@ export const DISCUSSION_DURATION_MS = 180_000;
 /** How long the Ja/Nein vote stays open before unvoted players default to Nein. */
 export const VOTE_DURATION_MS = 30_000;
 /** How long a legislator has to choose before the engine picks at random. */
-export const LEGISLATIVE_DURATION_MS = 10_000;
+export const LEGISLATIVE_DURATION_MS = 20_000;
 /** How long the President has to nominate before the election fails. */
 export const NOMINATION_DURATION_MS = 10_000;
 /** How long a disconnected host keeps the host seat before migration, in ms. */

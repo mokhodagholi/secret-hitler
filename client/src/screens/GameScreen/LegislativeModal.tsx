@@ -23,7 +23,7 @@ const REVEAL_STEP_MS = 110;
 /**
  * The legislator's hand, centre stage: cards flip in on open, the chosen one
  * animates away (discard) or flies to the board (enact) before the choice is
- * sent. A 10-second timer counts down to the engine's random pick.
+ * sent. A 20-second timer counts down to the engine's random pick.
  */
 export function LegislativeModal(props: LegislativeModalProps) {
   const { formatMessage } = props;

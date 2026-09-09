@@ -129,6 +129,27 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.changed();
   }
 
+  /**
+   * Host-only lobby kick. The socket layer then closes the target's connection.
+   */
+  kickPlayer(hostId: string, targetId: string): EngineError | null {
+    const room = this.room;
+    if (room.phase !== Phase.Lobby) {
+      return err('ALREADY_STARTED', 'The game has already started.');
+    }
+    if (hostId !== room.hostId) {
+      return err('NOT_HOST', 'Only the host can remove a player.');
+    }
+    if (targetId === hostId) {
+      return err('INVALID_ACTION', 'You cannot kick yourself.');
+    }
+    if (!room.findPlayer(targetId)) {
+      return err('INVALID_ACTION', 'That player is not in the room.');
+    }
+    this.removePlayer(targetId);
+    return null;
+  }
+
   setConnected(playerId: string, connected: boolean): void {
     const player = this.room.findPlayer(playerId);
     if (!player || player.connected === connected) return;
@@ -264,6 +285,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   advanceRound(): void {
     const room = this.room;
     if (room.phase === Phase.GameOver) return;
+    if (this.fascistsHoldTheTable()) {
+      this.log('fascistsWinNumbers');
+      this.endGame('fascist');
+      return;
+    }
     // A special election runs one round out of turn; afterwards the normal
     // rotation resumes from the player who invoked it.
     const resumeAfter = room.specialElectionResumeAfterId;
@@ -302,6 +328,19 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     return this.room.players
       .filter((p) => p.isAlive)
       .sort((a, b) => a.seat - b.seat);
+  }
+
+  /**
+   * A leaver can shrink the table until Fascists equal or outnumber Liberals.
+   * Official rules don't cover mid-game absences; we check at the start of
+   * the next round so the current election/legislation can finish.
+   */
+  private fascistsHoldTheTable(): boolean {
+    const living = this.room.players.filter((player) => player.isAlive);
+    const present = living.filter((player) => player.connected);
+    if (present.length === 0 || present.length === living.length) return false;
+    const liberals = present.filter((player) => player.role === 'liberal').length;
+    return present.length - liberals >= liberals;
   }
 
   private nextPresidentId(): string | null {

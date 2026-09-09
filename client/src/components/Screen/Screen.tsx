@@ -6,6 +6,8 @@ import styles from './Screen.module.scss';
 export interface ScreenProps {
   children: JSX.Element;
   nav?: NavItem[];
+  /** Skip content padding and scrolling so a child can fill the shell. */
+  fill?: boolean;
 }
 
 /**
@@ -19,7 +21,11 @@ export function Screen(props: ScreenProps) {
     <div class={styles.shell}>
       {/* Each navigation mounts a fresh screen — its content rises in. */}
       <main
-        classList={{ [styles.content]: true, [styles.withNav]: !!props.nav }}
+        classList={{
+          [styles.content]: true,
+          [styles.withNav]: !!props.nav,
+          [styles.fill]: !!props.fill,
+        }}
         ref={(element) => void animation.play(element, 'screen-enter')}
       >
         {props.children}
