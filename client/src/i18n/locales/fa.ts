@@ -321,7 +321,7 @@ export const fa = {
     youVoted: 'رأی شما: {vote} — در انتظار دیگران',
     voteProgress: '{count}/{total} رأی داده‌اند',
     president: 'رئیس‌جمهور',
-    chancellor: 'نخست وزیر',
+    chancellor: 'صدراعظم',
     yourRole: 'نقش شما',
     chat: 'گفت‌وگو',
     gameLog: 'گزارش بازی',

@@ -1,0 +1,220 @@
+# Ravi — the table narrator
+
+Ravi is the table’s presenter: an on-screen 1930s radio host who tells
+every player **what just happened** and **what to do next**. It is not a
+live AI, and it is not a player at a seat. It is a scripted ceremony
+layer on top of the engine, with a visible character, a subtitle, and
+optional spoken audio.
+
+This doc is the system. The words themselves live in
+[`ravi-script.md`](./ravi-script.md). The pictures, timings, and “who sees
+what” live in [`gamification.md`](./gamification.md).
+
+## Why it exists
+
+Players currently learn the game from a thin header line, a toast, and a
+chat log. That is why people miss their role, miss whose turn it is, and
+stare at the board with no idea a vote or a law is happening.
+
+Ravi fixes the *public* story. Private information (your role, the three
+laws in the President’s hand, an investigation result) is shown only on
+that player’s screen. Ravi never speaks a secret.
+
+## On-screen character
+
+Locked: Ravi is a **visible person**, not only a voice in the header.
+
+The table already looks like Weimar paper, postage, and newsprint. Ravi
+matches that as a radio-show host in a cameo frame:
+
+- Oval / circular portrait, like a 1932 wireless broadcast. Not a seat
+  at the table (that would look like an 11th player).
+- Lives in a **Ravi dock** on the game page — header-adjacent on
+  desktop, a small pinned cameo on mobile so it never covers a seat.
+- Two portraits, because both voices are in: **Farid** (male, grave)
+  and **Dilara** (female, clear). Settings pick the voice; the matching
+  portrait shows.
+- Two art poses per portrait: **idle** (listening) and **speaking**
+  (frame gilt lights, mouth slightly open). Swap poses with opacity —
+  no lip-sync.
+- The spoken line is a plaque / speech card next to the cameo, *and*
+  duplicated in the parchment header so it stays readable if the cameo
+  is small. `aria-live` stays on the header.
+- Idle most of the time. The cameo only “leans in” for a beat, then
+  settles, so it does not compete with cards in flight.
+
+Do not put Ravi on a chair, do not give them a vote, do not let them
+hold policy cards. They announce. They do not play.
+
+## Do not generate lines at runtime
+
+ChatGPT / Gemini / any LLM must **not** invent lines during a live game.
+
+| Live AI speech | Scripted catalog |
+|---|---|
+| 1–8 s of lag before every beat | Instant: subtitle + pre-recorded clip |
+| Different wording every time, easy to leak a secret | Same line, every table, never a secret |
+| Cost per game, needs a key, fails offline | Files in the bundle |
+| Names and numbers come out wrong in Persian TTS | Templates with `{name}` in text only |
+
+The “AI” step is **authoring**: we write the catalog, then (optionally) run
+a TTS studio once to record the clips. After that, the game is a player.
+
+```
+ravi-script.md          ← human-editable source of truth for the words
+        ↓
+i18n keys `ravi.*`      ← fa.ts / en.ts, same ids, `{name}` / `{ja}` params
+        ↓
+RaviService.speak(id)   ← subtitle in the header + SoundService clip
+        ↓
+mp3 per line            ← pre-recorded, named by id (deal.start.mp3, …)
+```
+
+A line id is a string like `deal.start` or `vote.passed`. The client never
+concatenates sentences. If a beat needs a name, the **subtitle** interpolates
+it and the **audio** uses a nameless take (“رئیس‌جمهور این دور انتخاب شد”)
+while the header already shows the name. Spoken player names are the thing
+TTS gets wrong; we do not depend on them.
+
+## What Ravi is allowed to say
+
+Public table facts only:
+
+- A phase began or ended (“زمان گفتگوست”).
+- Who holds a **public** office (President, nominated Chancellor).
+- Vote totals after the cards are revealed.
+- Which colour of **enacted** law hit the board (that is public).
+- That a power is in play (“رئیس‌جمهور باید یک نفر را بازرسی کند”) — not
+  the result of the inspection.
+- Win / loss.
+
+Never:
+
+- Anyone’s secret role or party, including “ fascists, open your eyes ”
+  as a *different* audio clip from what liberals hear (phones on one sofa
+  would leak). Night uses **one shared line**; only the picture differs.
+- The three laws the President drew, or which one was burned.
+- An investigation result.
+- How any living player voted. Ballots stay anonymous for the whole
+  game. Ravi may speak **totals only** (“۴ موافق، ۱ مخالف”).
+
+## How it plays with the engine
+
+The server stays the source of truth. Ravi and the card motion are a
+**client ceremony** driven by the snapshot the server already sent.
+
+```
+server: deal roles + Phase.Night + clock
+        ↓  full GameStateView (you.role, visible teammates, deadline)
+client: animation.enqueue the deal / look / glance
+        ravi.speak the public lines
+```
+
+Night is a real engine phase (`Phase.Night`), server-timed, so a rejoin
+lands in the same beat. The client never invents a role, never guesses
+who the Fascists are, and never starts Night because a local timer fired.
+It only *stages* what `you.role` and `players[].role` already contain
+(`Room.roleVisibleTo` already sends teammates to the right viewers).
+
+When the server clock ends, the engine moves to `Nomination` (discussion).
+The client plays `night.end` → `president.first` off that transition.
+
+Same pattern as discussion / vote already: a `nightDeadline`
+`{ startedAt, endsAt }` on the snapshot. The client uses that clock to
+pace the deal (backs) → look → glance, then waits for the phase change.
+A player who taps «فهمیدم» only skips *their* look overlay; it does not
+end Night for the table.
+
+| Phase | Ravi |
+|---|---|
+| `Night` (new) | Deal, private look, team glance, first President |
+| `Nomination` | Discussion, then “pick a Chancellor” |
+| `Voting` | “Vote on this government” |
+| `PresidentLegislative` | “Three laws to the President” |
+| `ChancellorLegislative` | “Two laws to the Chancellor” |
+| `SpecialPower` | The matching power line |
+| `GameOver` | Winner line + role cascade (no voice over secrets until cards are up) |
+
+Until `Night` exists, `startGame` deals roles and jumps straight into
+`Nomination` with a 3-minute chat and a tiny “you are X” label. That is
+the hole Ravi + Night is meant to fill. Discussion becomes **5 minutes**
+once we touch that timer; the President may still skip.
+
+`LogCode` already covers most beats (`nominated`, `votePassed`,
+`liberalEnacted`, …). Add codes only when a beat has no log today
+(deal, night, discussion opening, chaos tracker tick).
+
+## Audio production
+
+ChatGPT and Gemini **cannot** give us usable Persian voice. Use a TTS
+studio, once, then commit the mp3s.
+
+**Best fit for this tone**
+
+1. **Azure Neural TTS** — record the pilot **twice**:
+   `fa-IR-FaridNeural` (male, grave) and `fa-IR-DilaraNeural` (female,
+   clear). SSML for rate ~0.9 and a slight pitch down. Both stay in the
+   game; the player picks Ravi’s voice in settings.
+2. **Google Cloud TTS** — `fa-IR-Wavenet-B` / `D` (male) or `A` / `C`
+   (female). Very consistent, a bit more “assistant” than radio.
+3. **ElevenLabs Multilingual v2** — hit-and-miss on Persian; use only if
+   a specific cloned voice is the goal.
+4. Human record — still the gold standard if we can get one actor for
+   ~80 short lines.
+
+Export: **mono mp3, 64–96 kbps, loudness-normalized**, 0.15 s pad at
+head/tail so clips do not click. Drop them in
+`client/src/assets/sounds/ravi/` and register them next to `EFFECTS` (or a
+sibling `RAVI` map) in `SoundService`.
+
+Playback rules:
+
+- **Two independent toggles** (keep both for now; we can drop one later):
+  - **Sound Effects** — card flights, tracker tick, vote pile, etc.
+  - **Ravi voice** — spoken lines only. Subtitle and cameo still run
+    when voice is off.
+- Music stays its own toggle, as today.
+- Voice *who*: Farid or Dilara, a third setting, independent of on/off.
+- `RaviService` ducking: start the clip, cancel the previous one if a new
+  beat starts (never layer two sentences).
+- Subtitle always shows, even when Ravi voice is off. The header is the
+  accessible version (`aria-live="polite"` is already on `GameEventHeader`).
+- Reduce Motion does not skip subtitles; it only skips the card motion.
+
+A 10-line **pilot**, recorded in **both** voices: `deal.start`,
+`president.first`, `discuss.start`, `nominate.start`, `vote.start`,
+`vote.passed`, `vote.failed`, `law.liberal`, `law.fascist`,
+`game.liberalsWin.policies`. Listen on a phone speaker, then batch the
+rest. Clips live in `…/ravi/farid/` and `…/ravi/dilara/` with the same
+filenames.
+
+## Client shape (when we build it)
+
+One owner, same pattern as `SoundService` / `AnimationService`:
+
+```ts
+ravi.speak('vote.passed', { ja: 4, nein: 1, total: 5 })
+```
+
+- Resolves the i18n string into the header **and** the cameo plaque.
+- Swaps the portrait to the speaking pose for the duration of the clip.
+- Plays the matching clip for the selected voice (Farid / Dilara) if
+  voice is on and a file exists.
+- Returns a promise on `audio.ended` (or a 1.2 s hold if there is no
+  clip) so the animation queue can wait.
+
+Nameless audio + named subtitle means missing clips are fine — the table
+still reads the line.
+
+## Locked decisions
+
+- Discussion window: **5 minutes**. President may still skip.
+- Votes: **anonymous**. Totals only; never who voted Ja or Nein.
+- Ravi: **on-screen character** (cameo + plaque), plus header subtitle.
+- Voice talent: **Farid and Dilara** both ship; settings pick one.
+- Toggles: **Sound Effects** and **Ravi voice** are both present for
+  now (plus Music, as today). We can drop one later.
+- Office title: **صدراعظم** (never نخست وزیر). Seats, Ravi, and rules
+  all use this word. English stays **Chancellor**.
+- Night: **server owns the data and the clock**; the client only
+  animates it. See above.
