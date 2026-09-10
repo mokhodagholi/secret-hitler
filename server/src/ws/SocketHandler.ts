@@ -1,8 +1,8 @@
 import type { WebSocket } from 'ws';
 import {
   HOST_MIGRATION_GRACE_MS,
+  LIVE_ROOM_RECONNECT_GRACE_MS,
   MessageRouter,
-  Phase,
   parseClientMessage,
   type ClientMessage,
   type EngineError,
@@ -15,6 +15,7 @@ import { RateLimiter } from '../util/RateLimiter';
 import type { RoomEntry, RoomRepository } from '../rooms/RoomRepository';
 import type { TokenStore } from '../rooms/TokenStore';
 import type { BaleSeatIndex } from '../bale/BaleSeatIndex';
+import type { LiveRoomStore } from '../rooms/LiveRoomStore';
 
 /** Resolved per-message context for an authenticated socket. */
 interface GameContext {
@@ -48,6 +49,10 @@ export class SocketHandler {
   private readonly nominationTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room pending host-migration timers (disconnect grace period). */
   private readonly hostGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Rooms that just came back from disk — do not wipe them while empty. */
+  private readonly reconnectGrace = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Serialize durable writes so a token issue cannot lose a racing snapshot. */
+  private readonly persistChain = new Map<string, Promise<void>>();
   private readonly chatLimiter = new RateLimiter(CHAT_LIMIT, CHAT_WINDOW_MS);
   private readonly router: MessageRouter<ClientMessage, GameContext>;
 
@@ -55,6 +60,7 @@ export class SocketHandler {
     private readonly repo: RoomRepository,
     private readonly tokens: TokenStore,
     private readonly seats: BaleSeatIndex | null = null,
+    private readonly live: LiveRoomStore | null = null,
   ) {
     this.router = this.buildRouter();
   }
@@ -93,7 +99,8 @@ export class SocketHandler {
           });
         }
       }
-      if (room.isEmpty) this.removeRoom(room.id);
+      void this.persistRoom(room.id);
+      if (room.isEmpty && !this.reconnectGrace.has(room.id)) this.removeRoom(room.id);
     });
 
     engine.on('roleAssigned', ({ playerId }) => {
@@ -139,6 +146,94 @@ export class SocketHandler {
       }, Math.max(0, endsAt - Date.now()));
       this.nominationTimers.set(room.id, timer);
     });
+  }
+
+  /**
+   * Wire a room that survived a process restart: timers, host grace, and a
+   * window so `isEmpty` does not delete it before anyone reconnects.
+   */
+  adoptRestored(entry: RoomEntry): void {
+    this.registerEngine(entry);
+    this.restoreDeadlines(entry);
+    this.beginReconnectGrace(entry.room.id);
+    this.scheduleHostGrace(entry.room.id);
+  }
+
+  /** Snapshot room + tokens. Chained per room so the last write wins. */
+  persistRoom(roomId: string): Promise<void> {
+    if (!this.live) return Promise.resolve();
+    return this.enqueuePersist(roomId, () => this.flushPersist(roomId));
+  }
+
+  private enqueuePersist(roomId: string, work: () => Promise<void>): Promise<void> {
+    const next = (this.persistChain.get(roomId) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(work);
+    const tracked = next.catch((error) => {
+      console.error(`Failed to persist live room ${roomId}`, error);
+    });
+    this.persistChain.set(roomId, tracked);
+    return tracked;
+  }
+
+  private async flushPersist(roomId: string): Promise<void> {
+    if (!this.live) return;
+    const entry = this.repo.get(roomId);
+    if (!entry) return;
+    await this.live.save(roomId, entry.room.code, {
+      room: entry.room.toSnapshot(),
+      tokens: this.tokens.listForRoom(roomId),
+    });
+  }
+
+  private restoreDeadlines(entry: RoomEntry): void {
+    const { room } = entry;
+    this.armTimer(this.discussionTimers, room.id, room.discussionEndsAt, () => {
+      this.repo.get(room.id)?.engine.resolveDiscussionTimeout();
+    });
+    this.armTimer(this.voteTimers, room.id, room.voteEndsAt, () => {
+      this.repo.get(room.id)?.engine.resolveVoteTimeout();
+    });
+    this.armTimer(this.legislativeTimers, room.id, room.legislativeEndsAt, () => {
+      this.repo.get(room.id)?.engine.resolveLegislativeTimeout();
+    });
+    this.armTimer(this.nominationTimers, room.id, room.nominationEndsAt, () => {
+      this.repo.get(room.id)?.engine.resolveNominationTimeout();
+    });
+  }
+
+  private armTimer(
+    timers: Map<string, ReturnType<typeof setTimeout>>,
+    roomId: string,
+    endsAt: number,
+    onTimeout: () => void,
+  ): void {
+    const existing = timers.get(roomId);
+    if (existing) {
+      clearTimeout(existing);
+      timers.delete(roomId);
+    }
+    if (endsAt <= 0) return;
+    const timer = setTimeout(onTimeout, Math.max(0, endsAt - Date.now()));
+    timers.set(roomId, timer);
+  }
+
+  private beginReconnectGrace(roomId: string): void {
+    this.clearReconnectGrace(roomId);
+    const timer = setTimeout(() => {
+      this.reconnectGrace.delete(roomId);
+      const entry = this.repo.get(roomId);
+      if (entry?.room.isEmpty) this.removeRoom(roomId);
+    }, LIVE_ROOM_RECONNECT_GRACE_MS);
+    this.reconnectGrace.set(roomId, timer);
+  }
+
+  private clearReconnectGrace(roomId: string): void {
+    const timer = this.reconnectGrace.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.reconnectGrace.delete(roomId);
+    }
   }
 
   private stopDiscussionTimer(roomId: string): void {
@@ -261,9 +356,13 @@ export class SocketHandler {
     this.stopLegislativeTimer(roomId);
     this.stopNominationTimer(roomId);
     this.cancelHostGrace(roomId);
+    this.clearReconnectGrace(roomId);
     this.tokens.revokeRoom(roomId);
     this.seats?.releaseRoom(roomId);
     this.repo.remove(roomId);
+    if (this.live) {
+      void this.enqueuePersist(roomId, () => this.live!.remove(roomId));
+    }
   }
 
   private onAuth(ws: WebSocket, token: string): void {
@@ -278,7 +377,12 @@ export class SocketHandler {
 
     this.connections.bind(player.id, ws);
     this.socketRoom.set(ws, entry.room.id);
-    if (player.id === entry.room.hostId) this.cancelHostGrace(entry.room.id);
+    this.clearReconnectGrace(entry.room.id);
+    if (player.id === entry.room.hostId) {
+      this.cancelHostGrace(entry.room.id);
+    } else if (!entry.room.findPlayer(entry.room.hostId)?.connected) {
+      this.scheduleHostGrace(entry.room.id);
+    }
     entry.engine.setConnected(player.id, true);
 
     this.sendTo(ws, { type: 'authed', playerId: player.id });

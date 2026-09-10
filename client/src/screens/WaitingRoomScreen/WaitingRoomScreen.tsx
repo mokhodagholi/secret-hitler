@@ -7,7 +7,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { Phase, type GameStateView } from '@secret-hitler/shared';
+import { MAX_PLAYERS, Phase, type GameStateView } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import {
   CONNECTION_STATUS_KEYS,
@@ -267,9 +267,16 @@ export function WaitingRoomScreen() {
     const awaiting = createMemo(() =>
       Math.max(0, props.state.maxPlayers - seated().length),
     );
+    const compact = () => props.state.maxPlayers === MAX_PLAYERS;
 
     return (
-      <div class={styles.seats} role="list">
+      <div
+        classList={{
+          [styles.seats]: true,
+          [styles.seatsPacked]: compact(),
+        }}
+        role="list"
+      >
         <For each={seated()}>
           {(player) => (
             <PlayerSlot
@@ -281,11 +288,12 @@ export function WaitingRoomScreen() {
                 connected: player.connected,
               }}
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
-              seatLabel={formatMessage('game.seatNumber', {
+              seatLabel={formatMessage('waiting.seatLabel', {
                 n: player.seat + 1,
               })}
               isYou={player.id === props.state.you.id}
               youLabel={formatMessage('game.you')}
+              compact={compact()}
               onSelect={
                 game.isHost() && player.id !== props.state.you.id
                   ? () => setKickTarget({ id: player.id, name: player.name })
@@ -298,6 +306,7 @@ export function WaitingRoomScreen() {
           {() => (
             <PlayerSlot
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
+              compact={compact()}
             />
           )}
         </For>

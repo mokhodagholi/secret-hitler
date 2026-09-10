@@ -3,9 +3,9 @@ import { useApp } from '../../services/AppContext';
 import { Button } from '../Button/Button';
 import {
   UPDATE_POLL_MS,
+  activateWaitingAndReload,
   checkForUpdate,
   isUpdatePromptVisible,
-  reloadToLatest,
 } from '../../services/update';
 import styles from './UpdateModal.module.scss';
 
@@ -54,7 +54,7 @@ export function UpdateModal() {
             {formatMessage('update.title')}
           </h2>
           <div class={styles.action}>
-            <Button onClick={() => reloadToLatest()}>
+            <Button onClick={() => void activateWaitingAndReload()}>
               {formatMessage('update.action')}
             </Button>
           </div>

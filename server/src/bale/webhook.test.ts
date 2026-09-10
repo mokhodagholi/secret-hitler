@@ -2,7 +2,11 @@ import { describe, expect, it } from '@rstest/core';
 import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
 import { BaleSeatIndex } from './BaleSeatIndex';
-import type { BaleMessenger } from './webhook';
+import {
+  webhookListenUrl,
+  webhookSecretMatches,
+  type BaleMessenger,
+} from './webhook';
 
 describe('Bale webhook', () => {
   it('Should reply to /start with a mini-app Play button', async () => {
@@ -44,6 +48,90 @@ describe('Bale webhook', () => {
     expect(JSON.stringify(sent[0])).not.toContain('mrfantastic');
   });
 
+  it('Should reject webhook posts that omit the configured secret', async () => {
+    const { app } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: 'test-token',
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+        webhookSecret: 's3cret',
+      },
+    });
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/start',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+    expect(status).toBe(401);
+  });
+
+  it('Should accept a webhook when the secret is in the path', async () => {
+    const sent: Array<{ text: string }> = [];
+    const { app } = await buildServer({
+      bale: {
+        bot: {
+          sendMessage: async (params) => {
+            sent.push(params);
+            return {};
+          },
+        },
+        botToken: 'test-token',
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+        webhookSecret: 's3cret',
+      },
+    });
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook/s3cret', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/start',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+    expect(status).toBe(200);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('Should accept a webhook when the secret is in the Telegram header', async () => {
+    const { app } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: 'test-token',
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+        webhookSecret: 's3cret',
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/bale/webhook',
+      headers: { 'x-telegram-bot-api-secret-token': 's3cret' },
+      payload: {
+        update_id: 1,
+        message: {
+          message_id: 1,
+          date: 0,
+          text: '/start',
+          from: { id: 9, is_bot: false, first_name: 'Ana' },
+          chat: { id: 9, type: 'private' },
+        },
+      },
+    });
+    expect(response.statusCode).toBe(200);
+  });
+
   it('Should refuse mini-app auth without a valid initData signature', async () => {
     const { app } = await buildServer({
       bale: {
@@ -56,5 +144,25 @@ describe('Bale webhook', () => {
     });
     const { status } = await httpJson(app, 'POST', '/api/auth/bale', { initData: 'hash=nope' });
     expect(status).toBe(401);
+  });
+});
+
+describe('webhookListenUrl', () => {
+  it('Should append the secret once and leave an empty secret alone', () => {
+    expect(webhookListenUrl('https://mrfantastic.ir/api/bale/webhook', undefined)).toBe(
+      'https://mrfantastic.ir/api/bale/webhook',
+    );
+    expect(webhookListenUrl('https://mrfantastic.ir/api/bale/webhook', 's3cret')).toBe(
+      'https://mrfantastic.ir/api/bale/webhook/s3cret',
+    );
+    expect(webhookListenUrl('https://mrfantastic.ir/api/bale/webhook/s3cret', 's3cret')).toBe(
+      'https://mrfantastic.ir/api/bale/webhook/s3cret',
+    );
+  });
+
+  it('Should compare secrets without leaking length', () => {
+    expect(webhookSecretMatches('s3cret', 's3cret')).toBe(true);
+    expect(webhookSecretMatches('nope', 's3cret')).toBe(false);
+    expect(webhookSecretMatches('', undefined)).toBe(true);
   });
 });

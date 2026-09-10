@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Update } from 'bale-bot' with { 'resolution-mode': 'import' };
 import type { RoomRepository } from '../rooms/RoomRepository';
@@ -12,7 +13,7 @@ export interface BaleMessenger {
     reply_markup?: BotReply['reply_markup'];
   }): Promise<unknown>;
   setMyCommands?(params: { commands: { command: string; description: string }[] }): Promise<unknown>;
-  setWebhook?(params: { url: string }): Promise<unknown>;
+  setWebhook?(params: { url: string; secret_token?: string }): Promise<unknown>;
 }
 
 export interface BaleRuntime {
@@ -21,6 +22,35 @@ export interface BaleRuntime {
   publicUrl?: string;
   botUsername: string;
   seats: BaleSeatIndex;
+  /** When set, incoming webhook posts must present this secret. */
+  webhookSecret?: string;
+}
+
+const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
+
+/** Append the secret as a path segment so Bale POSTs to an unguessable URL. */
+export function webhookListenUrl(base: string, secret: string | undefined): string {
+  if (!secret) return base;
+  const trimmed = base.replace(/\/$/, '');
+  if (trimmed.endsWith(`/${secret}`)) return trimmed;
+  return `${trimmed}/${secret}`;
+}
+
+export function webhookSecretMatches(
+  provided: string,
+  expected: string | undefined,
+): boolean {
+  if (!expected) return true;
+  const left = createHash('sha256').update(provided).digest();
+  const right = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(left, right);
+}
+
+function providedWebhookSecret(req: FastifyRequest): string {
+  const header = req.headers[SECRET_HEADER];
+  if (typeof header === 'string' && header.length > 0) return header;
+  const param = (req.params as { secret?: string }).secret;
+  return typeof param === 'string' ? param : '';
 }
 
 function isUpdate(body: unknown): body is Update {
@@ -40,6 +70,9 @@ export async function handleBaleWebhook(
 ): Promise<void> {
   if (!bale) {
     return reply.code(503).send({ error: 'Bale bot is not configured' });
+  }
+  if (!webhookSecretMatches(providedWebhookSecret(req), bale.webhookSecret)) {
+    return reply.code(401).send({ error: 'Unauthorized' });
   }
   if (!isUpdate(req.body)) {
     return reply.code(400).send({ error: 'Invalid update' });

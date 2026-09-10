@@ -44,7 +44,6 @@ const DEFAULTS: SettingsState = {
 };
 
 const STORAGE_KEY = 'sh:settings';
-const TUTORIALS_KEY = 'sh:tutorials';
 
 /** User-facing settings as a Solid store, persisted to localStorage. */
 export class SettingsService {
@@ -78,15 +77,6 @@ export class SettingsService {
     const voices = Object.keys(RAVI_CLIPS) as RaviWho[];
     const i = voices.indexOf(this.settings.raviWho);
     this.set('raviWho', voices[(i + 1) % voices.length]);
-  }
-
-  resetTutorials(): void {
-    localStorage.removeItem(TUTORIALS_KEY);
-  }
-
-  clearLocalData(): void {
-    localStorage.clear();
-    this.update({ ...DEFAULTS, profileId: crypto.randomUUID() });
   }
 
   private static load(): SettingsState {

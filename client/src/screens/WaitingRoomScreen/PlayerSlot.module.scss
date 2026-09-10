@@ -14,6 +14,22 @@
   cursor: default;
 }
 
+.compact {
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
+
+  .caption {
+    margin-top: 4px;
+    gap: 3px;
+  }
+
+  .badge,
+  .name {
+    font-size: 0.64rem;
+  }
+}
+
 .kickable {
   cursor: pointer;
 }
@@ -88,6 +104,7 @@
 
 .caption {
   display: flex;
+  flex-direction: row;
   align-items: baseline;
   justify-content: center;
   gap: 5px;

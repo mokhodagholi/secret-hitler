@@ -84,4 +84,25 @@ describe('PrefetchService', () => {
     prefetch.prefetch(['/a.mp3']);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('Should retry a failed boot URL once', async () => {
+    const fetchSpy = rs
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    const prefetch = new PrefetchService();
+    await prefetch.boot(['/a.mp3']);
+    expect(prefetch.progress()).toEqual({ done: 1, total: 1 });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('Should not mark a URL loaded after both boot attempts fail', async () => {
+    const fetchSpy = rs
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('offline'));
+    const prefetch = new PrefetchService();
+    await prefetch.boot(['/a.mp3']);
+    await prefetch.boot(['/a.mp3']);
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+  });
 });

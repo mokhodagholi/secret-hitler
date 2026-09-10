@@ -250,4 +250,126 @@ export class Room {
       phase: this.phase,
     };
   }
+
+  /** Full authoritative dump so a process restart can resume the same table. */
+  toSnapshot(): RoomSnapshot {
+    return {
+      id: this.id,
+      code: this.code,
+      options: { ...this.options },
+      passwordHash: this.passwordHash,
+      deck: this.deck.toSnapshot(),
+      players: this.players.map((player) => ({ ...player })),
+      phase: this.phase,
+      hostId: this.hostId,
+      liberalPolicies: this.liberalPolicies,
+      fascistPolicies: this.fascistPolicies,
+      electionTracker: this.electionTracker,
+      presidentId: this.presidentId,
+      chancellorId: this.chancellorId,
+      lastElectedPresidentId: this.lastElectedPresidentId,
+      lastElectedChancellorId: this.lastElectedChancellorId,
+      lastEnacted: [...this.lastEnacted],
+      winner: this.winner,
+      votes: [...this.votes.entries()],
+      drawnPolicies: [...this.drawnPolicies],
+      discussionStartedAt: this.discussionStartedAt,
+      discussionEndsAt: this.discussionEndsAt,
+      voteStartedAt: this.voteStartedAt,
+      voteEndsAt: this.voteEndsAt,
+      legislativeStartedAt: this.legislativeStartedAt,
+      legislativeEndsAt: this.legislativeEndsAt,
+      nominationStartedAt: this.nominationStartedAt,
+      nominationEndsAt: this.nominationEndsAt,
+      activePower: this.activePower,
+      investigatedIds: [...this.investigatedIds],
+      peekedPolicies: [...this.peekedPolicies],
+      investigation: this.investigation ? { ...this.investigation } : null,
+      investigations: this.investigations.map((entry) => ({ ...entry })),
+      specialElectionResumeAfterId: this.specialElectionResumeAfterId,
+      vetoRequested: this.vetoRequested,
+    };
+  }
+
+  static fromSnapshot(snapshot: RoomSnapshot): Room {
+    const deck = new PolicyDeck();
+    deck.restore(snapshot.deck.draw, snapshot.deck.discard);
+    const room = new Room({
+      id: snapshot.id,
+      code: snapshot.code,
+      options: { ...snapshot.options },
+      passwordHash: snapshot.passwordHash,
+      deck,
+    });
+    room.players = snapshot.players.map((player) => ({ ...player }));
+    room.phase = snapshot.phase;
+    room.hostId = snapshot.hostId;
+    room.liberalPolicies = snapshot.liberalPolicies;
+    room.fascistPolicies = snapshot.fascistPolicies;
+    room.electionTracker = snapshot.electionTracker;
+    room.presidentId = snapshot.presidentId;
+    room.chancellorId = snapshot.chancellorId;
+    room.lastElectedPresidentId = snapshot.lastElectedPresidentId;
+    room.lastElectedChancellorId = snapshot.lastElectedChancellorId;
+    room.lastEnacted = [...snapshot.lastEnacted];
+    room.winner = snapshot.winner;
+    room.votes = new Map(snapshot.votes);
+    room.drawnPolicies = [...snapshot.drawnPolicies];
+    room.discussionStartedAt = snapshot.discussionStartedAt;
+    room.discussionEndsAt = snapshot.discussionEndsAt;
+    room.voteStartedAt = snapshot.voteStartedAt;
+    room.voteEndsAt = snapshot.voteEndsAt;
+    room.legislativeStartedAt = snapshot.legislativeStartedAt;
+    room.legislativeEndsAt = snapshot.legislativeEndsAt;
+    room.nominationStartedAt = snapshot.nominationStartedAt;
+    room.nominationEndsAt = snapshot.nominationEndsAt;
+    room.activePower = snapshot.activePower;
+    room.investigatedIds = [...snapshot.investigatedIds];
+    room.peekedPolicies = [...snapshot.peekedPolicies];
+    room.investigation = snapshot.investigation
+      ? { ...snapshot.investigation }
+      : null;
+    room.investigations = snapshot.investigations.map((entry) => ({ ...entry }));
+    room.specialElectionResumeAfterId = snapshot.specialElectionResumeAfterId;
+    room.vetoRequested = snapshot.vetoRequested;
+    return room;
+  }
+}
+
+/** JSON-safe room dump. Maps become entries so Postgres jsonb can store them. */
+export interface RoomSnapshot {
+  id: string;
+  code: string;
+  options: RoomOptions;
+  passwordHash: string | null;
+  deck: { draw: Policy[]; discard: Policy[] };
+  players: Player[];
+  phase: Phase;
+  hostId: string;
+  liberalPolicies: number;
+  fascistPolicies: number;
+  electionTracker: number;
+  presidentId: string | null;
+  chancellorId: string | null;
+  lastElectedPresidentId: string | null;
+  lastElectedChancellorId: string | null;
+  lastEnacted: Policy[];
+  winner: Faction | null;
+  votes: [string, Vote][];
+  drawnPolicies: Policy[];
+  discussionStartedAt: number;
+  discussionEndsAt: number;
+  voteStartedAt: number;
+  voteEndsAt: number;
+  legislativeStartedAt: number;
+  legislativeEndsAt: number;
+  nominationStartedAt: number;
+  nominationEndsAt: number;
+  activePower: ExecutivePower | null;
+  investigatedIds: string[];
+  peekedPolicies: Policy[];
+  investigation: { targetId: string; party: Faction } | null;
+  investigations: { investigatorId: string; targetId: string; party: Faction }[];
+  specialElectionResumeAfterId: string | null;
+  vetoRequested: boolean;
 }

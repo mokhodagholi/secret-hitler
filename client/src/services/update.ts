@@ -6,6 +6,12 @@ export const APP_VERSION: string =
     ? import.meta.env.APP_VERSION
     : 'dev';
 
+export const APP_PACKAGE_VERSION: string =
+  typeof import.meta.env.APP_PACKAGE_VERSION === 'string' &&
+  import.meta.env.APP_PACKAGE_VERSION.length > 0
+    ? import.meta.env.APP_PACKAGE_VERSION
+    : '0.0.1';
+
 export interface RemoteVersion {
   version: string;
 }
@@ -15,6 +21,8 @@ export function isNewerVersion(remote: string, current: string = APP_VERSION): b
   return remote.length > 0 && remote !== current;
 }
 
+export const SKIP_WAITING = 'SKIP_WAITING';
+
 /** Bypass the running bundle (and the SW HTML cache) by loading a fresh document. */
 export function reloadToLatest(
   assign: (url: string) => void = (href) => location.replace(href),
@@ -22,6 +30,21 @@ export function reloadToLatest(
   const url = new URL(location.href);
   url.searchParams.set('v', String(Date.now()));
   assign(`${url.pathname}${url.search}${url.hash}`);
+}
+
+export interface WaitingWorker {
+  postMessage: (message: { type: string }) => void;
+}
+
+/** Tell a waiting worker to activate, then load the new document. */
+export async function activateWaitingAndReload(
+  reload: () => void = () => reloadToLatest(),
+  getRegistration: () => Promise<{ waiting?: WaitingWorker | null } | undefined> = () =>
+    navigator.serviceWorker?.getRegistration() ?? Promise.resolve(undefined),
+): Promise<void> {
+  const registration = await getRegistration();
+  registration?.waiting?.postMessage({ type: SKIP_WAITING });
+  reload();
 }
 
 /** The prompt waits until they leave a live table. */

@@ -672,6 +672,7 @@ export interface SetWebhookParams {
   max_connections?: number;
   allowed_updates?: string[];
   drop_pending_updates?: boolean;
+  secret_token?: string;
 }
 
 export interface GetFileParams {

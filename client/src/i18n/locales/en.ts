@@ -20,7 +20,6 @@ export const en = {
   },
   nav: {
     rules: 'Rules',
-    howToPlay: 'How to Play',
     settings: 'Settings',
     home: 'Home',
   },
@@ -128,88 +127,6 @@ export const en = {
       'Deduction, deception, and discussion are your greatest weapons.',
     trustNoOne: 'Trust no one.',
   },
-  howToPlay: {
-    title: 'How to Play',
-    counter: '{current}/{total}',
-    steps: {
-      roles: {
-        title: 'Roles & Secrets',
-        subtitle: 'Each player is secretly a Liberal, a Fascist, or Hitler.',
-        points: {
-          liberals:
-            'Liberals are the majority but know no one — they must deduce who to trust.',
-          fascists: 'Fascists secretly know each other and who Hitler is.',
-          hitler:
-            'In 5–6 player games Hitler knows the Fascists; in 7–10 player games Hitler is on their own.',
-        },
-      },
-      elect: {
-        title: 'Elect a Government',
-        subtitle: 'Every round opens with an election for President and Chancellor.',
-        points: {
-          rotate: 'The role of presidential candidate rotates clockwise each round.',
-          nominate: 'The President nominates an eligible player as Chancellor.',
-          vote: 'Everyone votes Ja or Nein at once — a strict majority elects them, a tie fails.',
-          term:
-            'The last elected President and Chancellor cannot be nominated as Chancellor next round.',
-        },
-      },
-      fail: {
-        title: 'When Elections Fail',
-        subtitle: 'A failed government pushes the country toward chaos.',
-        points: {
-          tracker: 'Each failed vote advances the election tracker by one.',
-          chaos:
-            'After three failures in a row the top policy is enacted automatically — with no power — and term limits reset.',
-        },
-      },
-      enact: {
-        title: 'Enact a Policy',
-        subtitle: 'The elected government secretly passes one policy.',
-        points: {
-          president: 'The President draws 3 policies and discards 1 face down.',
-          chancellor: 'The Chancellor enacts 1 of the remaining 2 and discards the other.',
-          silence:
-            'No talking during this step, and discarded policies are never revealed.',
-          veto:
-            'After 5 Fascist policies, the Chancellor and President may agree to veto both tiles.',
-        },
-      },
-      powers: {
-        title: 'Presidential Powers',
-        subtitle: 'Enacting a Fascist policy can grant the President a one-time power.',
-        points: {
-          investigate: 'Investigate Loyalty — secretly see a player’s party (once per player).',
-          special: 'Special Election — choose the next presidential candidate.',
-          peek: 'Policy Peek — secretly view the top 3 policies.',
-          execute: 'Execution — kill a player; if it is Hitler, the Liberals win instantly.',
-        },
-      },
-      agenda: {
-        title: 'Achieve Your Agenda',
-        subtitle: 'Each side has two paths to victory.',
-        points: {
-          liberalPolicies: 'Liberals win by enacting 5 Liberal policies…',
-          liberalExecute: '…or by executing Hitler.',
-          fascistPolicies: 'Fascists win by enacting 6 Fascist policies…',
-          fascistHitler:
-            '…or by electing Hitler as Chancellor once 3 Fascist policies are down.',
-        },
-      },
-      tips: {
-        title: 'Tips & Strategy',
-        subtitle: 'Reading the table matters more than the cards.',
-        points: {
-          watch: 'Watch who talks, not just what they say — trust is a weapon.',
-          hitler:
-            'As Hitler, play like a Liberal until the moment you can seize the chancellorship.',
-          fascist: 'As a Fascist, sow doubt and protect Hitler — never look too eager.',
-          liberal:
-            'As a Liberal, track who passed which policy; a forced Fascist tile can expose a lying government.',
-        },
-      },
-    },
-  },
   settings: {
     title: 'Settings',
     headerLabel: 'Settings',
@@ -236,18 +153,10 @@ export const en = {
       daniel: 'Daniel',
     },
     reduceMotion: 'Reduce Motion',
-    other: 'Other',
-    howToPlay: 'How to Play',
-    about: 'About',
-    resetTutorials: 'Reset Tutorials',
-    clearLocalData: 'Clear Local Data',
-    clearLocalDataMessage:
-      'This erases your name, sound toggles, and other prefs saved on this phone. It does not delete rooms or game history on the server.',
+    version: '{package}',
     restorePurchases: 'Restore Purchases',
   },
   screens: {
-    howToPlay: 'How to Play',
-    about: 'About',
     play: 'Play',
   },
   play: {
@@ -316,6 +225,7 @@ export const en = {
     startNotReady: 'Every player must be ready before the game can start.',
     kickConfirm: 'Kick {name} from the room?',
     kick: 'Kick',
+    seatLabel: 'No. {n}',
   },
   tip: {
     watch: 'Watch who talks, not just what they say. Trust is a weapon.',

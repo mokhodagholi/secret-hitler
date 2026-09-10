@@ -4,8 +4,6 @@ import { HomeScreen } from './screens/HomeScreen/HomeScreen';
 import { PlayerCardsScreen } from './screens/PlayerCardsScreen/PlayerCardsScreen';
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
-import { PlaceholderScreen } from './screens/PlaceholderScreen/PlaceholderScreen';
-import { HowToPlayScreen } from './screens/HowToPlayScreen/HowToPlayScreen';
 import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
 import { GameScreen } from './screens/GameScreen/GameScreen';
@@ -38,8 +36,7 @@ function RoomClosedNotice() {
 }
 
 function Router() {
-  const { nav, i18n } = useApp();
-  const { formatMessage } = i18n;
+  const { nav } = useApp();
   return (
     <Switch fallback={<HomeScreen />}>
       <Match when={nav.screen() === 'home'}>
@@ -53,12 +50,6 @@ function Router() {
       </Match>
       <Match when={nav.screen() === 'settings'}>
         <SettingsScreen />
-      </Match>
-      <Match when={nav.screen() === 'how-to-play'}>
-        <HowToPlayScreen />
-      </Match>
-      <Match when={nav.screen() === 'about'}>
-        <PlaceholderScreen title={formatMessage('screens.about')} />
       </Match>
       <Match when={nav.screen() === 'play'}>
         <RoomsScreen initialTab="create" />

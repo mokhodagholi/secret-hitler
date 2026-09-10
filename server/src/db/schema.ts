@@ -1,4 +1,5 @@
-import { boolean, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import type { LiveRoomSnapshot } from '../rooms/LiveRoomStore';
 
 /**
  * Chosen player card, keyed by a client-generated id and optional Bale user.
@@ -38,4 +39,15 @@ export const gamePlayers = pgTable('game_players', {
   role: text('role').notNull(),
   seat: integer('seat').notNull(),
   won: boolean('won').notNull(),
+});
+
+/**
+ * In-progress table. Wiped when the room dies. Survives process restarts so a
+ * deploy does not scatter everyone who was mid-game.
+ */
+export const liveRooms = pgTable('live_rooms', {
+  id: uuid('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  snapshot: jsonb('snapshot').$type<LiveRoomSnapshot>().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

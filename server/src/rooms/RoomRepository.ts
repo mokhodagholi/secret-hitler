@@ -37,6 +37,14 @@ export class RoomRepository {
     return this.get(idOrCode) ?? this.getByCode(idOrCode);
   }
 
+  /** Rehydrate a room that was snapshotted before a process restart. */
+  restore(room: Room): RoomEntry {
+    const entry: RoomEntry = { room, engine: new GameEngine(room) };
+    this.rooms.set(room.id, entry);
+    this.byCode.set(room.code, room.id);
+    return entry;
+  }
+
   remove(roomId: string): void {
     const entry = this.rooms.get(roomId);
     if (!entry) return;

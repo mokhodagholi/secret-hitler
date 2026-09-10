@@ -1,9 +1,12 @@
 import { useApp } from '../../services/AppContext';
+import { LANGUAGES } from '../../i18n';
+import { APP_PACKAGE_VERSION } from '../../services/update';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { SectionTitle } from '../../components/SectionTitle/SectionTitle';
 import { SettingRow } from '../../components/SettingRow/SettingRow';
 import { TextInput } from '../../components/TextInput/TextInput';
+import styles from './SettingsScreen.module.scss';
 
 export function SettingsScreen() {
   const { settings, i18n, bale } = useApp();
@@ -32,6 +35,13 @@ export function SettingsScreen() {
       />
 
       <SectionTitle>{formatMessage('settings.display')}</SectionTitle>
+      <SettingRow
+        kind="value"
+        icon="globe"
+        label={formatMessage('settings.language')}
+        value={LANGUAGES[state.language].nativeName}
+        onClick={() => settings.set('language', i18n.next(state.language))}
+      />
       <SettingRow
         kind="toggle"
         icon="music"
@@ -67,6 +77,10 @@ export function SettingsScreen() {
         checked={state.reduceMotion}
         onChange={(value) => settings.set('reduceMotion', value)}
       />
+
+      <p class={styles.version}>
+        {formatMessage('settings.version', { package: APP_PACKAGE_VERSION })}
+      </p>
     </Screen>
   );
 }

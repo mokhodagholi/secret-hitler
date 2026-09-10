@@ -35,6 +35,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-secret_hitler}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-secret_hitler}
       PUBLIC_URL: ${PUBLIC_URL:-https://mrfantastic.ir}
       BALE_WEBHOOK_URL: ${BALE_WEBHOOK_URL:-https://mrfantastic.ir/api/bale/webhook}
+      BALE_WEBHOOK_SECRET: ${BALE_WEBHOOK_SECRET:-}
       BALE_BOT_USERNAME: ${BALE_BOT_USERNAME:-@secret_hitler_bot}
     depends_on:
       postgres:
@@ -46,6 +47,8 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-}
     container_name: secret-hitler-nginx
     restart: unless-stopped
     ports:

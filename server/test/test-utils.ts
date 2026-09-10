@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import type { ClientMessage, ServerMessage } from '@secret-hitler/shared';
 import type { FastifyInstance } from 'fastify';
-import { buildServer, type BuiltServer } from '../src/app';
+import { buildServer, type BuiltServer, type ServerOptions } from '../src/app';
 
 export interface LiveServer extends BuiltServer {
   port: number;
@@ -9,8 +9,11 @@ export interface LiveServer extends BuiltServer {
 }
 
 /** Build the full server (HTTP + WS) on an ephemeral port. */
-export async function listenServer(minPlayers = 3): Promise<LiveServer> {
-  const built = await buildServer({ minPlayers });
+export async function listenServer(
+  minPlayers = 3,
+  options: Omit<ServerOptions, 'minPlayers'> = {},
+): Promise<LiveServer> {
+  const built = await buildServer({ minPlayers, ...options });
   await built.app.listen({ port: 0, host: '127.0.0.1' });
   const address = built.app.server.address();
   if (address == null || typeof address === 'string') {

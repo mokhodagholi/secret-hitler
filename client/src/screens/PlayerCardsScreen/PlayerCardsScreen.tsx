@@ -1,4 +1,4 @@
-import { For } from 'solid-js';
+import { For, onCleanup } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
@@ -6,20 +6,36 @@ import { PORTRAITS } from '../../assets/avatars';
 import styles from './PlayerCardsScreen.module.scss';
 
 /**
- * Grid of illustrated player cards. Tapping one stores it locally and on
- * the server so the same face is used in the next room.
+ * Grid of illustrated player cards. Tapping one stores it locally; the
+ * server is updated once when leaving so the same face is used in the next room.
  */
 export function PlayerCardsScreen() {
   const { settings, i18n, game, bale } = useApp();
   const { formatMessage } = i18n;
+  const initialAvatar = settings.settings.avatar;
+  let persisted = false;
 
-  const select = (index: number) => {
-    settings.set('avatar', index);
+  const persist = () => {
+    if (persisted) return;
+    const avatar = settings.settings.avatar;
+    if (avatar === initialAvatar) return;
+    persisted = true;
     void game.saveProfile({
-      avatar: index,
+      avatar,
       clientId: settings.settings.profileId,
       initData: bale.initData(),
     });
+  };
+
+  const onPageHide = () => persist();
+  window.addEventListener('pagehide', onPageHide);
+  onCleanup(() => {
+    window.removeEventListener('pagehide', onPageHide);
+    persist();
+  });
+
+  const select = (index: number) => {
+    settings.set('avatar', index);
   };
 
   return (

@@ -58,7 +58,21 @@
   padding: 4px 4px 8px;
 }
 
+// 10 seats: five across, two rows, so the last card stays above the footer.
+.seatsPacked {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  justify-items: stretch;
+  align-content: start;
+  gap: 8px 6px;
+}
+
 // --- Bottom: tip + controls --------------------------------------------------
+
+.scene:has(.seatsPacked) .tip {
+  padding: 10px 16px;
+  font-size: 1.05rem;
+}
 
 .footer {
   position: relative;

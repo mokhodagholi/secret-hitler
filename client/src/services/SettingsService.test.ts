@@ -49,17 +49,6 @@ describe('SettingsService', () => {
     expect(settings.settings.raviWho).toBe('daniel');
   });
 
-  it('Should restore defaults when local data is cleared', () => {
-    const settings = new SettingsService();
-    settings.set('profileName', 'Ana');
-    settings.set('music', false);
-    settings.clearLocalData();
-    expect(settings.settings.profileName).toBe('');
-    expect(settings.settings.avatar).toBe(0);
-    expect(settings.settings.music).toBe(true);
-    expect(localStorage.getItem('sh:settings')).toBeNull();
-  });
-
   it('Should fall back to defaults when stored JSON is corrupt', () => {
     localStorage.setItem('sh:settings', '{ not valid json');
     const settings = new SettingsService();

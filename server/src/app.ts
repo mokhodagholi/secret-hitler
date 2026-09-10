@@ -14,6 +14,8 @@ import type { ProfileStore } from './profiles/ProfileStore';
 import { InMemoryProfileStore } from './profiles/InMemoryProfileStore';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import type { BaleRuntime } from './bale/webhook';
+import type { LiveRoomStore } from './rooms/LiveRoomStore';
+import { restoreLiveRooms } from './rooms/restoreLiveRooms';
 
 const WS_PATH = '/ws';
 
@@ -30,8 +32,13 @@ export interface ServerOptions {
    * default to an in-memory store. The server never runs without a store.
    */
   history?: GameHistoryStore;
-  /** Store for chosen player cards. Tests default to in-memory. */
+  /** Chosen player cards. Tests default to in-memory. */
   profiles?: ProfileStore;
+  /**
+   * Durable live rooms. Production always supplies Postgres; tests omit this
+   * unless they are asserting restart survival.
+   */
+  live?: LiveRoomStore;
   /** Public HTTPS origin for share links and the Bale mini-app. */
   publicUrl?: string;
   /** Present when BALE_BOT_TOKEN is configured. */
@@ -59,10 +66,23 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
 
   const repo = new RoomRepository(options.minPlayers);
   const tokens = new TokenStore();
-  const sockets = new SocketHandler(repo, tokens, seats);
+  const sockets = new SocketHandler(repo, tokens, seats, options.live ?? null);
   const history = options.history ?? new InMemoryGameHistoryStore();
   const profiles = options.profiles ?? new InMemoryProfileStore();
   const recorder = new GameResultRecorder(history);
+
+  if (options.live) {
+    const restored = await restoreLiveRooms({
+      repo,
+      tokens,
+      sockets,
+      recorder,
+      live: options.live,
+    });
+    if (restored > 0) {
+      app.log.info({ restored }, 'Restored live rooms.');
+    }
+  }
 
   app.get('/health', async () => ({ status: 'ok', shared: SHARED_VERSION }));
   registerRoutes(app, {

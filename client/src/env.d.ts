@@ -3,4 +3,5 @@
 
 interface ImportMetaEnv {
   readonly APP_VERSION?: string;
+  readonly APP_PACKAGE_VERSION?: string;
 }

@@ -110,6 +110,9 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   app.post('/api/bale/webhook', async (req, reply) => {
     return handleBaleWebhook(req, reply, repo, bale);
   });
+  app.post('/api/bale/webhook/:secret', async (req, reply) => {
+    return handleBaleWebhook(req, reply, repo, bale);
+  });
 
   // Create a room and seat the host.
   app.post('/api/rooms', async (req, reply) => {
@@ -143,6 +146,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     }
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: host.id });
+    void sockets.persistRoom(entry.room.id);
     bindBaleSeat(bale, body.initData, host.id, entry.room.id, entry.room.code, entry.room.options.name);
     const res: CreateRoomResponse = {
       roomId: entry.room.id,
@@ -191,6 +195,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     }
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: player.id });
+    void sockets.persistRoom(entry.room.id);
     bindBaleSeat(bale, body.initData, player.id, entry.room.id, entry.room.code, entry.room.options.name);
     const res: JoinRoomResponse = {
       roomId: entry.room.id,

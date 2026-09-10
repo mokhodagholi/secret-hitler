@@ -19,10 +19,12 @@ export interface PlayerSlotProps {
   onSelect?: () => void;
   isYou?: boolean;
   youLabel?: string;
+  /** Fill a 10-seat grid cell instead of the default 120px portrait. */
+  compact?: boolean;
 }
 
 /**
- * Lobby seat portrait with the seat number and name under the image.
+ * Lobby seat portrait with the seat number on the left of the name.
  * Ready state is a green/red glow; empty seats show the unused paper
  * slot, grayed out.
  */
@@ -32,7 +34,11 @@ export function PlayerSlot(props: PlayerSlotProps) {
       when={props.player}
       fallback={
         <div
-          class={`${styles.slot} ${styles.empty}`}
+          classList={{
+            [styles.slot]: true,
+            [styles.empty]: true,
+            [styles.compact]: !!props.compact,
+          }}
           role="listitem"
           aria-label={props.awaitingLabel}
         >
@@ -63,8 +69,8 @@ export function PlayerSlot(props: PlayerSlotProps) {
                 aria-hidden="true"
               />
             </span>
-            <span class={styles.caption}>
-              <span class={styles.badge}>
+            <span class={styles.caption} dir="ltr">
+              <span class={styles.badge} dir="auto">
                 {props.seatLabel ?? player().seat + 1}
               </span>
               <span class={styles.name} dir="auto">
@@ -80,6 +86,7 @@ export function PlayerSlot(props: PlayerSlotProps) {
               <div
                 classList={{
                   [styles.slot]: true,
+                  [styles.compact]: !!props.compact,
                   [styles.offline]: !player().connected,
                 }}
                 role="listitem"
@@ -95,6 +102,7 @@ export function PlayerSlot(props: PlayerSlotProps) {
               aria-label={shownName()}
               classList={{
                 [styles.slot]: true,
+                [styles.compact]: !!props.compact,
                 [styles.offline]: !player().connected,
                 [styles.kickable]: true,
               }}

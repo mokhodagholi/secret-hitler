@@ -49,6 +49,16 @@ export class PolicyDeck {
     this.discard.push(...tiles);
   }
 
+  toSnapshot(): { draw: Policy[]; discard: Policy[] } {
+    return { draw: [...this.draw], discard: [...this.discard] };
+  }
+
+  /** Replace both piles as stored — do not shuffle, or a restart would re-deal. */
+  restore(draw: Policy[], discard: Policy[]): void {
+    this.draw = [...draw];
+    this.discard = [...discard];
+  }
+
   private reshuffleDiscard(): void {
     this.draw.push(...this.discard);
     this.discard = [];

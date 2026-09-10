@@ -134,6 +134,53 @@ describe('WaitingRoomScreen', () => {
     });
   });
 
+  it('Should put the seat number to the left of the player name', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('language', 'fa');
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 4, ready: false }),
+        ],
+      }),
+    );
+
+    const guest = screen.getByRole('listitem', { name: 'Ben' });
+    expect(guest.textContent).toMatch(/^شماره ۵Ben/);
+    expect(guest.querySelector('[dir="ltr"]')?.getAttribute('dir')).toBe('ltr');
+  });
+
+  it('Should pack lobby portraits only when the room holds ten', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        maxPlayers: 10,
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+    expect(screen.getByRole('list').className).toMatch(/seatsPacked/);
+    expect(screen.getByRole('listitem', { name: 'You' }).className).toMatch(
+      /compact/,
+    );
+
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        maxPlayers: 7,
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+    expect(screen.getByRole('list').className).not.toMatch(/seatsPacked/);
+    expect(screen.getByRole('listitem', { name: 'You' }).className).not.toMatch(
+      /compact/,
+    );
+  });
+
   it('Should navigate to the game board once the lobby phase ends', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);

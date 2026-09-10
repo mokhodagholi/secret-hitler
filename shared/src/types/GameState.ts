@@ -217,6 +217,9 @@ export const NOMINATION_DURATION_MS = 25_000;
 /** How long a disconnected host keeps the host seat before migration, in ms. */
 export const HOST_MIGRATION_GRACE_MS = 30_000;
 
+/** After a process restart, keep empty tables until clients can reconnect. */
+export const LIVE_ROOM_RECONNECT_GRACE_MS = 5 * 60_000;
+
 /** Opening night: face-down cards fly to every seat. */
 export const OPENING_DEAL_MS = 10_000;
 /** Opening night: private look — longest spoken pair (night.start + youFascist) + 2s. */

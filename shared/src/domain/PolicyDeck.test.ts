@@ -40,4 +40,16 @@ describe('PolicyDeck', () => {
     const second = new PolicyDeck(makeRng()).drawTiles(17);
     expect(first).toEqual(second);
   });
+
+  it('Should restore the exact pile order without shuffling', () => {
+    const draw: Array<'liberal' | 'fascist'> = ['fascist', 'liberal', 'fascist'];
+    const discard: Array<'liberal' | 'fascist'> = ['liberal', 'liberal'];
+    const deck = new PolicyDeck();
+    deck.restore(draw, discard);
+
+    expect(deck.drawCount).toBe(3);
+    expect(deck.discardCount).toBe(2);
+    expect(deck.drawTiles(3)).toEqual(draw);
+    expect(deck.discardCount).toBe(2);
+  });
 });

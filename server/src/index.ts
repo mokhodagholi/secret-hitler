@@ -2,8 +2,10 @@ import { resolve } from 'node:path';
 import { buildServer } from './app';
 import { DrizzleGameHistoryStore } from './history/DrizzleGameHistoryStore';
 import { DrizzleProfileStore } from './profiles/DrizzleProfileStore';
+import { DrizzleLiveRoomStore } from './rooms/DrizzleLiveRoomStore';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
-import { registerBaleCommands, type BaleRuntime } from './bale/webhook';
+import { registerBaleCommands, webhookListenUrl, type BaleRuntime } from './bale/webhook';
+import { connectDatabase } from './db/connection';
 import { drizzleFolder, migrateDatabase } from './db/migrate';
 
 // Load the repo-root .env for dev. Anchored to this file (not cwd) so it works
@@ -23,13 +25,23 @@ async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
   const { BaleBot } = await import('bale-bot');
   const bot = new BaleBot({ token: botToken });
   const webhookUrl = process.env.BALE_WEBHOOK_URL?.trim();
+  const webhookSecret = process.env.BALE_WEBHOOK_SECRET?.trim() || undefined;
   const botUsername = process.env.BALE_BOT_USERNAME?.trim() || '@secret_hitler_bot';
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
 
   if (webhookUrl) {
-    await bot.setWebhook({ url: webhookUrl });
+    const url = webhookListenUrl(webhookUrl, webhookSecret);
+    try {
+      await bot.setWebhook(webhookSecret ? { url, secret_token: webhookSecret } : { url });
+    } catch {
+      await bot.setWebhook({ url });
+    }
   }
   await registerBaleCommands(bot);
+
+  if (botToken && !webhookSecret) {
+    console.warn('BALE_WEBHOOK_SECRET is empty; anyone can POST /api/bale/webhook');
+  }
 
   return {
     bot,
@@ -37,6 +49,7 @@ async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
     publicUrl,
     botUsername,
     seats: new BaleSeatIndex(),
+    webhookSecret,
   };
 }
 
@@ -52,14 +65,23 @@ async function main() {
   }
 
   await migrateDatabase(databaseUrl, drizzleFolder(__dirname));
-  const history = DrizzleGameHistoryStore.fromUrl(databaseUrl);
-  const profiles = DrizzleProfileStore.fromUrl(databaseUrl);
+  const connection = connectDatabase(databaseUrl);
+  const history = new DrizzleGameHistoryStore(connection);
+  const profiles = new DrizzleProfileStore(connection);
+  const live = new DrizzleLiveRoomStore(connection);
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
 
-  const { app } = await buildServer({ logger: true, history, profiles, publicUrl, bale });
+  const { app } = await buildServer({
+    logger: true,
+    history,
+    profiles,
+    live,
+    publicUrl,
+    bale,
+  });
 
-  app.log.info('Game history persistence enabled.');
+  app.log.info('Game history and live-room persistence enabled.');
   if (bale) {
     app.log.info('Bale bot webhook ready.');
   }

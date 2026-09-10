@@ -79,7 +79,7 @@ export class PrefetchService {
     let done = 0;
     await Promise.all(
       unique.map(async (url) => {
-        await this.load(url);
+        await this.load(url, 1);
         done += 1;
         this.setProgress({ done, total: unique.length });
       }),
@@ -88,22 +88,34 @@ export class PrefetchService {
 
   /** Fire-and-forget warm for the next scene. */
   prefetch(urls: readonly string[]): void {
-    void Promise.all(urls.map((url) => this.load(url)));
+    void Promise.all(urls.map((url) => this.load(url, 0)));
   }
 
-  private load(url: string): Promise<void> {
+  private load(url: string, retries: number): Promise<void> {
     if (this.loaded.has(url)) return Promise.resolve();
     const existing = this.inflight.get(url);
     if (existing) return existing;
-    const job = fetch(url)
-      .then(() => undefined)
+    const job = this.fetchWithRetry(url, retries)
+      .then(() => {
+        this.loaded.add(url);
+      })
       .catch(() => undefined)
       .finally(() => {
-        this.loaded.add(url);
         this.inflight.delete(url);
       });
     this.inflight.set(url, job);
     return job;
+  }
+
+  private async fetchWithRetry(url: string, retries: number): Promise<void> {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return;
+      throw new Error(`prefetch ${response.status}`);
+    } catch (error) {
+      if (retries > 0) return this.fetchWithRetry(url, retries - 1);
+      throw error;
+    }
   }
 }
 

@@ -43,4 +43,17 @@ export class TokenStore {
       if (claim.playerId === playerId) this.tokens.delete(token);
     }
   }
+
+  listForRoom(roomId: string): { token: string; playerId: string }[] {
+    const tokens: { token: string; playerId: string }[] = [];
+    for (const [token, claim] of this.tokens) {
+      if (claim.roomId === roomId) tokens.push({ token, playerId: claim.playerId });
+    }
+    return tokens;
+  }
+
+  /** Re-insert a token that was issued before a process restart. */
+  restore(token: string, claim: TokenClaim): void {
+    this.tokens.set(token, claim);
+  }
 }

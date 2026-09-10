@@ -4,8 +4,6 @@ export type ScreenName =
   | 'home'
   | 'rules'
   | 'settings'
-  | 'how-to-play'
-  | 'about'
   | 'player-cards'
   | 'play'
   | 'create-room'

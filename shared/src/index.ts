@@ -7,6 +7,7 @@ export { AVATAR_COUNT, normalizeAvatar } from './avatars';
 
 // Domain model
 export { Room } from './domain/Room';
+export type { RoomSnapshot } from './domain/Room';
 export { PolicyDeck } from './domain/PolicyDeck';
 
 // Factories
