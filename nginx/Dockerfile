@@ -3,10 +3,11 @@ WORKDIR /app
 
 ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-ENV COREPACK_DEFAULT_TO_LATEST=0
+ENV NPM_CONFIG_FETCH_RETRIES=5
+ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
+ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
-RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
+RUN npm install -g pnpm@11.25.0
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/
