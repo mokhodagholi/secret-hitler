@@ -16,6 +16,7 @@ RUN pnpm install --frozen-lockfile --filter @secret-hitler/server...
 COPY shared ./shared
 COPY bale-bot ./bale-bot
 COPY server ./server
+COPY tsconfig.base.json ./
 
 RUN pnpm --filter @secret-hitler/shared build \
   && pnpm --filter bale-bot build \

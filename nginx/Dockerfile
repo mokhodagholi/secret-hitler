@@ -17,6 +17,7 @@ RUN pnpm install --frozen-lockfile --filter @secret-hitler/client...
 
 COPY shared ./shared
 COPY client ./client
+COPY tsconfig.base.json ./
 
 RUN pnpm --filter @secret-hitler/shared build \
   && pnpm --filter @secret-hitler/client build
