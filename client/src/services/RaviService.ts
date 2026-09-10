@@ -25,6 +25,10 @@ export type RaviLineId =
   | 'nominate.namedYou'
   | 'nominate.namedAsYou'
   | 'nominate.timeout'
+  | 'office.presidentLeft'
+  | 'office.chancellorLeft'
+  | 'office.roundOver'
+  | 'player.left'
   | 'vote.start'
   | 'vote.collecting'
   | 'vote.count'
@@ -168,7 +172,9 @@ export class RaviService {
 
   private clipSrc(id: RaviLineId): string | undefined {
     // Dilara is parked — Daniel (male ElevenLabs) is the table voice for now.
-    return RAVI_CLIPS.farid[id];
+    // New lines may not have a clip yet; deliver() holds on the subtitle.
+    const clips: Partial<Record<RaviLineId, string>> = RAVI_CLIPS.farid;
+    return clips[id];
   }
 
   private stopCurrent(): void {

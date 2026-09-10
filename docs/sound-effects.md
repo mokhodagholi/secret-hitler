@@ -8,7 +8,9 @@ Spoken lines stay in [`ravi-script.md`](./ravi-script.md). Playback
 rules for the SFX toggle live in
 [`client/docs/audio.md`](../client/docs/audio.md). This doc is the
 catalog of *which* one-shots to bake, *when* they fire, and *how* to
-make the files.
+make the files. Hits that must start on the same frame as a named
+animation (shorter, dry foley) are
+[`animation-sounds.md`](./animation-sounds.md).
 
 ## Two layers (locked)
 
@@ -16,7 +18,7 @@ make the files.
 |---|---|---|
 | **Ravi Voice** | Scripted Persian lines. Subtitles always run. | `RaviService.speak` |
 | **Sound Effects** | Table physics + UI punctuation. No words. | `SoundService.play` |
-| **Music** | Looping bed. Empty today — out of this catalog. | `SoundService.playMusic` |
+| **Music** | Looping bed. Catalog in [`background-music.md`](./background-music.md). | `SoundService.playMusic` |
 
 Do **not** put speech in an SFX file. Do **not** put a card slide in a
 Ravi clip. If both fire on the same beat, the SFX starts with the
@@ -419,4 +421,5 @@ in `RaviNarrator` and `GameScreen`.
 4. Lobby chrome last.
 
 Do not add Music tracks in this pass. The table has to click before
-it hums.
+it hums. When you do, the looping catalog is
+[`background-music.md`](./background-music.md).

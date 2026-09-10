@@ -137,8 +137,8 @@ Do not invent extra tags per line. If it is not in this table, it is
 ## Nomination
 
 ### `nominate.start`
-- **When:** Nomination window opens. President also sees a private
-  overlay (“صدراعظم رو انتخاب کنید”); this line is public.
+- **When:** Nomination window opens. Public table line. The President does
+  **not** hear this — they only get `private.nominate`.
 - **FA:** رئیس‌جمهور، صدراعظم رو انتخاب کنه.
 - **EN:** The President chooses a Chancellor.
 
@@ -167,6 +167,38 @@ Do not invent extra tags per line. If it is not in this table, it is
 - **When:** President did not pick in time.
 - **FA:** صدراعظم انتخاب نشد.
 - **EN:** No Chancellor was chosen.
+
+### `office.presidentLeft`
+- **When:** The sitting President leaves or is kicked.
+- **FA subtitle:** {name} رئیس‌جمهور بود و از بازی رفت.
+- **FA audio:** رئیس‌جمهور از بازی رفت.
+- **EN subtitle:** {name} was President and left the game.
+- **EN audio:** The President has left the game.
+- **Tone:** `[disappointed]`
+
+### `office.chancellorLeft`
+- **When:** The sitting Chancellor leaves or is kicked.
+- **FA subtitle:** {name} صدراعظم بود و از بازی رفت.
+- **FA audio:** صدراعظم از بازی رفت.
+- **EN subtitle:** {name} was Chancellor and left the game.
+- **EN audio:** The Chancellor has left the game.
+- **Tone:** `[disappointed]`
+
+### `office.roundOver`
+- **When:** Right after an office-holder left; the current government is void
+  and the presidency will pass on.
+- **FA:** این دور تموم شد.
+- **EN:** This round is over.
+- **Tone:** `[firm]`
+
+### `player.left`
+- **When:** A player who is not President or Chancellor leaves or is kicked.
+  Office-holders use the lines above instead.
+- **FA subtitle:** {name} از بازی رفت.
+- **FA audio:** یکی از بازیکن‌ها از بازی رفت.
+- **EN subtitle:** {name} left the game.
+- **EN audio:** A player left the game.
+- **Tone:** `[disappointed]`
 
 ---
 
@@ -453,6 +485,10 @@ table is the **spoken** line.
 | `nominate.namedYou` | `[calm]` | شما صدراعظم رو انتخاب کردید. |
 | `nominate.namedAsYou` | `[announcing]` | شما رو صدراعظم انتخاب کردن. |
 | `nominate.timeout` | `[disappointed]` | صدراعظم انتخاب نشد. |
+| `office.presidentLeft` | `[disappointed]` | رئیس‌جمهور از بازی رفت. |
+| `office.chancellorLeft` | `[disappointed]` | صدراعظم از بازی رفت. |
+| `office.roundOver` | `[firm]` | این دور تموم شد. |
+| `player.left` | `[disappointed]` | یکی از بازیکن‌ها از بازی رفت. |
 | `vote.start` | `[calm]` | رأی‌گیری آغاز شد. |
 | `vote.collecting` | `[calm]` | رای‌ها داره جمع می‌شه. |
 | `vote.count` | `[announcing]` | رأی ها شمرده شد. |

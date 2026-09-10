@@ -10,6 +10,8 @@ export interface PlayerRowProps {
   player: PublicPlayer;
   isYou: boolean;
   nominatable: boolean;
+  /** President / Chancellor letters — hidden until the opening night ends. */
+  showOffice?: boolean;
   onNominate: () => void;
   formatMessage: FormatMessage;
 }
@@ -74,7 +76,7 @@ export function PlayerRow(props: PlayerRowProps) {
           </span>
         </Show>
       </span>
-      <Show when={props.player.isPresident}>
+      <Show when={props.showOffice !== false && props.player.isPresident}>
         <span
           class={styles.playerBadge}
           ref={(element) => void animation.play(element, 'badge-pop')}
@@ -82,7 +84,7 @@ export function PlayerRow(props: PlayerRowProps) {
           {formatMessage('game.president').slice(0, 1)}
         </span>
       </Show>
-      <Show when={props.player.isChancellor}>
+      <Show when={props.showOffice !== false && props.player.isChancellor}>
         <span
           class={styles.playerBadge}
           ref={(element) => void animation.play(element, 'badge-pop')}

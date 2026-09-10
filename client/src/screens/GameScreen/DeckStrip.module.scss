@@ -88,25 +88,35 @@
   font-size: 0.82rem;
   font-weight: 700;
   color: $cream;
+  display: inline-block;
+  transform-origin: center;
 }
 
-.candidate {
+.role {
+  @include pressable;
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1px;
-  text-align: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 2px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
-.candidateLabel {
-  @include display(0.52rem, 0.08em);
-  color: $gold;
+.roleFace {
+  width: 26px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
 }
 
-.candidateName {
-  font-size: 0.8rem;
+.roleName {
+  font-size: 0.82rem;
   font-weight: 700;
   color: $cream;
   overflow: hidden;

@@ -1,4 +1,4 @@
-import { Show, onMount } from 'solid-js';
+import { Show, createSignal, onMount } from 'solid-js';
 import type { Vote } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -17,8 +17,8 @@ export interface VotingOverlayProps {
   /** Show the vote countdown. The engine always times this phase. */
   showTimer: boolean;
   secondsLeft: number;
-  /** Fraction of the window remaining, 0–1. */
-  progress: number;
+  startedAt: number;
+  endsAt: number;
   onVote: (vote: Vote) => void;
 }
 
@@ -26,10 +26,27 @@ export interface VotingOverlayProps {
 export function VotingOverlay(props: VotingOverlayProps) {
   const { formatMessage } = props;
   const { animation, ravi, sound } = useApp();
+  const [picked, setPicked] = createSignal<Vote | null>(null);
+  const chosen = () => props.yourVote ?? picked();
+  const showBallot = () => props.canVote || chosen() != null;
+
+  const totalMs = Math.max(1, props.endsAt - props.startedAt);
+  const elapsedMs = Math.max(0, Date.now() - props.startedAt);
+  const timerVars = {
+    '--vote-total': `${totalMs}ms`,
+    '--vote-elapsed': `${elapsedMs}ms`,
+  };
+  const timerFallback =
+    animation.motionEnabled()
+      ? undefined
+      : { width: `${Math.max(0, 1 - elapsedMs / totalMs) * 100}%` };
+
   onMount(() => {
     void ravi.speak('private.vote');
   });
   function choose(vote: Vote): void {
+    if (chosen() != null) return;
+    setPicked(vote);
     sound.play('ballot-tap');
     props.onVote(vote);
   }
@@ -49,7 +66,13 @@ export function VotingOverlay(props: VotingOverlayProps) {
 
         <Show when={props.showTimer}>
           <div class={styles.timer}>
-            <div class={styles.timerBar} style={{ width: `${props.progress * 100}%` }} />
+            <div
+              classList={{
+                [styles.timerBar]: true,
+                [styles.timerBarStatic]: !animation.motionEnabled(),
+              }}
+              style={{ ...timerVars, ...timerFallback }}
+            />
             <span class={styles.timerLabel}>
               {formatMessage('game.secondsLeft', { seconds: props.secondsLeft })}
             </span>
@@ -57,16 +80,9 @@ export function VotingOverlay(props: VotingOverlayProps) {
         </Show>
 
         <Show
-          when={props.canVote}
+          when={showBallot()}
           fallback={
             <div class={styles.waiting}>
-              <Show when={props.yourVote}>
-                <span class={styles.yourVote}>
-                  {formatMessage('game.youVoted', {
-                    vote: formatMessage(`vote.${props.yourVote!}`),
-                  })}
-                </span>
-              </Show>
               <span class={styles.progress}>
                 {formatMessage('game.voteProgress', {
                   count: props.votedCount,
@@ -79,7 +95,13 @@ export function VotingOverlay(props: VotingOverlayProps) {
           <div class={styles.buttons}>
             <button
               type="button"
-              class={styles.ja}
+              classList={{
+                [styles.ja]: true,
+                [styles.selected]: chosen() === 'ja',
+                [styles.dimmed]: chosen() != null && chosen() !== 'ja',
+              }}
+              aria-pressed={chosen() == null ? undefined : chosen() === 'ja'}
+              disabled={chosen() != null}
               onClick={() => choose('ja')}
             >
               <img class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
@@ -87,13 +109,26 @@ export function VotingOverlay(props: VotingOverlayProps) {
             </button>
             <button
               type="button"
-              class={styles.nein}
+              classList={{
+                [styles.nein]: true,
+                [styles.selected]: chosen() === 'nein',
+                [styles.dimmed]: chosen() != null && chosen() !== 'nein',
+              }}
+              aria-pressed={chosen() == null ? undefined : chosen() === 'nein'}
+              disabled={chosen() != null}
               onClick={() => choose('nein')}
             >
               <img class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
               <span>{formatMessage('game.voteNein')}</span>
             </button>
           </div>
+          <Show when={chosen()}>
+            <span class={styles.yourVote}>
+              {formatMessage('game.youVoted', {
+                vote: formatMessage(`vote.${chosen()!}`),
+              })}
+            </span>
+          </Show>
           <span class={styles.progress}>
             {formatMessage('game.voteProgress', {
               count: props.votedCount,

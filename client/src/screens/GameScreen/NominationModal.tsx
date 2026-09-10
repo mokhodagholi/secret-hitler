@@ -18,7 +18,7 @@ export interface NominationModalProps {
 
 /**
  * The President's timed nomination: every player is listed, eligible ones are
- * tappable. A 10-second countdown runs to the engine's auto-fail, and the
+ * tappable. A 25-second countdown runs to the engine's auto-fail, and the
  * President can end the round early.
  */
 export function NominationModal(props: NominationModalProps) {

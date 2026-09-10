@@ -1,0 +1,61 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 88;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 6, 12, 0.78);
+}
+
+.card {
+  position: relative;
+  width: min(280px, 78vw, 72vh * 2 / 3);
+  aspect-ratio: 2 / 3;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.65));
+}
+
+.art {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.caption {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 5.4%;
+  height: 13%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.name {
+  @include display(0.78rem, 0.12em);
+  color: #3a2410;
+  line-height: 1.1;
+}
+
+.blurb {
+  font-family: $font-body;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #5c3a22;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

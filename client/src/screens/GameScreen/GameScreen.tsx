@@ -1,7 +1,6 @@
-import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createRenderEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import {
   Phase,
-  VOTE_DURATION_MS,
   type Faction,
   type Policy,
   type PublicPlayer,
@@ -16,6 +15,7 @@ import { GameEventHeader, governmentLabel } from './GameEventHeader';
 import { DeckStrip } from './DeckStrip';
 import { TableSeat } from './TableSeat';
 import { HelpBar } from './HelpBar';
+import { ChatPanel } from './ChatPanel';
 import { PolicyBoard } from './PolicyBoard';
 import { PlayersModal } from './PlayersModal';
 import { GameMenu } from './GameMenu';
@@ -25,16 +25,18 @@ import { PowerPanel } from './PowerPanel';
 import { GameOverOverlay } from './GameOverOverlay';
 import { PolicyRevealOverlay } from './PolicyRevealOverlay';
 import { CEREMONY_MS, NightOverlay } from './NightOverlay';
+import { RoleInspectOverlay } from './RoleInspectOverlay';
 import { ChancellorReveal } from './ChancellorReveal';
 import { InvestigateOverlay } from './InvestigateOverlay';
 import { YouDiedOverlay } from './YouDiedOverlay';
 import { RaviNarrator } from './RaviNarrator';
+import { splitTableRows, tableSeatOrder } from './tableSeats';
 import styles from './GameScreen.module.scss';
 
 /**
  * Main game screen. A parchment header with the current instruction, a deck
- * strip, compact policy boards at the top, two rows of seats below, and table tools.
- * Phase actions still arrive as overlays; state is the server's.
+ * strip, compact policy boards at the top, two rows of seats below, and a
+ * docked chat panel. Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
   const { nav, game, i18n, animation, ravi, sound } = useApp();
@@ -44,7 +46,12 @@ export function GameScreen() {
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [playersOpen, setPlayersOpen] = createSignal(false);
+  const [chatHeight, setChatHeight] = createSignal(280);
+  const [inspectingRole, setInspectingRole] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
+  const [drawHold, setDrawHold] = createSignal(0);
+  let seenDrawCount = -1;
+  let seenDrawPhase: Phase | null = null;
 
   let boardElement: HTMLElement | undefined;
 
@@ -61,6 +68,29 @@ export function GameScreen() {
   onMount(() => {
     const ticker = setInterval(() => setNow(Date.now()), 1000);
     onCleanup(() => clearInterval(ticker));
+  });
+
+  // Hold the draw-pile count at its pre-deal value, then tick down as each
+  // card lifts off — the server already subtracted all three.
+  createRenderEffect(() => {
+    const state = view();
+    if (!state) {
+      seenDrawCount = -1;
+      seenDrawPhase = null;
+      return;
+    }
+    const draw = state.board.drawPile;
+    const enteringPresident =
+      state.phase === Phase.PresidentLegislative &&
+      seenDrawPhase !== Phase.PresidentLegislative;
+    if (enteringPresident && seenDrawCount >= 0 && seenDrawCount - draw === 3) {
+      setDrawHold(3);
+    }
+    if (state.phase !== Phase.PresidentLegislative && drawHold() !== 0) {
+      setDrawHold(0);
+    }
+    seenDrawCount = draw;
+    seenDrawPhase = state.phase;
   });
 
   createEffect(() => {
@@ -346,6 +376,7 @@ export function GameScreen() {
       inNomination() &&
       iAmPresident() &&
       player.isAlive &&
+      player.connected &&
       player.id !== state!.you.id &&
       !state!.ineligibleChancellors.includes(player.id)
     );
@@ -354,11 +385,22 @@ export function GameScreen() {
   const termLocked = (player: PublicPlayer) => {
     const state = view();
     return (
-      state?.phase === Phase.Nomination &&
+      inNomination() &&
       iAmPresident() &&
       player.isAlive &&
-      player.id !== state.you.id &&
-      state.ineligibleChancellors.includes(player.id)
+      player.id !== state!.you.id &&
+      state!.ineligibleChancellors.includes(player.id)
+    );
+  };
+
+  const awayFromTable = (player: PublicPlayer) => {
+    const state = view();
+    return (
+      inNomination() &&
+      iAmPresident() &&
+      player.isAlive &&
+      !player.connected &&
+      player.id !== state!.you.id
     );
   };
 
@@ -370,7 +412,8 @@ export function GameScreen() {
     if (!player.isAlive || player.id === state.you.id) return false;
     const power = state.activePower;
     if (power === 'investigate') return state.you.investigation == null;
-    return power === 'execution' || power === 'specialElection';
+    if (power === 'specialElection') return player.connected;
+    return power === 'execution';
   };
 
   const seatSelectable = (player: PublicPlayer) =>
@@ -388,8 +431,6 @@ export function GameScreen() {
     const deadline = view()?.voteDeadline;
     return deadline ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000)) : 0;
   };
-  const voteProgress = () =>
-    Math.max(0, Math.min(1, (voteSecondsLeft() * 1000) / VOTE_DURATION_MS));
 
   const secondsUntil = (endsAt: number) =>
     Math.max(0, Math.ceil((endsAt - now()) / 1000));
@@ -417,7 +458,9 @@ export function GameScreen() {
   const myPolicies = () => view()?.you.policies ?? [];
   const legislativeSecondsLeft = () => {
     const deadline = view()?.legislativeDeadline;
-    return deadline ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000)) : 0;
+    if (!deadline) return 0;
+    if (now() < deadline.startedAt) return 0;
+    return Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000));
   };
 
   function chooseLegislative(index: number): void {
@@ -450,7 +493,6 @@ export function GameScreen() {
     | 'vote'
     | 'veto'
     | 'legislative'
-    | 'legislativeWait'
     | 'power'
     | 'night'
     | 'policy'
@@ -472,8 +514,7 @@ export function GameScreen() {
     if (chancellorReveal()) return 'chancellorReveal';
     if (state?.phase === Phase.Voting) return 'vote';
     if (isLegislative() && state?.vetoRequested) return 'veto';
-    if (isLegislative() && myPolicies().length > 0) return 'legislative';
-    if (isLegislative()) return 'legislativeWait';
+    if (isLegislative()) return 'legislative';
     if (state?.phase === Phase.SpecialPower && state.activePower) return 'power';
     if (ceremonyOpen() && game.role()) return 'night';
     if (revealedPolicy()) return 'policy';
@@ -489,7 +530,6 @@ export function GameScreen() {
       overlay === 'investigate' ||
       overlay === 'veto' ||
       overlay === 'legislative' ||
-      overlay === 'legislativeWait' ||
       overlay === 'power' ||
       overlay === 'over';
     if (!phaseTakesOver) return;
@@ -501,30 +541,33 @@ export function GameScreen() {
   const playerName = (playerId: string | null) =>
     view()?.players.find((player) => player.id === playerId)?.name ?? '—';
 
-  const seatedPlayers = () =>
-    [...(view()?.players ?? [])].sort((a, b) => a.seat - b.seat);
-
-  const topSeats = () => {
-    const seated = seatedPlayers();
-    return seated.slice(0, Math.ceil(seated.length / 2));
+  const seatedPlayers = () => {
+    const state = view();
+    return tableSeatOrder(state?.players ?? [], state?.you.id ?? '');
   };
 
-  const bottomSeats = () => {
-    const seated = seatedPlayers();
-    return seated.slice(Math.ceil(seated.length / 2));
-  };
+  const topSeats = () => splitTableRows(seatedPlayers()).top;
+  const bottomSeats = () => splitTableRows(seatedPlayers()).bottom;
 
   const nextPresidentId = () => {
-    const living = seatedPlayers().filter((player) => player.isAlive);
+    const seated = [...(view()?.players ?? [])].sort((a, b) => a.seat - b.seat);
+    const playable = seated.filter(
+      (player) => player.isAlive && player.connected,
+    );
     const presidentId = view()?.board.president;
-    if (living.length === 0) return null;
-    const index = living.findIndex((player) => player.id === presidentId);
-    if (index < 0) return living[0].id;
-    return living[(index + 1) % living.length].id;
+    if (playable.length === 0) return null;
+    const start = seated.findIndex((player) => player.id === presidentId);
+    const from = start < 0 ? 0 : start;
+    for (let step = 1; step <= seated.length; step++) {
+      const candidate = seated[(from + step) % seated.length];
+      if (candidate.isAlive && candidate.connected) return candidate.id;
+    }
+    return playable[0].id;
   };
 
   const BUBBLE_MS = 8_000;
   const bubbleFor = (playerId: string) => {
+    if (ceremonyOpen()) return undefined;
     const messages = game.chatMessages();
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].playerId !== playerId) continue;
@@ -605,6 +648,15 @@ export function GameScreen() {
         variant: 'prominent',
         message: formatMessage('game.nominateIneligible'),
       });
+      return;
+    }
+    if (awayFromTable(player)) {
+      const seat = document.querySelector(`[data-seat-id="${player.id}"]`);
+      void animation.play(seat instanceof HTMLElement ? seat : null, 'shake');
+      showToast({
+        variant: 'prominent',
+        message: formatMessage('game.nominateAbsent'),
+      });
     }
   }
 
@@ -618,24 +670,25 @@ export function GameScreen() {
     <Screen fill>
       <Show when={view()}>
         {(state) => (
-          <div class={styles.scene}>
+          <div
+            class={styles.scene}
+            style={{ '--chat-panel-height': `${chatHeight()}px` }}
+          >
             <GameEventHeader
               headline={ravi.line() ?? helpMessage()}
               governmentLabel={governmentLabel(
                 state().board.liberalPolicies + state().board.fascistPolicies,
                 formatMessage,
               )}
+              fullWidth={tableOverlay() === 'night'}
             />
 
             <DeckStrip
-              drawCount={state().board.drawPile}
+              drawCount={state().board.drawPile + drawHold()}
               discardCount={state().board.discardPile}
               electionTracker={state().board.electionTracker}
-              candidateName={
-                iAmPresident()
-                  ? formatMessage('game.you')
-                  : playerName(state().board.president)
-              }
+              role={game.role() ?? state().you.role}
+              onInspectRole={() => setInspectingRole(true)}
               formatMessage={formatMessage}
             />
 
@@ -658,7 +711,8 @@ export function GameScreen() {
                         isYou={player.id === state().you.id}
                         isNext={player.id === nextPresidentId()}
                         selectable={seatSelectable(player)}
-                        termLocked={termLocked(player)}
+                        termLocked={termLocked(player) || awayFromTable(player)}
+                        showPublicMarks={!ceremonyOpen()}
                         bubble={bubbleFor(player.id)}
                         onSelect={() => onSeat(player)}
                         formatMessage={formatMessage}
@@ -675,7 +729,8 @@ export function GameScreen() {
                         isYou={player.id === state().you.id}
                         isNext={player.id === nextPresidentId()}
                         selectable={seatSelectable(player)}
-                        termLocked={termLocked(player)}
+                        termLocked={termLocked(player) || awayFromTable(player)}
+                        showPublicMarks={!ceremonyOpen()}
                         bubble={bubbleFor(player.id)}
                         onSelect={() => onSeat(player)}
                         formatMessage={formatMessage}
@@ -684,31 +739,35 @@ export function GameScreen() {
                   </For>
                 </div>
               </div>
+
+              <div class={styles.toolsDock}>
+                <HelpBar
+                  actionLabel={
+                    ceremonyOpen()
+                      ? undefined
+                      : game.inDiscussion() && iAmPresident()
+                        ? formatMessage('game.startNomination')
+                        : inNomination() && iAmPresident()
+                          ? formatMessage('game.endRound')
+                          : undefined
+                  }
+                  onAction={
+                    !ceremonyOpen() &&
+                    (game.inDiscussion() || inNomination()) &&
+                    iAmPresident()
+                      ? sendEndTurn
+                      : undefined
+                  }
+                />
+              </div>
             </div>
 
-            <div class={styles.toolsDock}>
-              <HelpBar
-                unreadChat={game.unreadChat() > 0}
-                actionLabel={
-                  game.inDiscussion() && iAmPresident()
-                    ? formatMessage('game.startNomination')
-                    : inNomination() && iAmPresident()
-                      ? formatMessage('game.endRound')
-                      : undefined
-                }
-                onAction={
-                  (game.inDiscussion() || inNomination()) && iAmPresident()
-                    ? sendEndTurn
-                    : undefined
-                }
-                onOpenChat={() => nav.navigate('chat')}
-                onOpenPlayers={() => setPlayersOpen(true)}
-                onOpenMenu={() => setMenuOpen(true)}
-                onRaiseHand={() => game.sendChat('✋')}
-                onEmoji={(emoji) => game.sendChat(emoji)}
-                formatMessage={formatMessage}
-              />
-            </div>
+            <ChatPanel
+              talkingAllowed={!ceremonyOpen()}
+              onOpenPlayers={() => setPlayersOpen(true)}
+              onOpenMenu={() => setMenuOpen(true)}
+              onHeightChange={setChatHeight}
+            />
 
             <RaviNarrator
               ceremonyOpen={ceremonyOpen()}
@@ -723,9 +782,12 @@ export function GameScreen() {
                   playerCount={state().players.length}
                   players={seatedPlayers()}
                   youId={state().you.id}
-                  teammates={state().players.filter(
-                    (player) => player.role != null && player.id !== state().you.id,
-                  )}
+                  teammates={[...state().players]
+                    .filter(
+                      (player) =>
+                        player.role != null && player.id !== state().you.id,
+                    )
+                    .sort((a, b) => a.seat - b.seat)}
                   presidentName={isolateBidi(playerName(state().board.president))}
                   presidentIsYou={iAmPresident()}
                   startedAt={state().discussionDeadline?.startedAt ?? Date.now()}
@@ -733,6 +795,15 @@ export function GameScreen() {
                     setCeremonyOpen(false);
                     void ravi.speak('discuss.start');
                   }}
+                />
+              )}
+            </Show>
+
+            <Show when={inspectingRole() && (game.role() ?? state().you.role)}>
+              {(role) => (
+                <RoleInspectOverlay
+                  role={role()}
+                  onClose={() => setInspectingRole(false)}
                 />
               )}
             </Show>
@@ -791,7 +862,8 @@ export function GameScreen() {
                 totalVoters={voters().length}
                 showTimer
                 secondsLeft={voteSecondsLeft()}
-                progress={voteProgress()}
+                startedAt={state().voteDeadline?.startedAt ?? Date.now()}
+                endsAt={state().voteDeadline?.endsAt ?? Date.now()}
                 onVote={castVote}
               />
             </Show>
@@ -835,28 +907,6 @@ export function GameScreen() {
               </div>
             </Show>
 
-            <Show when={tableOverlay() === 'legislativeWait'}>
-              <div class={styles.overlayLayer}>
-                <div class={styles.votePanel}>
-                  <span class={styles.voteWaiting}>
-                    {state().phase === Phase.PresidentLegislative
-                      ? iAmPresident()
-                        ? formatMessage('game.presidentChoosingYou')
-                        : formatMessage('game.presidentChoosing', {
-                            name: isolateBidi(playerName(state().board.president)),
-                          })
-                      : iAmChancellor()
-                        ? formatMessage('game.chancellorChoosingYou')
-                        : formatMessage('game.chancellorChoosing', {
-                            name: isolateBidi(
-                              playerName(state().board.chancellor),
-                            ),
-                          })}
-                  </span>
-                </div>
-              </div>
-            </Show>
-
             <Show when={tableOverlay() === 'legislative'}>
               <LegislativeModal
                 mode={
@@ -865,12 +915,19 @@ export function GameScreen() {
                     : 'enact'
                 }
                 policies={myPolicies()}
+                presidentId={state().board.president ?? ''}
+                chancellorId={state().board.chancellor}
+                presidentName={isolateBidi(playerName(state().board.president))}
+                chancellorName={isolateBidi(playerName(state().board.chancellor))}
                 secondsLeft={legislativeSecondsLeft()}
                 canVeto={
                   state().phase === Phase.ChancellorLegislative &&
                   state().vetoUnlocked &&
                   iAmChancellor()
                 }
+                startedAt={state().legislativeDeadline?.startedAt ?? 0}
+                onDrewCard={() => setDrawHold((held) => Math.max(0, held - 1))}
+                onDealCaughtUp={() => setDrawHold(0)}
                 onPick={chooseLegislative}
                 onVeto={proposeVeto}
                 formatMessage={formatMessage}
@@ -913,6 +970,7 @@ export function GameScreen() {
               youId={state().you.id}
               formatMessage={formatMessage}
               canNominate={() => false}
+              showOffice={!ceremonyOpen()}
               onNominate={() => {}}
               onClose={() => setPlayersOpen(false)}
             />

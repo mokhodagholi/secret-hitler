@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { GameEngine } from './GameEngine';
-import { Phase } from '../types/GameState';
+import { LEGISLATIVE_DEAL_MS, LEGISLATIVE_DURATION_MS, Phase } from '../types/GameState';
 import {
   StackedDeck,
   electGovernment,
@@ -352,6 +352,89 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.phase).toBe(Phase.Nomination);
   });
 
+  it('Should refuse a disconnected player as Chancellor', () => {
+    const { engine, players } = startGame();
+    const [president, ben] = players;
+    engine.setConnected(ben.id, false);
+    expect(
+      engine.handleCommand(president.id, {
+        kind: 'nominateChancellor',
+        targetId: ben.id,
+      })?.code,
+    ).toBe('INVALID_ACTION');
+  });
+
+  it('Should skip a disconnected player when the presidency moves on', () => {
+    const { engine, room, players } = startGame([
+      'Ana',
+      'Ben',
+      'Cal',
+      'Dia',
+      'Eli',
+      'Fay',
+    ]);
+    const [president, ben, cal] = players;
+    engine.setConnected(ben.id, false);
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    expect(room.presidentId).toBe(cal.id);
+  });
+
+  it('Should mark an in-game leaver dead and keep them off the next government', () => {
+    const { engine, room, players } = startGame();
+    const [president, ben, cal] = players;
+    engine.removePlayer(ben.id);
+    expect(ben.isAlive).toBe(false);
+    expect(room.findPlayer(ben.id)).toBeTruthy();
+    expect(
+      engine.handleCommand(president.id, {
+        kind: 'nominateChancellor',
+        targetId: ben.id,
+      })?.code,
+    ).toBe('INVALID_ACTION');
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    expect(room.presidentId).toBe(cal.id);
+  });
+
+  it('Should void the round when the President leaves mid-office', () => {
+    const { engine, room, players } = startGame();
+    const [president, ben] = players;
+    const codes: string[] = [];
+    engine.on('log', ({ entry }) => codes.push(entry.code));
+    engine.removePlayer(president.id);
+    expect(president.isAlive).toBe(false);
+    expect(codes).toContain('left');
+    expect(codes).toContain('presidentVacated');
+    expect(room.phase).toBe(Phase.Nomination);
+    expect(room.presidentId).toBe(ben.id);
+    expect(room.electionTracker).toBe(1);
+  });
+
+  it('Should void the round when the Chancellor leaves after nomination', () => {
+    const { engine, room, players } = startGame();
+    const [president, ben, cal] = players;
+    engine.handleCommand(president.id, {
+      kind: 'nominateChancellor',
+      targetId: ben.id,
+    });
+    const codes: string[] = [];
+    engine.on('log', ({ entry }) => codes.push(entry.code));
+    engine.removePlayer(ben.id);
+    expect(codes).toContain('chancellorVacated');
+    expect(room.phase).toBe(Phase.Nomination);
+    expect(room.chancellorId).toBeNull();
+    expect(room.presidentId).toBe(cal.id);
+  });
+
+  it('Should let the host kick a player during the game', () => {
+    const { engine, room, players } = startGame();
+    const [host, ben] = players;
+    expect(engine.kickPlayer(host.id, ben.id)).toBeNull();
+    expect(ben.isAlive).toBe(false);
+    expect(room.findPlayer(ben.id)).toBeTruthy();
+  });
+
   it('Should open the nomination window when the President starts nomination', () => {
     const { engine, room, players } = startGame();
     const [president, ben] = players;
@@ -427,6 +510,28 @@ describe('GameEngine — nomination and voting', () => {
     engine.postChat(president.id, 'over here');
     expect(heard).toEqual([ben.name, president.name]);
   });
+
+  it('Should ignore chat during the opening night', () => {
+    const { engine, players } = startGame(['Ana', 'Ben', 'Cal'], undefined, {
+      keepOpeningNight: true,
+    });
+    const heard: string[] = [];
+    engine.on('chat', ({ message }) => heard.push(message.text));
+
+    engine.postChat(players[1].id, 'psst');
+    expect(heard).toEqual([]);
+  });
+
+  it('Should keep the President from skipping the opening night', () => {
+    const { engine, room, players } = startGame(['Ana', 'Ben', 'Cal'], undefined, {
+      keepOpeningNight: true,
+    });
+    expect(
+      engine.handleCommand(players[0].id, { kind: 'endTurn' })?.code,
+    ).toBe('INVALID_ACTION');
+    expect(room.discussionEndsAt).toBeGreaterThan(0);
+    expect(room.nominationEndsAt).toBe(0);
+  });
 });
 
 describe('GameEngine — legislative session', () => {
@@ -437,6 +542,20 @@ describe('GameEngine — legislative session', () => {
 
     expect(game.room.phase).toBe(Phase.PresidentLegislative);
     expect(game.room.drawnPolicies).toEqual(['liberal', 'fascist', 'fascist']);
+  });
+
+  it('Should hold the choice clock until the public deal has landed', () => {
+    const deck = new StackedDeck(['liberal', 'fascist', 'fascist']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck);
+    const before = Date.now();
+    electGovernment(game, game.players[1]);
+
+    expect(game.room.legislativeStartedAt - before).toBeGreaterThanOrEqual(
+      LEGISLATIVE_DEAL_MS - 50,
+    );
+    expect(game.room.legislativeEndsAt - game.room.legislativeStartedAt).toBe(
+      LEGISLATIVE_DURATION_MS,
+    );
   });
 
   it('Should auto-discard for the President when the timer elapses', () => {

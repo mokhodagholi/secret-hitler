@@ -91,7 +91,9 @@ watches game state, or the handler that reacts to a server message.
 
 The catalog of those one-shots — what to bake, when they fire, and how to
 generate the files — is [`docs/sound-effects.md`](../../docs/sound-effects.md).
-Bake with `scripts/generate-sound-effects.py`. Spoken table lines stay in
+Bake with `scripts/generate-sound-effects.py`. Looping beds (Suno prompts,
+when to switch tracks) are [`docs/background-music.md`](../../docs/background-music.md).
+Spoken table lines stay in
 [`docs/ravi-script.md`](../../docs/ravi-script.md); do not put words in an SFX.
 
 ## Testing

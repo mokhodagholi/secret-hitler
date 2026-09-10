@@ -12,6 +12,7 @@ export interface PlayersModalProps {
   youId: string;
   formatMessage: FormatMessage;
   canNominate: (player: PublicPlayer) => boolean;
+  showOffice?: boolean;
   onNominate: (player: PublicPlayer) => void;
   onClose: () => void;
 }
@@ -57,6 +58,7 @@ export function PlayersModal(props: PlayersModalProps) {
                   player={player()}
                   isYou={player().id === props.youId}
                   nominatable={props.canNominate(player())}
+                  showOffice={props.showOffice}
                   onNominate={() => props.onNominate(player())}
                   formatMessage={formatMessage}
                 />

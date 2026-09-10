@@ -76,7 +76,9 @@ export class SpecialPowerPhase implements GamePhase {
 
   private specialElection(playerId: string, targetId: string): EngineError | null {
     const target = this.livingTarget(playerId, targetId);
-    if (!target) return err('INVALID_ACTION', 'That player cannot be chosen.');
+    if (!target?.connected) {
+      return err('INVALID_ACTION', 'That player cannot be chosen.');
+    }
     this.host.startSpecialElection(target.id);
     return null;
   }

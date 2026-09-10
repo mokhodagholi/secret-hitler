@@ -1,4 +1,4 @@
-import { Phase } from '../../types/GameState';
+import { LEGISLATIVE_PASS_MS, Phase } from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import {
@@ -15,7 +15,7 @@ export class ChancellorLegislativePhase implements GamePhase {
 
   enter(): void {
     this.host.room.vetoRequested = false;
-    this.host.openLegislativeTimer();
+    this.host.openLegislativeTimer(LEGISLATIVE_PASS_MS);
   }
 
   exit(): void {

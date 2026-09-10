@@ -1,9 +1,10 @@
 import { describe, expect, it } from '@rstest/core';
-import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
+import { screen, waitFor } from '@solidjs/testing-library';
 import {
   NightOverlay,
   CEREMONY_MS,
   DEAL_MS,
+  GLANCE_AT_MS,
   LOOK_AT_MS,
 } from './NightOverlay';
 import { en } from '../../i18n/locales/en';
@@ -16,16 +17,22 @@ const players = [
 
 function renderOverlay(
   harness: ReturnType<typeof buildHarness>,
-  overrides: { startedAt?: number; onDone?: () => void } = {},
+  overrides: {
+    startedAt?: number;
+    onDone?: () => void;
+    role?: 'liberal' | 'fascist' | 'hitler';
+    playerCount?: number;
+    teammates?: ReturnType<typeof makePlayer>[];
+  } = {},
 ) {
   renderWithApp(
     () => (
       <NightOverlay
-        role="liberal"
-        playerCount={5}
+        role={overrides.role ?? 'liberal'}
+        playerCount={overrides.playerCount ?? 5}
         players={players}
         youId="you"
-        teammates={[]}
+        teammates={overrides.teammates ?? []}
         presidentName="Ana"
         startedAt={overrides.startedAt ?? Date.now()}
         onDone={overrides.onDone ?? (() => {})}
@@ -41,7 +48,7 @@ describe('NightOverlay', () => {
     harness.services.settings.set('raviVoice', false);
     renderOverlay(harness);
 
-    expect(screen.getByText(en.ravi.deal.start)).toBeTruthy();
+    expect(screen.queryByText(en.ravi.deal.start)).toBeNull();
     expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
     expect(screen.queryByText(en.ravi.night.start)).toBeNull();
     await waitFor(() => {
@@ -55,10 +62,10 @@ describe('NightOverlay', () => {
 
     expect(screen.getByText(en.ravi.night.start)).toBeTruthy();
     expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.game.gotIt })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.game.gotIt })).toBeNull();
   });
 
-  it('Should not end the ceremony when the player taps Got it', async () => {
+  it('Should keep the private role on screen until the shared clock', async () => {
     const harness = buildHarness({ seated: true });
     let done = 0;
     renderOverlay(harness, {
@@ -68,9 +75,9 @@ describe('NightOverlay', () => {
       },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: en.game.gotIt }));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(done).toBe(0);
+    expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
     expect(screen.getByRole('dialog', { name: en.game.yourRole })).toBeTruthy();
   });
 
@@ -86,6 +93,36 @@ describe('NightOverlay', () => {
 
     await waitFor(() => {
       expect(done).toBe(1);
+    });
+  });
+
+  it('Should wait with closed eyes instead of repeating the header line', async () => {
+    const harness = buildHarness({ seated: true });
+    renderOverlay(harness, { startedAt: Date.now() - GLANCE_AT_MS - 80 });
+
+    expect(
+      screen.getByLabelText(en.ravi.private.nightLiberal),
+    ).toBeTruthy();
+    expect(screen.queryByText(en.ravi.private.nightLiberal)).toBeNull();
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.private.nightLiberal);
+    });
+  });
+
+  it('Should show teammates to Fascists while the header stays closed-eyes', async () => {
+    const harness = buildHarness({ seated: true });
+    renderOverlay(harness, {
+      role: 'fascist',
+      startedAt: Date.now() - GLANCE_AT_MS - 80,
+      teammates: [makePlayer({ id: 'ana', name: 'Ana', seat: 1, role: 'hitler' })],
+    });
+
+    expect(screen.getByText(en.ravi.private.nightFascistSmall)).toBeTruthy();
+    expect(screen.getByText('Ana')).toBeTruthy();
+    expect(screen.getByText(en.role.hitler)).toBeTruthy();
+    expect(document.querySelector('[data-teammate-seat]')?.textContent).toBe('2');
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.private.nightLiberal);
     });
   });
 });

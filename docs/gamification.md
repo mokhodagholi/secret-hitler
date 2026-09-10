@@ -6,6 +6,7 @@ happening.” This doc is that layer — timings, who sees what, and how
 cards move. Words and voice are in [`ravi.md`](./ravi.md) and
 [`ravi-script.md`](./ravi-script.md). Table sound effects (the physical
 hits under those lines) are in [`sound-effects.md`](./sound-effects.md).
+Looping beds are in [`background-music.md`](./background-music.md).
 Art prompts are in [`assets-brief.md`](./assets-brief.md).
 
 The Chancellor’s Persian title is locked as **صدراعظم** (English:

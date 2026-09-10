@@ -14,6 +14,8 @@ export interface TableSeatProps {
   selectable: boolean;
   /** Previous-government lock: clickable so we can explain why not. */
   termLocked: boolean;
+  /** Seat numbers and office ribbons — hidden until the opening night ends. */
+  showPublicMarks?: boolean;
   bubble?: string;
   onSelect: () => void;
   formatMessage: FormatMessage;
@@ -26,12 +28,16 @@ export interface TableSeatProps {
 export function TableSeat(props: TableSeatProps) {
   const { formatMessage } = props;
 
-  const office = () =>
-    props.player.isPresident
+  const showPublicMarks = () => props.showPublicMarks !== false;
+
+  const office = () => {
+    if (!showPublicMarks()) return null;
+    return props.player.isPresident
       ? 'president'
       : props.player.isChancellor
         ? 'chancellor'
         : null;
+  };
 
   const interactive = () => props.selectable || props.termLocked;
 
@@ -75,7 +81,14 @@ export function TableSeat(props: TableSeatProps) {
         )}
       </Show>
 
-      <Show when={props.isNext && !props.player.isPresident && !office()}>
+      <Show
+        when={
+          showPublicMarks() &&
+          props.isNext &&
+          !props.player.isPresident &&
+          !office()
+        }
+      >
         <span class={styles.next}>{formatMessage('game.nextPresident')}</span>
       </Show>
 
@@ -87,9 +100,11 @@ export function TableSeat(props: TableSeatProps) {
           alt=""
           aria-hidden="true"
         />
-        <span class={styles.badge}>
-          {formatMessage('game.seatNumber', { n: props.player.seat + 1 })}
-        </span>
+        <Show when={showPublicMarks()}>
+          <span class={styles.badge} data-seat-number>
+            {formatMessage('game.seatNumber', { n: props.player.seat + 1 })}
+          </span>
+        </Show>
         <span class={styles.name} dir="auto">
           {playerLabel(props.isYou, props.player.name, formatMessage)}
         </span>

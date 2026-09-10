@@ -1,4 +1,4 @@
-import { Phase } from '../../types/GameState';
+import { LEGISLATIVE_DEAL_MS, Phase } from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import type { GamePhase, PhaseHost } from './GamePhase';
@@ -13,7 +13,7 @@ export class PresidentLegislativePhase implements GamePhase {
   enter(): void {
     const room = this.host.room;
     room.drawnPolicies = room.deck.drawTiles(3);
-    this.host.openLegislativeTimer();
+    this.host.openLegislativeTimer(LEGISLATIVE_DEAL_MS);
     this.host.log('presidentDraws');
     this.host.changed();
   }

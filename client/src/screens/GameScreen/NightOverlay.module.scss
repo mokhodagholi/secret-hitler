@@ -35,29 +35,6 @@
   user-select: none;
 }
 
-.caption,
-.nightCall {
-  position: relative;
-  z-index: 3;
-  max-width: min(360px, 100%);
-  margin: 0;
-  padding: 12px 16px;
-  font-family: $font-body;
-  font-size: 1.05rem;
-  font-weight: 700;
-  line-height: 1.45;
-  color: $cream;
-  text-align: center;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85);
-  white-space: pre-line;
-}
-
-.caption {
-  align-self: start;
-  margin-top: 8px;
-  max-width: min(280px, 100%);
-}
-
 .dealLayer {
   position: absolute;
   inset: 0;
@@ -169,15 +146,6 @@
   color: $text-light;
 }
 
-.gotIt {
-  @include display(0.82rem, 0.08em);
-  @include pressable;
-  padding: 11px 22px;
-  border-radius: $radius;
-  color: $navy-950;
-  background: linear-gradient(180deg, $gold-bright, $gold-dark);
-}
-
 .glance {
   position: relative;
   z-index: 1;
@@ -199,6 +167,24 @@
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
 }
 
+.sleep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.lids {
+  width: min(168px, 55vw);
+  height: auto;
+  stroke: $gold;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  fill: none;
+  opacity: 0.88;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.7));
+}
+
 .team {
   display: flex;
   flex-wrap: wrap;
@@ -214,7 +200,8 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 72px;
+  width: 80px;
+  position: relative;
 
   img {
     width: 52px;
@@ -224,7 +211,7 @@
     border: 2px solid rgba($gold, 0.7);
   }
 
-  span {
+  span:not(.teammateSeat) {
     font-size: 0.72rem;
     font-weight: 700;
     color: $cream;
@@ -239,4 +226,22 @@
     font-size: 0.68rem;
     color: $gold;
   }
+}
+
+.teammateSeat {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  z-index: 1;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, $gold-bright, $gold-dark);
+  color: $navy-950;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 20px;
+  transform: translateX(-50%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
 }

@@ -64,6 +64,16 @@ describe('RaviService', () => {
     expect(ravi.line()).toBe('Ana chose you as Chancellor.');
   });
 
+  it('Should subtitle an office-holder leaving the table', async () => {
+    const ravi = makeRavi(false);
+    await ravi.speak('office.presidentLeft', { name: 'Ana' });
+    expect(ravi.line()).toBe('Ana was President and left the game.');
+    await ravi.speak('office.roundOver');
+    expect(ravi.line()).toBe('This round is over.');
+    await ravi.speak('player.left', { name: 'Cal' });
+    expect(ravi.line()).toBe('Cal left the game.');
+  });
+
   it('Should play queued lines one after another', async () => {
     const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
     const ravi = makeRavi(true);

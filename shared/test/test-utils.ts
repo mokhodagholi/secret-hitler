@@ -1,7 +1,12 @@
 import { GameEngine } from '../src/engine/GameEngine';
 import { PolicyDeck } from '../src/domain/PolicyDeck';
 import { Room } from '../src/domain/Room';
-import type { Player, Policy, RoomOptions } from '../src/types/GameState';
+import {
+  OPENING_CEREMONY_MS,
+  type Player,
+  type Policy,
+  type RoomOptions,
+} from '../src/types/GameState';
 
 /** Deck that serves a fixed tile sequence — no shuffling, fully predictable. */
 export class StackedDeck extends PolicyDeck {
@@ -57,10 +62,18 @@ export interface RunningGame {
   players: Player[];
 }
 
+/** Backdate the discussion clock so tests can play past the opening night. */
+export function skipOpeningNight(room: Room): void {
+  if (room.discussionStartedAt > 0) {
+    room.discussionStartedAt -= OPENING_CEREMONY_MS + 1;
+  }
+}
+
 /** Seat `names`, ready everyone, and start the game (first player hosts). */
 export function startGame(
   names: string[] = ['Ana', 'Ben', 'Cal'],
   deck?: PolicyDeck,
+  opts?: { keepOpeningNight?: boolean },
 ): RunningGame {
   const room = makeRoom({}, deck);
   const engine = new GameEngine(room);
@@ -68,6 +81,7 @@ export function startGame(
   for (const player of players) engine.setReady(player.id, true);
   const error = engine.startGame(players[0].id);
   if (error) throw new Error(`startGame failed: ${error.code}`);
+  if (!opts?.keepOpeningNight) skipOpeningNight(room);
   return { engine, room, players };
 }
 

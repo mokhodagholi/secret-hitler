@@ -2,7 +2,7 @@ import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { GameScreen } from './GameScreen';
-import { LOOK_AT_MS, LOOK_MS } from './NightOverlay';
+import { LOOK_AT_MS, LOOK_MS, CEREMONY_MS } from './NightOverlay';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, makePlayer, makeView, renderWithApp } from '../../../test/test-utils';
 
@@ -43,6 +43,12 @@ describe('GameScreen — voting', () => {
       type: 'command',
       command: { kind: 'castVote', vote: 'ja' },
     });
+    expect(screen.getByRole('button', { name: 'Ja!' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Nein!' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
   });
 
   it('Should send a Nein vote when the player picks it', () => {
@@ -57,7 +63,7 @@ describe('GameScreen — voting', () => {
     });
   });
 
-  it('Should hide the vote buttons after the player has voted', () => {
+  it('Should keep the vote cards after the player has voted', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -69,23 +75,46 @@ describe('GameScreen — voting', () => {
       ),
     });
 
-    expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
+    const ja = screen.getByRole('button', { name: 'Ja!' });
+    const nein = screen.getByRole('button', { name: 'Nein!' });
+    expect(ja.getAttribute('aria-pressed')).toBe('true');
+    expect(nein.getAttribute('aria-pressed')).toBe('false');
+    expect(ja).toHaveProperty('disabled', true);
+    expect(nein).toHaveProperty('disabled', true);
     expect(screen.getByText(/waiting for others/i)).toBeTruthy();
   });
 
-  it('Should hide the secret role on the table after the opening look', () => {
+  it('Should show the secret role on the deck strip after the opening look', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
     harness.socket.emit({ type: 'private', role: 'liberal' });
 
     expect(
-      screen.queryByLabelText(en.game.youAreRole.replace('{role}', en.role.liberal)),
-    ).toBeNull();
+      screen.getByLabelText(en.game.youAreRole.replace('{role}', en.role.liberal)),
+    ).toBeTruthy();
+    expect(screen.getByText(en.role.liberal)).toBeTruthy();
     expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
   });
 
-  it('Should deal face-down cards when the game has just started', () => {
+  it('Should open the role card when the player taps their role', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(nominationView());
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: en.game.youAreRole.replace('{role}', en.role.liberal),
+      }),
+    );
+    expect(screen.getByText(en.roleDescription.liberal)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: en.game.yourRole })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('dialog', { name: en.game.yourRole }));
+    expect(screen.queryByText(en.roleDescription.liberal)).toBeNull();
+  });
+
+  it('Should deal face-down cards when the game has just started', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -97,9 +126,15 @@ describe('GameScreen — voting', () => {
       you: { ...view.you, role: 'liberal' },
     });
 
-    expect(screen.getByText(en.ravi.deal.start)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(en.ravi.deal.start)).toBeTruthy();
+    });
+    expect(screen.getAllByText(en.ravi.deal.start)).toHaveLength(1);
     expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
     expect(screen.queryByText(en.ravi.night.start)).toBeNull();
+    expect(document.querySelector('[data-seat-number]')).toBeNull();
+    expect(screen.queryByText(en.game.president)).toBeNull();
+    expect(screen.getByPlaceholderText(en.game.chatSilentPlaceholder)).toBeTruthy();
   });
 
   it('Should open the private role look after the deal and night', () => {
@@ -118,16 +153,12 @@ describe('GameScreen — voting', () => {
     });
 
     expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.game.gotIt })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: en.game.gotIt }));
-    expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
     expect(screen.queryByRole('button', { name: en.game.gotIt })).toBeNull();
-    expect(screen.queryByText(en.ravi.private.nightLiberal)).toBeNull();
     expect(screen.getByRole('dialog', { name: en.game.yourRole })).toBeTruthy();
+    expect(screen.queryByText(en.game.government.first)).toBeNull();
   });
 
-  it('Should open the night glance on the shared clock, not on Got it', () => {
+  it('Should open the night glance on the shared clock, not on Got it', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -142,11 +173,15 @@ describe('GameScreen — voting', () => {
       you: { ...view.you, role: 'liberal' },
     });
 
-    expect(screen.getByText(en.ravi.private.nightLiberal)).toBeTruthy();
+    expect(screen.getByLabelText(en.ravi.private.nightLiberal)).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.game.gotIt })).toBeNull();
+    expect(screen.queryByText(en.game.government.first)).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByText(en.ravi.private.nightLiberal)).toBeTruthy();
+    });
   });
 
-  it('Should dismiss the night look when voting starts', () => {
+  it('Should dismiss the night look when voting starts', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -157,12 +192,36 @@ describe('GameScreen — voting', () => {
       discussionDeadline: { startedAt: Date.now(), endsAt: Date.now() + 20_000 },
       you: { ...view.you, role: 'liberal' },
     });
-    expect(screen.getByText(en.ravi.deal.start)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(en.ravi.deal.start)).toBeTruthy();
+    });
 
     harness.pushState(votingView());
-    expect(screen.queryByText(en.ravi.deal.start)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: en.ravi.deal.start })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: en.game.yourRole })).toBeNull();
     expect(screen.getByText(en.game.chancellorRevealTitleYou)).toBeTruthy();
     expect(screen.getByText(en.game.chancellorRevealYou)).toBeTruthy();
+  });
+
+  it('Should reveal seat numbers and the President after night', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, chancellor: null },
+      discussionDeadline: {
+        startedAt: Date.now() - CEREMONY_MS - 5_000,
+        endsAt: Date.now() + 20_000,
+      },
+      you: { ...view.you, role: 'liberal' },
+    });
+
+    expect(screen.queryByRole('dialog', { name: en.ravi.deal.start })).toBeNull();
+    expect(document.querySelector('[data-seat-number]')).toBeTruthy();
+    expect(screen.getByText(en.game.president)).toBeTruthy();
+    expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
   });
 
   it('Should name another player when they are nominated Chancellor', () => {
@@ -265,9 +324,31 @@ describe('GameScreen — nomination', () => {
     fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
     expect(screen.getByText(en.game.nominateIneligible)).toBeTruthy();
     expect(harness.socket.lastSent('command')).toBeUndefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /Ana/ }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'nominateChancellor', targetId: 'pres' },
+    });
   });
 
-  it('Should explain the term limit even before nomination opens', () => {
+  it('Should explain why a disconnected player cannot be Chancellor', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = nominationView();
+    harness.pushState({
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cal' ? { ...player, connected: false } : player,
+      ),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.getByText(en.game.nominateAbsent)).toBeTruthy();
+    expect(harness.socket.lastSent('command')).toBeUndefined();
+  });
+
+  it('Should not let the President pick seats until nomination is open', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -280,8 +361,10 @@ describe('GameScreen — nomination', () => {
       ineligibleChancellors: ['cal'],
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
-    expect(screen.getByText(en.game.nominateIneligible)).toBeTruthy();
+    const cal = screen.getByRole('button', { name: /Cal/ });
+    expect(cal.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(cal);
+    expect(screen.queryByText(en.game.nominateIneligible)).toBeNull();
     expect(harness.socket.lastSent('command')).toBeUndefined();
   });
 
@@ -451,12 +534,60 @@ describe('GameScreen — legislative modal', () => {
       },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
+    const liberal = await waitFor(() =>
+      screen.getByRole('button', { name: en.game.liberal }),
+    );
+    fireEvent.click(liberal);
     // The pick plays an exit animation (a resolved no-op under jsdom) first.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
       command: { kind: 'discardPolicy', index: 0 },
+    });
+  });
+
+  it('Should show the public deal to everyone while the President chooses', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      board: { ...view.board, president: 'pres', chancellor: 'you' },
+    });
+
+    expect(screen.getByText(en.game.legislativeDeal)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(/is choosing a policy to discard/)).toBeTruthy();
+    });
+    expect(screen.queryByRole('button', { name: en.game.liberal })).toBeNull();
+  });
+
+  it('Should tick the draw pile down as cards are dealt', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState(view);
+    expect(screen.getByLabelText(`${en.game.drawPile}: 17`)).toBeTruthy();
+
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      board: {
+        ...view.board,
+        president: 'pres',
+        chancellor: 'you',
+        drawPile: 14,
+      },
+      legislativeDeadline: {
+        startedAt: Date.now() + 8_000,
+        endsAt: Date.now() + 28_000,
+      },
+    });
+
+    expect(screen.getByLabelText(`${en.game.drawPile}: 17`)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText(`${en.game.drawPile}: 14`)).toBeTruthy();
     });
   });
 });
@@ -471,9 +602,24 @@ describe('GameScreen — government', () => {
     expect(screen.getByText(en.game.chancellor)).toBeTruthy();
     expect(screen.getByText(en.game.electionTracker)).toBeTruthy();
     expect(screen.getByLabelText(`${en.game.drawPile}: 17`)).toBeTruthy();
-    expect(screen.getByText(en.game.presidentialCandidate)).toBeTruthy();
+    expect(screen.getByText(en.role.liberal)).toBeTruthy();
+    expect(screen.queryByText(en.game.presidentialCandidate)).toBeNull();
     // The seated president's name is surfaced, no info panel to open.
     expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
+  });
+
+  it('Should put the current player first, then wrap around the table', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    const rows = document.querySelectorAll('[data-game-table] [role="list"]');
+    const ids = (row: Element) =>
+      [...row.querySelectorAll('[data-seat-id]')].map((seat) =>
+        seat.getAttribute('data-seat-id'),
+      );
+    expect(ids(rows[1])).toEqual(['you', 'cal']);
+    expect(ids(rows[0])).toEqual(['pres']);
   });
 });
 
@@ -502,17 +648,18 @@ describe('GameScreen — in-game menu', () => {
   });
 });
 
-describe('GameScreen — chat page', () => {
-  it('Should open the chat page from the chat button', () => {
+describe('GameScreen — docked chat', () => {
+  it('Should show chat on the board without leaving the table', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
-    fireEvent.click(screen.getByRole('button', { name: en.game.openChat }));
-    expect(harness.services.nav.screen()).toBe('chat');
+    expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.playersTitle })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.settings.title })).toBeTruthy();
   });
 
-  it('Should track unread chat while the player is on the board', () => {
+  it('Should show an incoming message on the docked panel', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
@@ -521,7 +668,8 @@ describe('GameScreen — chat page', () => {
       type: 'chat',
       message: { id: 'm1', playerId: 'cal', name: 'Cal', text: 'hi', at: 0 },
     });
-    expect(harness.services.game.unreadChat()).toBe(1);
+    expect(screen.getByText('hi')).toBeTruthy();
+    expect(harness.services.game.unreadChat()).toBe(0);
   });
 
   it('Should not badge the player for their own message', () => {
@@ -585,19 +733,6 @@ describe('GameScreen — help bar', () => {
     harness.pushState(votingView());
 
     expect(screen.getByText(en.game.help.voteYou)).toBeTruthy();
-  });
-
-  it('Should send an emoji through chat', () => {
-    const harness = buildHarness({ seated: true });
-    renderWithApp(() => <GameScreen />, harness);
-    harness.pushState(votingView());
-
-    fireEvent.click(screen.getByRole('button', { name: en.game.emojis }));
-    fireEvent.click(screen.getByRole('button', { name: '👍' }));
-    expect(harness.socket.lastSent('chat:message')).toEqual({
-      type: 'chat:message',
-      text: '👍',
-    });
   });
 });
 

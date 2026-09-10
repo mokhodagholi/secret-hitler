@@ -1,9 +1,12 @@
-import type { FormatMessage } from '../../i18n';
+import { Show } from 'solid-js';
+import type { FormatMessage, MessageKey } from '../../i18n';
 import styles from './GameEventHeader.module.scss';
 
 export interface GameEventHeaderProps {
   headline: string;
   governmentLabel: string;
+  /** Night has no government yet — let the instruction use the full bar. */
+  fullWidth?: boolean;
 }
 
 const GOVERNMENT_KEYS = [
@@ -37,17 +40,22 @@ export function governmentLabel(
  */
 export function GameEventHeader(props: GameEventHeaderProps) {
   return (
-    <header class={styles.header} aria-live="polite">
+    <header
+      classList={{ [styles.header]: true, [styles.full]: props.fullWidth }}
+      aria-live="polite"
+    >
       <p class={styles.headline} dir="auto">
         {props.headline}
       </p>
-      <span class={styles.divider} aria-hidden="true" />
-      <div class={styles.government}>
-        <span class={styles.governmentLabel} dir="auto">
-          {props.governmentLabel}
-        </span>
-        <SunMark />
-      </div>
+      <Show when={!props.fullWidth}>
+        <span class={styles.divider} aria-hidden="true" />
+        <div class={styles.government}>
+          <span class={styles.governmentLabel} dir="auto">
+            {props.governmentLabel}
+          </span>
+          <SunMark />
+        </div>
+      </Show>
     </header>
   );
 }

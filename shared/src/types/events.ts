@@ -39,7 +39,7 @@ export type ClientMessage =
   | { type: 'game:start' }
   | { type: 'chat:message'; text: string }
   | { type: 'command'; command: GameCommand }
-  /** Host removes a guest from the lobby. */
+  /** Host removes a guest. Lobby: seat gone. In-game: marked dead. */
   | { type: 'player:kick'; playerId: string }
   /** Explicit leave — host: destroys the room; guest: vacates the seat. */
   | { type: 'room:leave' }

@@ -4,6 +4,7 @@ import {
   NOMINATION_DURATION_MS,
   Phase,
   VOTE_DURATION_MS,
+  isOpeningNight,
   type ChatMessage,
   type ExecutivePower,
   type Faction,
@@ -109,17 +110,19 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   /**
-   * Permanently vacate a seat (explicit leave, not a network drop). Only
-   * meaningful in the lobby — in-game leavers are treated as disconnected so
-   * their seat survives a possible rejoin. A leaving host is handled at the
-   * server layer by destroying the whole room before this is reached, but the
-   * host seat is migrated here too as a safety net.
+   * Permanently vacate a seat (explicit leave, not a network drop). In the
+   * lobby the seat is removed. In-game the player is marked dead so they
+   * cannot be President or Chancellor; the socket layer then closes them.
    */
   removePlayer(playerId: string): void {
     const room = this.room;
-    if (room.phase !== Phase.Lobby) return;
     const index = room.players.findIndex((player) => player.id === playerId);
     if (index === -1) return;
+
+    if (room.phase !== Phase.Lobby) {
+      this.vacateInGame(room.players[index], 'left');
+      return;
+    }
 
     const [removed] = room.players.splice(index, 1);
     room.players.forEach((player, seat) => (player.seat = seat));
@@ -130,23 +133,26 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   /**
-   * Host-only lobby kick. The socket layer then closes the target's connection.
+   * Host-only kick. Lobby: the seat is removed. In-game: marked dead, same as
+   * an explicit leave. The socket layer then closes the target's connection.
    */
   kickPlayer(hostId: string, targetId: string): EngineError | null {
     const room = this.room;
-    if (room.phase !== Phase.Lobby) {
-      return err('ALREADY_STARTED', 'The game has already started.');
-    }
     if (hostId !== room.hostId) {
       return err('NOT_HOST', 'Only the host can remove a player.');
     }
     if (targetId === hostId) {
       return err('INVALID_ACTION', 'You cannot kick yourself.');
     }
-    if (!room.findPlayer(targetId)) {
+    const target = room.findPlayer(targetId);
+    if (!target) {
       return err('INVALID_ACTION', 'That player is not in the room.');
     }
-    this.removePlayer(targetId);
+    if (room.phase === Phase.Lobby) {
+      this.removePlayer(targetId);
+      return null;
+    }
+    this.vacateInGame(target, 'kicked');
     return null;
   }
 
@@ -227,6 +233,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   // --- Chat / log ------------------------------------------------------------
 
   postChat(playerId: string, text: string): void {
+    if (this.inOpeningNight()) return;
     const player = this.room.findPlayer(playerId);
     const body = text.trim();
     if (!player || !body) return;
@@ -323,7 +330,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.changed();
   }
 
-  /** Living players ordered by seat — the presidential rotation order. */
+  /** Living players ordered by seat. */
   private livingInSeatOrder(): Player[] {
     return this.room.players
       .filter((p) => p.isAlive)
@@ -347,12 +354,82 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     return this.nextLivingAfter(this.room.presidentId);
   }
 
-  /** Next living player by seat after `playerId`, wrapping around. */
+  /**
+   * Next living, connected player by seat after `playerId`, wrapping around.
+   * Dead and disconnected seats stay in the circle but are skipped so they
+   * cannot take the presidency.
+   */
   private nextLivingAfter(playerId: string | null): string | null {
-    const living = this.livingInSeatOrder();
-    if (living.length === 0) return null;
-    const currentIndex = living.findIndex((p) => p.id === playerId);
-    return living[(currentIndex + 1) % living.length].id;
+    const seated = [...this.room.players].sort((a, b) => a.seat - b.seat);
+    if (seated.length === 0) return null;
+    const start = seated.findIndex((player) => player.id === playerId);
+    const from = start === -1 ? 0 : start;
+    for (let step = 1; step <= seated.length; step++) {
+      const candidate = seated[(from + step) % seated.length];
+      if (candidate.isAlive && candidate.connected) return candidate.id;
+    }
+    return null;
+  }
+
+  /**
+   * Explicit leave or kick during a running game: the seat stays (spectators
+   * and the board need it) but the player is out. If they held office, the
+   * current round is voided and the presidency moves on.
+   */
+  private vacateInGame(player: Player, reason: 'left' | 'kicked'): void {
+    const heldPresident = this.room.presidentId === player.id;
+    const heldChancellor = this.room.chancellorId === player.id;
+    const alreadyDead = !player.isAlive;
+    player.isAlive = false;
+    player.connected = false;
+    if (alreadyDead) {
+      this.changed();
+      return;
+    }
+
+    this.log(reason, { name: player.name });
+    if (this.room.hostId === player.id) this.maybeMigrateHost();
+    if (this.room.phase === Phase.GameOver) {
+      this.changed();
+      return;
+    }
+    if (heldPresident || heldChancellor) {
+      this.log(heldPresident ? 'presidentVacated' : 'chancellorVacated', {
+        name: player.name,
+      });
+      this.abortCurrentRound();
+      return;
+    }
+    this.currentPhase.presenceChanged?.();
+    this.changed();
+  }
+
+  /** Drop an unfinished government and pass the presidency on. */
+  private abortCurrentRound(): void {
+    const room = this.room;
+    if (room.drawnPolicies.length) {
+      room.deck.discardTiles(room.drawnPolicies);
+      room.drawnPolicies = [];
+    }
+    room.chancellorId = null;
+    room.vetoRequested = false;
+    if (room.phase === Phase.SpecialPower) {
+      this.advanceRound();
+      return;
+    }
+    this.failElection();
+  }
+
+  /** First-round deal / night / glance — no talk, no skipping to nomination. */
+  inOpeningNight(): boolean {
+    const room = this.room;
+    return isOpeningNight({
+      phase: room.phase,
+      discussionStartedAt: room.discussionStartedAt,
+      liberalPolicies: room.liberalPolicies,
+      fascistPolicies: room.fascistPolicies,
+      electionTracker: room.electionTracker,
+    });
   }
 
   // --- Discussion window (PhaseHost) -----------------------------------------
@@ -408,10 +485,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   // --- Legislative timer (PhaseHost) -----------------------------------------
 
-  openLegislativeTimer(): void {
+  openLegislativeTimer(delayMs = 0): void {
     const room = this.room;
-    room.legislativeStartedAt = Date.now();
-    room.legislativeEndsAt = room.legislativeStartedAt + LEGISLATIVE_DURATION_MS;
+    const openAt = Date.now() + Math.max(0, delayMs);
+    room.legislativeStartedAt = openAt;
+    room.legislativeEndsAt = openAt + LEGISLATIVE_DURATION_MS;
     this.emit('legislativeTimerChanged', { endsAt: room.legislativeEndsAt });
   }
 

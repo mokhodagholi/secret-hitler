@@ -41,6 +41,9 @@ export class NominationPhase implements GamePhase {
             : 'Only the President can end the round.',
         );
       }
+      if (discussing && this.host.inOpeningNight()) {
+        return err('INVALID_ACTION', 'Wait until night is over.');
+      }
       if (discussing) this.host.endDiscussion();
       else this.host.failElection();
       return null;
@@ -52,7 +55,7 @@ export class NominationPhase implements GamePhase {
       return err('INVALID_ACTION', 'Only the President can nominate.');
     }
     const target = room.findPlayer(command.targetId);
-    if (!target || !target.isAlive || target.id === playerId) {
+    if (!target || !target.isAlive || !target.connected || target.id === playerId) {
       return err('INVALID_ACTION', 'That player cannot be nominated.');
     }
     if (room.ineligibleChancellorIds().includes(target.id)) {
@@ -64,6 +67,8 @@ export class NominationPhase implements GamePhase {
     this.host.log('nominated', {
       president: room.findPlayer(playerId)?.name ?? '',
       chancellor: target.name,
+      presidentId: playerId,
+      chancellorId: target.id,
     });
     this.host.changed();
     return null;

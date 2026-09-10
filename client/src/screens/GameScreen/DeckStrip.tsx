@@ -1,24 +1,29 @@
-import { Index } from 'solid-js';
+import { Index, Show, createEffect } from 'solid-js';
+import type { Role } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
-import { CARD_BACK } from '../../assets/cards';
+import { useApp } from '../../services/AppContext';
+import { CARD_BACK, ROLE_FACE } from '../../assets/cards';
 import styles from './DeckStrip.module.scss';
 
 export interface DeckStripProps {
   drawCount: number;
   discardCount: number;
   electionTracker: number;
-  candidateName: string;
+  role: Role | null;
+  onInspectRole: () => void;
   formatMessage: FormatMessage;
 }
 
 const TRACKER_SLOTS = 3;
 
 /**
- * Compact rules strip: remaining policies, burned laws, the presidential
- * candidate, and failed-government marks.
+ * Compact rules strip: remaining policies, burned laws, your secret role,
+ * and failed-government marks.
  */
 export function DeckStrip(props: DeckStripProps) {
   const { formatMessage } = props;
+  const roleName = () =>
+    props.role ? formatMessage(`role.${props.role}`) : '';
   return (
     <section class={styles.strip} aria-label={formatMessage('game.infoTitle')}>
       <div class={styles.piles}>
@@ -27,6 +32,7 @@ export function DeckStrip(props: DeckStripProps) {
           label={formatMessage('game.drawPile')}
           countLabel={formatMessage('game.pileCount', { count: props.drawCount })}
           mark="?"
+          pile="draw"
         />
         <Pile
           count={props.discardCount}
@@ -34,17 +40,23 @@ export function DeckStrip(props: DeckStripProps) {
           countLabel={formatMessage('game.pileCount', { count: props.discardCount })}
           mark="✕"
           burned
+          pile="discard"
         />
       </div>
 
-      <div class={styles.candidate}>
-        <span class={styles.candidateLabel}>
-          {formatMessage('game.presidentialCandidate')}
-        </span>
-        <span class={styles.candidateName} dir="auto">
-          {props.candidateName}
-        </span>
-      </div>
+      <Show when={props.role}>
+        {(role) => (
+          <button
+            type="button"
+            class={styles.role}
+            aria-label={formatMessage('game.youAreRole', { role: roleName() })}
+            onClick={props.onInspectRole}
+          >
+            <img class={styles.roleFace} src={ROLE_FACE[role()]} alt="" />
+            <span class={styles.roleName}>{roleName()}</span>
+          </button>
+        )}
+      </Show>
 
       <div
         class={styles.tracker}
@@ -76,17 +88,36 @@ function Pile(props: {
   countLabel: string;
   mark: string;
   burned?: boolean;
+  pile: 'draw' | 'discard';
 }) {
+  const { animation } = useApp();
+  let countEl: HTMLSpanElement | undefined;
+  let seenCount: number | null = null;
+
+  createEffect(() => {
+    const count = props.count;
+    if (seenCount == null) {
+      seenCount = count;
+      return;
+    }
+    if (seenCount === count) return;
+    seenCount = count;
+    void animation.play(countEl, 'count-tick');
+  });
+
   return (
     <div
       classList={{ [styles.pile]: true, [styles.burned]: !!props.burned }}
       aria-label={`${props.label}: ${props.count}`}
+      data-pile={props.pile}
     >
       <span class={styles.pileCard}>
         <img src={CARD_BACK} alt="" class={styles.pileBack} />
         <span class={styles.pileMark}>{props.mark}</span>
       </span>
-      <span class={styles.pileCount}>{props.countLabel}</span>
+      <span class={styles.pileCount} ref={(element) => (countEl = element)}>
+        {props.countLabel}
+      </span>
     </div>
   );
 }

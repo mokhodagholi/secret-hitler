@@ -10,8 +10,7 @@ export type ScreenName =
   | 'create-room'
   | 'join-game'
   | 'waiting-room'
-  | 'game'
-  | 'chat';
+  | 'game';
 
 const JOIN_LINK_PATTERN = /^\/join\/([A-Za-z0-9]+)\/?$/;
 

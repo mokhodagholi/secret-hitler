@@ -20,6 +20,8 @@ export interface PhaseHost {
   /** A government failed: advance the tracker, enact on chaos, next round. */
   failElection(): void;
   endGame(winner: Faction): void;
+  /** True during the first-round deal / night / glance. */
+  inOpeningNight(): boolean;
   /** Open the 3-minute discussion window before nomination (everyone may chat). */
   openDiscussion(): void;
   /** Cancel the discussion window without opening nomination (phase exit). */
@@ -30,8 +32,11 @@ export interface PhaseHost {
   openVote(): void;
   /** Close the vote window (vote resolved) and cancel its deadline. */
   closeVote(): void;
-  /** Open the legislative choice window and schedule its deadline. */
-  openLegislativeTimer(): void;
+  /**
+   * Open the legislative choice window and schedule its deadline.
+   * `delayMs` holds the clock until the public deal/pass has landed.
+   */
+  openLegislativeTimer(delayMs?: number): void;
   /** Close the legislative choice window and cancel its deadline. */
   closeLegislativeTimer(): void;
   /** Open the nomination window and schedule its deadline. */

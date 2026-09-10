@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
-import { ChatScreen } from './ChatScreen';
+import { ChatPanel } from './ChatPanel';
 import { en } from '../../i18n/locales/en';
 import {
   buildHarness,
@@ -27,10 +27,17 @@ function emitChat(harness: ReturnType<typeof buildHarness>, text: string) {
   });
 }
 
-describe('ChatScreen', () => {
+function renderPanel(harness: ReturnType<typeof buildHarness>) {
+  return renderWithApp(
+    () => <ChatPanel onOpenPlayers={() => {}} onOpenMenu={() => {}} />,
+    harness,
+  );
+}
+
+describe('ChatPanel', () => {
   it('Should render an incoming chat message with its author', () => {
     const harness = buildHarness({ seated: true });
-    renderWithApp(() => <ChatScreen />, harness);
+    renderPanel(harness);
     harness.pushState(seatedView());
     emitChat(harness, 'hello table');
 
@@ -38,9 +45,24 @@ describe('ChatScreen', () => {
     expect(screen.getByText('sadf')).toBeTruthy();
   });
 
+  it('Should hide the send action until the player types', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    expect(
+      screen.queryByRole('button', { name: en.game.send }),
+    ).toBeNull();
+
+    fireEvent.input(screen.getByPlaceholderText(en.game.chatPlaceholder), {
+      target: { value: 'my move' },
+    });
+    expect(screen.getByRole('button', { name: en.game.send })).toBeTruthy();
+  });
+
   it('Should send a chat message the player types', () => {
     const harness = buildHarness({ seated: true });
-    renderWithApp(() => <ChatScreen />, harness);
+    renderPanel(harness);
     harness.pushState(seatedView());
 
     const input = screen.getByPlaceholderText(en.game.chatPlaceholder);
@@ -55,7 +77,7 @@ describe('ChatScreen', () => {
 
   it('Should show the discussion countdown while discussion is open', () => {
     const harness = buildHarness({ seated: true });
-    renderWithApp(() => <ChatScreen />, harness);
+    renderPanel(harness);
     harness.pushState({
       ...seatedView(),
       discussionDeadline: { startedAt: 0, endsAt: Date.now() + 15_000 },
@@ -65,15 +87,34 @@ describe('ChatScreen', () => {
     expect(screen.getByText(/^\d+:\d{2}$/)).toBeTruthy();
   });
 
-  it('Should clear the unread chat count while open', () => {
+  it('Should clear the unread chat count while the panel can show the feed', () => {
     const harness = buildHarness({ seated: true });
-    // A message arrives before the page is opened.
     emitChat(harness, 'earlier');
     expect(harness.services.game.unreadChat()).toBe(1);
 
-    renderWithApp(() => <ChatScreen />, harness);
+    renderPanel(harness);
     harness.pushState(seatedView());
 
     expect(harness.services.game.unreadChat()).toBe(0);
+  });
+
+  it('Should keep the composer silent when talking is not allowed', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(
+      () => (
+        <ChatPanel
+          talkingAllowed={false}
+          onOpenPlayers={() => {}}
+          onOpenMenu={() => {}}
+        />
+      ),
+      harness,
+    );
+    harness.pushState(seatedView());
+
+    const input = screen.getByPlaceholderText(en.game.chatSilentPlaceholder);
+    expect(input).toHaveProperty('disabled', true);
+    fireEvent.input(input, { target: { value: 'psst' } });
+    expect(harness.socket.lastSent('chat:message')).toBeUndefined();
   });
 });

@@ -60,6 +60,20 @@
   display: flex;
   gap: 14px;
   justify-content: center;
+  min-height: calc(92px * 3 / 2);
+}
+
+.travelCard {
+  width: 92px;
+  aspect-ratio: 2 / 3;
+  object-fit: contain;
+  border-radius: $radius;
+  opacity: 0;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+}
+
+.travelVisible {
+  opacity: 1;
 }
 
 .card {

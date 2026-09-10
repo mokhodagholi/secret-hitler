@@ -240,11 +240,8 @@ export class SocketHandler {
       this.destroyRoom(entry);
     } else {
       engine.removePlayer(playerId);
-      // In-game leavers keep their seat (and token) for a possible rejoin.
-      if (entry.room.phase === Phase.Lobby) {
-        this.tokens.revokePlayer(playerId);
-        this.seats?.releasePlayer(playerId);
-      }
+      this.tokens.revokePlayer(playerId);
+      this.seats?.releasePlayer(playerId);
       this.connections.close(playerId);
     }
   }

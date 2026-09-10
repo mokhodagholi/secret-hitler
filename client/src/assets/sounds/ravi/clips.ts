@@ -31,6 +31,10 @@ import faridNominateNamedAsYou from './daniel/nominate.namedAsYou.mp3';
 import faridNominateNamedYou from './daniel/nominate.namedYou.mp3';
 import faridNominateStart from './daniel/nominate.start.mp3';
 import faridNominateTimeout from './daniel/nominate.timeout.mp3';
+import faridOfficeChancellorLeft from './daniel/office.chancellorLeft.mp3';
+import faridOfficePresidentLeft from './daniel/office.presidentLeft.mp3';
+import faridOfficeRoundOver from './daniel/office.roundOver.mp3';
+import faridPlayerLeft from './daniel/player.left.mp3';
 import faridPowerExecuted from './daniel/power.executed.mp3';
 import faridPowerExecutedYou from './daniel/power.executedYou.mp3';
 import faridPowerExecution from './daniel/power.execution.mp3';
@@ -149,6 +153,10 @@ const FARID = {
   'nominate.namedYou': faridNominateNamedYou,
   'nominate.start': faridNominateStart,
   'nominate.timeout': faridNominateTimeout,
+  'office.chancellorLeft': faridOfficeChancellorLeft,
+  'office.presidentLeft': faridOfficePresidentLeft,
+  'office.roundOver': faridOfficeRoundOver,
+  'player.left': faridPlayerLeft,
   'power.executed': faridPowerExecuted,
   'power.executedYou': faridPowerExecutedYou,
   'power.execution': faridPowerExecution,

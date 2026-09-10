@@ -94,6 +94,7 @@ export interface ChatMessage {
 export type LogCode =
   | 'joined'
   | 'left'
+  | 'kicked'
   | 'reconnected'
   | 'disconnected'
   | 'gameStarted'
@@ -116,7 +117,9 @@ export type LogCode =
   | 'vetoAgreed'
   | 'investigated'
   | 'executed'
-  | 'hitlerExecuted';
+  | 'hitlerExecuted'
+  | 'presidentVacated'
+  | 'chancellorVacated';
 
 export interface LogEntry {
   id: string;
@@ -191,7 +194,43 @@ export const DISCUSSION_DURATION_MS = 180_000;
 export const VOTE_DURATION_MS = 30_000;
 /** How long a legislator has to choose before the engine picks at random. */
 export const LEGISLATIVE_DURATION_MS = 20_000;
+/** One face-down policy flying from the pile or a seat to the table. */
+export const LEGISLATIVE_TRAVEL_CARD_MS = 780;
+/** President deal: three cards leave the draw pile before the choice clock starts. */
+export const LEGISLATIVE_DEAL_MS = 100 + 3 * LEGISLATIVE_TRAVEL_CARD_MS;
+/** Chancellor pass: two cards travel before the choice clock starts. */
+export const LEGISLATIVE_PASS_MS = 100 + 2 * LEGISLATIVE_TRAVEL_CARD_MS;
 /** How long the President has to nominate before the election fails. */
-export const NOMINATION_DURATION_MS = 10_000;
+export const NOMINATION_DURATION_MS = 25_000;
 /** How long a disconnected host keeps the host seat before migration, in ms. */
 export const HOST_MIGRATION_GRACE_MS = 30_000;
+
+/** Opening night: face-down cards fly to every seat. */
+export const OPENING_DEAL_MS = 10_000;
+/** Opening night: private look at your role and party card. */
+export const OPENING_LOOK_MS = 12_000;
+/** Opening night: Fascists glance at teammates; Liberals keep eyes closed. */
+export const OPENING_GLANCE_MS = 9_000;
+/** Full opening ceremony. Chat and the first President stay hidden until this elapses. */
+export const OPENING_CEREMONY_MS =
+  OPENING_DEAL_MS + OPENING_LOOK_MS + OPENING_GLANCE_MS;
+
+/** True during the first-round deal / night / glance, before day begins. */
+export function isOpeningNight(state: {
+  phase: Phase;
+  discussionStartedAt: number;
+  liberalPolicies: number;
+  fascistPolicies: number;
+  electionTracker: number;
+  now?: number;
+}): boolean {
+  const now = state.now ?? Date.now();
+  return (
+    state.phase === Phase.Nomination &&
+    state.discussionStartedAt > 0 &&
+    now - state.discussionStartedAt < OPENING_CEREMONY_MS &&
+    state.liberalPolicies === 0 &&
+    state.fascistPolicies === 0 &&
+    state.electionTracker === 0
+  );
+}

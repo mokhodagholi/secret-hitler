@@ -51,8 +51,23 @@
   inset-inline-start: 0;
   top: 0;
   height: 100%;
+  width: 100%;
   background: linear-gradient(90deg, $gold-dark, $gold-bright);
-  transition: width 0.5s linear;
+  animation: drain-vote var(--vote-total, 0ms) linear
+    calc(-1 * var(--vote-elapsed, 0ms)) forwards;
+}
+
+.timerBarStatic {
+  animation: none;
+}
+
+@keyframes drain-vote {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
 }
 
 .timerLabel {
@@ -86,6 +101,11 @@
   border: none;
   box-shadow: none;
   background: transparent;
+
+  &:disabled {
+    cursor: default;
+    transform: none;
+  }
 }
 
 .cardArt {
@@ -95,6 +115,22 @@
   display: block;
   background: transparent;
   mix-blend-mode: lighten;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.selected .cardArt {
+  filter: none;
+  opacity: 1;
+}
+
+.dimmed {
+  color: rgba($white, 0.45);
+}
+
+.dimmed .cardArt {
+  mix-blend-mode: normal;
+  filter: grayscale(1);
+  opacity: 0.4;
 }
 
 .waiting {

@@ -123,6 +123,16 @@ export const ANIMATIONS = {
     options: { duration: 450, easing: 'ease-in', fill: 'forwards' },
   },
 
+  /** Draw/discard pile count ticking as a card leaves or lands. */
+  'count-tick': {
+    keyframes: [
+      { transform: 'scale(1)' },
+      { transform: 'scale(1.28)', offset: 0.4 },
+      { transform: 'scale(1)' },
+    ],
+    options: { duration: 280, easing: 'ease-out' },
+  },
+
   // --- Attention ---------------------------------------------------------------
   /** Horizontal jolt for failures (failed election, rejected action). */
   shake: {

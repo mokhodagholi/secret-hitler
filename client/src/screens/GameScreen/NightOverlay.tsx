@@ -1,5 +1,12 @@
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
-import type { PublicPlayer, Role } from '@secret-hitler/shared';
+import {
+  OPENING_CEREMONY_MS,
+  OPENING_DEAL_MS,
+  OPENING_GLANCE_MS,
+  OPENING_LOOK_MS,
+  type PublicPlayer,
+  type Role,
+} from '@secret-hitler/shared';
 import type { MessageKey } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import type { RaviLineId } from '../../services/RaviService';
@@ -22,13 +29,13 @@ export interface NightOverlayProps {
 }
 
 /** Long enough for the paused welcome clip and a 10-player one-by-one deal. */
-export const DEAL_MS = 10_000;
+export const DEAL_MS = OPENING_DEAL_MS;
 export const NIGHT_MS = 0;
-export const LOOK_MS = 12_000;
-export const GLANCE_MS = 9_000;
+export const LOOK_MS = OPENING_LOOK_MS;
+export const GLANCE_MS = OPENING_GLANCE_MS;
 export const LOOK_AT_MS = DEAL_MS + NIGHT_MS;
 export const GLANCE_AT_MS = LOOK_AT_MS + LOOK_MS;
-export const CEREMONY_MS = GLANCE_AT_MS + GLANCE_MS;
+export const CEREMONY_MS = OPENING_CEREMONY_MS;
 
 type Beat = 'deal' | 'look' | 'glance';
 
@@ -85,14 +92,12 @@ function waitFrames(count: number): Promise<void> {
 
 /**
  * Opening ceremony: face-down cards split to every seat, night falls with
- * the private look, then the team glance. "Got it" only tucks the cards
- * away. Beats stay on the shared clock.
+ * the private look, then the team glance. Beats stay on the shared clock.
  */
 export function NightOverlay(props: NightOverlayProps) {
   const { i18n, ravi, animation, sound } = useApp();
   const { formatMessage } = i18n;
   const [beat, setBeat] = createSignal<Beat>('deal');
-  const [acknowledged, setAcknowledged] = createSignal(false);
   const party = () => (props.role === 'liberal' ? 'liberal' : 'fascist');
 
   let lookTimer: ReturnType<typeof setTimeout> | undefined;
@@ -148,15 +153,8 @@ export function NightOverlay(props: NightOverlayProps) {
     ravi.cancel();
     setBeat('glance');
     sound.play('glance-tick');
-    void ravi.speak(
-      glanceKey(props.role, props.playerCount).slice('ravi.'.length) as RaviLineId,
-    );
-  }
-
-  function acknowledge(): void {
-    if (closed || beat() !== 'look' || acknowledged()) return;
-    setAcknowledged(true);
-    ravi.cancel();
+    // Same spoken line on every phone so a sofa cannot hear who is Fascist.
+    void ravi.speak('private.nightLiberal');
   }
 
   function finish(): void {
@@ -175,8 +173,16 @@ export function NightOverlay(props: NightOverlayProps) {
     props.onDone();
   }
 
-  const showingLook = () => beat() === 'look' && !acknowledged();
-  const seeingTeam = () => beat() === 'glance' && props.role !== 'liberal';
+  const showingLook = () => beat() === 'look';
+  const seeingTeam = () => {
+    if (beat() !== 'glance' || props.role === 'liberal') return false;
+    // 7–10: Hitler keeps eyes closed; Fascists see him, he does not see them.
+    if (props.role === 'hitler' && props.playerCount > 6) return false;
+    return true;
+  };
+  const raisingHand = () =>
+    beat() === 'glance' && props.role === 'hitler' && props.playerCount > 6;
+  const you = () => props.players.find((player) => player.id === props.youId);
 
   return (
     <div
@@ -198,7 +204,6 @@ export function NightOverlay(props: NightOverlayProps) {
       </Show>
 
       <Show when={beat() === 'deal'}>
-        <p class={styles.caption}>{formatMessage('ravi.deal.start')}</p>
         <DealBacks players={props.players} youId={props.youId} />
       </Show>
 
@@ -223,9 +228,6 @@ export function NightOverlay(props: NightOverlayProps) {
             />
           </div>
           <p class={styles.blurb}>{formatMessage(lookKey(props.role))}</p>
-          <button type="button" class={styles.gotIt} onClick={acknowledge}>
-            {formatMessage('game.gotIt')}
-          </button>
         </div>
       </Show>
 
@@ -234,14 +236,19 @@ export function NightOverlay(props: NightOverlayProps) {
           class={styles.glance}
           ref={(element) => void animation.play(element, 'fade-in')}
         >
-          <p class={styles.glanceLine}>
-            {formatMessage(glanceKey(props.role, props.playerCount))}
-          </p>
           <Show when={seeingTeam()}>
+            <p class={styles.glanceLine}>
+              {formatMessage(glanceKey(props.role, props.playerCount))}
+            </p>
             <ul class={styles.team}>
               <For each={props.teammates}>
                 {(player) => (
                   <li class={styles.teammate}>
+                    <span class={styles.teammateSeat} data-teammate-seat>
+                      {formatMessage('game.seatNumber', {
+                        n: player.seat + 1,
+                      })}
+                    </span>
                     <img src={avatarImage(player.avatar)} alt="" />
                     <span dir="auto">{player.name}</span>
                     <Show when={player.role}>
@@ -254,9 +261,43 @@ export function NightOverlay(props: NightOverlayProps) {
               </For>
             </ul>
           </Show>
+          <Show when={!seeingTeam()}>
+            <div
+              class={styles.sleep}
+              aria-label={formatMessage('ravi.private.nightLiberal')}
+            >
+              <ClosedLids />
+              <Show when={raisingHand() && you()}>
+                {(player) => (
+                  <div class={styles.teammate}>
+                    <span class={styles.teammateSeat} data-teammate-seat>
+                      {formatMessage('game.seatNumber', {
+                        n: player().seat + 1,
+                      })}
+                    </span>
+                    <img src={avatarImage(player().avatar)} alt="" />
+                    <span dir="auto">{player().name}</span>
+                    <em>{formatMessage('game.raiseHand')}</em>
+                  </div>
+                )}
+              </Show>
+            </div>
+          </Show>
         </div>
       </Show>
     </div>
+  );
+}
+
+/** Gold-line closed eyelids — the closed-eyes wait, with no extra instruction. */
+function ClosedLids() {
+  return (
+    <svg class={styles.lids} viewBox="0 0 160 56" aria-hidden="true">
+      <path d="M12 32c18-20 42-20 58 0" />
+      <path d="M90 32c18-20 42-20 58 0" />
+      <path d="M18 36c16 10 38 10 52 0" />
+      <path d="M90 36c16 10 38 10 52 0" />
+    </svg>
   );
 }
 
@@ -362,14 +403,14 @@ function seatOffset(
   const table = document.querySelector('[data-game-table]');
   if (!(table instanceof HTMLElement)) return null;
   const box = table.getBoundingClientRect();
-  const topCount = Math.ceil(total / 2);
-  const onTop = index < topCount;
-  const rowIndex = onTop ? index : index - topCount;
-  const rowLen = onTop ? topCount : Math.max(1, total - topCount);
+  const bottomCount = Math.ceil(total / 2);
+  const onBottom = index < bottomCount;
+  const rowIndex = onBottom ? index : index - bottomCount;
+  const rowLen = onBottom ? bottomCount : Math.max(1, total - bottomCount);
   return {
     x: box.left + ((rowIndex + 0.5) / rowLen) * box.width - fromX,
     y:
-      (onTop ? box.top + box.height * 0.2 : box.bottom - box.height * 0.2) -
+      (onBottom ? box.bottom - box.height * 0.2 : box.top + box.height * 0.2) -
       fromY,
   };
 }

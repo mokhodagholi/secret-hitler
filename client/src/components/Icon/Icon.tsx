@@ -8,6 +8,7 @@ export type IconName =
   | 'masks'
   | 'clock'
   | 'chat'
+  | 'send'
   | 'palette'
   | 'globe'
   | 'menu'
@@ -74,6 +75,13 @@ const glyphs: Record<IconName, () => JSX.Element> = {
   ),
   chat: () => (
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  ),
+  send: () => (
+    <path
+      d="M3.4 20.9 21.2 12c.8-.4.8-1.6 0-2L3.4 1.1c-.9-.4-1.8.4-1.5 1.3L4.4 10l9.2 1.1c.5.1.5.8 0 .9L4.4 13.2 1.9 19.6c-.3.9.6 1.7 1.5 1.3z"
+      fill="currentColor"
+      stroke="none"
+    />
   ),
   palette: () => (
     <>

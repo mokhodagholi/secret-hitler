@@ -93,6 +93,8 @@ snapshot of a room so a rejoin doesn't replay history.
 | `card-flip-in` (staggered) | Game-over role cascade (`GameOverOverlay`) and the Policy Peek fan (`PowerPanel`) — `delay: index * step` + `fill: 'backwards'` to hold the hidden first frame through the delay |
 | `seat-death` | A player's execution — the seat swells, collapses and settles into its `.dead` styling |
 
+Hits that start on the same frame as these motions: [`docs/animation-sounds.md`](../../docs/animation-sounds.md).
+
 Planned (see CLAUDE.md "Animation Sequences to Build"): vote-reveal
 simultaneous flip (needs the server to disclose per-player votes at
 resolution — protocol change).

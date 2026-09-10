@@ -1027,4 +1027,5 @@ do not change the words in a live game.
 
 Table physics (card slides, stamps, gavel, tracker pawn) are a separate
 layer: [`sound-effects.md`](./sound-effects.md) and
-`scripts/generate-sound-effects.py`.
+`scripts/generate-sound-effects.py`. Looping beds (Suno) are
+[`background-music.md`](./background-music.md).

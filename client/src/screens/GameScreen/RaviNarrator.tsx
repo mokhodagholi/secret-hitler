@@ -24,6 +24,10 @@ const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
   fascistsWin: 'game.fascistsWin.policies',
   fascistsWinNumbers: 'game.fascistsWin.policies',
   chaos: 'chaos.start',
+  left: 'player.left',
+  kicked: 'player.left',
+  presidentVacated: 'office.presidentLeft',
+  chancellorVacated: 'office.chancellorLeft',
 };
 
 const POWER_LINE = {
@@ -44,6 +48,9 @@ const LINE_SFX: Partial<Record<RaviLineId, SoundEffect>> = {
   'president.nextYou': 'president-seal',
   'president.special': 'president-seal',
   'nominate.timeout': 'nominate-timeout',
+  'office.presidentLeft': 'player-leave',
+  'office.chancellorLeft': 'player-leave',
+  'player.left': 'player-leave',
   'game.liberalsWin.policies': 'win-liberal',
   'game.fascistsWin.policies': 'win-fascist',
   'game.reveal': 'role-cascade',
@@ -122,10 +129,23 @@ export function RaviNarrator(props: {
       state.players.find((player) => player.id === state.you.id)?.name ?? '';
 
     if (entries.length > seenLog) {
-      for (const entry of entries.slice(seenLog)) {
+      const fresh = entries.slice(seenLog);
+      for (const entry of fresh) {
         let line = LOG_LINE[entry.code];
+        if (
+          (entry.code === 'left' || entry.code === 'kicked') &&
+          fresh.some(
+            (other) =>
+              (other.code === 'presidentVacated' ||
+                other.code === 'chancellorVacated') &&
+              other.params?.name === entry.params?.name,
+          )
+        ) {
+          // Office-holder lines already say they left.
+          continue;
+        }
         if (entry.code === 'nominated') {
-          line = raviNominatedLine(entry.params, myName);
+          line = raviNominatedLine(entry.params, myName, state.you.id);
         } else if (
           entry.code === 'executed' &&
           namedIsYou(entry.params?.name, myName)
@@ -149,6 +169,12 @@ export function RaviNarrator(props: {
             chancellor: named(entry.params?.chancellor),
           },
         });
+        if (
+          entry.code === 'presidentVacated' ||
+          entry.code === 'chancellorVacated'
+        ) {
+          pending.push({ id: 'office.roundOver' });
+        }
       }
       seenLog = entries.length;
     }
@@ -181,9 +207,10 @@ export function RaviNarrator(props: {
 
     const nominationOpen = state.nominationDeadline != null;
     if (nominationOpen && !lastNominationOpen) {
-      pending.push({ id: 'nominate.start' });
       if (state.you.id === state.board.president) {
         pending.push({ id: 'private.nominate' });
+      } else {
+        pending.push({ id: 'nominate.start' });
       }
     }
     lastNominationOpen = nominationOpen;

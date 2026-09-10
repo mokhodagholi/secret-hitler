@@ -8,7 +8,6 @@ import { HowToPlayScreen } from './screens/HowToPlayScreen/HowToPlayScreen';
 import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
 import { GameScreen } from './screens/GameScreen/GameScreen';
-import { ChatScreen } from './screens/ChatScreen/ChatScreen';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 
 /** Shown on every screen — the room can be closed under any of them. */
@@ -67,9 +66,6 @@ function Router() {
       </Match>
       <Match when={nav.screen() === 'game'}>
         <GameScreen />
-      </Match>
-      <Match when={nav.screen() === 'chat'}>
-        <ChatScreen />
       </Match>
     </Switch>
   );

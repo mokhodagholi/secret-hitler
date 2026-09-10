@@ -18,6 +18,14 @@ describe('perspective', () => {
     expect(
       logLineKey('nominated', { president: 'Ana', chancellor: 'Cal' }, 'You'),
     ).toBe('log.nominated');
+    expect(
+      logLineKey(
+        'nominated',
+        { president: 'You', chancellor: 'Cal', presidentId: 'ana', chancellorId: 'cal' },
+        'You',
+        'you',
+      ),
+    ).toBe('log.nominated');
   });
 
   it('Should pick first-person Ravi nomination lines', () => {
@@ -27,5 +35,22 @@ describe('perspective', () => {
     expect(
       raviNominatedLine({ president: 'Ana', chancellor: 'You' }, 'You'),
     ).toBe('nominate.namedAsYou');
+    expect(
+      raviNominatedLine({ president: 'Ana', chancellor: 'Cal' }, 'You'),
+    ).toBe('nominate.named');
+    expect(
+      raviNominatedLine(
+        { president: 'You', chancellor: 'Cal', presidentId: 'ana', chancellorId: 'cal' },
+        'You',
+        'you',
+      ),
+    ).toBe('nominate.named');
+    expect(
+      raviNominatedLine(
+        { president: 'Ana', chancellor: 'Cal', presidentId: 'you', chancellorId: 'cal' },
+        'You',
+        'you',
+      ),
+    ).toBe('nominate.namedYou');
   });
 });

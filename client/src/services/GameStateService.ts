@@ -71,8 +71,7 @@ export class GameStateService {
   readonly logEntries = this.logSignal[0];
   private readonly setLogEntries = this.logSignal[1];
 
-  // Chat messages arriving while the player is away from the chat page, so the
-  // game screen can badge the chat icon.
+  // Chat arriving while the docked panel is collapsed, so the chrome can badge.
   private readonly unreadSignal = createSignal(0);
   readonly unreadChat = this.unreadSignal[0];
   private readonly setUnreadChat = this.unreadSignal[1];
@@ -123,7 +122,7 @@ export class GameStateService {
     return state?.phase === Phase.Nomination && state.discussionDeadline != null;
   }
 
-  /** Clear the unread chat badge — the player is looking at the chat page. */
+  /** Clear the unread chat badge — the player can see the docked feed. */
   markChatRead(): void {
     this.setUnreadChat(0);
   }
