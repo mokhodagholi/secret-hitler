@@ -8,7 +8,7 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(5, 3, 8, 0.22);
 }
 
@@ -49,11 +49,13 @@
   color: $cream;
   text-align: center;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85);
+  white-space: pre-line;
 }
 
 .caption {
   align-self: start;
   margin-top: 8px;
+  max-width: min(280px, 100%);
 }
 
 .dealLayer {
@@ -105,6 +107,7 @@
   object-fit: contain;
   border-radius: 5px;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
+  opacity: 0;
 }
 
 .dealtBackYou {

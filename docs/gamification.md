@@ -21,7 +21,7 @@ Most of this only stages [`game-rules.md`](./game-rules.md). Two
 
 | # | What players feel today | What the ceremony must do |
 |---|---|---|
-| 1 | “What am I?” Role is a tiny caption under your seat. Fascists already receive teammate roles in the snapshot, but the UI never *stages* that glance. | Deal → private card → night glance, then hide the card. |
+| 1 | “What am I?” Role is a tiny caption under your seat. Fascists already receive teammate roles in the snapshot, but the UI never *stages* that glance. | Deal (backs fly to seats) → night + private card → night glance, then hide the card. |
 | 2 | “What is going on?” Header line + toast. Legislative is a modal only the actor sees; everyone else waits. | Shared animations for every public beat; actor-only hands stay private. |
 | 3 | No toys. No card language. No presenter. | On-screen Ravi + big cards + seat bubbles + tracker pawn. |
 | 4 | Liberal / Fascist laws look like cropped board art. Votes are two text buttons. | Dedicated policy tiles, role cards, party cards, Ja / Nein cards. |
@@ -133,7 +133,9 @@ Same audio for everyone during night. Different picture.
 
 ```
 Night (first round only)
-  deal → private look → team glance → name the President
+  deal (backs fly to seats, Ravi welcomes the table)
+  → night + private look (“خب نقشت رو با دقت ببین”)
+  → team glance → day (“خب نقشت رو قایم کن”) → name the President
 Discussion          5 min, President may skip
 Nomination          30 s  (today: 10 s — too tight)
 Vote                25–30 s (today: 30 s, keep)

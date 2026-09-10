@@ -1,0 +1,83 @@
+import { describe, expect, it } from '@rstest/core';
+import { screen, waitFor } from '@solidjs/testing-library';
+import { InvestigateOverlay } from './InvestigateOverlay';
+import { en } from '../../i18n/locales/en';
+import { buildHarness, renderWithApp } from '../../../test/test-utils';
+
+describe('InvestigateOverlay', () => {
+  it('Should announce Liberal after the party card is shown', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(
+      () => (
+        <InvestigateOverlay
+          targetId="cal"
+          targetName="Cal"
+          party="liberal"
+          onContinue={() => {}}
+          formatMessage={harness.services.i18n.formatMessage}
+        />
+      ),
+      harness,
+    );
+
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.power.investigatedLiberal);
+    });
+    expect(
+      screen.getByText(
+        en.game.power.investigationResult
+          .replace('{name}', 'Cal')
+          .replace('{party}', en.game.liberal),
+      ),
+    ).toBeTruthy();
+  });
+
+  it('Should announce Fascist after the party card is shown', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(
+      () => (
+        <InvestigateOverlay
+          targetId="cal"
+          targetName="Cal"
+          party="fascist"
+          onContinue={() => {}}
+          formatMessage={harness.services.i18n.formatMessage}
+        />
+      ),
+      harness,
+    );
+
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.power.investigatedFascist);
+    });
+  });
+
+  it('Should stay silent about the party when the viewer is not the President', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    let continued = 0;
+    renderWithApp(
+      () => (
+        <InvestigateOverlay
+          targetId="cal"
+          targetName="Cal"
+          party={null}
+          onContinue={() => {
+            continued += 1;
+          }}
+          formatMessage={harness.services.i18n.formatMessage}
+        />
+      ),
+      harness,
+    );
+
+    await waitFor(() => {
+      expect(continued).toBe(1);
+    });
+    expect(harness.services.ravi.line()).toBeNull();
+    expect(screen.queryByText(en.ravi.power.investigatedLiberal)).toBeNull();
+    expect(screen.queryByText(en.ravi.power.investigatedFascist)).toBeNull();
+  });
+});

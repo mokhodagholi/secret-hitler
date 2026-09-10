@@ -403,6 +403,9 @@ describe('GameScreen — presidential power', () => {
       expect(screen.getByText(caption)).toBeTruthy();
     });
     expect(screen.getByRole('button', { name: en.game.power.continue })).toBeTruthy();
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.power.investigatedFascist);
+    });
   });
 });
 

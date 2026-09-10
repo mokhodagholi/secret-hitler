@@ -17,8 +17,9 @@ chat log. That is why people miss their role, miss whose turn it is, and
 stare at the board with no idea a vote or a law is happening.
 
 Ravi fixes the *public* story. Private information (your role, the three
-laws in the President’s hand, an investigation result) is shown only on
-that player’s screen. Ravi never speaks a secret.
+laws in the President’s hand) is shown only on that player’s screen.
+The investigation party is spoken only on the President’s device, after
+the card face — never as a shared table line.
 
 ## On-screen character
 
@@ -84,8 +85,8 @@ Public table facts only:
 - Who holds a **public** office (President, chosen Chancellor).
 - Vote totals after the cards are revealed.
 - Which colour of **enacted** law hit the board (that is public).
-- That a power is in play (“رئیس‌جمهور باید کارت یکی رو چک کنه”) — not
-  the result of the check.
+- That a power is in play (“رئیس‌جمهور باید کارت یکی رو چک کنه”).
+  The check’s party is a President-only line after the card face.
 - Win / loss.
 
 Never:
@@ -94,7 +95,9 @@ Never:
   as a *different* audio clip from what liberals hear (phones on one sofa
   would leak). Night uses **one shared line**; only the picture differs.
 - The three laws the President drew, or which one was burned.
-- An investigation result.
+- An investigation result as a *shared* line. The President’s client
+  may say `power.investigatedLiberal` / `power.investigatedFascist`
+  after the card; other seats only hear that a card was checked.
 - How any living player voted. Ballots stay anonymous for the whole
   game. Ravi may speak **totals only** (“۴ موافق، ۱ مخالف”).
 
@@ -121,7 +124,9 @@ The client plays `night.end` → `president.first` off that transition.
 
 Same pattern as discussion / vote already: a `nightDeadline`
 `{ startedAt, endsAt }` on the snapshot. The client uses that clock to
-pace the deal (backs) → look → glance, then waits for the phase change.
+pace the deal (backs flying one by one to seats, with `deal.start`) →
+night + private look (`night.start`) → glance → day (`night.end`), then
+waits for the phase change.
 A player who taps «فهمیدم» only skips *their* look overlay; it does not
 end Night for the table.
 

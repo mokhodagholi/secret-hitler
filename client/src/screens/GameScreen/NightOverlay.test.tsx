@@ -49,13 +49,13 @@ describe('NightOverlay', () => {
     });
   });
 
-  it('Should announce night after the deal, before the role', () => {
+  it('Should open night with the private role after the deal', () => {
     const harness = buildHarness({ seated: true });
     renderOverlay(harness, { startedAt: Date.now() - DEAL_MS - 80 });
 
     expect(screen.getByText(en.ravi.night.start)).toBeTruthy();
-    expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
-    expect(screen.queryByRole('button', { name: en.game.gotIt })).toBeNull();
+    expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.gotIt })).toBeTruthy();
   });
 
   it('Should not end the ceremony when the player taps Got it', async () => {

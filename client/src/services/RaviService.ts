@@ -48,6 +48,8 @@ export type RaviLineId =
   | 'power.investigate'
   | 'power.investigated'
   | 'power.investigatedYou'
+  | 'power.investigatedLiberal'
+  | 'power.investigatedFascist'
   | 'power.peek'
   | 'power.peekDone'
   | 'power.specialElection'
@@ -154,7 +156,7 @@ export class RaviService {
   }
 
   private clipSrc(id: RaviLineId): string | undefined {
-    // Dilara is parked — Farid is the only table voice for now.
+    // Dilara is parked — Daniel (male ElevenLabs) is the table voice for now.
     return RAVI_CLIPS.farid[id];
   }
 

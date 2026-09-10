@@ -16,12 +16,12 @@ export interface InvestigateOverlayProps {
 
 /**
  * A membership card lifts off the investigated seat and lands centre-stage.
- * The President then sees the party face and a caption; everyone else just
- * watches the card arrive and leave.
+ * The President then sees the party face, hears which party it was, and a
+ * caption; everyone else just watches the card arrive and leave.
  */
 export function InvestigateOverlay(props: InvestigateOverlayProps) {
   const { formatMessage } = props;
-  const { animation } = useApp();
+  const { animation, ravi } = useApp();
   const [face, setFace] = createSignal<'back' | 'party'>('back');
   const [ready, setReady] = createSignal(false);
   let card: HTMLImageElement | undefined;
@@ -57,7 +57,15 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
       if (props.party) {
         setFace('party');
         await animation.play(card, 'card-flip-face');
-        if (!closed) setReady(true);
+        if (!closed) {
+          setReady(true);
+          ravi.cancel();
+          void ravi.speak(
+            props.party === 'liberal'
+              ? 'power.investigatedLiberal'
+              : 'power.investigatedFascist',
+          );
+        }
       } else {
         await animation.play(card, 'policy-exit');
         if (!closed) props.onContinue();

@@ -37,6 +37,8 @@ import faridPowerExecution from './farid/power.execution.mp3';
 import faridPowerHitlerExecuted from './farid/power.hitlerExecuted.mp3';
 import faridPowerInvestigate from './farid/power.investigate.mp3';
 import faridPowerInvestigated from './farid/power.investigated.mp3';
+import faridPowerInvestigatedFascist from './farid/power.investigatedFascist.mp3';
+import faridPowerInvestigatedLiberal from './farid/power.investigatedLiberal.mp3';
 import faridPowerInvestigatedYou from './farid/power.investigatedYou.mp3';
 import faridPowerPeek from './farid/power.peek.mp3';
 import faridPowerPeekDone from './farid/power.peekDone.mp3';
@@ -88,6 +90,8 @@ import dilaraPowerExecution from './dilara/power.execution.mp3';
 import dilaraPowerHitlerExecuted from './dilara/power.hitlerExecuted.mp3';
 import dilaraPowerInvestigate from './dilara/power.investigate.mp3';
 import dilaraPowerInvestigated from './dilara/power.investigated.mp3';
+import dilaraPowerInvestigatedFascist from './dilara/power.investigatedFascist.mp3';
+import dilaraPowerInvestigatedLiberal from './dilara/power.investigatedLiberal.mp3';
 import dilaraPowerInvestigatedYou from './dilara/power.investigatedYou.mp3';
 import dilaraPowerPeek from './dilara/power.peek.mp3';
 import dilaraPowerPeekDone from './dilara/power.peekDone.mp3';
@@ -140,6 +144,8 @@ const FARID = {
   'power.hitlerExecuted': faridPowerHitlerExecuted,
   'power.investigate': faridPowerInvestigate,
   'power.investigated': faridPowerInvestigated,
+  'power.investigatedFascist': faridPowerInvestigatedFascist,
+  'power.investigatedLiberal': faridPowerInvestigatedLiberal,
   'power.investigatedYou': faridPowerInvestigatedYou,
   'power.peek': faridPowerPeek,
   'power.peekDone': faridPowerPeekDone,
@@ -193,6 +199,8 @@ const DILARA = {
   'power.hitlerExecuted': dilaraPowerHitlerExecuted,
   'power.investigate': dilaraPowerInvestigate,
   'power.investigated': dilaraPowerInvestigated,
+  'power.investigatedFascist': dilaraPowerInvestigatedFascist,
+  'power.investigatedLiberal': dilaraPowerInvestigatedLiberal,
   'power.investigatedYou': dilaraPowerInvestigatedYou,
   'power.peek': dilaraPowerPeek,
   'power.peekDone': dilaraPowerPeekDone,

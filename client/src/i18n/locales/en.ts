@@ -439,12 +439,12 @@ export const en = {
   },
   ravi: {
     deal: {
-      start: 'It is time to deal the roles.',
-      look: 'Look at your role. Show it to no one.',
+      start: 'Welcome to another Secret Hitler. Hope we have a good game.',
+      look: 'Alright. Look at your role carefully.',
     },
     night: {
-      start: 'Night has fallen. Those who must look, look now.',
-      end: 'Morning. Hide your cards.',
+      start: 'Alright. Look at your role carefully.',
+      end: 'Alright. Hide your role.',
     },
     president: {
       first: '{name} is President this round.',
@@ -497,6 +497,8 @@ export const en = {
       investigate: "The President must check a player's card.",
       investigated: "The President has seen {name}'s party.",
       investigatedYou: 'The President has seen your party.',
+      investigatedLiberal: 'It was Liberal.',
+      investigatedFascist: 'It was Fascist.',
       peek: 'The President looks at the top three policies.',
       peekDone: 'The policies return to the deck.',
       specialElection: 'The President chooses the next presidential candidate.',

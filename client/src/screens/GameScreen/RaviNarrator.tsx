@@ -95,11 +95,13 @@ export function RaviNarrator(props: {
           namedIsYou(entry.params?.name, myName)
         ) {
           line = 'power.executedYou';
-        } else if (
-          entry.code === 'investigated' &&
-          namedIsYou(entry.params?.name, myName)
-        ) {
-          line = 'power.investigatedYou';
+        } else if (entry.code === 'investigated') {
+          if (namedIsYou(entry.params?.name, myName)) {
+            line = 'power.investigatedYou';
+          } else if (state.board.president === state.you.id) {
+            // President's overlay speaks the party after the card face.
+            continue;
+          }
         }
         if (!line) continue;
         pending.push({

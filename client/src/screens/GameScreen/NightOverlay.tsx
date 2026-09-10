@@ -20,15 +20,16 @@ export interface NightOverlayProps {
   onDone: () => void;
 }
 
-export const DEAL_MS = 3_500;
-export const NIGHT_MS = 4_000;
+/** Long enough for the paused welcome clip and a 10-player one-by-one deal. */
+export const DEAL_MS = 10_000;
+export const NIGHT_MS = 0;
 export const LOOK_MS = 12_000;
 export const GLANCE_MS = 9_000;
 export const LOOK_AT_MS = DEAL_MS + NIGHT_MS;
 export const GLANCE_AT_MS = LOOK_AT_MS + LOOK_MS;
 export const CEREMONY_MS = GLANCE_AT_MS + GLANCE_MS;
 
-type Beat = 'deal' | 'night' | 'look' | 'glance';
+type Beat = 'deal' | 'look' | 'glance';
 
 function lookKey(role: Role): MessageKey {
   if (role === 'liberal') return 'ravi.private.youLiberal';
@@ -55,13 +56,35 @@ function remaining(startedAt: number, durationMs: number): number {
 
 function dialogLabel(beat: Beat): MessageKey {
   if (beat === 'deal') return 'ravi.deal.start';
-  if (beat === 'night') return 'ravi.night.start';
   return 'game.yourRole';
 }
 
+function escapeAttr(value: string): string {
+  return typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+    ? CSS.escape(value)
+    : value.replace(/["\\]/g, '\\$&');
+}
+
+function waitFrames(count: number): Promise<void> {
+  return new Promise((resolve) => {
+    const tick = (left: number) => {
+      if (left <= 0) {
+        resolve();
+        return;
+      }
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => tick(left - 1));
+        return;
+      }
+      setTimeout(() => tick(left - 1), 0);
+    };
+    tick(count);
+  });
+}
+
 /**
- * Opening ceremony: face-down cards split to every seat, night falls, then a
- * private look at your role and the team glance. "Got it" only tucks the cards
+ * Opening ceremony: face-down cards split to every seat, night falls with
+ * the private look, then the team glance. "Got it" only tucks the cards
  * away. Beats stay on the shared clock.
  */
 export function NightOverlay(props: NightOverlayProps) {
@@ -71,7 +94,6 @@ export function NightOverlay(props: NightOverlayProps) {
   const [acknowledged, setAcknowledged] = createSignal(false);
   const party = () => (props.role === 'liberal' ? 'liberal' : 'fascist');
 
-  let nightTimer: ReturnType<typeof setTimeout> | undefined;
   let lookTimer: ReturnType<typeof setTimeout> | undefined;
   let glanceTimer: ReturnType<typeof setTimeout> | undefined;
   let doneTimer: ReturnType<typeof setTimeout> | undefined;
@@ -79,17 +101,13 @@ export function NightOverlay(props: NightOverlayProps) {
 
   onMount(() => {
     const origin = props.startedAt || Date.now();
-    const untilNight = remaining(origin, DEAL_MS);
     const untilLook = remaining(origin, LOOK_AT_MS);
     const untilGlance = remaining(origin, GLANCE_AT_MS);
     const untilDone = remaining(origin, CEREMONY_MS);
 
-    if (untilNight > 0) {
+    if (untilLook > 0) {
       setBeat('deal');
       void ravi.speak('deal.start');
-      nightTimer = setTimeout(openNight, untilNight);
-    } else if (untilLook > 0) {
-      openNight();
     } else if (untilGlance > 0) {
       openLook();
     } else if (untilDone > 0) {
@@ -106,34 +124,21 @@ export function NightOverlay(props: NightOverlayProps) {
 
   onCleanup(() => {
     closed = true;
-    clearTimeout(nightTimer);
     clearTimeout(lookTimer);
     clearTimeout(glanceTimer);
     clearTimeout(doneTimer);
   });
 
-  function openNight(): void {
-    if (closed || beat() === 'night' || beat() === 'look' || beat() === 'glance') {
-      return;
-    }
-    clearTimeout(nightTimer);
-    ravi.cancel();
-    setBeat('night');
-    void ravi.speak('night.start');
-  }
-
   function openLook(): void {
     if (closed || beat() === 'look' || beat() === 'glance') return;
-    clearTimeout(nightTimer);
     clearTimeout(lookTimer);
     ravi.cancel();
     setBeat('look');
-    void ravi.speak('deal.look');
+    void ravi.speak('night.start');
   }
 
   function openGlance(): void {
     if (closed || beat() === 'glance') return;
-    clearTimeout(nightTimer);
     clearTimeout(lookTimer);
     clearTimeout(glanceTimer);
     ravi.cancel();
@@ -149,7 +154,6 @@ export function NightOverlay(props: NightOverlayProps) {
   function finish(): void {
     if (closed) return;
     closed = true;
-    clearTimeout(nightTimer);
     clearTimeout(lookTimer);
     clearTimeout(glanceTimer);
     clearTimeout(doneTimer);
@@ -189,16 +193,12 @@ export function NightOverlay(props: NightOverlayProps) {
         <DealBacks players={props.players} youId={props.youId} />
       </Show>
 
-      <Show when={beat() === 'night'}>
-        <p class={styles.nightCall}>{formatMessage('ravi.night.start')}</p>
-      </Show>
-
       <Show when={showingLook()}>
         <div
           class={styles.sheet}
           ref={(element) => void animation.play(element, 'pop-in')}
         >
-          <p class={styles.prompt}>{formatMessage('ravi.deal.look')}</p>
+          <p class={styles.prompt}>{formatMessage('ravi.night.start')}</p>
           <div class={styles.cards}>
             <img
               class={styles.roleCard}
@@ -251,19 +251,30 @@ export function NightOverlay(props: NightOverlayProps) {
   );
 }
 
-/** Face-down role cards start in a pile, then fly to each seat. */
+/** Face-down role cards start in a pile, then fly to each seat one by one. */
 function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
   const { animation } = useApp();
   const cards: (HTMLImageElement | undefined)[] = [];
 
   onMount(() => {
-    requestAnimationFrame(() => {
-      void Promise.all(
-        props.players.map((player, index) =>
-          flyToSeat(animation, cards[index], player.id, index),
-        ),
-      );
+    let cancelled = false;
+    onCleanup(() => {
+      cancelled = true;
     });
+    void (async () => {
+      await waitFrames(2);
+      if (cancelled) return;
+      for (let index = 0; index < props.players.length; index++) {
+        if (cancelled) return;
+        await flyToSeat(
+          animation,
+          cards[index],
+          props.players[index].id,
+          index,
+          props.players.length,
+        );
+      }
+    })();
   });
 
   return (
@@ -297,24 +308,58 @@ function flyToSeat(
   card: HTMLImageElement | undefined,
   playerId: string,
   index: number,
+  total: number,
 ): Promise<void> {
   if (!card) return Promise.resolve();
-  const seat = document.querySelector(`[data-seat-id="${playerId}"]`);
-  if (!(seat instanceof HTMLElement)) return Promise.resolve();
-  const dest = seat.getBoundingClientRect();
-  const here = card.getBoundingClientRect();
-  const toX = dest.left + dest.width / 2 - (here.left + here.width / 2);
-  const toY = dest.top + dest.height / 2 - (here.top + here.height / 2);
+  const dest = seatOffset(card, playerId, index, total);
+  if (!dest) {
+    card.style.opacity = '1';
+    return Promise.resolve();
+  }
   const tilt = index % 2 ? 8 : -8;
-  return animation.playCustom(
+  const landed = `translate(${dest.x}px, ${dest.y}px) scale(0.45) rotate(${tilt}deg)`;
+  const play = animation.playCustom(
     card,
     [
-      { opacity: 1, transform: `translate(0px, 0px) scale(1) rotate(${-tilt}deg)` },
-      {
-        opacity: 1,
-        transform: `translate(${toX}px, ${toY}px) scale(0.45) rotate(${tilt}deg)`,
-      },
+      { opacity: 1, transform: 'translate(0px, 0px) scale(1) rotate(0deg)' },
+      { opacity: 1, transform: landed },
     ],
-    { duration: 620, delay: index * 140, easing: 'ease-in-out', fill: 'forwards' },
+    { duration: 560, easing: 'ease-in-out', fill: 'forwards' },
   );
+  return play.then(() => {
+    card.style.opacity = '1';
+    card.style.transform = landed;
+  });
+}
+
+function seatOffset(
+  card: HTMLElement,
+  playerId: string,
+  index: number,
+  total: number,
+): { x: number; y: number } | null {
+  const origin = card.getBoundingClientRect();
+  const fromX = origin.left + origin.width / 2;
+  const fromY = origin.top + origin.height / 2;
+  const seat = document.querySelector(`[data-seat-id="${escapeAttr(playerId)}"]`);
+  if (seat instanceof HTMLElement) {
+    const dest = seat.getBoundingClientRect();
+    return {
+      x: dest.left + dest.width / 2 - fromX,
+      y: dest.top + dest.height / 2 - fromY,
+    };
+  }
+  const table = document.querySelector('[data-game-table]');
+  if (!(table instanceof HTMLElement)) return null;
+  const box = table.getBoundingClientRect();
+  const topCount = Math.ceil(total / 2);
+  const onTop = index < topCount;
+  const rowIndex = onTop ? index : index - topCount;
+  const rowLen = onTop ? topCount : Math.max(1, total - topCount);
+  return {
+    x: box.left + ((rowIndex + 0.5) / rowLen) * box.width - fromX,
+    y:
+      (onTop ? box.top + box.height * 0.2 : box.bottom - box.height * 0.2) -
+      fromY,
+  };
 }

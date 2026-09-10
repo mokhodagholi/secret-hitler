@@ -10,7 +10,8 @@ Engines (pick one):
            two distinct voices (Fenrir / Kore). Needs GEMINI_API_KEY.
 
   eleven   ElevenLabs eleven_v3. Best commercial quality. Needs
-           ELEVENLABS_API_KEY plus voice ids.
+           ELEVENLABS_API_KEY. James (Husky, Engaging and Bold) is the
+           default male voice; Farid/Dilara still need their own ids.
 
   edge     Azure Farid/Dilara via Edge. Backup only — sounds like TTS.
 
@@ -38,12 +39,22 @@ VOICE_PROMPTS = {
     "dilara": VOICE_DIR / "dilara.wav",
 }
 
+# A tuple is one clip with a breath between phrases (hello, then the rest).
+PAUSE_S = 1.0
+LineText = str | tuple[str, ...]
+
+# James — Husky, Engaging and Bold. English narrative voice for listen tests.
+JAMES_VOICE_ID = "EkK5I93UQWFDigLMpZcX"
+
 # id → spoken Persian (FA audio line from docs/ravi-script.md)
-LINES: dict[str, str] = {
-    "deal.start": "الان نقش‌هاتون پخش می‌شه.",
-    "deal.look": "الان نقش‌تون رو ببینید. به کسی نشون ندید.",
-    "night.start": "شب شد. هر کی باید نگاه کنه، الان نگاه کنه.",
-    "night.end": "صبح شد. کارت‌هاتون رو قایم کنید.",
+LINES: dict[str, LineText] = {
+    "deal.start": (
+        "سلام به یه راز هیتلر دیگه خوش اومدید.",
+        "امیدوارم که بازی خوبی داشته باشیم.",
+    ),
+    "deal.look": "خب نقشت رو با دقت ببین.",
+    "night.start": "خب نقشت رو با دقت ببین.",
+    "night.end": "خب نقشت رو قایم کن.",
     "president.first": "رئیس‌جمهور این دور معلوم شد.",
     "president.firstYou": "این دور شما رئیس‌جمهورید.",
     "president.next": "ریاست رسید به نفر بعد.",
@@ -80,6 +91,8 @@ LINES: dict[str, str] = {
     "power.investigate": "رئیس‌جمهور باید کارت یکی رو چک کنه.",
     "power.investigated": "کارت چک شد.",
     "power.investigatedYou": "کارت شما چک شد.",
+    "power.investigatedLiberal": "این یکی لیبرال بود.",
+    "power.investigatedFascist": "این یکی فاشیست بود.",
     "power.peek": "رئیس‌جمهور سه تا قانون بالای دسته رو می‌بینه.",
     "power.peekDone": "قانون‌ها برگشتن روی دسته.",
     "power.specialElection": "رئیس‌جمهور، رئیس بعدی رو خودش انتخاب می‌کنه.",
@@ -92,12 +105,167 @@ LINES: dict[str, str] = {
     "game.reveal": "نقش‌ها رو ببینید.",
 }
 
+# id → spoken English (EN audio line from docs/ravi-script.md)
+LINES_EN: dict[str, LineText] = {
+    "deal.start": (
+        "Welcome to another Secret Hitler.",
+        "Hope we have a good game.",
+    ),
+    "deal.look": "Alright. Look at your role carefully.",
+    "night.start": "Alright. Look at your role carefully.",
+    "night.end": "Alright. Hide your role.",
+    "president.first": "The President for this round has been chosen.",
+    "president.firstYou": "You are President this round.",
+    "president.next": "The presidency passes on.",
+    "president.nextYou": "The presidency passes to you.",
+    "president.special": "A special election has been called.",
+    "discuss.start": "Okay. Time to talk.",
+    "discuss.closing": "Time is almost up.",
+    "discuss.ended": "Discussion is over.",
+    "nominate.start": "The President chooses a Chancellor.",
+    "nominate.named": "A Chancellor has been chosen.",
+    "nominate.namedYou": "You chose a Chancellor.",
+    "nominate.namedAsYou": "You have been named Chancellor.",
+    "nominate.timeout": "No Chancellor was chosen.",
+    "vote.start": "Voting has begun.",
+    "vote.collecting": "The votes are being gathered.",
+    "vote.count": "The votes have been counted.",
+    "vote.passed": "The government is elected.",
+    "vote.failed": "The government is rejected.",
+    "vote.hitlerChancellor": "Hitler is Chancellor. The Fascists win.",
+    "tracker.advance": "The tracker advances.",
+    "chaos.start": "Three governments failed in a row. Chaos begins.",
+    "chaos.enacted": "The top policy is enacted. The President gets no power.",
+    "law.draw": "Three policies are given to the President.",
+    "law.presidentChoosing": "The President burns one policy.",
+    "law.burned": "A policy is burned.",
+    "law.pass": "Two policies pass to the Chancellor.",
+    "law.chancellorChoosing": "The Chancellor enacts one policy.",
+    "law.liberal": "A Liberal policy is enacted.",
+    "law.fascist": "A Fascist policy is enacted.",
+    "law.vetoOffered": "The Chancellor proposes a veto.",
+    "law.vetoAgreed": "The veto is accepted. Both policies burn.",
+    "law.vetoRejected": "The President refuses the veto. A policy must be enacted.",
+    "law.vetoUnlocked": "The veto is now in play.",
+    "power.investigate": "The President must check a player's card.",
+    "power.investigated": "The card has been checked.",
+    "power.investigatedYou": "Your card has been checked.",
+    "power.investigatedLiberal": "It was Liberal.",
+    "power.investigatedFascist": "It was Fascist.",
+    "power.peek": "The President looks at the top three policies.",
+    "power.peekDone": "The policies return to the deck.",
+    "power.specialElection": "The President chooses the next presidential candidate.",
+    "power.execution": "The President must execute a player.",
+    "power.executed": "The execution is carried out.",
+    "power.executedYou": "You have been executed.",
+    "power.hitlerExecuted": "Hitler has been executed. The Liberals win.",
+    "game.liberalsWin.policies": "Five Liberal policies are enacted. The Liberals win.",
+    "game.fascistsWin.policies": "Six Fascist policies are enacted. The Fascists win.",
+    "game.reveal": "The roles are revealed.",
+}
+
+def load_dotenv() -> None:
+    path = ROOT / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        os.environ.setdefault(name.strip(), value.strip())
+
+
+def catalog_for(lang: str) -> dict[str, LineText]:
+    return LINES_EN if lang == "en" else LINES
+
+
 def for_tts(text: str) -> str:
     """pocket-tts spelling: no ZWNJ, no Arabic comma (tiny chunks hallucinate)."""
     text = text.replace("می‌", "می")
     text = text.replace("\u200c", " ")
     text = text.replace("،", " ")
     return " ".join(text.split())
+
+
+def for_eleven_fa(text: str) -> str:
+    """ElevenLabs spellings: ra'y not ray; nayavard not nayavarad."""
+    text = text.replace("رای‌گیری", "رأی گیری")
+    text = text.replace("رای‌ها", "رأی ها")
+    text = text.replace("رای ", "رأی ")
+    text = text.replace("رای", "رأی")
+    # Past tense: nayāvard. Bare نیاورد is read as present نیاورَد.
+    return text.replace("نیاورد", "نی‌آورد")
+
+
+# v3 audio tags. Only the bake sees these; i18n subtitles stay clean.
+ELEVEN_DIRECTION: dict[str, str | tuple[str, ...]] = {
+    "deal.start": ("[warmly]", "[hopeful]"),
+    "deal.look": "[whispering]",
+    "night.start": "[whispering]",
+    "night.end": "[whispering]",
+    "president.first": "[announcing]",
+    "president.firstYou": "[announcing]",
+    "president.next": "[announcing]",
+    "president.nextYou": "[announcing]",
+    "president.special": "[serious]",
+    "discuss.start": "[calm]",
+    "discuss.closing": "[urgent]",
+    "discuss.ended": "[firm]",
+    "nominate.start": "[serious]",
+    "nominate.named": "[announcing]",
+    "nominate.namedYou": "[calm]",
+    "nominate.namedAsYou": "[announcing]",
+    "nominate.timeout": "[disappointed]",
+    "vote.start": "[announcing]",
+    "vote.collecting": "[calm]",
+    "vote.count": "[serious]",
+    "vote.passed": "[firm]",
+    "vote.failed": "[disappointed]",
+    "vote.hitlerChancellor": "[shocked]",
+    "tracker.advance": "[serious]",
+    "chaos.start": "[ominous]",
+    "chaos.enacted": "[grave]",
+    "law.draw": "[narrating]",
+    "law.presidentChoosing": "[calm]",
+    "law.burned": "[calm]",
+    "law.pass": "[narrating]",
+    "law.chancellorChoosing": "[calm]",
+    "law.liberal": "[calm]",
+    "law.fascist": "[ominous]",
+    "law.vetoOffered": "[serious]",
+    "law.vetoAgreed": "[firm]",
+    "law.vetoRejected": "[firm]",
+    "law.vetoUnlocked": "[announcing]",
+    "power.investigate": "[serious]",
+    "power.investigated": "[calm]",
+    "power.investigatedYou": "[whispering]",
+    "power.investigatedLiberal": "[whispering]",
+    "power.investigatedFascist": "[whispering]",
+    "power.peek": "[serious]",
+    "power.peekDone": "[calm]",
+    "power.specialElection": "[announcing]",
+    "power.execution": "[grave]",
+    "power.executed": "[grave]",
+    "power.executedYou": "[grave]",
+    "power.hitlerExecuted": "[relieved]",
+    "game.liberalsWin.policies": "[triumphant]",
+    "game.fascistsWin.policies": "[ominous]",
+    "game.reveal": "[announcing]",
+}
+
+
+def with_eleven_direction(line_id: str, text: LineText) -> LineText:
+    parts = tuple(for_eleven_fa(p) for p in phrases(text))
+    direction = ELEVEN_DIRECTION.get(line_id)
+    if direction is None:
+        return parts if len(parts) > 1 else parts[0]
+    if isinstance(direction, tuple):
+        tagged = tuple(
+            f"{direction[i]} {parts[i]}" if i < len(direction) else parts[i]
+            for i in range(len(parts))
+        )
+        return tagged if len(tagged) > 1 else tagged[0]
+    return tuple(f"{direction} {p}" for p in parts) if len(parts) > 1 else f"{direction} {parts[0]}"
 
 
 def wav_duration(path: Path) -> float:
@@ -112,6 +280,55 @@ RADIO_STYLE = (
     "جمله‌ها را همان‌طور بخوان که مردم حرف می‌زنند، نه مثل کتاب. "
     "رادیو، اما گفتاری. فقط همین جمله را بخوان، هیچ چیز اضافه نگو:\n"
 )
+
+
+def phrases(text: LineText) -> tuple[str, ...]:
+    return text if isinstance(text, tuple) else (text,)
+
+
+def join_with_pause(sources: list[Path], dest: Path, pause_s: float = PAUSE_S) -> None:
+    """Stitch clips with a silent breath, then the usual loudnorm pad."""
+    if len(sources) == 1:
+        pad_and_normalize(sources[0], dest)
+        return
+    n = len(sources)
+    inputs: list[str] = []
+    for src in sources:
+        inputs.extend(["-i", str(src)])
+    fmt = "aformat=sample_fmts=fltp:sample_rates=24000:channel_layouts=mono"
+    parts = [f"[{i}:a]{fmt}[a{i}]" for i in range(n)]
+    parts.append(
+        f"anullsrc=r=24000:cl=mono:d={pause_s},aformat=sample_fmts=fltp:channel_layouts=mono[gap]"
+    )
+    concat_in = "".join(
+        f"[a{i}][gap]" if i < n - 1 else f"[a{i}]" for i in range(n)
+    )
+    parts.append(f"{concat_in}concat=n={2 * n - 1}:v=0:a=1[out]")
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        mid = Path(tmp.name)
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                *inputs,
+                "-filter_complex",
+                ";".join(parts),
+                "-map",
+                "[out]",
+                "-ac",
+                "1",
+                "-ar",
+                "24000",
+                str(mid),
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        pad_and_normalize(mid, dest)
+    finally:
+        mid.unlink(missing_ok=True)
 
 
 def pad_and_normalize(src: Path, dest: Path) -> None:
@@ -225,7 +442,7 @@ def speak_pocket(text: str, dest: Path, model, state) -> None:
             sphn.write_wav(str(raw), wav, int(model.mimi.sample_rate))
             dur = wav_duration(raw)
             leftovers.append(raw)
-            if dur < 1.2 or dur > 8.0:
+            if dur < 1.2 or dur > 12.0:
                 print(f"  skip seed {seed}: {dur:.2f}s")
                 continue
             score = abs(dur - expected)
@@ -240,6 +457,24 @@ def speak_pocket(text: str, dest: Path, model, state) -> None:
         pad_and_normalize(best_raw, dest)
     finally:
         for path in leftovers:
+            path.unlink(missing_ok=True)
+
+
+def speak_pocket_line(text: LineText, dest: Path, model, state) -> None:
+    parts = phrases(text)
+    if len(parts) == 1:
+        speak_pocket(parts[0], dest, model, state)
+        return
+    chunks: list[Path] = []
+    try:
+        for phrase in parts:
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+                chunk = Path(tmp.name)
+            speak_pocket(phrase, chunk, model, state)
+            chunks.append(chunk)
+        join_with_pause(chunks, dest)
+    finally:
+        for path in chunks:
             path.unlink(missing_ok=True)
 
 
@@ -264,23 +499,42 @@ def run_pocket(who: list[str], ids: list[str] | None = None) -> None:
         state = model.get_state_for_audio_prompt(str(prompt))
         for line_id, text in lines.items():
             dest = OUT_DIR / name / f"{line_id}.mp3"
-            print(f"{name}/{line_id}: {for_tts(text)}")
-            speak_pocket(text, dest, model, state)
+            spoken = " / ".join(for_tts(p) for p in phrases(text))
+            print(f"{name}/{line_id}: {spoken}")
+            speak_pocket_line(text, dest, model, state)
             n += 1
     print(f"wrote {n} files under {OUT_DIR}")
 
 
-async def speak_edge(voice: str, text: str, dest: Path) -> None:
+async def speak_edge(voice: str, text: LineText, dest: Path) -> None:
     import edge_tts
 
-    communicate = edge_tts.Communicate(text, voice, rate="-10%", pitch="-5Hz")
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
-        raw = Path(tmp.name)
+    async def raw_mp3(phrase: str, path: Path) -> None:
+        communicate = edge_tts.Communicate(phrase, voice, rate="-10%", pitch="-5Hz")
+        await communicate.save(str(path))
+
+    parts = phrases(text)
+    if len(parts) == 1:
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+            raw = Path(tmp.name)
+        try:
+            await raw_mp3(parts[0], raw)
+            pad_and_normalize(raw, dest)
+        finally:
+            raw.unlink(missing_ok=True)
+        return
+
+    chunks: list[Path] = []
     try:
-        await communicate.save(str(raw))
-        pad_and_normalize(raw, dest)
+        for phrase in parts:
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+                chunk = Path(tmp.name)
+            await raw_mp3(phrase, chunk)
+            chunks.append(chunk)
+        join_with_pause(chunks, dest)
     finally:
-        raw.unlink(missing_ok=True)
+        for path in chunks:
+            path.unlink(missing_ok=True)
 
 
 async def run_edge(who: list[str], ids: list[str] | None = None) -> None:
@@ -288,10 +542,11 @@ async def run_edge(who: list[str], ids: list[str] | None = None) -> None:
     lines = LINES if not ids else {i: LINES[i] for i in ids}
     sem = asyncio.Semaphore(4)
 
-    async def one(name: str, line_id: str, text: str) -> None:
+    async def one(name: str, line_id: str, text: LineText) -> None:
         dest = OUT_DIR / name / f"{line_id}.mp3"
         async with sem:
-            print(f"{name}/{line_id}: {text}")
+            spoken = " / ".join(phrases(text))
+            print(f"{name}/{line_id}: {spoken}")
             await speak_edge(voices[name], text, dest)
 
     tasks = [
@@ -318,9 +573,10 @@ def run_gemini(who: list[str]) -> None:
         for line_id, text in LINES.items():
             dest = OUT_DIR / name / f"{line_id}.mp3"
             print(f"{name}/{line_id}")
+            spoken = " ".join(phrases(text))
             response = client.models.generate_content(
                 model="gemini-2.5-flash-preview-tts",
-                contents=RADIO_STYLE + text,
+                contents=RADIO_STYLE + spoken,
                 config=types.GenerateContentConfig(
                     response_modalities=["AUDIO"],
                     speech_config=types.SpeechConfig(
@@ -344,60 +600,110 @@ def run_gemini(who: list[str]) -> None:
     print(f"wrote {n} files under {OUT_DIR}")
 
 
-def run_eleven(who: list[str]) -> None:
+def speak_eleven(key: str, voice_id: str, text: str, dest: Path, language_code: str) -> None:
     import json
+    from urllib.error import HTTPError
     from urllib.request import Request, urlopen
 
+    body = json.dumps(
+        {
+            "text": text,
+            "model_id": "eleven_v3",
+            "language_code": language_code,
+            "voice_settings": {
+                "stability": 0.55,
+                "similarity_boost": 0.75,
+                "style": 0.2,
+                "use_speaker_boost": True,
+                "speed": 0.95,
+            },
+        }
+    ).encode()
+    req = Request(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+        data=body,
+        headers={
+            "xi-api-key": key,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg",
+        },
+        method="POST",
+    )
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+        raw = Path(tmp.name)
+    try:
+        try:
+            with urlopen(req, timeout=120) as resp:
+                raw.write_bytes(resp.read())
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:400]
+            sys.exit(f"ElevenLabs HTTP {exc.code}: {detail}")
+        pad_and_normalize(raw, dest)
+    finally:
+        raw.unlink(missing_ok=True)
+
+
+def speak_eleven_line(
+    key: str, voice_id: str, text: LineText, dest: Path, language_code: str
+) -> None:
+    parts = phrases(text)
+    if len(parts) == 1:
+        speak_eleven(key, voice_id, parts[0], dest, language_code)
+        return
+    chunks: list[Path] = []
+    try:
+        for phrase in parts:
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+                chunk = Path(tmp.name)
+            speak_eleven(key, voice_id, phrase, chunk, language_code)
+            chunks.append(chunk)
+        join_with_pause(chunks, dest)
+    finally:
+        for path in chunks:
+            path.unlink(missing_ok=True)
+
+
+def run_eleven(who: list[str], ids: list[str] | None = None, lang: str = "en") -> None:
     key = os.environ.get("ELEVENLABS_API_KEY") or os.environ.get("ELEVEN_API_KEY")
     if not key:
         sys.exit("Set ELEVENLABS_API_KEY for --engine eleven")
 
     voices = {
-        "farid": os.environ.get("ELEVENLABS_FARID_VOICE_ID", ""),
+        "james": os.environ.get("ELEVENLABS_JAMES_VOICE_ID", JAMES_VOICE_ID),
+        "daniel": os.environ.get("ELEVENLABS_DANIEL_VOICE_ID", "onwK4e9ZLuTAKqWW03F9"),
+        "callum": os.environ.get("ELEVENLABS_CALLUM_VOICE_ID", "N2lVS1w4EtoT3dr4eOWO"),
+        "george": os.environ.get("ELEVENLABS_GEORGE_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
+        "sarah": os.environ.get("ELEVENLABS_SARAH_VOICE_ID", "EXAVITQu4vr4xnSDxMaL"),
+        "brian": os.environ.get("ELEVENLABS_BRIAN_VOICE_ID", "nPczCjzI2devNBz1zQrb"),
         "dilara": os.environ.get("ELEVENLABS_DILARA_VOICE_ID", ""),
     }
-    missing = [name for name in who if not voices[name]]
+    missing = [name for name in who if not voices.get(name)]
     if missing:
         sys.exit(
-            "Set ELEVENLABS_FARID_VOICE_ID and ELEVENLABS_DILARA_VOICE_ID "
-            "(Persian-tagged voices from the ElevenLabs library)"
+            "Unknown or unconfigured ElevenLabs voice: "
+            + ", ".join(missing)
+            + ". Use --who daniel, george, callum, sarah, brian, or james (paid)."
         )
 
+    catalog = catalog_for(lang)
+    lines = catalog if not ids else {i: catalog[i] for i in ids}
+    language_code = "en" if lang == "en" else "fa"
     n = 0
     for name in who:
-        for line_id, text in LINES.items():
+        for line_id, text in lines.items():
             dest = OUT_DIR / name / f"{line_id}.mp3"
-            print(f"{name}/{line_id}")
-            body = json.dumps(
-                {
-                    "text": text,
-                    "model_id": "eleven_v3",
-                    "language_code": "fa",
-                }
-            ).encode()
-            req = Request(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{voices[name]}",
-                data=body,
-                headers={
-                    "xi-api-key": key,
-                    "Content-Type": "application/json",
-                    "Accept": "audio/mpeg",
-                },
-                method="POST",
+            spoken_text: LineText = (
+                with_eleven_direction(line_id, text) if lang == "fa" else text
             )
-            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
-                raw = Path(tmp.name)
-            try:
-                with urlopen(req) as resp:
-                    raw.write_bytes(resp.read())
-                pad_and_normalize(raw, dest)
-            finally:
-                raw.unlink(missing_ok=True)
+            spoken = " / ".join(phrases(spoken_text))
+            print(f"{name}/{line_id}: {spoken}")
+            speak_eleven_line(key, voices[name], spoken_text, dest, language_code)
             n += 1
-    print(f"wrote {n} files under {OUT_DIR}")
+    print(f"wrote {n} files under {OUT_DIR / who[0]}")
 
 
 def main() -> None:
+    load_dotenv()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--engine",
@@ -406,13 +712,19 @@ def main() -> None:
     )
     parser.add_argument(
         "--who",
-        default="farid,dilara",
-        help="comma-separated: farid,dilara",
+        default="daniel",
+        help="comma-separated: daniel (default male), callum, george, james",
     )
     parser.add_argument(
         "--ids",
         default="",
         help="comma-separated line ids; default is the full catalog",
+    )
+    parser.add_argument(
+        "--lang",
+        choices=("fa", "en"),
+        default="fa",
+        help="spoken catalog: fa (default) or en",
     )
     args = parser.parse_args()
     if shutil.which("ffmpeg") is None:
@@ -424,7 +736,7 @@ def main() -> None:
     elif args.engine == "gemini":
         run_gemini(who)
     elif args.engine == "eleven":
-        run_eleven(who)
+        run_eleven(who, ids, args.lang)
     else:
         asyncio.run(run_edge(who, ids))
 

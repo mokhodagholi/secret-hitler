@@ -24,29 +24,33 @@ clear and a bit grave, not a translated newspaper.
 ## Night / deal
 
 ### `deal.start`
-- **When:** Night begins.
-- **FA:** الان نقش‌هاتون پخش می‌شه.
-- **EN:** It is time to deal the roles.
-- **Audio:** same as FA.
+- **When:** Cards split off the pile to each seat. Night has not
+  opened yet.
+- **FA:** سلام به یه راز هیتلر دیگه خوش اومدید
+  امیدوارم که بازی خوبی داشته باشیم
+- **EN:** Welcome to another Secret Hitler.
+  Hope we have a good game.
+- **Audio:** one clip, two breaths — hello, a 1 s pause, then the
+  hope line. `سلام به یه راز هیتلر دیگه خوش اومدید.` … `امیدوارم که بازی خوبی داشته باشیم.`
 
 ### `deal.look`
-- **When:** Private card is up. (Subtitle only on the actor’s screen;
-  audio is shared and generic.)
-- **FA:** الان نقش‌تون رو ببینید. به کسی نشون ندید.
-- **EN:** Look at your role. Show it to no one.
-- **Audio:** same.
+- **When:** Same words as `night.start`. Kept so the catalog id still
+  matches the private-card beat. The table speaks `night.start`.
+- **FA:** خب نقشت رو با دقت ببین.
+- **EN:** Alright. Look at your role carefully.
+- **Audio:** same as FA.
 
 ### `night.start`
-- **When:** Private cards close, team glance begins. Same audio for
+- **When:** Night opens and the private role is up. Same audio for
   every seat; only the picture differs.
-- **FA:** شب شد. هر کی باید نگاه کنه، الان نگاه کنه.
-- **EN:** Night has fallen. Those who must look, look now.
+- **FA:** خب نقشت رو با دقت ببین.
+- **EN:** Alright. Look at your role carefully.
 - **Audio:** same.
 
 ### `night.end`
-- **When:** Glance ends.
-- **FA:** صبح شد. کارت‌هاتون رو قایم کنید.
-- **EN:** Morning. Hide your cards.
+- **When:** Glance ends and day begins.
+- **FA:** خب نقشت رو قایم کن.
+- **EN:** Alright. Hide your role.
 - **Audio:** same.
 
 ### `president.first`
@@ -270,14 +274,15 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ## Executive powers
 
-Speak the *assignment*, never the private result.
+Speak the *assignment* to the table. The investigation *party* is spoken
+only on the President’s device, after the card face is up.
 
 ### `power.investigate`
 - **FA:** رئیس‌جمهور باید کارت یکی رو چک کنه.
 - **EN:** The President must check a player's card.
 
 ### `power.investigated`
-- **When:** Target chosen. Result is private.
+- **When:** Target chosen. Other seats hear this; the President does not.
 - **FA subtitle:** رئیس‌جمهور حزب {name} رو دید.
 - **FA audio:** کارت چک شد.
 - **EN subtitle:** The President has seen {name}’s party.
@@ -287,6 +292,19 @@ Speak the *assignment*, never the private result.
 - **When:** The President checked your card.
 - **FA:** کارت شما چک شد.
 - **EN:** Your card has been checked.
+- **Audio:** same as FA.
+
+### `power.investigatedLiberal`
+- **When:** President’s device, after the membership card shows Liberal.
+- **FA:** این یکی لیبرال بود.
+- **EN:** It was Liberal.
+- **Audio:** same as FA.
+
+### `power.investigatedFascist`
+- **When:** President’s device, after the membership card shows Fascist
+  (Hitler’s card included).
+- **FA:** این یکی فاشیست بود.
+- **EN:** It was Fascist.
 - **Audio:** same as FA.
 
 ### `power.peek`

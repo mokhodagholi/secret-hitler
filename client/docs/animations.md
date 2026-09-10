@@ -85,7 +85,8 @@ snapshot of a room so a rejoin doesn't replay history.
 |---|---|
 | `screen-enter` | Every navigation — screen content rises in (`<Screen>`), paired with the swap-page sound |
 | `policy-reveal` → `policy-exit` | Policy total grew — centre-stage card sequence |
-| `card-flip-in` | Your secret role card appears (game start) |
+| Deal backs (FLIP) | Game start — each face-down role card leaves the centre pile and flies to a `[data-seat-id]` seat, one after another |
+| `card-flip-in` | Your secret role card appears (night look) |
 | `pop-in` + `fade-in` | Voting overlay entrance |
 | `badge-pop` | President/Chancellor badge lands on a seat |
 | `shake` | Failed election — the whole table jolts (tracker grew; a reset is not a failure) |
