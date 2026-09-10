@@ -3,3 +3,9 @@ packages:
   - 'server'
   - 'client'
   - 'bale-bot'
+
+# pnpm 11's default 24h age gate rejects lockfile entries published today
+# (browserslist transitives) and aborts Docker --frozen-lockfile installs.
+minimumReleaseAge: 0
+minimumReleaseAgeStrict: false
+
