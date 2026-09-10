@@ -1,6 +1,7 @@
 {
   "name": "secret-hitler",
   "private": true,
+  "packageManager": "pnpm@11.25.0",
   "scripts": {
     "dev": "pnpm --filter @secret-hitler/shared build && pnpm --parallel --filter @secret-hitler/client --filter @secret-hitler/server --filter @secret-hitler/shared dev",
     "dev:server": "pnpm --filter server dev",

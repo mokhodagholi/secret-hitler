@@ -1,7 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+ENV COREPACK_DEFAULT_TO_LATEST=0
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/
@@ -21,8 +23,10 @@ RUN pnpm --filter @secret-hitler/shared build \
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+ENV COREPACK_DEFAULT_TO_LATEST=0
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/

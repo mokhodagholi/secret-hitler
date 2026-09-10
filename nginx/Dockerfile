@@ -3,8 +3,10 @@ WORKDIR /app
 
 ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+ENV COREPACK_DEFAULT_TO_LATEST=0
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/

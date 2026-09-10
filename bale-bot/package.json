@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "TypeScript client for the Bale messenger Bot API (tapi.bale.ai).",
   "type": "module",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@11.25.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
