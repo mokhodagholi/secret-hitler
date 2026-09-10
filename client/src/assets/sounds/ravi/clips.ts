@@ -9,6 +9,11 @@ import faridDealLook from './daniel/deal.look.mp3';
 import faridDealStart from './daniel/deal.start.mp3';
 import faridDiscussClosing from './daniel/discuss.closing.mp3';
 import faridDiscussEnded from './daniel/discuss.ended.mp3';
+import faridDiscussAfterFail from './daniel/discuss.afterFail.mp3';
+import faridDiscussAfterLeave from './daniel/discuss.afterLeave.mp3';
+import faridDiscussAfterLeave2 from './daniel/discuss.afterLeave2.mp3';
+import faridDiscussAfterLeave3 from './daniel/discuss.afterLeave3.mp3';
+import faridDiscussAfterPower from './daniel/discuss.afterPower.mp3';
 import faridDiscussStart from './daniel/discuss.start.mp3';
 import faridGameFascistsWinPolicies from './daniel/game.fascistsWin.policies.mp3';
 import faridGameLiberalsWinPolicies from './daniel/game.liberalsWin.policies.mp3';
@@ -129,6 +134,11 @@ const FARID = {
   'chaos.start': faridChaosStart,
   'deal.look': faridDealLook,
   'deal.start': faridDealStart,
+  'discuss.afterFail': faridDiscussAfterFail,
+  'discuss.afterLeave': faridDiscussAfterLeave,
+  'discuss.afterLeave2': faridDiscussAfterLeave2,
+  'discuss.afterLeave3': faridDiscussAfterLeave3,
+  'discuss.afterPower': faridDiscussAfterPower,
   'discuss.closing': faridDiscussClosing,
   'discuss.ended': faridDiscussEnded,
   'discuss.start': faridDiscussStart,

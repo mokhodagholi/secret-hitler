@@ -116,9 +116,41 @@ Do not invent extra tags per line. If it is not in this table, it is
 ## Discussion
 
 ### `discuss.start`
-- **When:** Discussion window opens.
+- **When:** Discussion window opens on the first day, or after a quiet
+  round with no failed vote, power, or leaver.
 - **FA:** خب، وقت حرف زدنه.
 - **EN:** Okay. Time to talk.
+
+### `discuss.afterFail`
+- **When:** A new discussion opens after a failed government (rejected
+  vote or no nominee).
+- **FA:** این سری سعی کنید به اجماع برسید!
+- **EN:** This time, try to reach a consensus!
+- **Tone:** `[firm]`
+
+### `discuss.afterPower`
+- **When:** Discussion opens after the President finished an executive power.
+- **FA:** خب از قدرتا استفاده کردیم بسه، حالا حرف بزنیم
+- **EN:** Okay, enough with the powers. Now we talk.
+- **Tone:** `[calm]`
+
+### `discuss.afterLeave` / `afterLeave2` / `afterLeave3`
+- **When:** Discussion opens after a player left or was kicked. Pick one of
+  the three takes at random, skipping the last one so it does not repeat.
+  Never play these on a normal or after-power open.
+- **Tone:** `[calm]` — a dry table joke is allowed on this beat only.
+
+`afterLeave`
+- **FA:** یکی فرار کرد. بقیه سر میز بمونید.
+- **EN:** Someone ran. The rest of you stay at the table.
+
+`afterLeave2`
+- **FA:** یه صندلی خالی شد. دل‌تون واسش تنگ نشه.
+- **EN:** A seat is empty. Don't miss them too much.
+
+`afterLeave3`
+- **FA:** یکی زد بیرون. صندلی حرف نمی‌زنه — شما بزنید.
+- **EN:** Someone walked out. The chair doesn't talk — you do.
 
 ### `discuss.closing`
 - **When:** ~30 s left of the 5-minute window.
@@ -478,6 +510,11 @@ table is the **spoken** line.
 | `president.nextYou` | `[announcing]` | شما رئیس جمهور شدید. |
 | `president.special` | `[announcing]` | انتخابات ویژه شروع شد. |
 | `discuss.start` | `[calm]` | خب، وقت حرف زدنه. |
+| `discuss.afterFail` | `[firm]` | این سری سعی کنید به اجماع برسید! |
+| `discuss.afterPower` | `[calm]` | خب از قدرتا استفاده کردیم بسه، حالا حرف بزنیم. |
+| `discuss.afterLeave` | `[calm]` | یکی فرار کرد. بقیه سر میز بمونید. |
+| `discuss.afterLeave2` | `[calm]` | یه صندلی خالی شد. دل‌تون واسش تنگ نشه. |
+| `discuss.afterLeave3` | `[calm]` | یکی زد بیرون. صندلی حرف نمی‌زنه — شما بزنید. |
 | `discuss.closing` | `[calm]` | به آخرای وقت نزدیک شدیم. |
 | `discuss.ended` | `[firm]` | وقت تموم شد. |
 | `nominate.start` | `[calm]` | رئیس‌جمهور، صدراعظم رو انتخاب کنه. |

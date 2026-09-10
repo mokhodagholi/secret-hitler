@@ -460,6 +460,11 @@ export const en = {
     },
     discuss: {
       start: 'Okay. Time to talk.',
+      afterFail: 'This time, try to reach a consensus!',
+      afterPower: 'Okay, enough with the powers. Now we talk.',
+      afterLeave: 'Someone ran. The rest of you stay at the table.',
+      afterLeave2: "A seat is empty. Don't miss them too much.",
+      afterLeave3: "Someone walked out. The chair doesn't talk — you do.",
       closing: "We're getting close to the end.",
       ended: "Time's up.",
     },

@@ -74,6 +74,14 @@ describe('RaviService', () => {
     expect(ravi.line()).toBe('Cal left the game.');
   });
 
+  it('Should subtitle the condition discuss-open lines', async () => {
+    const ravi = makeRavi(false);
+    await ravi.speak('discuss.afterFail');
+    expect(ravi.line()).toBe('This time, try to reach a consensus!');
+    await ravi.speak('discuss.afterPower');
+    expect(ravi.line()).toBe('Okay, enough with the powers. Now we talk.');
+  });
+
   it('Should play queued lines one after another', async () => {
     const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
     const ravi = makeRavi(true);

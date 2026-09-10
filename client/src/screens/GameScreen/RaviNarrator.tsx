@@ -6,6 +6,7 @@ import type { SoundEffect } from '../../services/SoundService';
 import type { MessageValues } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
 import { namedIsYou, raviNominatedLine } from '../../i18n/perspective';
+import { discussOpenLine } from './discussOpen';
 
 const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
   nominated: 'nominate.named',
@@ -71,6 +72,11 @@ const LINE_SFX: Partial<Record<RaviLineId, SoundEffect>> = {
   'power.specialElection': 'seal-open',
   'power.execution': 'seal-open',
   'discuss.start': 'discuss-open',
+  'discuss.afterFail': 'discuss-open',
+  'discuss.afterPower': 'discuss-open',
+  'discuss.afterLeave': 'discuss-open',
+  'discuss.afterLeave2': 'discuss-open',
+  'discuss.afterLeave3': 'discuss-open',
   'discuss.closing': 'discuss-warn',
   'discuss.ended': 'discuss-close',
 };
@@ -127,11 +133,22 @@ export function RaviNarrator(props: {
     const pending: PendingLine[] = [];
     const myName =
       state.players.find((player) => player.id === state.you.id)?.name ?? '';
+    let tableChanged = false;
+    let governmentFailed = false;
 
     if (entries.length > seenLog) {
       const fresh = entries.slice(seenLog);
       for (const entry of fresh) {
         let line = LOG_LINE[entry.code];
+        if (
+          entry.code === 'left' ||
+          entry.code === 'kicked' ||
+          entry.code === 'presidentVacated' ||
+          entry.code === 'chancellorVacated'
+        ) {
+          tableChanged = true;
+        }
+        if (entry.code === 'voteFailed') governmentFailed = true;
         if (
           (entry.code === 'left' || entry.code === 'kicked') &&
           fresh.some(
@@ -181,6 +198,7 @@ export function RaviNarrator(props: {
 
     const tracker = state.board.electionTracker;
     if (tracker > lastTracker) {
+      governmentFailed = true;
       pending.push({ id: 'tracker.advance', params: { count: tracker } });
     }
     lastTracker = tracker;
@@ -202,7 +220,9 @@ export function RaviNarrator(props: {
     if (discussionStart && discussionStart !== lastDiscussionStart) {
       lastDiscussionStart = discussionStart;
       warnedClosing = false;
-      pending.push({ id: 'discuss.start' });
+      pending.push({
+        id: discussOpenLine(lastPhase, tableChanged, governmentFailed),
+      });
     }
 
     const nominationOpen = state.nominationDeadline != null;
