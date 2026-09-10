@@ -1,4 +1,4 @@
-import { Show } from 'solid-js';
+import { Show, onMount } from 'solid-js';
 import type { Vote } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -25,7 +25,10 @@ export interface VotingOverlayProps {
 /** Full-screen timed Ja/Nein agreement screen shown during the Voting phase. */
 export function VotingOverlay(props: VotingOverlayProps) {
   const { formatMessage } = props;
-  const { animation } = useApp();
+  const { animation, ravi } = useApp();
+  onMount(() => {
+    void ravi.speak('private.vote');
+  });
   return (
     <div
       class={styles.backdrop}

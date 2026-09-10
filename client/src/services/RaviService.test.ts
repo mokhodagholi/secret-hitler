@@ -51,9 +51,9 @@ describe('RaviService', () => {
   it('Should subtitle the investigation party for the President', async () => {
     const ravi = makeRavi(false);
     await ravi.speak('power.investigatedLiberal');
-    expect(ravi.line()).toBe('It was Liberal.');
+    expect(ravi.line()).toBe('Liberal.');
     await ravi.speak('power.investigatedFascist');
-    expect(ravi.line()).toBe('It was Fascist.');
+    expect(ravi.line()).toBe('Fascist.');
   });
 
   it('Should play the first-person clip when Ravi Voice is on', async () => {

@@ -2,6 +2,7 @@ import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import type { PublicPlayer, Role } from '@secret-hitler/shared';
 import type { MessageKey } from '../../i18n';
 import { useApp } from '../../services/AppContext';
+import type { RaviLineId } from '../../services/RaviService';
 import type { AnimationService } from '../../services/AnimationService';
 import { avatarImage } from '../../assets/avatars';
 import { CARD_BACK, NIGHT_VEIL, PARTY_FACE, ROLE_FACE } from '../../assets/cards';
@@ -43,7 +44,7 @@ function glanceKey(role: Role, playerCount: number): MessageKey {
   if (role === 'hitler') {
     return smallTable
       ? 'ravi.private.nightHitlerSmall'
-      : 'ravi.private.nightHitlerLarge';
+      : 'ravi.private.nightLiberal';
   }
   return smallTable
     ? 'ravi.private.nightFascistSmall'
@@ -135,6 +136,7 @@ export function NightOverlay(props: NightOverlayProps) {
     ravi.cancel();
     setBeat('look');
     void ravi.speak('night.start');
+    void ravi.speak(lookKey(props.role).slice('ravi.'.length) as RaviLineId);
   }
 
   function openGlance(): void {
@@ -143,6 +145,9 @@ export function NightOverlay(props: NightOverlayProps) {
     clearTimeout(glanceTimer);
     ravi.cancel();
     setBeat('glance');
+    void ravi.speak(
+      glanceKey(props.role, props.playerCount).slice('ravi.'.length) as RaviLineId,
+    );
   }
 
   function acknowledge(): void {

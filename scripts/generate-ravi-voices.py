@@ -40,7 +40,7 @@ VOICE_PROMPTS = {
 }
 
 # A tuple is one clip with a breath between phrases (hello, then the rest).
-PAUSE_S = 1.0
+PAUSE_S = 0.35
 LineText = str | tuple[str, ...]
 
 # James — Husky, Engaging and Bold. English narrative voice for listen tests.
@@ -52,17 +52,17 @@ LINES: dict[str, LineText] = {
         "سلام به یه راز هیتلر دیگه خوش اومدید.",
         "امیدوارم که بازی خوبی داشته باشیم.",
     ),
-    "deal.look": "خب نقشت رو با دقت ببین.",
-    "night.start": "خب نقشت رو با دقت ببین.",
-    "night.end": "خب نقشت رو قایم کن.",
+    "deal.look": "نقشت رو با دقت ببین.",
+    "night.start": "نقشت رو با دقت ببین.",
+    "night.end": "نقشت رو حالا قایم کن.",
     "president.first": "رئیس‌جمهور این دور معلوم شد.",
     "president.firstYou": "این دور شما رئیس‌جمهورید.",
-    "president.next": "ریاست رسید به نفر بعد.",
-    "president.nextYou": "ریاست رسید به شما.",
+    "president.next": "نفر بعدی رئیس جمهور شد.",
+    "president.nextYou": "شما رئیس جمهور شدید.",
     "president.special": "انتخابات ویژه شروع شد.",
     "discuss.start": "خب، وقت حرف زدنه.",
-    "discuss.closing": "دیگه وقتتون کمه.",
-    "discuss.ended": "دیگه حرف‌ها تموم شد.",
+    "discuss.closing": "به آخرای وقت نزدیک شدیم.",
+    "discuss.ended": "وقت تموم شد.",
     "nominate.start": "رئیس‌جمهور، صدراعظم رو انتخاب کنه.",
     "nominate.named": "صدراعظم انتخاب شد.",
     "nominate.namedYou": "شما صدراعظم رو انتخاب کردید.",
@@ -70,29 +70,29 @@ LINES: dict[str, LineText] = {
     "nominate.timeout": "صدراعظم انتخاب نشد.",
     "vote.start": "رای‌گیری آغاز شد.",
     "vote.collecting": "رای‌ها داره جمع می‌شه.",
-    "vote.count": "رای‌ها رو شمردیم.",
+    "vote.count": "رأی ها شمرده شد.",
     "vote.passed": "دولت رای آورد.",
-    "vote.failed": "دولت رای نیاورد.",
+    "vote.failed": "دولت رأی نیاورد.",
     "vote.hitlerChancellor": "هیتلر صدراعظم شد. فاشیست‌ها برنده شدن.",
-    "tracker.advance": "شمارنده یکی رفت جلو.",
+    "tracker.advance": "شُمارَنده یکی رفت جلو.",
     "chaos.start": "سه دولت پشت‌سرهم رای نیاورد. آشوب شروع شد.",
-    "chaos.enacted": "قانون بالای دسته تصویب می‌شه. رئیس‌جمهور قدرتی نمی‌گیره.",
+    "chaos.enacted": "قانونِ بالای دسته تصویب می‌شه. رئیس‌جمهور قدرتی نمی‌گیره.",
     "law.draw": "سه تا قانون می‌ره دست رئیس‌جمهور.",
-    "law.presidentChoosing": "رئیس‌جمهور یکی رو می‌سوزونه.",
+    "law.presidentChoosing": "رئیس جمهور یه کارت رو می‌سوزونه.",
     "law.burned": "یه قانون سوخت.",
     "law.pass": "دو تا قانون می‌ره دست صدراعظم.",
     "law.chancellorChoosing": "صدراعظم یکی رو تصویب می‌کنه.",
     "law.liberal": "یه قانون لیبرالی تصویب شد.",
     "law.fascist": "یه قانون فاشیستی تصویب شد.",
-    "law.vetoOffered": "صدراعظم پیشنهاد حق وتو داد.",
-    "law.vetoAgreed": "حق وتو قبول شد. هر دو قانون سوخت.",
+    "law.vetoOffered": "صدراعظم وتو رو پیشنهاد کرد.",
+    "law.vetoAgreed": "رئیس‌جمهور حق وتو رو قبول کرد. هر دو قانون سوخت.",
     "law.vetoRejected": "رئیس‌جمهور حق وتو رو رد کرد. باید یه قانون تصویب بشه.",
-    "law.vetoUnlocked": "حق وتو باز شد.",
+    "law.vetoUnlocked": "از این به بعد می‌شه حق وتو کرد.",
     "power.investigate": "رئیس‌جمهور باید کارت یکی رو چک کنه.",
     "power.investigated": "کارت چک شد.",
     "power.investigatedYou": "کارت شما چک شد.",
-    "power.investigatedLiberal": "این یکی لیبرال بود.",
-    "power.investigatedFascist": "این یکی فاشیست بود.",
+    "power.investigatedLiberal": "لیبراله‌.",
+    "power.investigatedFascist": "فاشیسته.",
     "power.peek": "رئیس‌جمهور سه تا قانون بالای دسته رو می‌بینه.",
     "power.peekDone": "قانون‌ها برگشتن روی دسته.",
     "power.specialElection": "رئیس‌جمهور، رئیس بعدی رو خودش انتخاب می‌کنه.",
@@ -103,6 +103,17 @@ LINES: dict[str, LineText] = {
     "game.liberalsWin.policies": "پنج تا قانون لیبرال تصویب شد. لیبرال‌ها برنده شدن.",
     "game.fascistsWin.policies": "شش تا قانون فاشیستی تصویب شد. فاشیست‌ها برنده شدن.",
     "game.reveal": "نقش‌ها رو ببینید.",
+    "private.youLiberal": "شما لیبرالید. هیتلر رو پیدا کنید. با پنج قانون لیبرال برنده می‌شید، یا با اعدام هیتلر.",
+    "private.youFascist": "شما فاشیستید. هوای هیتلر رو داشته باشید. با شش قانون فاشیستی برنده می‌شید؛ یا بعد از سه قانون فاشیستی، هیتلر رو بذارید صدراعظم.",
+    "private.youHitler": "شما هیتلرید. مخفی بمونید. بعد از سه قانون فاشیستی صدراعظم بشید.",
+    "private.nightLiberal": "چشم‌هاتون رو ببندید.",
+    "private.nightFascistSmall": "فاشیست‌ها و هیتلر رو ببینید.",
+    "private.nightFascistLarge": "فاشیست‌های دیگه و هیتلر رو ببینید. هیتلر شما رو نمی‌بینه.",
+    "private.nightHitlerSmall": "فاشیست‌هاتون رو ببینید.",
+    "private.nominate": "شما رئیس‌جمهورید. صدراعظم رو انتخاب کنید.",
+    "private.vote": "به این دولت رای بدید.",
+    "private.discard": "یه قانون رو بسوزون.",
+    "private.enact": "یکی رو تصویب کنید. به کسی نشون ندید.",
 }
 
 # id → spoken English (EN audio line from docs/ravi-script.md)
@@ -111,17 +122,17 @@ LINES_EN: dict[str, LineText] = {
         "Welcome to another Secret Hitler.",
         "Hope we have a good game.",
     ),
-    "deal.look": "Alright. Look at your role carefully.",
-    "night.start": "Alright. Look at your role carefully.",
-    "night.end": "Alright. Hide your role.",
+    "deal.look": "Look at your role carefully.",
+    "night.start": "Look at your role carefully.",
+    "night.end": "Now hide your role.",
     "president.first": "The President for this round has been chosen.",
     "president.firstYou": "You are President this round.",
-    "president.next": "The presidency passes on.",
-    "president.nextYou": "The presidency passes to you.",
+    "president.next": "The next player is President.",
+    "president.nextYou": "You are President.",
     "president.special": "A special election has been called.",
     "discuss.start": "Okay. Time to talk.",
-    "discuss.closing": "Time is almost up.",
-    "discuss.ended": "Discussion is over.",
+    "discuss.closing": "We're getting close to the end.",
+    "discuss.ended": "Time's up.",
     "nominate.start": "The President chooses a Chancellor.",
     "nominate.named": "A Chancellor has been chosen.",
     "nominate.namedYou": "You chose a Chancellor.",
@@ -150,8 +161,8 @@ LINES_EN: dict[str, LineText] = {
     "power.investigate": "The President must check a player's card.",
     "power.investigated": "The card has been checked.",
     "power.investigatedYou": "Your card has been checked.",
-    "power.investigatedLiberal": "It was Liberal.",
-    "power.investigatedFascist": "It was Fascist.",
+    "power.investigatedLiberal": "Liberal.",
+    "power.investigatedFascist": "Fascist.",
     "power.peek": "The President looks at the top three policies.",
     "power.peekDone": "The policies return to the deck.",
     "power.specialElection": "The President chooses the next presidential candidate.",
@@ -162,6 +173,17 @@ LINES_EN: dict[str, LineText] = {
     "game.liberalsWin.policies": "Five Liberal policies are enacted. The Liberals win.",
     "game.fascistsWin.policies": "Six Fascist policies are enacted. The Fascists win.",
     "game.reveal": "The roles are revealed.",
+    "private.youLiberal": "You are a Liberal. Find Hitler. Win with five Liberal policies, or by executing Hitler.",
+    "private.youFascist": "You are a Fascist. Protect Hitler. Win with six Fascist policies, or by electing Hitler Chancellor after three Fascist policies.",
+    "private.youHitler": "You are Hitler. Stay hidden. Become Chancellor after three Fascist policies.",
+    "private.nightLiberal": "Keep your eyes closed.",
+    "private.nightFascistSmall": "See your fellow Fascists and Hitler.",
+    "private.nightFascistLarge": "See the other Fascists and Hitler. Hitler does not see you.",
+    "private.nightHitlerSmall": "See your Fascists.",
+    "private.nominate": "You are President. Choose a Chancellor.",
+    "private.vote": "Vote on this government.",
+    "private.discard": "Burn a policy.",
+    "private.enact": "Enact one policy. Show it to no one.",
 }
 
 def load_dotenv() -> None:
@@ -189,17 +211,28 @@ def for_tts(text: str) -> str:
 
 def for_eleven_fa(text: str) -> str:
     """ElevenLabs spellings: ra'y not ray; nayavard not nayavarad."""
-    text = text.replace("رای‌گیری", "رأی گیری")
+    import re
+
+    text = text.replace("رای‌گیری", "رأی‌گیری")
     text = text.replace("رای‌ها", "رأی ها")
-    text = text.replace("رای ", "رأی ")
-    text = text.replace("رای", "رأی")
-    # Past tense: nayāvard. Bare نیاورد is read as present نیاورَد.
-    return text.replace("نیاورد", "نی‌آورد")
+    # Whole word رای only — آخرای contains رای as a suffix.
+    text = re.sub(r"(?<![\u0600-\u06FF])رای", "رأی", text)
+    text = text.replace("شمارنده", "شُمارَنده")
+    # Sukun on ر: past نیاورد (nayavard), not present نیاورَد, not «نی اورد».
+    text = text.replace("نیاوَرد", "نیاورْد")
+    text = text.replace("نَیاورد", "نیاورْد")
+    text = text.replace("نیاورد", "نیاورْد")
+    # haqq + ezafe: tashdid on ق and kasra — حقِّ وتو, not حقتورو.
+    text = text.replace("حق وتو", "حقِّ وتو")
+    # Sukun so صدراعظم is not صدراعظمِ before وِتو.
+    text = text.replace("صدراعظم وتو", "صدراعظمْ وتو")
+    # Kasra on و: وِتو (veto), not وَتو.
+    return text.replace("وتو", "وِتو")
 
 
-# v3 audio tags. Only the bake sees these; i18n subtitles stay clean.
+# v3 audio tags. Locked set from docs/ravi-script.md.
 ELEVEN_DIRECTION: dict[str, str | tuple[str, ...]] = {
-    "deal.start": ("[warmly]", "[hopeful]"),
+    "deal.start": ("[warmly]", "[warmly]"),
     "deal.look": "[whispering]",
     "night.start": "[whispering]",
     "night.end": "[whispering]",
@@ -207,50 +240,61 @@ ELEVEN_DIRECTION: dict[str, str | tuple[str, ...]] = {
     "president.firstYou": "[announcing]",
     "president.next": "[announcing]",
     "president.nextYou": "[announcing]",
-    "president.special": "[serious]",
+    "president.special": "[announcing]",
     "discuss.start": "[calm]",
-    "discuss.closing": "[urgent]",
+    "discuss.closing": "[calm]",
     "discuss.ended": "[firm]",
-    "nominate.start": "[serious]",
+    "nominate.start": "[calm]",
     "nominate.named": "[announcing]",
     "nominate.namedYou": "[calm]",
     "nominate.namedAsYou": "[announcing]",
     "nominate.timeout": "[disappointed]",
-    "vote.start": "[announcing]",
+    "vote.start": "[calm]",
     "vote.collecting": "[calm]",
-    "vote.count": "[serious]",
+    "vote.count": "[announcing]",
     "vote.passed": "[firm]",
     "vote.failed": "[disappointed]",
-    "vote.hitlerChancellor": "[shocked]",
-    "tracker.advance": "[serious]",
-    "chaos.start": "[ominous]",
+    "vote.hitlerChancellor": "[grave]",
+    "tracker.advance": "[announcing]",
+    "chaos.start": "[grave]",
     "chaos.enacted": "[grave]",
-    "law.draw": "[narrating]",
+    "law.draw": "[calm]",
     "law.presidentChoosing": "[calm]",
     "law.burned": "[calm]",
-    "law.pass": "[narrating]",
+    "law.pass": "[calm]",
     "law.chancellorChoosing": "[calm]",
     "law.liberal": "[calm]",
-    "law.fascist": "[ominous]",
-    "law.vetoOffered": "[serious]",
+    "law.fascist": "[grave]",
+    "law.vetoOffered": "[firm]",
     "law.vetoAgreed": "[firm]",
     "law.vetoRejected": "[firm]",
     "law.vetoUnlocked": "[announcing]",
-    "power.investigate": "[serious]",
+    "power.investigate": "[calm]",
     "power.investigated": "[calm]",
     "power.investigatedYou": "[whispering]",
     "power.investigatedLiberal": "[whispering]",
     "power.investigatedFascist": "[whispering]",
-    "power.peek": "[serious]",
+    "power.peek": "[calm]",
     "power.peekDone": "[calm]",
     "power.specialElection": "[announcing]",
     "power.execution": "[grave]",
     "power.executed": "[grave]",
     "power.executedYou": "[grave]",
-    "power.hitlerExecuted": "[relieved]",
-    "game.liberalsWin.policies": "[triumphant]",
-    "game.fascistsWin.policies": "[ominous]",
+    "power.hitlerExecuted": "[firm]",
+    "game.liberalsWin.policies": "[firm]",
+    "game.fascistsWin.policies": "[grave]",
     "game.reveal": "[announcing]",
+    "private.youLiberal": "[whispering]",
+    "private.youFascist": "[whispering]",
+    "private.youHitler": "[whispering]",
+    "private.nightLiberal": "[whispering]",
+    "private.nightFascistSmall": "[whispering]",
+    "private.nightFascistLarge": "[whispering]",
+    "private.nightHitlerSmall": "[whispering]",
+    "private.nominate": "[whispering]",
+    "private.vote": "[whispering]",
+    "private.discard": "[whispering]",
+    "private.enact": "[whispering]",
 }
 
 

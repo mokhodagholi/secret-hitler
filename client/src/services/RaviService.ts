@@ -59,7 +59,18 @@ export type RaviLineId =
   | 'power.hitlerExecuted'
   | 'game.liberalsWin.policies'
   | 'game.fascistsWin.policies'
-  | 'game.reveal';
+  | 'game.reveal'
+  | 'private.youLiberal'
+  | 'private.youFascist'
+  | 'private.youHitler'
+  | 'private.nightLiberal'
+  | 'private.nightFascistSmall'
+  | 'private.nightFascistLarge'
+  | 'private.nightHitlerSmall'
+  | 'private.nominate'
+  | 'private.vote'
+  | 'private.discard'
+  | 'private.enact';
 
 const HOLD_WITHOUT_CLIP_MS = 1_200;
 

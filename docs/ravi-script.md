@@ -8,16 +8,36 @@ keys and `deal.start.mp3` filenames.
 - Short. One breath. No jokes.
 - Spoken Iranian Persian (گفتاری), not textbook (کتابی). A real host
   at the table: `می‌شه`, `رو`, `تون`, `کنه`. Not `می‌شود` / `را` / `تان`.
-- TTS spellings (audio only): `رای` not `رأی`; bake strips ZWNJ (`می`
-  not `می‌`). `حق وتو` so the model does not read `وتو` as «و تو».
-  Subtitles still say `وتو`.
+- Table voice for now: **Daniel** (ElevenLabs). One speaker for every
+  clip — do not let a direction tag change the person.
+- TTS spellings (audio only, Daniel): `رأی` so it is *ra’y* not
+  English *ray*; `نیاورْد` (past نیاورد, not present نیاورَد, not «نی اورد»);
+  `شُمارَنده`; `حقِّ وتو رو` (tashdid on ق, kasra for ezafe);
+  `وِتو` not `وَتو`. Subtitles may stay undiacritic.
+- `deal.start` is two breaths with a **short** pause (~0.35 s), not a
+  full second.
 - Subtitle interpolates `{name}`, `{ja}`, `{nein}`, `{count}`.
 - Audio is the nameless take when a name would be spoken. The header
   already shows the name.
 - Never a secret (see [`ravi.md`](./ravi.md)).
 
-Tone: 1930s radio, but the words are what Iranians actually say —
-clear and a bit grave, not a translated newspaper.
+## Tones
+
+A small locked set. Each bake line gets **one** tag. Whispering is the
+private/secret colour; the rest are radio, not theatre.
+
+| Tone | Tag | When |
+|---|---|---|
+| **whisper** | `[whispering]` | Night, private look, investigation party, President’s burn prompt. Close to the ear. |
+| **warm** | `[warmly]` | Welcome only (`deal.start`). |
+| **calm** | `[calm]` | Default table. Routine motion. `vote.start` stays here so Daniel does not turn into another announcer. |
+| **announce** | `[announcing]` | A public office or count just became true. |
+| **firm** | `[firm]` | A decision stuck (vote passed, veto resolved, discussion over). |
+| **down** | `[disappointed]` | The table lost something (failed government, no nominee). |
+| **grave** | `[grave]` | Bad public news (Fascist law, chaos, execution, Fascist win). |
+
+Do not invent extra tags per line. If it is not in this table, it is
+`[calm]`.
 
 ---
 
@@ -30,27 +50,30 @@ clear and a bit grave, not a translated newspaper.
   امیدوارم که بازی خوبی داشته باشیم
 - **EN:** Welcome to another Secret Hitler.
   Hope we have a good game.
-- **Audio:** one clip, two breaths — hello, a 1 s pause, then the
+- **Tone:** `[warmly]` on both breaths.
+- **Audio:** one clip, two breaths — hello, a **0.35 s** pause, then the
   hope line. `سلام به یه راز هیتلر دیگه خوش اومدید.` … `امیدوارم که بازی خوبی داشته باشیم.`
 
 ### `deal.look`
-- **When:** Same words as `night.start`. Kept so the catalog id still
-  matches the private-card beat. The table speaks `night.start`.
-- **FA:** خب نقشت رو با دقت ببین.
-- **EN:** Alright. Look at your role carefully.
+- **When:** Private role card is up. Same words as `night.start`.
+- **FA:** نقشت رو با دقت ببین.
+- **EN:** Look at your role carefully.
+- **Tone:** `[whispering]`
 - **Audio:** same as FA.
 
 ### `night.start`
 - **When:** Night opens and the private role is up. Same audio for
   every seat; only the picture differs.
-- **FA:** خب نقشت رو با دقت ببین.
-- **EN:** Alright. Look at your role carefully.
+- **FA:** نقشت رو با دقت ببین.
+- **EN:** Look at your role carefully.
+- **Tone:** `[whispering]`
 - **Audio:** same.
 
 ### `night.end`
 - **When:** Glance ends and day begins.
-- **FA:** خب نقشت رو قایم کن.
-- **EN:** Alright. Hide your role.
+- **FA:** نقشت رو حالا قایم کن.
+- **EN:** Now hide your role.
+- **Tone:** `[whispering]`
 - **Audio:** same.
 
 ### `president.first`
@@ -68,15 +91,17 @@ clear and a bit grave, not a translated newspaper.
 
 ### `president.next`
 - **When:** Placard moves clockwise (not a special election).
-- **FA subtitle:** ریاست رسید به {name}.
-- **FA audio:** ریاست رسید به نفر بعد.
-- **EN subtitle:** The presidency passes to {name}.
-- **EN audio:** The presidency passes on.
+- **FA subtitle:** {name} رئیس‌جمهور شد.
+- **FA audio:** نفر بعدی رئیس جمهور شد.
+- **EN subtitle:** {name} is President.
+- **EN audio:** The next player is President.
+- **Tone:** `[announcing]`
 
 ### `president.nextYou`
 - **When:** The presidency passes to you.
-- **FA:** ریاست رسید به شما.
-- **EN:** The presidency passes to you.
+- **FA:** شما رئیس جمهور شدید.
+- **EN:** You are President.
+- **Tone:** `[announcing]`
 - **Audio:** same as FA.
 
 ### `president.special`
@@ -97,13 +122,15 @@ clear and a bit grave, not a translated newspaper.
 
 ### `discuss.closing`
 - **When:** ~30 s left of the 5-minute window.
-- **FA:** دیگه وقتتون کمه.
-- **EN:** Time is almost up.
+- **FA:** به آخرای وقت نزدیک شدیم.
+- **EN:** We're getting close to the end.
+- **Tone:** `[calm]`
 
 ### `discuss.ended`
 - **When:** Timer ends or the President skips.
-- **FA:** دیگه حرف‌ها تموم شد.
-- **EN:** Discussion is over.
+- **FA:** وقت تموم شد.
+- **EN:** Time's up.
+- **Tone:** `[firm]`
 
 ---
 
@@ -150,21 +177,25 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `vote.start`
 - **When:** Voting opens.
-- **FA:** رای‌گیری آغاز شد.
+- **FA:** رأی‌گیری آغاز شد.
 - **EN:** Voting has begun.
+- **Tone:** `[calm]` — not `[announcing]`; that tag made this clip
+  sound like another person.
 
 ### `vote.collecting`
 - **When:** Cards are flying face-down to the centre. Optional; skip if
   it talks over the motion.
 - **FA:** رای‌ها داره جمع می‌شه.
 - **EN:** The votes are being gathered.
+- **Tone:** `[calm]`
 
 ### `vote.count`
 - **When:** Face-down pile has been tallied. Totals only; no seats.
 - **FA subtitle:** {ja} موافق، {nein} مخالف.
-- **FA audio:** رای‌ها رو شمردیم.
+- **FA audio:** رأی ها شمرده شد.
 - **EN subtitle:** {ja} Ja, {nein} Nein.
 - **EN audio:** The votes have been counted.
+- **Tone:** `[announcing]`
 
 ### `vote.passed`
 - **When:** Strict Ja majority.
@@ -175,10 +206,11 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `vote.failed`
 - **When:** No strict majority (a tie fails).
-- **FA subtitle:** دولت رای نیاورد. {ja} موافق، {nein} مخالف.
-- **FA audio:** دولت رای نیاورد.
+- **FA subtitle:** دولت رأی نیاورد. {ja} موافق، {nein} مخالف.
+- **FA audio:** دولت رأی نیاورْد.
 - **EN subtitle:** The government is rejected. {ja} Ja, {nein} Nein.
 - **EN audio:** The government is rejected.
+- **Tone:** `[disappointed]`
 
 ### `vote.hitlerChancellor`
 - **When:** Elected Chancellor is Hitler and 3+ Fascist laws are down.
@@ -192,9 +224,10 @@ word already means “or”, so «یا یا نِین» is noise.
 ### `tracker.advance`
 - **When:** A failed government ticks the tracker (not a reset).
 - **FA subtitle:** شکست {count} از ۳.
-- **FA audio:** شمارنده یکی رفت جلو.
+- **FA audio:** شُمارَنده یکی رفت جلو.
 - **EN subtitle:** Election tracker {count} of 3.
 - **EN audio:** The tracker advances.
+- **Tone:** `[announcing]`
 
 ### `chaos.start`
 - **When:** Third consecutive failure.
@@ -204,8 +237,9 @@ word already means “or”, so «یا یا نِین» is noise.
 ### `chaos.enacted`
 - **When:** Top law is enacted with no power. Follow with `law.liberal`
   or `law.fascist`.
-- **FA:** قانون بالای دسته تصویب می‌شه. رئیس‌جمهور قدرتی نمی‌گیره.
-- **EN:** The top policy is enacted. The President gets no power.
+- **FA:** قانونِ بالای دسته تصویب می‌شه. رئیس‌جمهور قدرتی نمی‌گیره.
+- **EN:** The top policy of the deck is enacted. The President gets no power.
+- **Tone:** `[grave]`
 
 ---
 
@@ -218,8 +252,10 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `law.presidentChoosing`
 - **When:** President is looking. Public; no colours.
-- **FA:** رئیس‌جمهور یکی رو می‌سوزونه.
-- **EN:** The President burns one policy.
+- **FA:** رئیس جمهور یه کارت رو می‌سوزونه.
+- **EN:** The President burns a card.
+- **Tone:** `[calm]`
+- **President-only (whisper):** `private.discard` — `یه قانون رو بسوزون.`
 
 ### `law.burned`
 - **When:** One back lands on the discard pile.
@@ -246,29 +282,37 @@ word already means “or”, so «یا یا نِین» is noise.
 - **FA:** یه قانون فاشیستی تصویب شد.
 - **EN:** A Fascist policy is enacted.
 
+Veto audio follows the good `law.vetoRejected` take: `حقِّ وتو رو`,
+same speaker, same radio grain. Not a different person, not «و تو».
+
 ### `law.vetoOffered`
 - **When:** Chancellor proposes a veto (only if unlocked).
-- **FA:** صدراعظم پیشنهاد وتو داد.
-- **Audio:** صدراعظم پیشنهاد حق وتو داد.
+- **FA:** صدراعظم وتو رو پیشنهاد کرد.
+- **Audio:** صدراعظمْ وِتو رو پیشنهاد کرد.
 - **EN:** The Chancellor proposes a veto.
+- **Tone:** `[firm]`
 
 ### `law.vetoAgreed`
 - **When:** President accepts. Both remaining laws burn; government fails.
-- **FA:** وتو قبول شد. هر دو قانون سوخت.
-- **Audio:** حق وتو قبول شد. هر دو قانون سوخت.
-- **EN:** The veto is accepted. Both policies burn.
+- **FA:** رئیس‌جمهور حق وتو رو قبول کرد. هر دو قانون سوخت.
+- **Audio:** رئیس‌جمهور حق وتو رو قبول کرد. هر دو قانون سوخت.
+- **EN:** The President accepts the veto. Both policies burn.
+- **Tone:** `[firm]`
 
 ### `law.vetoRejected`
-- **When:** President refuses.
+- **When:** President refuses. This take is the reference for the
+  other veto clips.
 - **FA:** رئیس‌جمهور وتو رو رد کرد. باید یه قانون تصویب بشه.
 - **Audio:** رئیس‌جمهور حق وتو رو رد کرد. باید یه قانون تصویب بشه.
 - **EN:** The President refuses the veto. A policy must be enacted.
+- **Tone:** `[firm]`
 
 ### `law.vetoUnlocked`
 - **When:** The fifth Fascist law lands.
-- **FA:** از این به بعد می‌شه وتو کرد.
-- **Audio:** حق وتو باز شد.
+- **FA:** از این به بعد می‌شه حق وتو کرد.
+- **Audio:** از این به بعد می‌شه حق وتو کرد.
 - **EN:** The veto is now in play.
+- **Tone:** `[announcing]`
 
 ---
 
@@ -296,15 +340,17 @@ only on the President’s device, after the card face is up.
 
 ### `power.investigatedLiberal`
 - **When:** President’s device, after the membership card shows Liberal.
-- **FA:** این یکی لیبرال بود.
-- **EN:** It was Liberal.
+- **FA:** لیبراله‌.
+- **EN:** Liberal.
+- **Tone:** `[whispering]` — same grain as `power.investigatedYou`.
 - **Audio:** same as FA.
 
 ### `power.investigatedFascist`
 - **When:** President’s device, after the membership card shows Fascist
   (Hitler’s card included).
-- **FA:** این یکی فاشیست بود.
-- **EN:** It was Fascist.
+- **FA:** فاشیسته.
+- **EN:** Fascist.
+- **Tone:** `[whispering]` — same grain as `power.investigatedYou`.
 - **Audio:** same as FA.
 
 ### `power.peek`
@@ -358,10 +404,11 @@ only on the President’s device, after the card face is up.
 
 ---
 
-## Private overlays (no shared audio)
+## Private overlays (this device only)
 
-These are on-screen only, on the actor’s device. If we ever record them,
-they must **not** play through the speaker while others are in the room.
+Spoken on the actor’s phone, never as a shared table line. Same Daniel
+voice, `[whispering]`. Do not put these in the public header of a TV
+view — the overlay already has the text.
 
 | Id | FA | EN |
 |---|---|---|
@@ -372,19 +419,84 @@ they must **not** play through the speaker while others are in the room.
 | `private.nightFascistSmall` | فاشیست‌ها و هیتلر رو ببینید. | See your fellow Fascists and Hitler. |
 | `private.nightFascistLarge` | فاشیست‌های دیگه و هیتلر رو ببینید. هیتلر شما رو نمی‌بینه. | See the other Fascists and Hitler. Hitler does not see you. |
 | `private.nightHitlerSmall` | فاشیست‌هاتون رو ببینید. | See your Fascists. |
-| `private.nightHitlerLarge` | دست‌تون رو بالا ببرید. فاشیست‌ها شما رو می‌بینن؛ شما اون‌ها رو نمی‌بینید. | Raise your hand. The Fascists see you — you do not see them. |
 | `private.nominate` | شما رئیس‌جمهورید. صدراعظم رو انتخاب کنید. | You are President. Choose a Chancellor. |
 | `private.vote` | به این دولت رای بدید. | Vote on this government. |
-| `private.discard` | یکی رو دور بندازید. به کسی نشون ندید. | Discard one policy. Show it to no one. |
+| `private.discard` | یه قانون رو بسوزون. | Burn a policy. |
 | `private.enact` | یکی رو تصویب کنید. به کسی نشون ندید. | Enact one policy. Show it to no one. |
-| `private.investigateResult` | {name} {party}ه. | {name} belongs to the {party} party. |
+
+Hitler at 7–10 uses `private.nightLiberal` (eyes closed). There is no
+raise-your-hand line.
 
 ---
 
-## Pilot set (record these first)
+## Daniel catalog (tone + FA audio)
 
-`deal.start` · `president.first` · `discuss.start` · `nominate.start` ·
-`vote.start` · `vote.passed` · `vote.failed` · `law.draw` ·
-`law.liberal` · `law.fascist`
+Subtitles may still interpolate `{name}` / `{ja}` / `{nein}`. This
+table is the **spoken** line.
 
-Record the set in both Farid and Dilara.
+| Id | Tone | FA audio |
+|---|---|---|
+| `deal.start` | `[warmly]` | سلام به یه راز هیتلر دیگه خوش اومدید. *(0.35 s)* امیدوارم که بازی خوبی داشته باشیم. |
+| `deal.look` | `[whispering]` | نقشت رو با دقت ببین. |
+| `night.start` | `[whispering]` | نقشت رو با دقت ببین. |
+| `night.end` | `[whispering]` | نقشت رو حالا قایم کن. |
+| `president.first` | `[announcing]` | رئیس‌جمهور این دور معلوم شد. |
+| `president.firstYou` | `[announcing]` | این دور شما رئیس‌جمهورید. |
+| `president.next` | `[announcing]` | نفر بعدی رئیس جمهور شد. |
+| `president.nextYou` | `[announcing]` | شما رئیس جمهور شدید. |
+| `president.special` | `[announcing]` | انتخابات ویژه شروع شد. |
+| `discuss.start` | `[calm]` | خب، وقت حرف زدنه. |
+| `discuss.closing` | `[calm]` | به آخرای وقت نزدیک شدیم. |
+| `discuss.ended` | `[firm]` | وقت تموم شد. |
+| `nominate.start` | `[calm]` | رئیس‌جمهور، صدراعظم رو انتخاب کنه. |
+| `nominate.named` | `[announcing]` | صدراعظم انتخاب شد. |
+| `nominate.namedYou` | `[calm]` | شما صدراعظم رو انتخاب کردید. |
+| `nominate.namedAsYou` | `[announcing]` | شما رو صدراعظم انتخاب کردن. |
+| `nominate.timeout` | `[disappointed]` | صدراعظم انتخاب نشد. |
+| `vote.start` | `[calm]` | رأی‌گیری آغاز شد. |
+| `vote.collecting` | `[calm]` | رای‌ها داره جمع می‌شه. |
+| `vote.count` | `[announcing]` | رأی ها شمرده شد. |
+| `vote.passed` | `[firm]` | دولت رای آورد. |
+| `vote.failed` | `[disappointed]` | دولت رأی نیاورْد. |
+| `vote.hitlerChancellor` | `[grave]` | هیتلر صدراعظم شد. فاشیست‌ها برنده شدن. |
+| `tracker.advance` | `[announcing]` | شُمارَنده یکی رفت جلو. |
+| `chaos.start` | `[grave]` | سه دولت پشت‌سرهم رای نیاورد. آشوب شروع شد. |
+| `chaos.enacted` | `[grave]` | قانونِ بالای دسته تصویب می‌شه. رئیس‌جمهور قدرتی نمی‌گیره. |
+| `law.draw` | `[calm]` | سه تا قانون می‌ره دست رئیس‌جمهور. |
+| `law.presidentChoosing` | `[calm]` | رئیس جمهور یه کارت رو می‌سوزونه. |
+| `private.discard` | `[whispering]` | یه قانون رو بسوزون. *(President only)* |
+| `law.burned` | `[calm]` | یه قانون سوخت. |
+| `law.pass` | `[calm]` | دو تا قانون می‌ره دست صدراعظم. |
+| `law.chancellorChoosing` | `[calm]` | صدراعظم یکی رو تصویب می‌کنه. |
+| `law.liberal` | `[calm]` | یه قانون لیبرالی تصویب شد. |
+| `law.fascist` | `[grave]` | یه قانون فاشیستی تصویب شد. |
+| `law.vetoOffered` | `[firm]` | صدراعظمْ وِتو رو پیشنهاد کرد. |
+| `law.vetoAgreed` | `[firm]` | رئیس‌جمهور حق وتو رو قبول کرد. هر دو قانون سوخت. |
+| `law.vetoRejected` | `[firm]` | رئیس‌جمهور حق وتو رو رد کرد. باید یه قانون تصویب بشه. |
+| `law.vetoUnlocked` | `[announcing]` | از این به بعد می‌شه حق وتو کرد. |
+| `power.investigate` | `[calm]` | رئیس‌جمهور باید کارت یکی رو چک کنه. |
+| `power.investigated` | `[calm]` | کارت چک شد. |
+| `power.investigatedYou` | `[whispering]` | کارت شما چک شد. |
+| `power.investigatedLiberal` | `[whispering]` | لیبراله‌. |
+| `power.investigatedFascist` | `[whispering]` | فاشیسته. |
+| `power.peek` | `[calm]` | رئیس‌جمهور سه تا قانون بالای دسته رو می‌بینه. |
+| `power.peekDone` | `[calm]` | قانون‌ها برگشتن روی دسته. |
+| `power.specialElection` | `[announcing]` | رئیس‌جمهور، رئیس بعدی رو خودش انتخاب می‌کنه. |
+| `power.execution` | `[grave]` | رئیس‌جمهور باید یه نفر رو اعدام کنه. |
+| `power.executed` | `[grave]` | یکی اعدام شد. |
+| `power.executedYou` | `[grave]` | شما اعدام شدید. |
+| `power.hitlerExecuted` | `[firm]` | هیتلر اعدام شد. لیبرال‌ها برنده شدن. |
+| `game.liberalsWin.policies` | `[firm]` | پنج تا قانون لیبرال تصویب شد. لیبرال‌ها برنده شدن. |
+| `game.fascistsWin.policies` | `[grave]` | شش تا قانون فاشیستی تصویب شد. فاشیست‌ها برنده شدن. |
+| `game.reveal` | `[announcing]` | نقش‌ها رو ببینید. |
+| `private.youLiberal` | `[whispering]` | شما لیبرالید. هیتلر رو پیدا کنید. با پنج قانون لیبرال برنده می‌شید، یا با اعدام هیتلر. |
+| `private.youFascist` | `[whispering]` | شما فاشیستید. هوای هیتلر رو داشته باشید. با شش قانون فاشیستی برنده می‌شید؛ یا بعد از سه قانون فاشیستی، هیتلر رو بذارید صدراعظم. |
+| `private.youHitler` | `[whispering]` | شما هیتلرید. مخفی بمونید. بعد از سه قانون فاشیستی صدراعظم بشید. |
+| `private.nightLiberal` | `[whispering]` | چشم‌هاتون رو ببندید. |
+| `private.nightFascistSmall` | `[whispering]` | فاشیست‌ها و هیتلر رو ببینید. |
+| `private.nightFascistLarge` | `[whispering]` | فاشیست‌های دیگه و هیتلر رو ببینید. هیتلر شما رو نمی‌بینه. |
+| `private.nightHitlerSmall` | `[whispering]` | فاشیست‌هاتون رو ببینید. |
+| `private.nominate` | `[whispering]` | شما رئیس‌جمهورید. صدراعظم رو انتخاب کنید. |
+| `private.vote` | `[whispering]` | به این دولت رای بدید. |
+| `private.discard` | `[whispering]` | یه قانون رو بسوزون. |
+| `private.enact` | `[whispering]` | یکی رو تصویب کنید. به کسی نشون ندید. |

@@ -440,23 +440,23 @@ export const en = {
   ravi: {
     deal: {
       start: 'Welcome to another Secret Hitler. Hope we have a good game.',
-      look: 'Alright. Look at your role carefully.',
+      look: 'Look at your role carefully.',
     },
     night: {
-      start: 'Alright. Look at your role carefully.',
-      end: 'Alright. Hide your role.',
+      start: 'Look at your role carefully.',
+      end: 'Now hide your role.',
     },
     president: {
       first: '{name} is President this round.',
       firstYou: 'You are President this round.',
-      next: 'The presidency passes to {name}.',
-      nextYou: 'The presidency passes to you.',
+      next: '{name} is President.',
+      nextYou: 'You are President.',
       special: 'Special election — {name} is the next President.',
     },
     discuss: {
       start: 'Okay. Time to talk.',
-      closing: 'Time is almost up.',
-      ended: 'Discussion is over.',
+      closing: "We're getting close to the end.",
+      ended: "Time's up.",
     },
     nominate: {
       start: 'The President chooses a Chancellor.',
@@ -478,18 +478,18 @@ export const en = {
     },
     chaos: {
       start: 'Three governments failed in a row. Chaos begins.',
-      enacted: 'The top policy is enacted. The President gets no power.',
+      enacted: 'The top policy of the deck is enacted. The President gets no power.',
     },
     law: {
       draw: 'Three policies are given to the President.',
-      presidentChoosing: 'The President burns one policy.',
+      presidentChoosing: 'The President burns a card.',
       burned: 'A policy is burned.',
       pass: 'Two policies pass to the Chancellor.',
       chancellorChoosing: 'The Chancellor enacts one policy.',
       liberal: 'A Liberal policy is enacted.',
       fascist: 'A Fascist policy is enacted.',
       vetoOffered: 'The Chancellor proposes a veto.',
-      vetoAgreed: 'The veto is accepted. Both policies burn.',
+      vetoAgreed: 'The President accepts the veto. Both policies burn.',
       vetoRejected: 'The President refuses the veto. A policy must be enacted.',
       vetoUnlocked: 'The veto is now in play.',
     },
@@ -497,8 +497,8 @@ export const en = {
       investigate: "The President must check a player's card.",
       investigated: "The President has seen {name}'s party.",
       investigatedYou: 'The President has seen your party.',
-      investigatedLiberal: 'It was Liberal.',
-      investigatedFascist: 'It was Fascist.',
+      investigatedLiberal: 'Liberal.',
+      investigatedFascist: 'Fascist.',
       peek: 'The President looks at the top three policies.',
       peekDone: 'The policies return to the deck.',
       specialElection: 'The President chooses the next presidential candidate.',
@@ -528,8 +528,10 @@ export const en = {
       nightFascistLarge:
         'See the other Fascists and Hitler. Hitler does not see you.',
       nightHitlerSmall: 'See your Fascists.',
-      nightHitlerLarge:
-        'Raise your hand. The Fascists see you — you do not see them.',
+      nominate: 'You are President. Choose a Chancellor.',
+      vote: 'Vote on this government.',
+      discard: 'Burn a policy.',
+      enact: 'Enact one policy. Show it to no one.',
     },
   },
   policyReveal: {

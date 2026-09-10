@@ -3,58 +3,69 @@
  * so each mp3 is a static import the same way SoundService registers effects.
  */
 
-import faridChaosEnacted from './farid/chaos.enacted.mp3';
-import faridChaosStart from './farid/chaos.start.mp3';
-import faridDealLook from './farid/deal.look.mp3';
-import faridDealStart from './farid/deal.start.mp3';
-import faridDiscussClosing from './farid/discuss.closing.mp3';
-import faridDiscussEnded from './farid/discuss.ended.mp3';
-import faridDiscussStart from './farid/discuss.start.mp3';
-import faridGameFascistsWinPolicies from './farid/game.fascistsWin.policies.mp3';
-import faridGameLiberalsWinPolicies from './farid/game.liberalsWin.policies.mp3';
-import faridGameReveal from './farid/game.reveal.mp3';
-import faridLawBurned from './farid/law.burned.mp3';
-import faridLawChancellorChoosing from './farid/law.chancellorChoosing.mp3';
-import faridLawDraw from './farid/law.draw.mp3';
-import faridLawFascist from './farid/law.fascist.mp3';
-import faridLawLiberal from './farid/law.liberal.mp3';
-import faridLawPass from './farid/law.pass.mp3';
-import faridLawPresidentChoosing from './farid/law.presidentChoosing.mp3';
-import faridLawVetoAgreed from './farid/law.vetoAgreed.mp3';
-import faridLawVetoOffered from './farid/law.vetoOffered.mp3';
-import faridLawVetoRejected from './farid/law.vetoRejected.mp3';
-import faridLawVetoUnlocked from './farid/law.vetoUnlocked.mp3';
-import faridNightEnd from './farid/night.end.mp3';
-import faridNightStart from './farid/night.start.mp3';
-import faridNominateNamed from './farid/nominate.named.mp3';
-import faridNominateNamedAsYou from './farid/nominate.namedAsYou.mp3';
-import faridNominateNamedYou from './farid/nominate.namedYou.mp3';
-import faridNominateStart from './farid/nominate.start.mp3';
-import faridNominateTimeout from './farid/nominate.timeout.mp3';
-import faridPowerExecuted from './farid/power.executed.mp3';
-import faridPowerExecutedYou from './farid/power.executedYou.mp3';
-import faridPowerExecution from './farid/power.execution.mp3';
-import faridPowerHitlerExecuted from './farid/power.hitlerExecuted.mp3';
-import faridPowerInvestigate from './farid/power.investigate.mp3';
-import faridPowerInvestigated from './farid/power.investigated.mp3';
-import faridPowerInvestigatedFascist from './farid/power.investigatedFascist.mp3';
-import faridPowerInvestigatedLiberal from './farid/power.investigatedLiberal.mp3';
-import faridPowerInvestigatedYou from './farid/power.investigatedYou.mp3';
-import faridPowerPeek from './farid/power.peek.mp3';
-import faridPowerPeekDone from './farid/power.peekDone.mp3';
-import faridPowerSpecialElection from './farid/power.specialElection.mp3';
-import faridPresidentFirst from './farid/president.first.mp3';
-import faridPresidentFirstYou from './farid/president.firstYou.mp3';
-import faridPresidentNext from './farid/president.next.mp3';
-import faridPresidentNextYou from './farid/president.nextYou.mp3';
-import faridPresidentSpecial from './farid/president.special.mp3';
-import faridTrackerAdvance from './farid/tracker.advance.mp3';
-import faridVoteCollecting from './farid/vote.collecting.mp3';
-import faridVoteCount from './farid/vote.count.mp3';
-import faridVoteFailed from './farid/vote.failed.mp3';
-import faridVoteHitlerChancellor from './farid/vote.hitlerChancellor.mp3';
-import faridVotePassed from './farid/vote.passed.mp3';
-import faridVoteStart from './farid/vote.start.mp3';
+import faridChaosEnacted from './daniel/chaos.enacted.mp3';
+import faridChaosStart from './daniel/chaos.start.mp3';
+import faridDealLook from './daniel/deal.look.mp3';
+import faridDealStart from './daniel/deal.start.mp3';
+import faridDiscussClosing from './daniel/discuss.closing.mp3';
+import faridDiscussEnded from './daniel/discuss.ended.mp3';
+import faridDiscussStart from './daniel/discuss.start.mp3';
+import faridGameFascistsWinPolicies from './daniel/game.fascistsWin.policies.mp3';
+import faridGameLiberalsWinPolicies from './daniel/game.liberalsWin.policies.mp3';
+import faridGameReveal from './daniel/game.reveal.mp3';
+import faridLawBurned from './daniel/law.burned.mp3';
+import faridLawChancellorChoosing from './daniel/law.chancellorChoosing.mp3';
+import faridLawDraw from './daniel/law.draw.mp3';
+import faridLawFascist from './daniel/law.fascist.mp3';
+import faridLawLiberal from './daniel/law.liberal.mp3';
+import faridLawPass from './daniel/law.pass.mp3';
+import faridLawPresidentChoosing from './daniel/law.presidentChoosing.mp3';
+import faridLawVetoAgreed from './daniel/law.vetoAgreed.mp3';
+import faridLawVetoOffered from './daniel/law.vetoOffered.mp3';
+import faridLawVetoRejected from './daniel/law.vetoRejected.mp3';
+import faridLawVetoUnlocked from './daniel/law.vetoUnlocked.mp3';
+import faridNightEnd from './daniel/night.end.mp3';
+import faridNightStart from './daniel/night.start.mp3';
+import faridNominateNamed from './daniel/nominate.named.mp3';
+import faridNominateNamedAsYou from './daniel/nominate.namedAsYou.mp3';
+import faridNominateNamedYou from './daniel/nominate.namedYou.mp3';
+import faridNominateStart from './daniel/nominate.start.mp3';
+import faridNominateTimeout from './daniel/nominate.timeout.mp3';
+import faridPowerExecuted from './daniel/power.executed.mp3';
+import faridPowerExecutedYou from './daniel/power.executedYou.mp3';
+import faridPowerExecution from './daniel/power.execution.mp3';
+import faridPowerHitlerExecuted from './daniel/power.hitlerExecuted.mp3';
+import faridPowerInvestigate from './daniel/power.investigate.mp3';
+import faridPowerInvestigated from './daniel/power.investigated.mp3';
+import faridPowerInvestigatedFascist from './daniel/power.investigatedFascist.mp3';
+import faridPowerInvestigatedLiberal from './daniel/power.investigatedLiberal.mp3';
+import faridPowerInvestigatedYou from './daniel/power.investigatedYou.mp3';
+import faridPowerPeek from './daniel/power.peek.mp3';
+import faridPowerPeekDone from './daniel/power.peekDone.mp3';
+import faridPowerSpecialElection from './daniel/power.specialElection.mp3';
+import faridPresidentFirst from './daniel/president.first.mp3';
+import faridPresidentFirstYou from './daniel/president.firstYou.mp3';
+import faridPresidentNext from './daniel/president.next.mp3';
+import faridPresidentNextYou from './daniel/president.nextYou.mp3';
+import faridPresidentSpecial from './daniel/president.special.mp3';
+import faridTrackerAdvance from './daniel/tracker.advance.mp3';
+import faridVoteCollecting from './daniel/vote.collecting.mp3';
+import faridVoteCount from './daniel/vote.count.mp3';
+import faridVoteFailed from './daniel/vote.failed.mp3';
+import faridVoteHitlerChancellor from './daniel/vote.hitlerChancellor.mp3';
+import faridVotePassed from './daniel/vote.passed.mp3';
+import faridVoteStart from './daniel/vote.start.mp3';
+import faridPrivateDiscard from './daniel/private.discard.mp3';
+import faridPrivateEnact from './daniel/private.enact.mp3';
+import faridPrivateNightFascistLarge from './daniel/private.nightFascistLarge.mp3';
+import faridPrivateNightFascistSmall from './daniel/private.nightFascistSmall.mp3';
+import faridPrivateNightHitlerSmall from './daniel/private.nightHitlerSmall.mp3';
+import faridPrivateNightLiberal from './daniel/private.nightLiberal.mp3';
+import faridPrivateNominate from './daniel/private.nominate.mp3';
+import faridPrivateVote from './daniel/private.vote.mp3';
+import faridPrivateYouFascist from './daniel/private.youFascist.mp3';
+import faridPrivateYouHitler from './daniel/private.youHitler.mp3';
+import faridPrivateYouLiberal from './daniel/private.youLiberal.mp3';
 
 import dilaraChaosEnacted from './dilara/chaos.enacted.mp3';
 import dilaraChaosStart from './dilara/chaos.start.mp3';
@@ -162,6 +173,17 @@ const FARID = {
   'vote.hitlerChancellor': faridVoteHitlerChancellor,
   'vote.passed': faridVotePassed,
   'vote.start': faridVoteStart,
+  'private.discard': faridPrivateDiscard,
+  'private.enact': faridPrivateEnact,
+  'private.nightFascistLarge': faridPrivateNightFascistLarge,
+  'private.nightFascistSmall': faridPrivateNightFascistSmall,
+  'private.nightHitlerSmall': faridPrivateNightHitlerSmall,
+  'private.nightLiberal': faridPrivateNightLiberal,
+  'private.nominate': faridPrivateNominate,
+  'private.vote': faridPrivateVote,
+  'private.youFascist': faridPrivateYouFascist,
+  'private.youHitler': faridPrivateYouHitler,
+  'private.youLiberal': faridPrivateYouLiberal,
 } as const;
 
 const DILARA = {

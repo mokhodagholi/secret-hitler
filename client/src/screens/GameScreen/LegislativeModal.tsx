@@ -1,4 +1,4 @@
-import { For, Show, createSignal } from 'solid-js';
+import { For, Show, createSignal, onMount } from 'solid-js';
 import type { Policy } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -27,9 +27,13 @@ const REVEAL_STEP_MS = 110;
  */
 export function LegislativeModal(props: LegislativeModalProps) {
   const { formatMessage } = props;
-  const { animation } = useApp();
+  const { animation, ravi } = useApp();
   const [picking, setPicking] = createSignal(false);
   const cards: (HTMLButtonElement | undefined)[] = [];
+
+  onMount(() => {
+    void ravi.speak(props.mode === 'discard' ? 'private.discard' : 'private.enact');
+  });
 
   async function pick(index: number): Promise<void> {
     if (picking()) return;

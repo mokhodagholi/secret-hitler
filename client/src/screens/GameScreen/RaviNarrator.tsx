@@ -146,6 +146,9 @@ export function RaviNarrator(props: {
     const nominationOpen = state.nominationDeadline != null;
     if (nominationOpen && !lastNominationOpen) {
       pending.push({ id: 'nominate.start' });
+      if (state.you.id === state.board.president) {
+        pending.push({ id: 'private.nominate' });
+      }
     }
     lastNominationOpen = nominationOpen;
 
