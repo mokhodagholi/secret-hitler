@@ -45,11 +45,3 @@
   color: $red-bright;
 }
 
-.continue {
-  @include display(0.85rem, 0.1em);
-  @include pressable;
-  padding: 11px 22px;
-  border-radius: $radius;
-  color: $navy-950;
-  background: linear-gradient(180deg, $gold-bright, $gold-dark);
-}

@@ -62,6 +62,12 @@ export class Room {
   peekedPolicies: Policy[] = [];
   /** Last investigation result, private to the President until acknowledged. */
   investigation: { targetId: string; party: Faction } | null = null;
+  /** Loyalty checks this game — each investigator keeps the party they saw. */
+  investigations: {
+    investigatorId: string;
+    targetId: string;
+    party: Faction;
+  }[] = [];
   /** After a special election, the round rotation resumes after this player. */
   specialElectionResumeAfterId: string | null = null;
   /** The Chancellor has proposed a veto this legislative session. */
@@ -152,7 +158,18 @@ export class Room {
       isChancellor: p.id === this.chancellorId,
       hasVoted: this.votes.has(p.id),
       role: this.roleVisibleTo(viewer, p),
+      party: this.partyVisibleTo(viewer.id, p.id),
     };
+  }
+
+  /** Party the viewer learned by investigating this player. Hidden from others. */
+  private partyVisibleTo(viewerId: string, targetId: string): Faction | null {
+    return (
+      this.investigations.find(
+        (entry) =>
+          entry.investigatorId === viewerId && entry.targetId === targetId,
+      )?.party ?? null
+    );
   }
 
   /** Per-viewer state snapshot for broadcasting. */

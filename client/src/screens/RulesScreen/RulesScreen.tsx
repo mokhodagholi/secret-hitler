@@ -1,7 +1,6 @@
 import { For } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage, MessageKey } from '../../i18n';
-import { APP_NAV } from '../../components/BottomNav/BottomNav';
 import { Icon, type IconName } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
@@ -77,7 +76,7 @@ export function RulesScreen() {
   const { formatMessage } = useApp().i18n;
   const paragraph = (key: MessageKey) => <p class={styles.lead}>{formatMessage(key)}</p>;
   return (
-    <Screen nav={APP_NAV}>
+    <Screen>
       <ScreenHeader title={formatMessage('rules.title')} />
 
       <SectionTitle centered>{formatMessage('rules.overview')}</SectionTitle>
@@ -108,6 +107,7 @@ export function RulesScreen() {
       {paragraph('rules.failBody')}
 
       <SectionTitle centered>{formatMessage('rules.powersTitle')}</SectionTitle>
+      {paragraph('rules.powersBody')}
       <ul class={styles.steps}>
         <For each={buildPowers(formatMessage)}>
           {(power) => <RuleStep {...power} />}

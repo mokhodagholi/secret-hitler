@@ -29,6 +29,12 @@ describe('GameEngine — lobby', () => {
     expect(guest.ready).toBe(false);
   });
 
+  it('Should seat a player with the portrait they chose', () => {
+    const engine = new GameEngine(makeRoom());
+    expect(engine.addPlayer('Ana', true, 4)).toMatchObject({ avatar: 4 });
+    expect(engine.addPlayer('Ben', false, 18)).toMatchObject({ avatar: 1 });
+  });
+
   it('Should reject players once the room is full', () => {
     const engine = new GameEngine(makeRoom({ maxPlayers: 3 }));
     seatPlayers(engine, ['Ana', 'Ben', 'Cal']);

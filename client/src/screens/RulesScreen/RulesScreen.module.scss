@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   text-align: center;
 }
 
@@ -14,9 +14,11 @@
 }
 
 .overview p {
-  font-size: 0.86rem;
-  line-height: 1.6;
+  font-size: 0.98rem;
+  line-height: 2;
+  word-spacing: 0.12em;
   color: $text-light;
+  white-space: pre-line;
 }
 
 /* Components */
@@ -61,16 +63,21 @@
 }
 
 .componentLabel {
-  @include display(0.56rem, 0.06em);
+  font-family: $font-body;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.45;
   color: $text-dim;
-  line-height: 1.3;
 }
 
 /* Lead paragraph under a section title */
 .lead {
-  font-size: 0.82rem;
-  line-height: 1.6;
+  font-size: 0.95rem;
+  line-height: 2;
+  word-spacing: 0.12em;
   color: $text-light;
+  white-space: pre-line;
+  margin-bottom: 4px;
 }
 
 /* Bulleted reference list (setup, winning) */
@@ -78,21 +85,22 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .bullet {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  gap: 12px;
+  font-size: 0.95rem;
+  line-height: 1.95;
+  word-spacing: 0.12em;
   color: $text-light;
 }
 
 .bulletIcon {
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 4px;
   color: $gold;
 }
 
@@ -101,7 +109,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 22px;
 }
 
 .step {
@@ -139,22 +147,35 @@
 }
 
 .stepTitle {
-  @include display(0.86rem, 0.1em);
+  @include display(0.92rem, 0.08em);
   color: $gold;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  line-height: 1.5;
+
+  :global([dir='rtl']) & {
+    font-family: $font-body;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    font-weight: 700;
+  }
 }
 
 .stepBody {
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  line-height: 1.95;
+  word-spacing: 0.12em;
   color: $text-light;
+  white-space: pre-line;
 }
 
 /* Remember */
 .remember {
   text-align: center;
-  font-size: 0.84rem;
-  line-height: 1.7;
+  font-size: 0.98rem;
+  line-height: 2;
+  word-spacing: 0.12em;
   color: $text-light;
   padding-bottom: 8px;
 

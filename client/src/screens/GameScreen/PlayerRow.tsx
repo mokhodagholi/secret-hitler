@@ -18,8 +18,8 @@ export interface PlayerRowProps {
 
 /**
  * One row in the sidebar player list: avatar, name, President/Chancellor
- * badges, and the role label — only when the server revealed it to this
- * viewer (own role, fellow fascists, game over).
+ * badges, and the role or investigated party — only when the server revealed
+ * it to this viewer (own role, fellow fascists, game over, or Investigate).
  */
 export function PlayerRow(props: PlayerRowProps) {
   const { formatMessage } = props;
@@ -74,6 +74,20 @@ export function PlayerRow(props: PlayerRowProps) {
           >
             {formatMessage(`role.${props.player.role!}`)}
           </span>
+        </Show>
+        <Show when={!props.player.role && props.player.party}>
+          {(party) => (
+            <span
+              classList={{
+                [styles.playerRole]: true,
+                [styles.roleLiberal]: party() === 'liberal',
+                [styles.roleFascist]: party() === 'fascist',
+              }}
+              data-party={party()}
+            >
+              {formatMessage(`game.${party()}`)}
+            </span>
+          )}
         </Show>
       </span>
       <Show when={props.showOffice !== false && props.player.isPresident}>

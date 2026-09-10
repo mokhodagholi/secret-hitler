@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <script src="https://tapi.bale.ai/miniapp.js?3"></script>
+    <script>
+      (function () {
+        var host = location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return;
+        document.write('<script src="https://tapi.bale.ai/miniapp.js?3"><\/script>');
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Secret Hitler</title>

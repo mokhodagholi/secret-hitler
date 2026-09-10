@@ -1,4 +1,4 @@
-import { Phase, type Faction, type Player } from '../../types/GameState';
+import { Phase, partyOf, type Player } from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import type { GamePhase, PhaseHost } from './GamePhase';
@@ -53,8 +53,15 @@ export class SpecialPowerPhase implements GamePhase {
     if (room.investigatedIds.includes(target.id)) {
       return err('INVALID_ACTION', 'That player has already been investigated.');
     }
+    const party = partyOf(target.role);
+    if (!party) return err('INVALID_ACTION', 'That player cannot be investigated.');
     room.investigatedIds.push(target.id);
-    room.investigation = { targetId: target.id, party: partyOf(target) };
+    room.investigation = { targetId: target.id, party };
+    room.investigations.push({
+      investigatorId: playerId,
+      targetId: target.id,
+      party,
+    });
     this.host.log('investigated', { name: target.name });
     this.host.changed();
     return null;
@@ -89,9 +96,4 @@ export class SpecialPowerPhase implements GamePhase {
     if (!target || !target.isAlive || target.id === playerId) return null;
     return target;
   }
-}
-
-/** The party an Investigate reveals — Hitler's membership card reads Fascist. */
-function partyOf(player: Player): Faction {
-  return player.role === 'liberal' ? 'liberal' : 'fascist';
 }

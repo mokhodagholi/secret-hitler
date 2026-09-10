@@ -144,6 +144,7 @@ function CreateRoomPanel() {
         name: roomName().trim(),
         password: password().trim() || undefined,
         hostName: resolvedName(),
+        avatar: settings.settings.avatar,
         initData: bale.initData(),
         options: {
           maxPlayers: playerCount(),
@@ -277,6 +278,7 @@ function JoinRoomPanel() {
     try {
       await game.joinRoom(target.id, {
         name,
+        avatar: settings.settings.avatar,
         password: password().trim() || undefined,
         initData: bale.initData(),
       });

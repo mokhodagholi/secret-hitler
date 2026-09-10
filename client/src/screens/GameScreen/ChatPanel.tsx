@@ -6,21 +6,23 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import type { LogEntry } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
-import { isolateBidi } from '../../i18n/utils';
-import { logLineKey, playerLabel } from '../../i18n/perspective';
+import { playerLabel } from '../../i18n/perspective';
 import { avatarImage } from '../../assets/avatars';
 import { Icon } from '../../components/Icon/Icon';
 import styles from './ChatPanel.module.scss';
 
-const CHAT_MIN = 148;
+/** Handle + chrome only — feed and composer hide at this height. */
+const CHAT_MIN = 72;
 const CHAT_DEFAULT = 280;
-const BOARD_RESERVE = 188;
+/** Leave room for the event header, deck, and a full-size seat row. */
+const BOARD_RESERVE = 260;
 const HEIGHT_KEY = 'sh:chat-panel-height';
 
 export interface ChatPanelProps {
   talkingAllowed?: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
   onOpenPlayers: () => void;
   onOpenMenu: () => void;
   onHeightChange?: (height: number) => void;
@@ -34,13 +36,13 @@ export function ChatPanel(props: ChatPanelProps) {
   const { game, i18n } = useApp();
   const { formatMessage } = i18n;
 
-  const [activeTab, setActiveTab] = createSignal<'chat' | 'log'>('chat');
   const [chatDraft, setChatDraft] = createSignal('');
   const [height, setHeight] = createSignal(CHAT_DEFAULT);
   const [resizing, setResizing] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
   let panelEl: HTMLElement | undefined;
   let feedScroller: HTMLDivElement | undefined;
+  let inputEl: HTMLTextAreaElement | undefined;
   let dragStartY = 0;
   let dragStartHeight = CHAT_DEFAULT;
   let lastExpanded = CHAT_DEFAULT;
@@ -48,6 +50,7 @@ export function ChatPanel(props: ChatPanelProps) {
 
   const talkingAllowed = () => props.talkingAllowed !== false;
   const canSend = () => talkingAllowed() && chatDraft().trim() !== '';
+  const expanded = () => height() > CHAT_MIN + 16;
 
   const clampHeight = (next: number) => {
     const available = panelEl?.parentElement?.clientHeight ?? 0;
@@ -73,18 +76,27 @@ export function ChatPanel(props: ChatPanelProps) {
 
   createEffect(() => props.onHeightChange?.(height()));
 
-  const feedVisible = () => height() > CHAT_MIN + 20;
-
   createEffect(() => {
     game.chatMessages();
     game.unreadChat();
-    if (feedVisible()) game.markChatRead();
+    if (expanded()) game.markChatRead();
   });
 
   createEffect(() => {
     game.chatMessages();
-    game.logEntries();
     if (feedScroller) feedScroller.scrollTop = feedScroller.scrollHeight;
+  });
+
+  const autosizeInput = () => {
+    const el = inputEl;
+    if (!el) return;
+    el.style.height = '0';
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  createEffect(() => {
+    chatDraft();
+    queueMicrotask(autosizeInput);
   });
 
   onMount(() => {
@@ -114,15 +126,6 @@ export function ChatPanel(props: ChatPanelProps) {
       hour: '2-digit',
       minute: '2-digit',
     });
-
-  const isolatedParams = (params: LogEntry['params']) => {
-    if (!params) return params;
-    const isolated: Record<string, string | number> = {};
-    for (const [key, value] of Object.entries(params)) {
-      isolated[key] = typeof value === 'string' ? isolateBidi(value) : value;
-    }
-    return isolated;
-  };
 
   const playerById = (playerId: string) =>
     game.view()?.players.find((player) => player.id === playerId);
@@ -190,29 +193,22 @@ export function ChatPanel(props: ChatPanelProps) {
 
       <header class={styles.chrome}>
         <div class={styles.titleBlock}>
-          <span class={styles.titleIcon} aria-hidden="true">
-            <Icon name="chat" size={22} />
-          </span>
-          <button
-            type="button"
-            classList={{
-              [styles.tab]: true,
-              [styles.tabActive]: activeTab() === 'chat',
-            }}
-            onClick={() => setActiveTab('chat')}
-          >
-            {formatMessage('game.chat')}
-          </button>
-          <button
-            type="button"
-            classList={{
-              [styles.tab]: true,
-              [styles.tabActive]: activeTab() === 'log',
-            }}
-            onClick={() => setActiveTab('log')}
-          >
-            {formatMessage('game.gameLog')}
-          </button>
+          <Show when={props.actionLabel}>
+            <Show
+              when={props.onAction}
+              fallback={
+                <span class={styles.title}>{props.actionLabel}</span>
+              }
+            >
+              <button
+                type="button"
+                class={styles.tableAction}
+                onClick={props.onAction}
+              >
+                {props.actionLabel}
+              </button>
+            </Show>
+          </Show>
           <Show when={talkingAllowed() && game.inDiscussion() && discussionSecondsLeft() != null}>
             <span
               classList={{
@@ -249,23 +245,8 @@ export function ChatPanel(props: ChatPanelProps) {
         </div>
       </header>
 
-      <div class={styles.feed} ref={feedScroller}>
-        <Show
-          when={activeTab() === 'chat'}
-          fallback={
-            <For each={game.logEntries()}>
-              {(entry) => (
-                <p class={styles.logEntry}>
-                  <span class={styles.time}>{timestamp(entry.at)}</span>
-                  {formatMessage(
-                    logLineKey(entry.code, entry.params, game.you()?.name ?? ''),
-                    isolatedParams(entry.params),
-                  )}
-                </p>
-              )}
-            </For>
-          }
-        >
+      <Show when={expanded()}>
+        <div class={styles.feed} ref={feedScroller}>
           <For each={game.chatMessages()}>
             {(message) => {
               const mine = () => message.playerId === game.view()?.you.id;
@@ -292,7 +273,10 @@ export function ChatPanel(props: ChatPanelProps) {
                       {playerLabel(mine(), message.name, formatMessage)}
                     </bdi>
                     <bdi class={styles.text}>{message.text}</bdi>
-                    <time class={styles.stamp} datetime={new Date(message.at).toISOString()}>
+                    <time
+                      class={styles.stamp}
+                      datetime={new Date(message.at).toISOString()}
+                    >
                       {timestamp(message.at)}
                     </time>
                   </div>
@@ -300,22 +284,18 @@ export function ChatPanel(props: ChatPanelProps) {
               );
             }}
           </For>
-        </Show>
-      </div>
+        </div>
 
-      <Show when={activeTab() === 'chat'}>
         <div
           classList={{
             [styles.composer]: true,
-            [styles.hasSend]: canSend(),
             [styles.composerMuted]: !talkingAllowed(),
           }}
-          dir="ltr"
         >
           <textarea
             class={styles.input}
             rows={1}
-            dir="auto"
+            dir={i18n.dir()}
             value={chatDraft()}
             placeholder={
               talkingAllowed()
@@ -325,6 +305,10 @@ export function ChatPanel(props: ChatPanelProps) {
             maxlength={500}
             disabled={!talkingAllowed()}
             aria-disabled={!talkingAllowed()}
+            ref={(element) => {
+              inputEl = element;
+              queueMicrotask(autosizeInput);
+            }}
             onInput={(event) => {
               if (!talkingAllowed()) return;
               setChatDraft(event.currentTarget.value);
@@ -338,13 +322,8 @@ export function ChatPanel(props: ChatPanelProps) {
           />
           <button
             type="button"
-            classList={{
-              [styles.send]: true,
-              [styles.sendVisible]: canSend(),
-            }}
+            class={styles.send}
             aria-label={formatMessage('game.send')}
-            aria-hidden={!canSend()}
-            tabindex={canSend() ? 0 : -1}
             disabled={!canSend()}
             onClick={sendChat}
           >

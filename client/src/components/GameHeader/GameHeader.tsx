@@ -1,4 +1,5 @@
-import avatarPortrait from '../../assets/avatars/avatar_1.png';
+import { useApp } from '../../services/AppContext';
+import { avatarImage } from '../../assets/avatars';
 import gemIcon from '../../assets/home/gem.png';
 import starIcon from '../../assets/home/star.png';
 import styles from './GameHeader.module.scss';
@@ -9,11 +10,16 @@ export interface GameHeaderProps {
 }
 
 export function GameHeader(props: GameHeaderProps) {
+  const { settings } = useApp();
   return (
     <header class={styles.header}>
       <div class={styles.profile}>
         <span class={styles.avatar}>
-          <img class={styles.avatarImage} src={avatarPortrait} alt="" />
+          <img
+            class={styles.avatarImage}
+            src={avatarImage(settings.settings.avatar)}
+            alt=""
+          />
         </span>
       </div>
 

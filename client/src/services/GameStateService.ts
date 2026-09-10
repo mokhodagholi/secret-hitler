@@ -10,10 +10,12 @@ import {
   type JoinRoomRequest,
   type JoinRoomResponse,
   type LogEntry,
+  type ProfileResponse,
   type PublicPlayer,
   type Role,
   type RoomClosedReason,
   type RoomSummary,
+  type SaveProfileRequest,
   type ServerErrorCode,
   type ServerMessage,
 } from '@secret-hitler/shared';
@@ -158,12 +160,13 @@ export class GameStateService {
   // --- HTTP ----------------------------------------------------------------
 
   async createRoom(request: CreateRoomRequest): Promise<RoomSession> {
-    const response = await this.post<CreateRoomResponse>('/api/rooms', request);
+    const response = await this.request<CreateRoomResponse>('POST', '/api/rooms', request);
     return this.beginSession({ ...response, shareLink: response.shareLink });
   }
 
   async joinRoom(idOrCode: string, request: JoinRoomRequest): Promise<RoomSession> {
-    const response = await this.post<JoinRoomResponse>(
+    const response = await this.request<JoinRoomResponse>(
+      'POST',
       `/api/rooms/${encodeURIComponent(idOrCode)}/join`,
       request,
     );
@@ -181,6 +184,29 @@ export class GameStateService {
       throw new RoomApiError('NETWORK', 'Could not load the room list.');
     }
     return (await response.json()) as RoomSummary[];
+  }
+
+  /** Persist the chosen card. Local settings already hold it if this fails. */
+  async saveProfile(request: SaveProfileRequest): Promise<void> {
+    try {
+      await this.request<ProfileResponse>('PUT', '/api/profile', request);
+    } catch {
+      /* local settings already hold the card */
+    }
+  }
+
+  async loadProfile(clientId: string): Promise<number | null> {
+    let response: Response;
+    try {
+      response = await fetch(
+        `/api/profile?clientId=${encodeURIComponent(clientId)}`,
+      );
+    } catch {
+      return null;
+    }
+    if (!response.ok) return null;
+    const body = (await response.json().catch(() => ({}))) as ProfileResponse;
+    return typeof body.avatar === 'number' ? body.avatar : null;
   }
 
   // --- WebSocket actions ---------------------------------------------------
@@ -282,11 +308,15 @@ export class GameStateService {
       });
   }
 
-  private async post<T>(url: string, body: unknown): Promise<T> {
+  private async request<T>(
+    method: 'POST' | 'PUT',
+    url: string,
+    body: unknown,
+  ): Promise<T> {
     let response: Response;
     try {
       response = await fetch(url, {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });

@@ -8,6 +8,8 @@ import { useApp } from '../../services/AppContext';
 import type { AnimationService } from '../../services/AnimationService';
 import { CARD_BACK, POLICY_FACE } from '../../assets/cards';
 import { Icon } from '../../components/Icon/Icon';
+import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
+import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import styles from './LegislativeModal.module.scss';
 
 export interface LegislativeModalProps {
@@ -16,6 +18,8 @@ export interface LegislativeModalProps {
   policies: Policy[];
   presidentId: string;
   chancellorId: string | null;
+  /** Viewer — first-person copy when the cards are flying to you. */
+  youId: string;
   presidentName: string;
   chancellorName: string;
   secondsLeft: number;
@@ -44,6 +48,7 @@ type Beat = 'deal' | 'pass' | 'choose';
 export function LegislativeModal(props: LegislativeModalProps) {
   const { formatMessage } = props;
   const { animation, ravi, sound } = useApp();
+  const drag = useDialogDrag();
   const [picking, setPicking] = createSignal(false);
   const [beat, setBeat] = createSignal<Beat>(
     props.mode === 'discard' ? 'deal' : 'pass',
@@ -130,8 +135,20 @@ export function LegislativeModal(props: LegislativeModalProps) {
   };
 
   const title = () => {
-    if (beat() === 'deal') return formatMessage('game.legislativeDeal');
-    if (beat() === 'pass') return formatMessage('game.legislativePass');
+    if (beat() === 'deal') {
+      return formatMessage(
+        props.youId === props.presidentId
+          ? 'game.legislativeDealYou'
+          : 'game.legislativeDeal',
+      );
+    }
+    if (beat() === 'pass') {
+      return formatMessage(
+        props.youId === props.chancellorId
+          ? 'game.legislativePassYou'
+          : 'game.legislativePass',
+      );
+    }
     if (props.policies.length > 0) {
       return formatMessage(
         props.mode === 'discard'
@@ -153,6 +170,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
       class={styles.backdrop}
       ref={(element) => void animation.play(element, 'fade-in')}
     >
+      <div class={styles.shift} style={drag.style()}>
       <div
         class={styles.dialog}
         role="dialog"
@@ -160,6 +178,11 @@ export function LegislativeModal(props: LegislativeModalProps) {
         aria-label={title()}
         ref={(element) => void animation.play(element, 'pop-in')}
       >
+        <DialogDragHandle
+          label={formatMessage('game.moveDialog')}
+          dragging={drag.dragging()}
+          handleProps={drag.handleProps}
+        />
         <span class={styles.title}>{title()}</span>
 
         <Show when={beat() === 'choose' && props.secondsLeft > 0}>
@@ -230,6 +253,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
             {formatMessage('game.veto.propose')}
           </button>
         </Show>
+      </div>
       </div>
     </div>
   );

@@ -85,6 +85,8 @@ export interface CreateRoomRequest {
   name: string;
   password?: string;
   hostName: string;
+  /** Illustrated player-card index; omitted seats use a seat-based default. */
+  avatar?: number;
   options?: {
     maxPlayers?: number;
     timerEnabled?: boolean;
@@ -105,8 +107,21 @@ export interface CreateRoomResponse {
 export interface JoinRoomRequest {
   name: string;
   password?: string;
+  /** Illustrated player-card index; omitted seats use a seat-based default. */
+  avatar?: number;
   /** Raw Bale `WebApp.initData` so the bot can /invite this player's room. */
   initData?: string;
+}
+
+/** Persist the chosen player card for this browser (and Bale user, when signed in). */
+export interface SaveProfileRequest {
+  avatar: number;
+  clientId: string;
+  initData?: string;
+}
+
+export interface ProfileResponse {
+  avatar: number;
 }
 
 export interface JoinRoomResponse {

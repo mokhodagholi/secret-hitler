@@ -1,24 +1,19 @@
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
-import avatarCard from '../../assets/avatars/avatar_placeholder.png';
-import avatarPortrait from '../../assets/avatars/avatar_1.png';
-import heroImage from '../../assets/home/hero.png';
+import { avatarImage, PAPER_FRAME } from '../../assets/avatars';
+import heroImage from '../../assets/home/hero.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
-import starIcon from '../../assets/home/star.png';
-import gemIcon from '../../assets/home/gem.png';
-import plusIcon from '../../assets/home/plus.png';
 import styles from './HomeScreen.module.scss';
 
 /**
- * Lobby splash modeled on the game mockup: a 3D menu button in the header, the
- * player's framed portrait to the left of the hero, the hero over a wooden desk
- * holding the policy boards, and the primary CTA. Tapping the menu opens settings.
+ * Lobby splash: centered title, a settings key in the header, قوانین hanging
+ * under it, and a framed portrait that opens the player-card picker.
  */
 export function HomeScreen() {
-  const { nav, i18n } = useApp();
+  const { nav, i18n, settings } = useApp();
   const { formatMessage } = i18n;
 
   const enterPlay = () => nav.navigate('play');
@@ -27,42 +22,60 @@ export function HomeScreen() {
     <Screen>
       <div class={styles.home}>
         <header class={styles.statusBar}>
-          <div class={styles.resources} aria-hidden="true">
-            <div class={styles.pill}>
-              <img class={styles.pillIcon} src={starIcon} alt="" />
-              <span class={styles.pillValue}>3.3K</span>
-              <img class={styles.pillPlus} src={plusIcon} alt="" />
-            </div>
-            <div class={styles.pill}>
-              <img class={styles.pillIcon} src={gemIcon} alt="" />
-              <span class={styles.pillValue}>3.3K</span>
-              <img class={styles.pillPlus} src={plusIcon} alt="" />
-            </div>
-          </div>
-
+          <span class={styles.headerSpacer} aria-hidden="true" />
+          <h1 class={styles.title}>{formatMessage('home.title')}</h1>
           <button
             type="button"
-            class={styles.menuButton}
+            class={styles.settingsButton}
             aria-label={formatMessage('nav.settings')}
             onClick={() => nav.navigate('settings')}
           >
-            <Icon name="menu" size={22} />
+            <Icon name="gear" size={22} />
           </button>
         </header>
 
         <div class={styles.profileRow}>
-          <div class={styles.avatarCard} aria-hidden="true">
-            <img class={styles.avatarCardFrame} src={avatarCard} alt="" />
-            <img class={styles.avatarPortrait} src={avatarPortrait} alt="" />
-          </div>
-          <span class={styles.namePlate} dir="auto">
-            {formatMessage('home.guest')}
-          </span>
+          <button
+            type="button"
+            class={styles.avatarCard}
+            aria-label={formatMessage('home.chooseCard')}
+            onClick={() => nav.navigate('player-cards')}
+          >
+            <img class={styles.avatarCardFrame} src={PAPER_FRAME} alt="" />
+            <img
+              class={styles.avatarPortrait}
+              src={avatarImage(settings.settings.avatar)}
+              alt=""
+            />
+          </button>
+          <button
+            type="button"
+            class={styles.rulesLink}
+            onClick={() => nav.navigate('rules')}
+          >
+            <Icon name="scroll" size={16} class={styles.rulesIcon} />
+            <span class={styles.rulesLabel}>
+              <span class={styles.flourish} aria-hidden="true" />
+              <span dir="auto">{formatMessage('nav.rules')}</span>
+              <span class={styles.flourish} aria-hidden="true" />
+            </span>
+          </button>
         </div>
 
         <div class={styles.stage}>
           <div class={styles.deskWrap}>
-            <img class={styles.heroImage} src={heroImage} alt="" />
+            <div class={styles.hero}>
+              <span class={styles.heroHeadShade} aria-hidden="true" />
+              <img class={styles.heroImage} src={heroImage} alt="" />
+              <span
+                class={styles.heroBellyShade}
+                aria-hidden="true"
+                style={{
+                  'mask-image': `url("${heroImage}")`,
+                  '-webkit-mask-image': `url("${heroImage}")`,
+                }}
+              />
+            </div>
             <img class={styles.desk} src={deskImage} alt="" />
             <div class={styles.boards} aria-hidden="true">
               <img class={styles.board} src={liberalBoard} alt="" />

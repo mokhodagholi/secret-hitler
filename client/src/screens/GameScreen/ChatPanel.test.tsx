@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@rstest/core';
+import { describe, expect, it, beforeEach } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { ChatPanel } from './ChatPanel';
@@ -35,6 +35,13 @@ function renderPanel(harness: ReturnType<typeof buildHarness>) {
 }
 
 describe('ChatPanel', () => {
+  beforeEach(() => {
+    try {
+      localStorage.removeItem('sh:chat-panel-height');
+    } catch {
+      /* jsdom */
+    }
+  });
   it('Should render an incoming chat message with its author', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);
@@ -45,19 +52,18 @@ describe('ChatPanel', () => {
     expect(screen.getByText('sadf')).toBeTruthy();
   });
 
-  it('Should hide the send action until the player types', () => {
+  it('Should keep the send action disabled until the player types', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);
     harness.pushState(seatedView());
 
-    expect(
-      screen.queryByRole('button', { name: en.game.send }),
-    ).toBeNull();
+    const send = screen.getByRole('button', { name: en.game.send });
+    expect(send).toHaveProperty('disabled', true);
 
     fireEvent.input(screen.getByPlaceholderText(en.game.chatPlaceholder), {
       target: { value: 'my move' },
     });
-    expect(screen.getByRole('button', { name: en.game.send })).toBeTruthy();
+    expect(send).toHaveProperty('disabled', false);
   });
 
   it('Should send a chat message the player types', () => {
@@ -116,5 +122,66 @@ describe('ChatPanel', () => {
     expect(input).toHaveProperty('disabled', true);
     fireEvent.input(input, { target: { value: 'psst' } });
     expect(harness.socket.lastSent('chat:message')).toBeUndefined();
+  });
+
+  it('Should put the viewer’s messages on the right and others on the left', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+    emitChat(harness, 'hello table');
+    harness.socket.emit({
+      type: 'chat',
+      message: { id: 'm2', playerId: 'you', name: 'You', text: 'my line', at: 1 },
+    });
+
+    const theirs = screen.getByText('hello table').closest('article');
+    const mine = screen.getByText('my line').closest('article');
+    expect(theirs?.className).not.toMatch(/mine/);
+    expect(mine?.className).toMatch(/mine/);
+    expect(mine?.querySelector('time')).toBeTruthy();
+  });
+
+  it('Should put the composer placeholder and send action on the trailing edge', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('language', 'fa');
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    const input = screen.getByPlaceholderText(
+      harness.services.i18n.formatMessage('game.chatPlaceholder'),
+    );
+    expect(input.getAttribute('dir')).toBe('rtl');
+    expect(screen.getByRole('button', { name: harness.services.i18n.formatMessage('game.send') })).toBeTruthy();
+  });
+
+  it('Should show the Choose Chancellor action instead of a Chat title', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(
+      () => (
+        <ChatPanel
+          actionLabel={en.game.startNomination}
+          onAction={() => {}}
+          onOpenPlayers={() => {}}
+          onOpenMenu={() => {}}
+        />
+      ),
+      harness,
+    );
+    harness.pushState(seatedView());
+
+    expect(screen.queryByText(en.game.chat)).toBeNull();
+    expect(
+      screen.getByRole('button', { name: en.game.startNomination }),
+    ).toBeTruthy();
+  });
+
+  it('Should hide the composer when the panel is collapsed to the header', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    fireEvent.dblClick(screen.getByRole('separator'));
+    expect(screen.queryByPlaceholderText(en.game.chatPlaceholder)).toBeNull();
+    expect(screen.queryByText(en.game.chat)).toBeNull();
   });
 });

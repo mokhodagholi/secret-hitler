@@ -13,6 +13,15 @@
   justify-content: center;
   gap: 12px;
   text-align: center;
+  margin: 28px 0 16px;
+
+  :global([dir='rtl']) & {
+    font-family: $font-body;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 1.08rem;
+    line-height: 1.8;
+  }
 }
 
 .star {

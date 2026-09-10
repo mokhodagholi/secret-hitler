@@ -2,44 +2,55 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 90;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(2, 8, 16, 0.82);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 10px 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.shift {
+  position: relative;
+  z-index: 2;
+  width: min(400px, 100%);
+  max-width: 400px;
+  flex: 0 0 auto;
+  pointer-events: auto;
 }
 
 .dialog {
   @include card;
   width: 100%;
-  max-width: 420px;
-  padding: 26px 22px;
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   border-color: rgba($gold, 0.5);
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
 .title {
-  @include display(1rem, 0.3em);
+  @include display(0.82rem, 0.22em);
   color: $gold;
 }
 
 .prompt {
-  font-size: 1.05rem;
+  margin: 0;
+  font-size: 0.95rem;
   color: $text-light;
   text-align: center;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .timer {
   position: relative;
   width: 100%;
-  height: 26px;
+  height: 20px;
   border-radius: $radius;
   background: $navy-900;
   border: 1px solid $line-soft;
@@ -71,7 +82,7 @@
 }
 
 .timerLabel {
-  @include display(0.75rem, 0.08em);
+  @include display(0.7rem, 0.08em);
   position: relative;
   display: grid;
   place-items: center;
@@ -82,20 +93,22 @@
 
 .buttons {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
+  justify-content: center;
 }
 
 .ja,
 .nein {
-  @include display(1.05rem, 0.08em);
+  @include display(0.92rem, 0.08em);
   @include pressable;
-  flex: 1;
+  flex: 1 1 0;
+  max-width: 160px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 8px 8px 12px;
+  gap: 4px;
+  padding: 4px 6px 8px;
   border-radius: $radius-lg;
   color: $white;
   border: none;
@@ -109,7 +122,7 @@
 }
 
 .cardArt {
-  width: 100%;
+  width: min(100%, 132px);
   aspect-ratio: 3 / 2;
   object-fit: contain;
   display: block;
@@ -118,9 +131,16 @@
   transition: filter 0.2s ease, opacity 0.2s ease;
 }
 
-.selected .cardArt {
-  filter: none;
-  opacity: 1;
+.ja:hover:not(:disabled),
+.ja.selected {
+  background: rgba(127, 208, 138, 0.28);
+  box-shadow: 0 0 0 2px rgba(127, 208, 138, 0.9), 0 0 18px rgba(127, 208, 138, 0.5);
+}
+
+.nein:hover:not(:disabled),
+.nein.selected {
+  background: rgba($red-bright, 0.28);
+  box-shadow: 0 0 0 2px rgba($red-bright, 0.9), 0 0 18px rgba($red-bright, 0.5);
 }
 
 .dimmed {
@@ -141,11 +161,43 @@
 }
 
 .yourVote {
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   color: $text-light;
 }
 
 .progress {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: $text-dim;
+}
+
+.felt {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  padding-bottom: 18%;
+}
+
+.pile {
+  position: relative;
+  width: 56px;
+  aspect-ratio: 2 / 3;
+}
+
+.ballot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+}
+
+.landed {
+  opacity: 1;
 }

@@ -6,6 +6,7 @@ export type ScreenName =
   | 'settings'
   | 'how-to-play'
   | 'about'
+  | 'player-cards'
   | 'play'
   | 'create-room'
   | 'join-game'

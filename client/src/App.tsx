@@ -1,6 +1,7 @@
 import { Match, Switch, createEffect } from 'solid-js';
 import { AppProvider, useApp, type AppServices } from './services/AppContext';
 import { HomeScreen } from './screens/HomeScreen/HomeScreen';
+import { PlayerCardsScreen } from './screens/PlayerCardsScreen/PlayerCardsScreen';
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen/PlaceholderScreen';
@@ -39,6 +40,9 @@ function Router() {
     <Switch fallback={<HomeScreen />}>
       <Match when={nav.screen() === 'home'}>
         <HomeScreen />
+      </Match>
+      <Match when={nav.screen() === 'player-cards'}>
+        <PlayerCardsScreen />
       </Match>
       <Match when={nav.screen() === 'rules'}>
         <RulesScreen />

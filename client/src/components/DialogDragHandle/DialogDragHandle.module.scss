@@ -1,0 +1,25 @@
+@use '../../styles/vars' as *;
+
+.handle {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 100%;
+  height: 22px;
+  margin: -4px 0 2px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.dragging {
+  cursor: grabbing;
+}
+
+.grip {
+  width: 42px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(243, 231, 201, 0.34);
+}

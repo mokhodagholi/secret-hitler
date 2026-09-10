@@ -5,19 +5,29 @@ import type { FormatMessage } from '../../i18n';
 import { CARD_BACK, PARTY_FACE } from '../../assets/cards';
 import styles from './InvestigateOverlay.module.scss';
 
+const NOTICE_MS =
+  import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test'
+    ? 200
+    : 12_000;
+
 export interface InvestigateOverlayProps {
   targetId: string;
   targetName: string;
-  /** Party face is private to the President. */
+  /** Party face — President only. Everyone else sees the back. */
   party: Faction | null;
+  /**
+   * President-only: whisper the party and show the result caption.
+   */
+  announce?: boolean;
   onContinue: () => void;
   formatMessage: FormatMessage;
 }
 
 /**
  * A membership card lifts off the investigated seat and lands centre-stage.
- * The President then sees the party face, hears which party it was, and a
- * caption; everyone else just watches the card arrive and leave.
+ * The President then sees the party face and hears which party it was. The
+ * investigated player and spectators watch the card arrive and leave; only
+ * Ravi tells them what is happening.
  */
 export function InvestigateOverlay(props: InvestigateOverlayProps) {
   const { formatMessage } = props;
@@ -26,6 +36,8 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
   const [ready, setReady] = createSignal(false);
   let card: HTMLImageElement | undefined;
   let closed = false;
+
+  const announce = () => props.announce !== false && props.party != null;
 
   onCleanup(() => {
     closed = true;
@@ -59,8 +71,9 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
         setFace('party');
         sound.play('card-flip');
         await animation.play(card, 'card-flip-face');
-        if (!closed) {
-          setReady(true);
+        if (closed) return;
+        setReady(true);
+        if (announce()) {
           ravi.cancel();
           void ravi.speak(
             props.party === 'liberal'
@@ -68,8 +81,10 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
               : 'power.investigatedFascist',
           );
         }
+        await linger();
+        if (!closed) props.onContinue();
       } else {
-        await animation.play(card, 'policy-exit');
+        await linger();
         if (!closed) props.onContinue();
       }
     });
@@ -89,32 +104,27 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
           alt={shownParty() ? formatMessage(`game.${shownParty()!}`) : ''}
           ref={(element) => (card = element)}
         />
-        <Show when={ready() ? shownParty() : undefined}>
+        <Show when={ready() && announce() ? shownParty() : undefined}>
           {(party) => (
-            <>
-              <span
-                classList={{
-                  [styles.result]: true,
-                  [styles.resultLiberal]: party() === 'liberal',
-                  [styles.resultFascist]: party() === 'fascist',
-                }}
-              >
-                {formatMessage('game.power.investigationResult', {
-                  name: props.targetName,
-                  party: formatMessage(`game.${party()}`),
-                })}
-              </span>
-              <button
-                type="button"
-                class={styles.continue}
-                onClick={props.onContinue}
-              >
-                {formatMessage('game.power.continue')}
-              </button>
-            </>
+            <span
+              classList={{
+                [styles.result]: true,
+                [styles.resultLiberal]: party() === 'liberal',
+                [styles.resultFascist]: party() === 'fascist',
+              }}
+            >
+              {formatMessage('game.power.investigationResult', {
+                name: props.targetName,
+                party: formatMessage(`game.${party()}`),
+              })}
+            </span>
           )}
         </Show>
       </div>
     </div>
   );
+}
+
+function linger(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, NOTICE_MS));
 }

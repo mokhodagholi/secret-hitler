@@ -1,10 +1,10 @@
 import { createSignal } from 'solid-js';
-import { RAVI_CLIPS } from '../assets/sounds/ravi/clips';
+import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 import type { MessageKey, MessageValues } from '../i18n';
 import type { I18nService } from './I18nService';
 import type { SettingsService } from './SettingsService';
 
-export type RaviWho = 'farid' | 'dilara';
+export type { RaviWho };
 
 /** Catalog ids — same strings as `ravi-script.md` and the mp3 filenames. */
 export type RaviLineId =
@@ -176,9 +176,9 @@ export class RaviService {
   }
 
   private clipSrc(id: RaviLineId): string | undefined {
-    // Dilara is parked — Daniel (male ElevenLabs) is the table voice for now.
     // New lines may not have a clip yet; deliver() holds on the subtitle.
-    const clips: Partial<Record<RaviLineId, string>> = RAVI_CLIPS.farid;
+    const clips: Partial<Record<RaviLineId, string>> =
+      RAVI_CLIPS[this.settings.settings.raviWho];
     return clips[id];
   }
 

@@ -33,20 +33,27 @@ political party, guns, screams, or anthems.
 
 ## The 12 rooms
 
-| # | Id | Title | Plays during | Vol | Loop | P |
-|---|---|---|---|---|---|---|
-| 1 | `menu-theme` | Foyer radio | Home, rules, how-to-play, settings, about, room-closed | 0.30 | 70–90 s | 0 |
-| 2 | `play-theme` | Ticket window | Play, create-room, join-game | 0.32 | 60–80 s | 1 |
-| 3 | `lobby-theme` | Club before the show | Waiting room | 0.34 | 80–100 s | 0 |
-| 4 | `night-ambient` | Velvet veil | Night: deal, private look, glance | 0.24 | 50–70 s | 0 |
-| 5 | `discuss-theme` | Salon argument | Discussion + nomination (early / mid) | 0.28 | 90–120 s | 0 |
-| 6 | `discuss-late` | Salon after midnight | Discussion + nomination when the board is nearly won | 0.26 | 80–110 s | 2 |
-| 7 | `vote-theme` | Held breath | Voting overlay through the tally | 0.26 | 45–70 s | 0 |
-| 8 | `legislative-theme` | Quiet desk | President / Chancellor legislative + veto | 0.22 | 50–80 s | 0 |
-| 9 | `power-theme` | Cabinet seal | Investigate, peek, special election, execute | 0.26 | 55–80 s | 1 |
-| 10 | `chaos-theme` | Third failure | Chaos — top law, no power | 0.28 | 40–60 s | 1 |
-| 11 | `over-dawn` | Dawn coda | Liberal win, after `win-liberal` | 0.32 | 70–90 s | 1 |
-| 12 | `over-dusk` | Dusk coda | Dark-party win, after `win-fascist` | 0.32 | 70–90 s | 1 |
+Same era (1930s analog, instrumental, looping). **Different body.**
+Suno weights the first words of Style the most — each prompt below
+leads with its own instrument and tempo, not a shared bible.
+
+If two takes could be swapped and you would not notice, reject one
+and regenerate. The table is the listen test.
+
+| # | Id | Title | Lead (must hear) | Tempo / density | Forbidden on this file | Vol | P |
+|---|---|---|---|---|---|---|---|
+| 1 | `menu-theme` | Foyer radio | Slow felt-piano foxtrot, distant muted sax | ~70 BPM, sparse | drums, walking bass, clarinet lead | 0.30 | 0 |
+| 2 | `play-theme` | Ticket window | Clarinet phrases + light brushes | ~92 BPM, gentle swing | saxophone, trumpet, silence-pads | 0.32 | 1 |
+| 3 | `lobby-theme` | Club before the show | Muted trumpet + upright bass + brushes | ~100 BPM, fullest combo | solo piano, drone, no-drums | 0.34 | 0 |
+| 4 | `night-ambient` | Velvet veil | Radio hush + one low piano every 8 bars | no pulse, drone | sax, swing, brushes, bass line | 0.24 | 0 |
+| 5 | `discuss-theme` | Salon argument | Plucked upright bass, lots of air | ~80 BPM, holes for speech | sax solos, trumpet, drums | 0.28 | 0 |
+| 6 | `discuss-late` | Salon after midnight | Bass clarinet in a minor key | ~58 BPM, darker | major foxtrot, trumpet, brushes | 0.26 | 2 |
+| 7 | `vote-theme` | Held breath | Single piano notes + muted trombone pad | almost no tempo | swing, brushes, sax, clock ticks | 0.26 | 0 |
+| 8 | `legislative-theme` | Quiet desk | Vinyl + one felt fifth, room tone | slowest, almost silent | any horn, bass, drums | 0.22 | 0 |
+| 9 | `power-theme` | Cabinet seal | Bowed bass + low clarinet | grave 4-note figure | swing, trumpet, bright piano | 0.26 | 1 |
+| 10 | `chaos-theme` | Third failure | Inside-piano string rumble | repeating thud, no groove | jazz combo, melody, explosion | 0.28 | 1 |
+| 11 | `over-dawn` | Dawn coda | Felt piano that resolves + distant muted trumpet, major | ~64 BPM, sparse | organ, clarinet, sax, hymn, fanfare | 0.32 | 1 |
+| 12 | `over-dusk` | Dusk coda | Reed organ / harmonium + cello | same length as dawn, darker | flugelhorn, major brass, march | 0.32 | 1 |
 
 Bake **P0** first (six files). Skip `discuss-late` until late games feel
 flat. Reuse `menu-theme` on Play if you have not baked `play-theme` yet.
@@ -59,26 +66,32 @@ Files live in `client/src/assets/sounds/music/{id}.mp3`. Stereo mp3,
 
 | Field | Cap | This catalog | What to paste |
 |---|---|---|---|
-| **Style** | **1000** | max **478** | the Style fence only |
-| **Lyrics** | **5000** | max **332** | the Lyrics fence only |
+| **Style** | **1000** | max **247** | the Style fence only |
+| **Lyrics** | **5000** | max **290** | the Lyrics fence only |
 | **Title** | **80** | the `id` | never a long heading |
 | **Exclude Styles** | **200** | **156** | the fence below |
 
 V4 is Style 200 / Lyrics 3000 — too small. Use V4.5 or newer.
 
+**Do not paste a shared style bible.** Each Style already starts with
+what makes this room different. Suno listens hardest to the first
+~200 characters — if they all begin “1930s Weimar jazz club…”, you
+get twelve copies of one song.
+
 1. Custom. Instrumental on.
 2. Title = `id`.
-3. Paste Style, then Lyrics. Do not prepend a second style bible.
+3. Paste Style, then Lyrics.
 4. Exclude Styles:
 
 ```
 vocals, choir, humming, lyrics, rap, EDM, trap, trailer drums, orchestra climax, electric guitar, chiptune, explosion, siren, scream, gunshot, anthem, march
 ```
 
-5. Style Influence ~70%. Weirdness ~25%. Generate ~2:00.
+5. Style Influence ~70%. Weirdness ~35% (a little higher than a
+   clone-set, so rooms diverge). Generate ~2:00.
 6. Crop a repeating loop. Export mp3.
 
-`playMusic` today hard-cuts. When wiring, fade the outgoing loop ~600 ms.
+`playMusic` crossfades the outgoing loop ~600 ms.
 
 ---
 
@@ -86,194 +99,194 @@ vocals, choir, humming, lyrics, rap, EDM, trap, trailer drums, orchestra climax,
 
 ### 1. `menu-theme` — Foyer radio
 
-**Style** (450 / 1000)
+**Style** (247 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, slow foxtrot harmony, very sparse, no walking bass, no drum kit
+slow foxtrot felt piano, 70 BPM, hotel foyer radio, distant muted saxophone holding long notes only, no drums, no walking bass, no clarinet, analog vinyl crackle, bakelite hiss, instrumental looping underscore, 1930s, sparse, no chorus, no trailer
 ```
 
-**Lyrics** (324 / 5000)
+**Lyrics** (290 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-A quiet 1930s radio playing in a hotel foyer. Soft felt piano repeating a four-bar figure. One distant muted saxophone holding long notes. Vinyl crackle and bakelite hiss. No drums. No vocals. No choir. No melody that wants to be sung. Same texture from the first second to the last. Ready to loop.
+Hotel foyer, not a jazz stage. A felt piano plays a slow four-bar foxtrot figure, very quiet. Far in the next room a muted saxophone holds long notes, never a solo. Vinyl and bakelite hiss. No drums. No bass. No clarinet. Same texture the whole way. Ready to loop.
 ```
 
 ### 2. `play-theme` — Ticket window
 
-**Style** (461 / 1000)
+**Style** (219 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, slightly brighter than a foyer, light brushed snare far away, still sparse
+gentle swing 92 BPM, lead clarinet, light brushed snare, soft upright bass, ticket-window energy, brighter than a foyer, instrumental looping bed, 1930s analog, no saxophone, no trumpet, no vocals, no chorus, no trailer
 ```
 
-**Lyrics** (288 / 5000)
+**Lyrics** (279 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-Late-night jazz club just before the set. Felt piano, a little more forward. Soft clarinet in the distance. Very light brushed snare, almost felt more than heard. Vinyl crackle. No vocals. No chorus. No build. Constant gentle swing, ready to loop. Not a fanfare.
+A club ticket window just before the set. Clarinet plays short gentle phrases, not a saxophone. Light brushes on a snare, never a fill. Soft upright bass. Brighter and more forward than a foyer radio. No vocals. No chorus. Constant swing, ready to loop.
 ```
 
 ### 3. `lobby-theme` — Club before the show
 
-**Style** (465 / 1000)
+**Style** (233 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, salon jazz, soft double bass, brushed drums very quiet, still a background bed
+salon jazz combo 100 BPM, muted trumpet, walking upright bass, brushed drums, guests sitting down, fullest band in the set, instrumental looping bed, 1930s analog, no solo piano, no ambient drone, no vocals, no applause, no countdown
 ```
 
-**Lyrics** (241 / 5000)
+**Lyrics** (239 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-A small 1930s jazz salon while guests sit down. Felt piano ostinato, warm double bass, one muted trumpet far off. Soft brushes on a snare, never a fill. No vocals. No applause. No countdown. Even energy, loop-ready.
+A small salon while guests take chairs. This is the only track with a real combo: muted trumpet, walking bass, brushes. Felt piano supports, it does not lead. Even energy, never a fill, never applause. Loop-ready.
 ```
 
 ### 4. `night-ambient` — Velvet veil
 
-**Style** (460 / 1000)
+**Style** (244 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, almost ambient, no drums, no saxophone melody, low felt piano, radio hush
+dark ambient drone, no tempo, bakelite radio static, velvet hush, one very low felt-piano note every eight bars, clarinet as a pad not a melody, no saxophone, no drums, no bass line, no swing, instrumental seamless loop, 1930s analog, no vocals
 ```
 
-**Lyrics** (303 / 5000)
+**Lyrics** (240 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-Night in a closed cabinet room. Velvet and bakelite radio hush. One very low felt-piano note every few bars. Faint vinyl and distant clarinet held as a pad, not a tune. No drums. No vocals. No choir. No ticking clock. The same quiet for every listener. Seamless loop, no swell.
+A closed cabinet at night. Not jazz. Radio hush and velvet. One low piano note, then a long wait. Clarinet is a pad, never a tune. No drums. No saxophone. No pulse. Identical for every listener. Seamless, no swell.
 ```
 
 ### 5. `discuss-theme` — Salon argument
 
-**Style** (478 / 1000)
+**Style** (244 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, slow salon jazz, soft piano and bass, saxophone only as long pads, plenty of air for speech
+conversation underscore, plucked upright bass ostinato, 80 BPM, lots of silence between notes, no horn solos, no saxophone, no trumpet, no drums, speech must sit on top, instrumental looping bed, 1930s wooden salon, analog, no vocals, no chorus
 ```
 
-**Lyrics** (332 / 5000)
+**Lyrics** (219 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-A 1930s salon where people are arguing at a wooden table. Underscore only. Felt piano and warm bass, slow. Muted saxophone plays long held notes in the background, never a solo. Lots of silence between phrases so spoken voices can sit on top. No drum fills. No vocals. Constant, loop-ready, never climaxes.
+People arguing at a wooden table. The lead is a plucked upright bass, slow, with holes so voices can sit on top. Almost no piano. No saxophone. No trumpet. No drums. Never a climax. Loop-ready.
 ```
 
 ### 6. `discuss-late` — Salon after midnight
 
-**Style** (449 / 1000)
+**Style** (202 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, darker salon jazz, minor, low piano, lonely clarinet, no drums
+bass clarinet, minor key, 58 BPM, after midnight, no trumpet, no brushes, no major foxtrot, low and lonely, still a talk-over bed, instrumental loop, 1930s analog, no horror stinger, no chase, no vocals
 ```
 
-**Lyrics** (257 / 5000)
+**Lyrics** (237 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-The same wooden salon after midnight. Felt piano in a minor key, slower. Lonely clarinet, very quiet. No drums. No vocals. No horror stingers. No chase music. Still a background loop people can talk over. Even, dark, ready to loop.
+The same salon after midnight, but the lead is now a bass clarinet in a minor key, slower. No walking bass like the early talk. No trumpet. No brushes. Still quiet enough to talk over. Even, dark, ready to loop.
 ```
 
 ### 7. `vote-theme` — Held breath
 
-**Style** (454 / 1000)
+**Style** (228 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, tense sparse piano, no drums, no clock ticks, held muted brass pads
+suspense sparse piano, one note at a time, muted trombone pad, no swing, no drums, no saxophone, no clarinet, no brushes, no clock ticks, no metronome, held breath, instrumental looping bed, 1930s cabinet room, analog, no vocals
 ```
 
-**Lyrics** (261 / 5000)
+**Lyrics** (210 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-A tense pause in a 1930s cabinet room before a vote is counted. Sparse felt piano, one note at a time. Muted brass pad underneath. No drums. No metronome. No clock ticks. No vocals. Held breath, not a thriller cue. Seamless quiet loop.
+A vote not yet counted. Not jazz. Prepared-feeling piano, one note, then wait. A muted trombone pad underneath, no melody. No drums. No clock. No saxophone. Held breath the whole loop.
 ```
 
 ### 8. `legislative-theme` — Quiet desk
 
-**Style** (451 / 1000)
+**Style** (215 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, almost silent, wood and felt piano, no saxophone licks, no drums
+almost silent, vinyl crackle, wooden room tone, one felt-piano fifth repeating slowly, no horns, no bass, no drums, no saxophone, quietest track in the set, instrumental loop, 1930s desk, analog, no vocals, no riser
 ```
 
-**Lyrics** (274 / 5000)
+**Lyrics** (200 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-A president's wooden desk at night. Almost silence. Soft vinyl. One felt-piano interval repeating slowly. A little room tone. No drums. No saxophone melody. No vocals. No tension riser. The quietest loop in the set. Ready to loop under card sounds.
+A night desk. Almost nothing. Vinyl and wood air. One felt-piano interval, a fifth, repeating slowly. No horns. No bass. No drums. The quietest loop. Ready under card sounds.
 ```
 
 ### 9. `power-theme` — Cabinet seal
 
-**Style** (449 / 1000)
+**Style** (206 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, low piano and clarinet, cabinet-room noir, no drums, no horror
+noir bowed double bass, low clarinet chalumeau, four-note grave figure, no swing, no trumpet, no bright piano, no drums, cabinet room, instrumental looping underscore, 1930s analog, no horror cue, no vocals
 ```
 
-**Lyrics** (311 / 5000)
+**Lyrics** (211 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-A sealed cabinet envelope opened on a walnut desk. Low felt piano, dark but formal. Quiet clarinet. No drums. No choir. No horror movie cue. No weapon sounds suggested in the music. Grave, short-phrase, looping underscore. Same mood for inspection, a peek at papers, or an empty chair.
+A sealed envelope on walnut. Bowed double bass and a low clarinet play a short grave figure, then it repeats. Not swing. Not the salon combo. Not the night drone. Formal, dark, looping.
 ```
 
 ### 10. `chaos-theme` — Third failure
 
-**Style** (452 / 1000)
+**Style** (199 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, low piano strings inside a wooden cabinet, no explosion, no drums
+inside piano string rumble, prepared piano, repeating low thud, no jazz combo, no melody, no drums, no saxophone, no explosion, instrumental looping bed, wooden cabinet, analog 1930s radio, no vocals
 ```
 
-**Lyrics** (274 / 5000)
+**Lyrics** (200 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-A low piano-string rumble inside a wooden cabinet, repeating. Grave, short decay, then the figure returns. No explosion. No percussion hits. No vocals. Not a sting that ends — a looping bed that can sit under a card flip. Dark, analog, 1930s radio.
+Inside a piano, strings rumble and decay, then the figure returns. Not a jazz club. Not a sting that ends. No explosion. No melody. Dark analog radio. Loop under a card flip.
 ```
 
 ### 11. `over-dawn` — Dawn coda
 
-**Style** (456 / 1000)
+**Style** (243 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, hopeful dawn, soft brass pads, felt piano, still a loop not a fanfare
+slow major salon 64 BPM, felt piano that resolves, distant muted trumpet long notes only, no drums, no bass, no clarinet, no saxophone, no organ, vinyl crackle, instrumental looping coda, 1930s, no hymn, no fanfare, no choir, no victory jingle
 ```
 
-**Lyrics** (266 / 5000)
+**Lyrics** (273 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-Dawn through a radio speaker. Soft felt piano and muted brass pads, hopeful but adult. No fanfare. No victory jingle. No choir. No vocals. A looping coda after the news has already been announced. Warm cream and sky-blue in sound. Seamless.
+The salon radio after the news. Felt piano plays a slow four-bar figure in major and it resolves. Far away a muted trumpet holds warm long notes, never a fanfare. Vinyl hiss. No drums. No bass. No clarinet. Not a hymn. Same texture. Ready to loop.
 ```
 
 ### 12. `over-dusk` — Dusk coda
 
-**Style** (455 / 1000)
+**Style** (188 / 1000)
 
 ```
-1930s Weimar late-night jazz club underscore, intimate analog recording, warm small-room reverb, faint vinyl crackle, bakelite radio hiss, felt piano, muted saxophone, clarinet, muted brass, instrumental only, seamless looping background bed, no intro swell, no ending, no fade-out, constant quiet energy, not a song with a chorus, not a cinematic trailer, not a video-game title theme, dusk, low strings and lonely clarinet, organ-adjacent pad, no anthem
+reed organ harmonium, cello, minor, dusk, same slow length as a dawn hymn but darker, no flugelhorn, no muted brass, no march, no anthem, instrumental looping coda, 1930s analog, no vocals
 ```
 
-**Lyrics** (286 / 5000)
+**Lyrics** (197 / 5000)
 
 ```
 [Instrumental]
 [Loop bed]
-Dusk in a closed cabinet. Low strings and a lonely clarinet. A dark wood organ-like pad, very quiet. Same length and shape as a hopeful dawn coda, only darker. No anthem. No march. No vocals. No villain laugh. Looping aftertaste after the news sting. Seamless.
+Dusk in a closed cabinet. Reed organ and cello, minor. Same slow shape as the dawn coda, opposite colour. No flugelhorn. No march. No anthem. Looping aftertaste. Seamless.
 ```
 
 ---
@@ -316,6 +329,7 @@ import menuThemeUrl from '../assets/sounds/music/menu-theme.mp3';
 
 const MUSIC = {
   'menu-theme': { src: menuThemeUrl, volume: 0.3 },
+  'play-theme': { src: playThemeUrl, volume: 0.32 },
 };
 ```
 
@@ -342,4 +356,5 @@ const MUSIC = {
 3. **P2 (1):** `discuss-late`
 
 Listen on a phone with Ravi Voice on, then off. If a bed fights
-speech, lower volume before rewriting the prompt.
+speech, lower volume before rewriting the prompt. **If two files
+could swap and you would not notice, regenerate** — they are clones.

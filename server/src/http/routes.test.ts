@@ -114,4 +114,64 @@ describe('room HTTP endpoints', () => {
     expect(throttled.status).toBe(429);
     expect((throttled.body as unknown as { code: string }).code).toBe('RATE_LIMITED');
   });
+
+  it('Should seat create and join with the requested player card', async () => {
+    const { app, repo } = await buildServer();
+    const created = (await createRoom(app, { avatar: 4 })).body;
+    expect(repo.resolve(created.code)?.room.players[0].avatar).toBe(4);
+
+    await httpJson(app, 'POST', `/api/rooms/${created.code}/join`, {
+      name: 'Ben',
+      avatar: 12,
+    });
+    expect(repo.resolve(created.code)?.room.players[1].avatar).toBe(12);
+  });
+});
+
+describe('profile HTTP endpoints', () => {
+  const clientId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+
+  it('Should persist a chosen player card and return it', async () => {
+    const { app } = await buildServer();
+    const saved = await httpJson<{ avatar: number }>(app, 'PUT', '/api/profile', {
+      avatar: 4,
+      clientId,
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.avatar).toBe(4);
+
+    const loaded = await httpJson<{ avatar: number }>(
+      app,
+      'GET',
+      `/api/profile?clientId=${clientId}`,
+    );
+    expect(loaded.status).toBe(200);
+    expect(loaded.body.avatar).toBe(4);
+  });
+
+  it('Should overwrite a previously saved player card', async () => {
+    const { app } = await buildServer();
+    await httpJson(app, 'PUT', '/api/profile', { avatar: 1, clientId });
+    const saved = await httpJson<{ avatar: number }>(app, 'PUT', '/api/profile', {
+      avatar: 9,
+      clientId,
+    });
+    expect(saved.body.avatar).toBe(9);
+  });
+
+  it('Should reject a save without a client id', async () => {
+    const { app } = await buildServer();
+    const { status } = await httpJson(app, 'PUT', '/api/profile', { avatar: 1 });
+    expect(status).toBe(400);
+  });
+
+  it('Should report an unknown profile as not found', async () => {
+    const { app } = await buildServer();
+    const { status } = await httpJson(
+      app,
+      'GET',
+      `/api/profile?clientId=${clientId}`,
+    );
+    expect(status).toBe(404);
+  });
 });

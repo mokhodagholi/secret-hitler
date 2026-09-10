@@ -1,4 +1,4 @@
-import { For, Show, onMount } from 'solid-js';
+import { For, Show, onCleanup, onMount } from 'solid-js';
 import type { ExecutivePower, Policy } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -25,13 +25,22 @@ const HINT_KEY = {
 export function PowerPanel(props: PowerPanelProps) {
   const { formatMessage } = props;
   const { animation, sound } = useApp();
+  const needsAck = () =>
+    props.power === 'policyPeek' || props.investigation != null;
+
   onMount(() => {
     if (props.power === 'policyPeek' && props.peek.length > 0) {
       sound.play('peek-flip');
     }
+    if (!needsAck()) return;
+    const lingerMs =
+      import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 200 : 4000;
+    const timer = window.setTimeout(() => {
+      if (props.power === 'policyPeek') sound.play('peek-done');
+      props.onContinue();
+    }, lingerMs);
+    onCleanup(() => clearTimeout(timer));
   });
-  const needsAck = () =>
-    props.power === 'policyPeek' || props.investigation != null;
 
   return (
     <div class={styles.votePanel}>
@@ -78,19 +87,6 @@ export function PowerPanel(props: PowerPanelProps) {
               })}
             </span>
           )}
-        </Show>
-
-        <Show when={needsAck()}>
-          <button
-            type="button"
-            class={styles.powerContinue}
-            onClick={() => {
-              if (props.power === 'policyPeek') sound.play('peek-done');
-              props.onContinue();
-            }}
-          >
-            {formatMessage('game.power.continue')}
-          </button>
         </Show>
       </Show>
     </div>

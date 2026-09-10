@@ -8,14 +8,20 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(2, 8, 16, 0.82);
+  background: transparent;
+  pointer-events: none;
+}
+
+.shift {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 360px;
 }
 
 .dialog {
   @include card;
   width: 100%;
-  max-width: 360px;
-  padding: 24px 20px;
+  padding: 20px 20px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;

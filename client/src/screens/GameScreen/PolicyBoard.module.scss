@@ -2,37 +2,36 @@
 
 // Liberal PNG is 600×300 with painted art at (21,31)–(577,270) → 557×240.
 // Fascist PNG is 600×400 with painted art at (29,62)–(574,318) → 546×257.
-// Tracks crop to those boxes so the 8px gap is between the painted edges,
-// and leftover table height stays with the player rows.
+// Tracks crop to those boxes so the 8px gap is between the painted edges.
+// The stack fills leftover table height so seats keep a fixed size above chat.
 $liberal-crop-w: 557;
 $liberal-crop-h: 240;
 $fascist-crop-w: 546;
 $fascist-crop-h: 257;
 $stack-gap: 8px;
-// Keep the stack under half the table so the two seat rows can grow.
-$board-max: 48cqh;
-
 .board {
   direction: ltr;
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   gap: $stack-gap;
-  // Sass would otherwise drop calc(); keep it so cqh math works in min().
   width: 92%;
-  width: #{'min(92%, calc((#{$board-max} - #{$stack-gap}) / (#{$liberal-crop-h} / #{$liberal-crop-w} + #{$fascist-crop-h} / #{$fascist-crop-w})))'};
-  max-width: none;
+  max-width: 92%;
   margin: 0 auto;
   padding: 2px 0 0;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .track {
   position: relative;
-  width: 100%;
+  height: calc((100% - #{$stack-gap}) / 2);
+  width: auto;
+  max-width: 100%;
   overflow: hidden;
-  flex-shrink: 0;
+  flex: 0 1 auto;
 }
 
 .trackLiberal {

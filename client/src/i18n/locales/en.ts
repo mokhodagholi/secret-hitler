@@ -18,11 +18,18 @@ export const en = {
   home: {
     play: 'Play',
     findGame: 'Find Game',
+    title: 'Secret Hitler',
+    chooseCard: 'Choose a player card',
     tagline: 'One night, a thousand secrets, one winner!',
     guest: 'Guest',
     rank: 'Rookie',
     live: 'Live',
     events: 'Events',
+  },
+  playerCards: {
+    title: 'Player Cards',
+    choose: 'Pick a card to use as your portrait.',
+    card: 'Player card {n}',
   },
   common: {
     comingSoon: 'Coming soon.',
@@ -79,6 +86,8 @@ export const en = {
     failBody:
       'Every failed vote advances the election tracker. After three failures in a row the country falls into chaos: the top policy is enacted automatically with no power, the tracker resets, and all term limits clear.',
     powersTitle: 'Presidential Powers',
+    powersBody:
+      'Some Fascist policies grant the President a one-time power. Which one depends on the player count and the board.',
     powers: {
       investigate: {
         title: 'Investigate Loyalty',
@@ -216,8 +225,9 @@ export const en = {
     soundEffects: 'Sound Effects',
     raviVoice: 'Ravi Voice',
     raviWho: 'Narrator',
-    raviFarid: 'Farid',
-    raviDilara: 'Dilara',
+    raviNarrator: {
+      daniel: 'Daniel',
+    },
     reduceMotion: 'Reduce Motion',
     other: 'Other',
     howToPlay: 'How to Play',
@@ -350,6 +360,7 @@ export const en = {
     chatTitle: 'Chat & Log',
     openChat: 'Open chat and game log',
     resizeChat: 'Resize chat',
+    moveDialog: 'Move panel',
     chatPlaceholder: 'Write a message…',
     chatSilentPlaceholder: 'Night — no talking yet…',
     send: 'Send',
@@ -368,7 +379,9 @@ export const en = {
     presidentDiscardHint: 'Tap a policy to discard',
     chancellorEnactHint: 'Tap a policy to enact',
     legislativeDeal: 'Three policies are drawn for the President…',
+    legislativeDealYou: 'Three policies are coming to you. Burn one.',
     legislativePass: 'Two policies pass to the Chancellor…',
+    legislativePassYou: 'Two policies are coming to you. Pick one.',
     presidentChoosing: '{name} is choosing a policy to discard…',
     presidentChoosingYou: 'You are choosing a policy to discard…',
     chancellorChoosing: '{name} is choosing a policy to enact…',
@@ -378,6 +391,7 @@ export const en = {
       investigateHint: 'Tap a player to investigate their loyalty',
       executeHint: 'Tap a player to execute',
       electHint: 'Tap a player to be the next President',
+      alreadyInvestigated: 'You already checked that player’s party.',
       investigationResult: '{name} belongs to the {party} party',
       inProgress: '{name} is using a presidential power…',
       continue: 'Continue',
@@ -513,8 +527,8 @@ export const en = {
     },
     power: {
       investigate: "The President must check a player's card.",
-      investigated: "The President has seen {name}'s party.",
-      investigatedYou: 'The President has seen your party.',
+      investigated: 'The President is checking their card.',
+      investigatedYou: 'Your card is being checked.',
       investigatedLiberal: 'Liberal.',
       investigatedFascist: 'Fascist.',
       peek: 'The President looks at the top three policies.',
@@ -591,8 +605,8 @@ export const en = {
     vetoProposed: 'The Chancellor proposes a veto.',
     vetoRejected: 'The President rejects the veto.',
     vetoAgreed: 'The President agrees to the veto — the government fails.',
-    investigated: "The President investigated {name}'s loyalty.",
-    investigatedYou: 'The President investigated your loyalty.',
+    investigated: 'The President is checking {name}’s card.',
+    investigatedYou: 'Your card is being checked.',
     executed: '{name} was executed.',
     executedYou: 'You were executed.',
     hitlerExecuted: 'Hitler was executed — the Liberals win!',

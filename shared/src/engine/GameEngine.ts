@@ -90,7 +90,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   // --- Lobby ---------------------------------------------------------------
 
-  addPlayer(name: string, asHost = false): Player | EngineError {
+  addPlayer(name: string, asHost = false, avatar?: number): Player | EngineError {
     const room = this.room;
     if (room.phase !== Phase.Lobby) {
       return err('ALREADY_STARTED', 'The game has already started.');
@@ -100,7 +100,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     }
 
     const isHost = asHost || room.players.length === 0;
-    const player = PlayerFactory.create(name, room.players.length, isHost);
+    const player = PlayerFactory.create(name, room.players.length, isHost, avatar);
     room.players.push(player);
     if (isHost) room.hostId = player.id;
 
@@ -217,6 +217,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.lastElectedChancellorId = null;
     room.activePower = null;
     room.investigatedIds = [];
+    room.investigations = [];
     room.peekedPolicies = [];
     room.investigation = null;
     room.specialElectionResumeAfterId = null;

@@ -1,6 +1,18 @@
 import { boolean, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 /**
+ * Chosen player card, keyed by a client-generated id and optional Bale user.
+ * Rooms still snapshot the index onto each seated player.
+ */
+export const profiles = pgTable('profiles', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  clientId: text('client_id').notNull().unique(),
+  baleUserId: text('bale_user_id').unique(),
+  avatar: integer('avatar').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
  * One finished game. Players have no persistent identity in Phase 1, so the
  * record stands alone — name + role are snapshotted per game. This is the seed
  * for Phase 2 profile/ELO aggregation.

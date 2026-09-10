@@ -103,6 +103,29 @@ describe('Room.viewFor — information hiding', () => {
     expect(seen.role).toBeNull();
   });
 
+  it('Should show an investigated party only to the President who checked', () => {
+    const game = startGame(['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay', 'Gus']);
+    const { room, players } = game;
+    const [president, ...rest] = players;
+    president.role = 'liberal';
+    rest.forEach((player, index) => {
+      player.role = index === rest.length - 1 ? 'hitler' : 'liberal';
+    });
+    room.investigations = [
+      { investigatorId: president.id, targetId: rest[0].id, party: 'liberal' },
+    ];
+
+    const presidentView = room.viewFor(president.id);
+    expect(presidentView.players.find((p) => p.id === rest[0].id)?.party).toBe(
+      'liberal',
+    );
+    expect(presidentView.players.find((p) => p.id === rest[1].id)?.party).toBeNull();
+
+    const bystander = room.viewFor(rest[1].id);
+    expect(bystander.players.find((p) => p.id === rest[0].id)?.party).toBeNull();
+    expect(bystander.players.find((p) => p.id === rest[0].id)?.role).toBeNull();
+  });
+
   it('Should count only lobby rooms as joinable in the public summary', () => {
     const { room } = startGame();
     expect(room.summary().phase).toBe(Phase.Nomination);

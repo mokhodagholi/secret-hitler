@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
-import { fireEvent, screen } from '@solidjs/testing-library';
+import { screen } from '@solidjs/testing-library';
 import { SettingsScreen } from './SettingsScreen';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
@@ -16,17 +16,24 @@ describe('SettingsScreen', () => {
     expect(screen.queryByText(en.settings.confirmActions)).toBeNull();
   });
 
-  it('Should ask before clearing local data', () => {
+  it('Should keep the extra Other links and the header gear off the page', () => {
     const harness = buildHarness();
-    harness.services.settings.set('profileName', 'Ana');
     renderWithApp(() => <SettingsScreen />, harness);
 
-    fireEvent.click(screen.getByText(en.settings.clearLocalData));
-    expect(screen.getByText(en.settings.clearLocalDataMessage)).toBeTruthy();
-    const confirm = screen
-      .getAllByRole('button', { name: en.settings.clearLocalData })
-      .at(-1);
-    fireEvent.click(confirm!);
-    expect(harness.services.settings.settings.profileName).toBe('');
+    expect(screen.queryByLabelText(en.settings.headerLabel)).toBeNull();
+    expect(screen.queryByText(en.settings.other)).toBeNull();
+    expect(screen.queryByText(en.settings.howToPlay)).toBeNull();
+    expect(screen.queryByText(en.settings.about)).toBeNull();
+    expect(screen.queryByText(en.settings.resetTutorials)).toBeNull();
+    expect(screen.queryByText(en.settings.clearLocalData)).toBeNull();
+    expect(screen.queryByText(en.settings.restorePurchases)).toBeNull();
+  });
+
+  it('Should show the narrator picker on Daniel', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <SettingsScreen />, harness);
+
+    expect(screen.getByText(en.settings.raviWho)).toBeTruthy();
+    expect(screen.getByText(en.settings.raviNarrator.daniel)).toBeTruthy();
   });
 });

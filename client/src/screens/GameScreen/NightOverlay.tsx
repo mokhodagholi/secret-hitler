@@ -58,6 +58,16 @@ function glanceKey(role: Role, playerCount: number): MessageKey {
     : 'ravi.private.nightFascistLarge';
 }
 
+function glanceLine(role: Role, playerCount: number): RaviLineId {
+  if (role === 'fascist') {
+    return playerCount <= 6
+      ? 'private.nightFascistSmall'
+      : 'private.nightFascistLarge';
+  }
+  // Liberals and Hitler: keep your eyes closed.
+  return 'private.nightLiberal';
+}
+
 function remaining(startedAt: number, durationMs: number): number {
   return Math.max(0, durationMs - (Date.now() - startedAt));
 }
@@ -153,8 +163,7 @@ export function NightOverlay(props: NightOverlayProps) {
     ravi.cancel();
     setBeat('glance');
     sound.play('glance-tick');
-    // Same spoken line on every phone so a sofa cannot hear who is Fascist.
-    void ravi.speak('private.nightLiberal');
+    void ravi.speak(glanceLine(props.role, props.playerCount));
   }
 
   function finish(): void {
@@ -176,8 +185,8 @@ export function NightOverlay(props: NightOverlayProps) {
   const showingLook = () => beat() === 'look';
   const seeingTeam = () => {
     if (beat() !== 'glance' || props.role === 'liberal') return false;
-    // 7–10: Hitler keeps eyes closed; Fascists see him, he does not see them.
-    if (props.role === 'hitler' && props.playerCount > 6) return false;
+    // Hitler always keeps eyes closed; Fascists look at their teammates.
+    if (props.role === 'hitler') return false;
     return true;
   };
   const raisingHand = () =>

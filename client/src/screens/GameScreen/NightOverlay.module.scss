@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .stage {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 80;
   display: grid;
@@ -223,8 +223,12 @@
 
   em {
     font-style: normal;
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     color: $gold;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

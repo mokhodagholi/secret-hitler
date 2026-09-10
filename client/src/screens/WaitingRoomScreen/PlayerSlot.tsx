@@ -1,6 +1,5 @@
 import { Show } from 'solid-js';
-import { avatarImage } from '../../assets/avatars';
-import paperFrame from '../../assets/avatars/avatar_placeholder.png';
+import { avatarImage, PAPER_FRAME } from '../../assets/avatars';
 import styles from './PlayerSlot.module.scss';
 
 export interface SlotPlayer {
@@ -14,6 +13,8 @@ export interface SlotPlayer {
 export interface PlayerSlotProps {
   player?: SlotPlayer;
   awaitingLabel: string;
+  /** Locale-formatted seat number (Persian digits in FA). */
+  seatLabel?: string;
   /** Host tapping a guest to kick them. */
   onSelect?: () => void;
   isYou?: boolean;
@@ -35,7 +36,7 @@ export function PlayerSlot(props: PlayerSlotProps) {
           aria-label={props.awaitingLabel}
         >
           <span class={styles.paper}>
-            <img class={styles.paperFrame} src={paperFrame} alt="" />
+            <img class={styles.paperFrame} src={PAPER_FRAME} alt="" />
           </span>
         </div>
       }
@@ -53,14 +54,14 @@ export function PlayerSlot(props: PlayerSlotProps) {
               [styles.paperYou]: !!props.isYou,
             }}
           >
-            <img class={styles.paperFrame} src={paperFrame} alt="" />
+            <img class={styles.paperFrame} src={PAPER_FRAME} alt="" />
             <img
               class={styles.face}
               src={avatarImage(player().avatar)}
               alt=""
               aria-hidden="true"
             />
-            <span class={styles.badge}>{player().seat + 1}</span>
+            <span class={styles.badge}>{props.seatLabel ?? player().seat + 1}</span>
             <span class={styles.name} dir="auto">
               {shownName()}
             </span>

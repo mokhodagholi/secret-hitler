@@ -61,11 +61,18 @@ export class BaleService {
     }
     if (!response.ok) return;
 
-    const body = (await response.json()) as { id?: number; firstName?: string };
+    const body = (await response.json()) as {
+      id?: number;
+      firstName?: string;
+      avatar?: number;
+    };
     if (typeof body.id !== 'number' || !body.firstName?.trim()) return;
 
     const user = { id: body.id, firstName: body.firstName.trim() };
     this.setUser(user);
     settings.set('profileName', user.firstName);
+    if (typeof body.avatar === 'number') {
+      settings.set('avatar', body.avatar);
+    }
   }
 }

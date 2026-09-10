@@ -84,6 +84,82 @@ describe('GameScreen — voting', () => {
     expect(screen.getByText(/waiting for others/i)).toBeTruthy();
   });
 
+  it('Should keep the vote dock on the table so seats stay in view', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(document.querySelector('[data-game-table] [data-ballot-pile]')).toBeTruthy();
+    expect(document.querySelector('[data-seat-id="cal"]')).toBeTruthy();
+  });
+
+  it('Should let the player drag the vote panel aside', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    const handle = screen.getByRole('separator', { name: en.game.moveDialog });
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(handle, { clientX: 50, clientY: 40, pointerId: 1 });
+
+    expect(screen.getByRole('dialog').parentElement?.style.transform).toBe(
+      'translate(40px, 30px)',
+    );
+  });
+
+  it('Should throw a face-down ballot onto the table when the player votes', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ja!' }));
+    await waitFor(() => {
+      expect(document.querySelector('[data-ballot="you"]')).toBeTruthy();
+    });
+  });
+
+  it('Should throw a face-down ballot when someone else votes', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState(view);
+    harness.pushState({
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cal' ? { ...player, hasVoted: true } : player,
+      ),
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-ballot="cal"]')).toBeTruthy();
+    });
+    expect(document.querySelector('[data-ballot="you"]')).toBeNull();
+  });
+
+  it('Should stack already-cast ballots when joining a vote late', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cal' || player.id === 'pres'
+          ? { ...player, hasVoted: true }
+          : player,
+      ),
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-ballot="cal"]')).toBeTruthy();
+      expect(document.querySelector('[data-ballot="pres"]')).toBeTruthy();
+    });
+  });
+
   it('Should show the secret role on the deck strip after the opening look', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -383,6 +459,10 @@ describe('GameScreen — nomination', () => {
 
     expect(screen.queryByText(en.game.nominateTitle)).toBeNull();
     expect(screen.getByText(en.game.discussionOpen)).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: en.game.startNomination }),
+    ).toBeTruthy();
+    expect(screen.queryByText(en.game.chat)).toBeNull();
   });
 
   it('Should notify the table when a government fails', () => {
@@ -450,6 +530,25 @@ describe('GameScreen — presidential power', () => {
     });
   });
 
+  it('Should let the President investigate the last government', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'investigate',
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      ineligibleChancellors: ['cal', 'pres'],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'useSpecialPower', targetId: 'cal' },
+    });
+  });
+
   it('Should reveal the party card in the centre after investigating', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -485,10 +584,116 @@ describe('GameScreen — presidential power', () => {
     await waitFor(() => {
       expect(screen.getByText(caption)).toBeTruthy();
     });
-    expect(screen.getByRole('button', { name: en.game.power.continue })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.game.power.continue })).toBeNull();
     await waitFor(() => {
       expect(harness.services.ravi.line()).toBe(en.ravi.power.investigatedFascist);
     });
+  });
+
+  it('Should keep the investigated party on that seat for the President', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    const powerView = {
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'investigate' as const,
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      players: view.players.map((player) =>
+        player.id === 'you' ? { ...player, isPresident: true } : player,
+      ),
+    };
+    harness.pushState(powerView);
+    harness.socket.emit({
+      type: 'log',
+      entry: {
+        id: 'log-1',
+        code: 'investigated',
+        params: { name: 'Cal' },
+        at: Date.now(),
+      },
+    });
+    harness.pushState({
+      ...powerView,
+      you: { ...powerView.you, investigation: { name: 'Cal', party: 'fascist' } },
+      players: powerView.players.map((player) =>
+        player.id === 'cal' ? { ...player, party: 'fascist' as const } : player,
+      ),
+    });
+
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.power.investigatedFascist);
+    });
+    await waitFor(() => {
+      expect(harness.socket.lastSent('command')).toEqual({
+        type: 'command',
+        command: { kind: 'useSpecialPower', targetId: '' },
+      });
+    });
+
+    harness.pushState({
+      ...powerView,
+      phase: Phase.Nomination,
+      activePower: null,
+      you: { ...powerView.you, investigation: null },
+      players: powerView.players.map((player) =>
+        player.id === 'cal' ? { ...player, party: 'fascist' as const } : player,
+      ),
+    });
+
+    expect(document.querySelector('[data-seat-id="cal"] [data-party="fascist"]')).toBeTruthy();
+  });
+
+  it('Should not re-investigate a player the President already checked', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'investigate' as const,
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      players: view.players.map((player) =>
+        player.id === 'cal' ? { ...player, party: 'fascist' as const } : player,
+      ),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.getByText(en.game.power.alreadyInvestigated)).toBeTruthy();
+    expect(harness.socket.lastSent('command')).toBeUndefined();
+  });
+
+  it('Should not show the party card to the player being investigated', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'investigate' as const,
+      you: { ...view.you, role: 'fascist', investigation: null },
+    });
+    harness.socket.emit({
+      type: 'log',
+      entry: {
+        id: 'log-1',
+        code: 'investigated',
+        params: { name: 'You' },
+        at: Date.now(),
+      },
+    });
+
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.power.investigatedYou);
+    });
+    expect(screen.queryByRole('button', { name: en.game.power.continue })).toBeNull();
+    expect(
+      screen.queryByText(
+        en.game.power.investigationResult
+          .replace('{name}', 'You')
+          .replace('{party}', en.game.fascist),
+      ),
+    ).toBeNull();
   });
 });
 
@@ -516,6 +721,22 @@ describe('GameScreen — players modal', () => {
 
     openPlayers();
     expect(screen.getByText(en.role.hitler)).toBeTruthy();
+  });
+
+  it('Should show an investigated party in the modal when the role stays hidden', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cal' ? { ...player, party: 'fascist' as const } : player,
+      ),
+    });
+
+    openPlayers();
+    expect(screen.getByText(en.game.fascist)).toBeTruthy();
+    expect(screen.queryByText(en.role.hitler)).toBeNull();
   });
 });
 

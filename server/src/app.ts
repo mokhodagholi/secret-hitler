@@ -10,6 +10,8 @@ import { registerRoutes } from './http/routes';
 import { GameResultRecorder } from './history/GameResultRecorder';
 import type { GameHistoryStore } from './history/GameHistoryStore';
 import { InMemoryGameHistoryStore } from './history/InMemoryGameHistoryStore';
+import type { ProfileStore } from './profiles/ProfileStore';
+import { InMemoryProfileStore } from './profiles/InMemoryProfileStore';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import type { BaleRuntime } from './bale/webhook';
 
@@ -28,6 +30,8 @@ export interface ServerOptions {
    * default to an in-memory store. The server never runs without a store.
    */
   history?: GameHistoryStore;
+  /** Store for chosen player cards. Tests default to in-memory. */
+  profiles?: ProfileStore;
   /** Public HTTPS origin for share links and the Bale mini-app. */
   publicUrl?: string;
   /** Present when BALE_BOT_TOKEN is configured. */
@@ -57,6 +61,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   const tokens = new TokenStore();
   const sockets = new SocketHandler(repo, tokens, seats);
   const history = options.history ?? new InMemoryGameHistoryStore();
+  const profiles = options.profiles ?? new InMemoryProfileStore();
   const recorder = new GameResultRecorder(history);
 
   app.get('/health', async () => ({ status: 'ok', shared: SHARED_VERSION }));
@@ -66,6 +71,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     sockets,
     recorder,
     history,
+    profiles,
     publicUrl: options.publicUrl,
     bale,
   });

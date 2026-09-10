@@ -1,4 +1,5 @@
 import { EFFECT_URLS } from '../assets/sounds/effects/clips';
+import { MUSIC_URLS } from '../assets/sounds/music/clips';
 import type { SettingsService } from './SettingsService';
 
 interface SoundDefinition {
@@ -63,8 +64,21 @@ const EFFECTS = {
   'timer-urgent': { src: EFFECT_URLS['timer-urgent'], volume: 0.5 },
 } satisfies Record<string, SoundDefinition>;
 
+const MUSIC_FADE_MS = 600;
+
 const MUSIC = {
-  // 'menu-theme': { src: menuThemeUrl, volume: 0.4 },
+  'menu-theme': { src: MUSIC_URLS['menu-theme'], volume: 0.3 },
+  'play-theme': { src: MUSIC_URLS['play-theme'], volume: 0.32 },
+  'lobby-theme': { src: MUSIC_URLS['lobby-theme'], volume: 0.34 },
+  'night-ambient': { src: MUSIC_URLS['night-ambient'], volume: 0.24 },
+  'discuss-theme': { src: MUSIC_URLS['discuss-theme'], volume: 0.28 },
+  'discuss-late': { src: MUSIC_URLS['discuss-late'], volume: 0.26 },
+  'vote-theme': { src: MUSIC_URLS['vote-theme'], volume: 0.26 },
+  'legislative-theme': { src: MUSIC_URLS['legislative-theme'], volume: 0.22 },
+  'power-theme': { src: MUSIC_URLS['power-theme'], volume: 0.26 },
+  'chaos-theme': { src: MUSIC_URLS['chaos-theme'], volume: 0.28 },
+  'over-dawn': { src: MUSIC_URLS['over-dawn'], volume: 0.32 },
+  'over-dusk': { src: MUSIC_URLS['over-dusk'], volume: 0.32 },
 } satisfies Record<string, SoundDefinition>;
 
 export type SoundEffect = keyof typeof EFFECTS;
@@ -103,7 +117,25 @@ export class SoundService {
   /** Start a looping track, replacing whatever is playing. No-op while Music is off. */
   playMusic(track: MusicTrack): void {
     if (this.musicTrack === track && this.music) return;
-    this.stopMusic();
+    if (this.musicTrack === track && !this.settings.settings.music) return;
+    const outgoing = this.music;
+    this.music = null;
+    if (outgoing) {
+      const from = outgoing.volume;
+      const started = Date.now();
+      const tick = () => {
+        const t = Math.min(1, (Date.now() - started) / MUSIC_FADE_MS);
+        try {
+          outgoing.volume = from * (1 - t);
+        } catch {
+          outgoing.pause();
+          return;
+        }
+        if (t < 1) setTimeout(tick, 50);
+        else outgoing.pause();
+      };
+      tick();
+    }
     this.musicTrack = track;
     if (!canPlayAudio || !this.settings.settings.music) return;
     const { src, volume = 1 } = MUSIC[track];

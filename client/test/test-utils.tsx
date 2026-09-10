@@ -135,6 +135,7 @@ export function makePlayer(overrides: Partial<PublicPlayer> = {}): PublicPlayer 
     isChancellor: false,
     hasVoted: false,
     role: null,
+    party: null,
     ...overrides,
   };
 }

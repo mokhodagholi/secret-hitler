@@ -25,7 +25,7 @@ export async function listenServer(minPlayers = 3): Promise<LiveServer> {
 
 export async function httpJson<T>(
   app: FastifyInstance,
-  method: 'POST' | 'GET',
+  method: 'POST' | 'GET' | 'PUT',
   url: string,
   body?: unknown,
 ): Promise<{ status: number; body: T }> {

@@ -6,6 +6,12 @@ export type Role = 'liberal' | 'fascist' | 'hitler';
 
 export type Faction = 'liberal' | 'fascist';
 
+/** Party membership Investigate reveals. Hitler's card reads Fascist. */
+export function partyOf(role: Role | null | undefined): Faction | null {
+  if (role == null) return null;
+  return role === 'liberal' ? 'liberal' : 'fascist';
+}
+
 export type Policy = 'liberal' | 'fascist';
 
 export type Vote = 'ja' | 'nein';
@@ -67,6 +73,12 @@ export interface PublicPlayer {
   hasVoted: boolean;
   /** Revealed role, or null when still hidden to the viewer. */
   role: Role | null;
+  /**
+   * Party membership this viewer has learned (Investigate). Null when they
+   * have not checked this player — never the secret role, and Hitler reads
+   * Fascist.
+   */
+  party: Faction | null;
 }
 
 /** Policy board / election state surfaced to all clients. */
@@ -207,9 +219,9 @@ export const HOST_MIGRATION_GRACE_MS = 30_000;
 
 /** Opening night: face-down cards fly to every seat. */
 export const OPENING_DEAL_MS = 10_000;
-/** Opening night: private look at your role and party card. */
-export const OPENING_LOOK_MS = 12_000;
-/** Opening night: Fascists glance at teammates; Liberals keep eyes closed. */
+/** Opening night: private look — longest spoken pair (night.start + youFascist) + 2s. */
+export const OPENING_LOOK_MS = 18_000;
+/** Opening night: glance — longest teammate line (nightFascistLarge) + 2s. */
 export const OPENING_GLANCE_MS = 9_000;
 /** Full opening ceremony. Chat and the first President stay hidden until this elapses. */
 export const OPENING_CEREMONY_MS =

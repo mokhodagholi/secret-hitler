@@ -97,23 +97,35 @@ describe('SpecialPowerPhase — 7-player powers', () => {
     enactFascist(game, 1); // 2nd fascist policy → Investigate in 7–8 player games
 
     expect(game.room.activePower).toBe('investigate');
+    const investigatorId = game.room.presidentId!;
     const target = game.players.find((p) => p.role === 'hitler')!;
-    game.engine.handleCommand(game.room.presidentId!, {
+    game.engine.handleCommand(investigatorId, {
       kind: 'useSpecialPower',
       targetId: target.id,
     });
 
-    const result = game.room.viewFor(game.room.presidentId!).you.investigation;
+    const result = game.room.viewFor(investigatorId).you.investigation;
     expect(result).toEqual({ name: target.name, party: 'fascist' });
+    expect(
+      game.room.viewFor(investigatorId).players.find((p) => p.id === target.id)
+        ?.party,
+    ).toBe('fascist');
+    expect(
+      game.room.viewFor(target.id).players.find((p) => p.id === target.id)?.party,
+    ).toBeNull();
 
     // A second investigate of the same player is rejected before acknowledging.
-    const repeat = game.engine.handleCommand(game.room.presidentId!, {
+    const repeat = game.engine.handleCommand(investigatorId, {
       kind: 'useSpecialPower',
       targetId: target.id,
     });
     // Acknowledging the result advances the round.
     expect(repeat).toBeNull();
     expect(game.room.phase).toBe(Phase.Nomination);
+    expect(
+      game.room.viewFor(investigatorId).players.find((p) => p.id === target.id)
+        ?.party,
+    ).toBe('fascist');
   });
 
   it('Should hand the presidency to the special-election pick', () => {

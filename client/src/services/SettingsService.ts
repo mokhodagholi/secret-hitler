@@ -1,11 +1,15 @@
 import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
 import { MAX_PLAYERS, MIN_PLAYERS } from '@secret-hitler/shared';
 import { DEFAULT_LANGUAGE, type Language } from '../i18n';
-import type { RaviWho } from './RaviService';
+import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 
 export interface SettingsState {
   /** Display name used for every room you create or join. */
   profileName: string;
+  /** Stable id so the server can store this browser's player card. */
+  profileId: string;
+  /** Index into the illustrated player-card portraits. */
+  avatar: number;
   playerCount: number;
   timerEnabled: boolean;
   confirmActions: boolean;
@@ -21,8 +25,12 @@ export interface SettingsState {
   reduceMotion: boolean;
 }
 
+const PROFILE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const DEFAULTS: SettingsState = {
   profileName: '',
+  profileId: '',
+  avatar: 0,
   playerCount: 7,
   timerEnabled: false,
   confirmActions: true,
@@ -31,7 +39,7 @@ const DEFAULTS: SettingsState = {
   music: true,
   soundEffects: true,
   raviVoice: true,
-  raviWho: 'farid',
+  raviWho: 'daniel',
   reduceMotion: false,
 };
 
@@ -67,7 +75,9 @@ export class SettingsService {
   }
 
   cycleRaviWho(): void {
-    this.set('raviWho', 'farid');
+    const voices = Object.keys(RAVI_CLIPS) as RaviWho[];
+    const i = voices.indexOf(this.settings.raviWho);
+    this.set('raviWho', voices[(i + 1) % voices.length]);
   }
 
   resetTutorials(): void {
@@ -76,18 +86,31 @@ export class SettingsService {
 
   clearLocalData(): void {
     localStorage.clear();
-    this.update({ ...DEFAULTS });
+    this.update({ ...DEFAULTS, profileId: crypto.randomUUID() });
   }
 
   private static load(): SettingsState {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const loaded = raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
-      loaded.raviWho = 'farid';
-      return loaded;
+      if (!(loaded.raviWho in RAVI_CLIPS)) {
+        loaded.raviWho = DEFAULTS.raviWho;
+      }
+      return SettingsService.withProfileId(loaded);
     } catch {
-      return { ...DEFAULTS };
+      return SettingsService.withProfileId({ ...DEFAULTS });
     }
+  }
+
+  private static withProfileId(state: SettingsState): SettingsState {
+    if (PROFILE_ID.test(state.profileId)) return state;
+    const next = { ...state, profileId: crypto.randomUUID() };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* private mode */
+    }
+    return next;
   }
 
   private persist(): void {

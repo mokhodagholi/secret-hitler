@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { buildServer } from './app';
 import { DrizzleGameHistoryStore } from './history/DrizzleGameHistoryStore';
+import { DrizzleProfileStore } from './profiles/DrizzleProfileStore';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import { registerBaleCommands, type BaleRuntime } from './bale/webhook';
 import { drizzleFolder, migrateDatabase } from './db/migrate';
@@ -52,10 +53,11 @@ async function main() {
 
   await migrateDatabase(databaseUrl, drizzleFolder(__dirname));
   const history = DrizzleGameHistoryStore.fromUrl(databaseUrl);
+  const profiles = DrizzleProfileStore.fromUrl(databaseUrl);
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
 
-  const { app } = await buildServer({ logger: true, history, publicUrl, bale });
+  const { app } = await buildServer({ logger: true, history, profiles, publicUrl, bale });
 
   app.log.info('Game history persistence enabled.');
   if (bale) {

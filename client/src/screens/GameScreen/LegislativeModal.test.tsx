@@ -13,6 +13,9 @@ function renderModal(
     policies: Policy[];
     startedAt: number;
     secondsLeft: number;
+    youId: string;
+    presidentId: string;
+    chancellorId: string;
   }> = {},
 ) {
   renderWithApp(
@@ -20,8 +23,9 @@ function renderModal(
       <LegislativeModal
         mode={overrides.mode ?? 'discard'}
         policies={overrides.policies ?? ['liberal', 'fascist', 'fascist']}
-        presidentId="you"
-        chancellorId="cal"
+        presidentId={overrides.presidentId ?? 'you'}
+        chancellorId={overrides.chancellorId ?? 'cal'}
+        youId={overrides.youId ?? 'you'}
         presidentName="You"
         chancellorName="Cal"
         secondsLeft={overrides.secondsLeft ?? 18}
@@ -42,7 +46,7 @@ describe('LegislativeModal', () => {
     harness.services.settings.set('raviVoice', false);
     renderModal(harness);
 
-    expect(screen.getByText(en.game.legislativeDeal)).toBeTruthy();
+    expect(screen.getByText(en.game.legislativeDealYou)).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.game.liberal })).toBeNull();
     expect(screen.queryByText('18s')).toBeNull();
 
@@ -56,7 +60,7 @@ describe('LegislativeModal', () => {
 
   it('Should keep policy faces private from spectators', async () => {
     const harness = buildHarness({ seated: true });
-    renderModal(harness, { policies: [] });
+    renderModal(harness, { policies: [], youId: 'cal' });
 
     expect(screen.getByText(en.game.legislativeDeal)).toBeTruthy();
     await waitFor(() => {
@@ -85,6 +89,7 @@ describe('LegislativeModal', () => {
           policies={policies()}
           presidentId="you"
           chancellorId="cal"
+          youId="you"
           presidentName="You"
           chancellorName="Cal"
           secondsLeft={18}
@@ -129,6 +134,40 @@ describe('LegislativeModal', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: en.game.liberal })).toBeTruthy();
     });
-    expect(screen.queryByText(en.game.legislativeDeal)).toBeNull();
+    expect(screen.queryByText(en.game.legislativeDealYou)).toBeNull();
+  });
+
+  it('Should tell the President the three policies are theirs', () => {
+    const harness = buildHarness({ seated: true });
+    renderModal(harness);
+    expect(screen.getByText(en.game.legislativeDealYou)).toBeTruthy();
+  });
+
+  it('Should tell the Chancellor the two policies are theirs', () => {
+    const harness = buildHarness({ seated: true });
+    renderModal(harness, {
+      mode: 'enact',
+      policies: ['liberal', 'fascist'],
+      youId: 'cal',
+    });
+    expect(screen.getByText(en.game.legislativePassYou)).toBeTruthy();
+  });
+
+  it('Should let the player drag the legislative panel aside', () => {
+    const harness = buildHarness({ seated: true });
+    renderModal(harness);
+
+    const handle = screen.getByRole('separator', { name: en.game.moveDialog });
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 8,
+      clientY: 8,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(handle, { clientX: 28, clientY: 48, pointerId: 1 });
+
+    expect(screen.getByRole('dialog').parentElement?.style.transform).toBe(
+      'translate(20px, 40px)',
+    );
   });
 });

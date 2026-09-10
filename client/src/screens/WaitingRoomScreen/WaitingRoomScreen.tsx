@@ -150,7 +150,7 @@ export function WaitingRoomScreen() {
   };
 
   return (
-    <Screen>
+    <Screen fill>
       <div class={styles.scene}>
         <div class={styles.backdrop} aria-hidden="true" />
 
@@ -281,6 +281,9 @@ export function WaitingRoomScreen() {
                 connected: player.connected,
               }}
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
+              seatLabel={formatMessage('game.seatNumber', {
+                n: player.seat + 1,
+              })}
               isYou={player.id === props.state.you.id}
               youLabel={formatMessage('game.you')}
               onSelect={

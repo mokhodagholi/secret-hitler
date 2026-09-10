@@ -2,6 +2,7 @@ import {
   createContext,
   createEffect,
   on,
+  onCleanup,
   useContext,
   type ParentProps,
 } from 'solid-js';
@@ -14,6 +15,7 @@ import { SoundService } from './SoundService';
 import { AnimationService } from './AnimationService';
 import { RaviService } from './RaviService';
 import { BaleService } from './BaleService';
+import { nextMusicCheckMs, trackForScene } from './music';
 
 export interface AppServices {
   nav: NavigationService;
@@ -50,7 +52,12 @@ export function AppProvider(
   };
 
   if (!overrides.bale) {
-    void services.bale.boot(settings, services.nav);
+    void services.bale.boot(settings, services.nav).then(() => {
+      if (services.bale.user() != null) return;
+      void services.game.loadProfile(settings.settings.profileId).then((avatar) => {
+        if (avatar != null) settings.set('avatar', avatar);
+      });
+    });
   }
 
   // Keep the document's language and reading direction in sync with the
@@ -72,6 +79,30 @@ export function AppProvider(
   createEffect(() =>
     services.sound.setMusicEnabled(services.settings.settings.music),
   );
+
+  // One looping bed per room. Chat / menu / players keep whatever is playing.
+  createEffect(() => {
+    const scene = {
+      screen: services.nav.screen(),
+      roomClosed: services.game.roomClosedNotice() != null,
+      view: services.game.view(),
+      logs: services.game.logEntries(),
+    };
+    services.sound.playMusic(trackForScene(scene));
+    const wait = nextMusicCheckMs(scene);
+    if (wait == null) return;
+    const id = setTimeout(() => {
+      services.sound.playMusic(
+        trackForScene({
+          screen: services.nav.screen(),
+          roomClosed: services.game.roomClosedNotice() != null,
+          view: services.game.view(),
+          logs: services.game.logEntries(),
+        }),
+      );
+    }, wait);
+    onCleanup(() => clearTimeout(id));
+  });
 
   return (
     <AppContext.Provider value={services}>{props.children}</AppContext.Provider>

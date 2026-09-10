@@ -2,6 +2,8 @@ import { onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage } from '../../i18n';
 import { avatarImage } from '../../assets/avatars';
+import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
+import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import styles from './ChancellorReveal.module.scss';
 
 export interface ChancellorRevealProps {
@@ -17,12 +19,14 @@ export interface ChancellorRevealProps {
 export function ChancellorReveal(props: ChancellorRevealProps) {
   const { formatMessage } = props;
   const { animation, sound } = useApp();
+  const drag = useDialogDrag();
   onMount(() => sound.play('chancellor-seal'));
   return (
     <div
       class={styles.backdrop}
       ref={(element) => void animation.play(element, 'fade-in')}
     >
+      <div class={styles.shift} style={drag.style()}>
       <div
         class={styles.dialog}
         role="dialog"
@@ -34,6 +38,11 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
         )}
         ref={(element) => void animation.play(element, 'pop-in')}
       >
+        <DialogDragHandle
+          label={formatMessage('game.moveDialog')}
+          dragging={drag.dragging()}
+          handleProps={drag.handleProps}
+        />
         <span class={styles.title}>
           {formatMessage(
             props.isYou
@@ -53,6 +62,7 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
                 name: props.chancellorName,
               })}
         </p>
+      </div>
       </div>
     </div>
   );

@@ -31,6 +31,7 @@ describe('InvestigateOverlay', () => {
           .replace('{party}', en.game.liberal),
       ),
     ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.game.power.continue })).toBeNull();
   });
 
   it('Should announce Fascist after the party card is shown', async () => {
@@ -54,7 +55,7 @@ describe('InvestigateOverlay', () => {
     });
   });
 
-  it('Should stay silent about the party when the viewer is not the President', async () => {
+  it('Should keep the party face private when the viewer is not the President', async () => {
     const harness = buildHarness({ seated: true });
     harness.services.settings.set('raviVoice', false);
     let continued = 0;
@@ -73,10 +74,15 @@ describe('InvestigateOverlay', () => {
       harness,
     );
 
-    await waitFor(() => {
-      expect(continued).toBe(1);
-    });
+    await waitFor(
+      () => {
+        expect(continued).toBe(1);
+      },
+      { timeout: 6000 },
+    );
     expect(harness.services.ravi.line()).toBeNull();
+    expect(screen.queryByAltText(en.game.liberal)).toBeNull();
+    expect(screen.queryByAltText(en.game.fascist)).toBeNull();
     expect(screen.queryByText(en.ravi.power.investigatedLiberal)).toBeNull();
     expect(screen.queryByText(en.ravi.power.investigatedFascist)).toBeNull();
   });

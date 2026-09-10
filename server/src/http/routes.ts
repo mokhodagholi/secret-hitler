@@ -4,13 +4,17 @@ import type {
   CreateRoomResponse,
   JoinRoomRequest,
   JoinRoomResponse,
+  ProfileResponse,
+  SaveProfileRequest,
 } from '@secret-hitler/shared';
+import { normalizeAvatar } from '@secret-hitler/shared';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { TokenStore } from '../rooms/TokenStore';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
 import type { GameHistoryStore } from '../history/GameHistoryStore';
+import type { ProfileStore } from '../profiles/ProfileStore';
 import { hashPassword, verifyPassword } from './password';
 import { validateBaleInitData } from '../bale/initData';
 import { handleBaleWebhook, type BaleRuntime } from '../bale/webhook';
@@ -23,6 +27,8 @@ export interface RouteDeps {
   recorder: GameResultRecorder;
   /** Reads finished games for the history endpoint. */
   history: GameHistoryStore;
+  /** Chosen player-card portraits. */
+  profiles: ProfileStore;
   publicUrl?: string;
   bale?: BaleRuntime;
 }
@@ -30,13 +36,21 @@ export interface RouteDeps {
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
 const CREATE_LIMIT = 5;
 const JOIN_LIMIT = 10;
+const PROFILE_LIMIT = 20;
 const LIMIT_WINDOW_MS = 60_000;
+
+const CLIENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isClientId(value: unknown): value is string {
+  return typeof value === 'string' && CLIENT_ID.test(value);
+}
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, publicUrl, bale } = deps;
+  const { repo, tokens, sockets, recorder, history, profiles, publicUrl, bale } = deps;
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
   const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
+  const profileLimiter = new RateLimiter(PROFILE_LIMIT, LIMIT_WINDOW_MS);
 
   app.post('/api/auth/bale', async (req, reply) => {
     if (!bale) {
@@ -50,7 +64,47 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!user) {
       return reply.code(401).send({ error: 'Invalid Bale login', code: 'AUTH_FAILED' });
     }
-    return { id: user.id, firstName: user.firstName };
+    const avatar = await profiles.get({
+      baleUserId: String(user.id),
+    });
+    return { id: user.id, firstName: user.firstName, avatar };
+  });
+
+  app.put('/api/profile', async (req, reply) => {
+    if (!profileLimiter.allow(req.ip)) {
+      return reply
+        .code(429)
+        .send({ error: 'Too many profile saves. Try again shortly.', code: 'RATE_LIMITED' });
+    }
+    const body = (req.body ?? {}) as SaveProfileRequest;
+    if (!isClientId(body.clientId) || typeof body.avatar !== 'number') {
+      return reply.code(400).send({ error: 'avatar and clientId are required' });
+    }
+    const baleUser = body.initData && bale
+      ? validateBaleInitData(body.initData, bale.botToken)
+      : null;
+    const avatar = await profiles.upsert(
+      {
+        clientId: body.clientId,
+        baleUserId: baleUser ? String(baleUser.id) : undefined,
+      },
+      normalizeAvatar(body.avatar),
+    );
+    const res: ProfileResponse = { avatar };
+    return res;
+  });
+
+  app.get('/api/profile', async (req, reply) => {
+    const clientId = (req.query as { clientId?: string }).clientId;
+    if (!isClientId(clientId)) {
+      return reply.code(400).send({ error: 'clientId is required' });
+    }
+    const avatar = await profiles.get({ clientId });
+    if (avatar == null) {
+      return reply.code(404).send({ error: 'Profile not found' });
+    }
+    const res: ProfileResponse = { avatar };
+    return res;
   });
 
   app.post('/api/bale/webhook', async (req, reply) => {
@@ -83,7 +137,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     sockets.registerEngine(entry);
     recorder.attach(entry);
 
-    const host = entry.engine.addPlayer(body.hostName, true);
+    const host = entry.engine.addPlayer(body.hostName, true, body.avatar);
     if ('code' in host) {
       return reply.code(400).send({ error: host.message });
     }
@@ -130,7 +184,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       return reply.code(403).send({ error: 'Wrong password', code: 'WRONG_PASSWORD' });
     }
 
-    const player = entry.engine.addPlayer(body.name);
+    const player = entry.engine.addPlayer(body.name, false, body.avatar);
     if ('code' in player) {
       const status = player.code === 'ROOM_FULL' ? 409 : 400;
       return reply.code(status).send({ error: player.message, code: player.code });

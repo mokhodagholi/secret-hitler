@@ -29,7 +29,40 @@ describe('SoundService — effects', () => {
   });
 });
 
-describe('SoundService — music toggle', () => {
+describe('SoundService — music', () => {
+  it('Should play a looping bed while Music is on', () => {
+    const settings = new SettingsService();
+    settings.set('music', true);
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+
+    new SoundService(settings).playMusic('menu-theme');
+
+    expect(play).toHaveBeenCalled();
+  });
+
+  it('Should stay silent while Music is off', () => {
+    const settings = new SettingsService();
+    settings.set('music', false);
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+
+    new SoundService(settings).playMusic('menu-theme');
+
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it('Should not restart the same bed', () => {
+    const settings = new SettingsService();
+    settings.set('music', true);
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+    const sound = new SoundService(settings);
+
+    sound.playMusic('menu-theme');
+    play.mockClear();
+    sound.playMusic('menu-theme');
+
+    expect(play).not.toHaveBeenCalled();
+  });
+
   it('Should pause the loop when Music is turned off', () => {
     const settings = new SettingsService();
     settings.set('music', true);
