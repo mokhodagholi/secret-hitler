@@ -27,17 +27,19 @@ const REVEAL_STEP_MS = 110;
  */
 export function LegislativeModal(props: LegislativeModalProps) {
   const { formatMessage } = props;
-  const { animation, ravi } = useApp();
+  const { animation, ravi, sound } = useApp();
   const [picking, setPicking] = createSignal(false);
   const cards: (HTMLButtonElement | undefined)[] = [];
 
   onMount(() => {
+    sound.play('card-flip');
     void ravi.speak(props.mode === 'discard' ? 'private.discard' : 'private.enact');
   });
 
   async function pick(index: number): Promise<void> {
     if (picking()) return;
     setPicking(true);
+    if (props.mode === 'discard') sound.play('policy-burn');
     const exit = props.mode === 'enact' ? 'card-to-board' : 'policy-exit';
     await animation.play(cards[index], exit);
     props.onPick(index);

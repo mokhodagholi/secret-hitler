@@ -1,3 +1,4 @@
+import { onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage } from '../../i18n';
 import { avatarImage } from '../../assets/avatars';
@@ -15,7 +16,8 @@ export interface ChancellorRevealProps {
  */
 export function ChancellorReveal(props: ChancellorRevealProps) {
   const { formatMessage } = props;
-  const { animation } = useApp();
+  const { animation, sound } = useApp();
+  onMount(() => sound.play('chancellor-seal'));
   return (
     <div
       class={styles.backdrop}

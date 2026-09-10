@@ -30,7 +30,7 @@ const TIP_ROTATION_MS = 5000;
  * Navigates to the game board as soon as the server leaves the lobby phase.
  */
 export function WaitingRoomScreen() {
-  const { nav, game, socket, i18n, animation } = useApp();
+  const { nav, game, socket, i18n, animation, sound } = useApp();
   const { formatMessage } = i18n;
 
   const [copied, setCopied] = createSignal(false);
@@ -60,9 +60,33 @@ export function WaitingRoomScreen() {
   createEffect(() => {
     const phase = view()?.phase;
     if (phase && phase !== Phase.Lobby) {
+      sound.play('room-start');
       game.clearError(); // don't carry a lobby error into the game
       nav.navigate('game');
     }
+  });
+
+  let seenPlayerIds: Set<string> | null = null;
+  let lastReadyCount = -1;
+  createEffect(() => {
+    const state = view();
+    if (!state) return;
+    const ids = new Set(state.players.map((player) => player.id));
+    const readyCount = state.players.filter((player) => player.ready).length;
+    if (seenPlayerIds == null) {
+      seenPlayerIds = ids;
+      lastReadyCount = readyCount;
+      return;
+    }
+    for (const id of ids) {
+      if (!seenPlayerIds.has(id)) sound.play('player-join');
+    }
+    for (const id of seenPlayerIds) {
+      if (!ids.has(id)) sound.play('player-leave');
+    }
+    if (readyCount > lastReadyCount) sound.play('player-ready');
+    seenPlayerIds = ids;
+    lastReadyCount = readyCount;
   });
 
   onMount(() => {
@@ -82,6 +106,7 @@ export function WaitingRoomScreen() {
   async function copyShareLink(): Promise<void> {
     try {
       await navigator.clipboard.writeText(shareLink());
+      sound.play('ui-copied');
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -100,10 +125,12 @@ export function WaitingRoomScreen() {
     if (!state) return;
     const connected = state.players.filter((player) => player.connected);
     if (connected.length < state.minPlayers) {
+      sound.play('ui-error');
       setStartBlock('needPlayers');
       return;
     }
     if (!connected.every((player) => player.ready)) {
+      sound.play('ui-error');
       setStartBlock('notReady');
       return;
     }

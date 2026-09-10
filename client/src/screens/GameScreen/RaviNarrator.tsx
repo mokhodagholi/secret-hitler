@@ -2,6 +2,7 @@ import { createEffect, onCleanup } from 'solid-js';
 import { Phase, type LogCode } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { RaviLineId } from '../../services/RaviService';
+import type { SoundEffect } from '../../services/SoundService';
 import type { MessageValues } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
 import { namedIsYou, raviNominatedLine } from '../../i18n/perspective';
@@ -32,6 +33,41 @@ const POWER_LINE = {
   execution: 'power.execution',
 } as const satisfies Record<string, RaviLineId>;
 
+const LINE_SFX: Partial<Record<RaviLineId, SoundEffect>> = {
+  'vote.failed': 'government-rejected',
+  'vote.passed': 'government-elected',
+  'vote.hitlerChancellor': 'win-fascist',
+  'vote.count': 'vote-tally',
+  'president.first': 'president-seal',
+  'president.firstYou': 'president-seal',
+  'president.next': 'president-seal',
+  'president.nextYou': 'president-seal',
+  'president.special': 'president-seal',
+  'nominate.timeout': 'nominate-timeout',
+  'game.liberalsWin.policies': 'win-liberal',
+  'game.fascistsWin.policies': 'win-fascist',
+  'game.reveal': 'role-cascade',
+  'power.hitlerExecuted': 'win-liberal',
+  'power.executed': 'execute-strike',
+  'chaos.start': 'chaos-hit',
+  'chaos.enacted': 'chaos-enact',
+  'tracker.advance': 'tracker-tick',
+  'law.draw': 'policy-draw',
+  'law.pass': 'policy-pass',
+  'law.burned': 'policy-burn',
+  'law.vetoOffered': 'veto-offer',
+  'law.vetoAgreed': 'veto-agree',
+  'law.vetoRejected': 'veto-refuse',
+  'law.vetoUnlocked': 'veto-unlock',
+  'power.investigate': 'seal-open',
+  'power.peek': 'seal-open',
+  'power.specialElection': 'seal-open',
+  'power.execution': 'seal-open',
+  'discuss.start': 'discuss-open',
+  'discuss.closing': 'discuss-warn',
+  'discuss.ended': 'discuss-close',
+};
+
 const CLOSING_MS = 30_000;
 
 function named(value: string | number | undefined): string | number {
@@ -49,7 +85,7 @@ export function RaviNarrator(props: {
   now: number;
   chancellorReveal: boolean;
 }) {
-  const { game, ravi } = useApp();
+  const { game, ravi, sound } = useApp();
 
   let seenLog = 0;
   let sawSnapshot = false;
@@ -188,6 +224,8 @@ export function RaviNarrator(props: {
     }
 
     for (const line of pending) {
+      const effect = LINE_SFX[line.id];
+      if (effect) sound.play(effect);
       void ravi.speak(line.id, line.params);
     }
   });

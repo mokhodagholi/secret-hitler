@@ -89,7 +89,7 @@ function waitFrames(count: number): Promise<void> {
  * away. Beats stay on the shared clock.
  */
 export function NightOverlay(props: NightOverlayProps) {
-  const { i18n, ravi, animation } = useApp();
+  const { i18n, ravi, animation, sound } = useApp();
   const { formatMessage } = i18n;
   const [beat, setBeat] = createSignal<Beat>('deal');
   const [acknowledged, setAcknowledged] = createSignal(false);
@@ -135,6 +135,8 @@ export function NightOverlay(props: NightOverlayProps) {
     clearTimeout(lookTimer);
     ravi.cancel();
     setBeat('look');
+    sound.play('night-fall');
+    sound.play('card-flip');
     void ravi.speak('night.start');
     void ravi.speak(lookKey(props.role).slice('ravi.'.length) as RaviLineId);
   }
@@ -145,6 +147,7 @@ export function NightOverlay(props: NightOverlayProps) {
     clearTimeout(glanceTimer);
     ravi.cancel();
     setBeat('glance');
+    sound.play('glance-tick');
     void ravi.speak(
       glanceKey(props.role, props.playerCount).slice('ravi.'.length) as RaviLineId,
     );
@@ -163,6 +166,7 @@ export function NightOverlay(props: NightOverlayProps) {
     clearTimeout(glanceTimer);
     clearTimeout(doneTimer);
     ravi.cancel();
+    sound.play('night-lift');
     void ravi.speak('night.end');
     void ravi.speak(
       props.presidentIsYou ? 'president.firstYou' : 'president.first',
@@ -258,7 +262,7 @@ export function NightOverlay(props: NightOverlayProps) {
 
 /** Face-down role cards start in a pile, then fly to each seat one by one. */
 function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
-  const { animation } = useApp();
+  const { animation, sound } = useApp();
   const cards: (HTMLImageElement | undefined)[] = [];
 
   onMount(() => {
@@ -271,6 +275,7 @@ function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
       if (cancelled) return;
       for (let index = 0; index < props.players.length; index++) {
         if (cancelled) return;
+        sound.play('deal-slide');
         await flyToSeat(
           animation,
           cards[index],

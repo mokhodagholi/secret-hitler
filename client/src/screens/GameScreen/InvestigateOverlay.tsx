@@ -21,7 +21,7 @@ export interface InvestigateOverlayProps {
  */
 export function InvestigateOverlay(props: InvestigateOverlayProps) {
   const { formatMessage } = props;
-  const { animation, ravi } = useApp();
+  const { animation, ravi, sound } = useApp();
   const [face, setFace] = createSignal<'back' | 'party'>('back');
   const [ready, setReady] = createSignal(false);
   let card: HTMLImageElement | undefined;
@@ -34,6 +34,7 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
   onMount(() => {
     void animation.enqueue(async () => {
       if (closed) return;
+      sound.play('party-slide');
       const from = document.querySelector(`[data-seat-id="${props.targetId}"]`);
       if (card?.isConnected && from) {
         const start = from.getBoundingClientRect();
@@ -56,6 +57,7 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
       // Read live props — the private party can arrive after the public log.
       if (props.party) {
         setFace('party');
+        sound.play('card-flip');
         await animation.play(card, 'card-flip-face');
         if (!closed) {
           setReady(true);

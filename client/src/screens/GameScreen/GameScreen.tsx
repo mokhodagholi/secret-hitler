@@ -37,7 +37,7 @@ import styles from './GameScreen.module.scss';
  * Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
-  const { nav, game, i18n, animation, ravi } = useApp();
+  const { nav, game, i18n, animation, ravi, sound } = useApp();
   const { formatMessage } = i18n;
 
   const view = game.view;
@@ -185,6 +185,7 @@ export function GameScreen() {
     if (total > previousTotal && latest) {
       revealEnactedPolicy(latest);
       void ravi.speak(latest === 'liberal' ? 'law.liberal' : 'law.fascist');
+      sound.play(latest === 'liberal' ? 'law-liberal' : 'law-fascist');
     }
     // A failed government jolts the board and raises a notice (a reset to 0 is
     // chaos, not a failure).
@@ -264,6 +265,52 @@ export function GameScreen() {
 
   createEffect(() => {
     if (ravi.lineId() === 'game.reveal') setShowRoles(true);
+  });
+
+  let lastClockSecond = -1;
+  createEffect(() => {
+    const state = view();
+    now();
+    if (!state) {
+      lastClockSecond = -1;
+      return;
+    }
+    const endsAt = [
+      state.discussionDeadline?.endsAt,
+      state.nominationDeadline?.endsAt,
+      state.voteDeadline?.endsAt,
+      state.legislativeDeadline?.endsAt,
+    ].filter((value): value is number => value != null && value > 0);
+    if (endsAt.length === 0) {
+      lastClockSecond = -1;
+      return;
+    }
+    const seconds = Math.max(0, Math.ceil((Math.min(...endsAt) - now()) / 1000));
+    if (seconds <= 0 || seconds > 10) {
+      lastClockSecond = -1;
+      return;
+    }
+    if (seconds === lastClockSecond) return;
+    lastClockSecond = seconds;
+    sound.play(seconds <= 3 ? 'timer-urgent' : 'timer-tick');
+  });
+
+  let lastVotedCount = -1;
+  createEffect(() => {
+    const state = view();
+    if (!state || state.phase !== Phase.Voting) {
+      lastVotedCount = -1;
+      return;
+    }
+    const count = state.players.filter(
+      (player) => player.isAlive && player.connected && player.hasVoted,
+    ).length;
+    if (lastVotedCount < 0) {
+      lastVotedCount = count;
+      return;
+    }
+    if (count > lastVotedCount) sound.play('ballot-slide');
+    lastVotedCount = count;
   });
 
   createEffect(() => {

@@ -1,4 +1,4 @@
-import { Match, Switch } from 'solid-js';
+import { Match, Switch, createEffect } from 'solid-js';
 import { AppProvider, useApp, type AppServices } from './services/AppContext';
 import { HomeScreen } from './screens/HomeScreen/HomeScreen';
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
@@ -13,8 +13,12 @@ import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 
 /** Shown on every screen — the room can be closed under any of them. */
 function RoomClosedNotice() {
-  const { game, i18n } = useApp();
+  const { game, i18n, sound } = useApp();
   const { formatMessage } = i18n;
+  const open = () => game.roomClosedNotice() != null;
+  createEffect(() => {
+    if (open()) sound.play('room-closed');
+  });
   return (
     <ConfirmDialog
       open={game.roomClosedNotice() != null}

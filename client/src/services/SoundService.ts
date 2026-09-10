@@ -1,4 +1,4 @@
-import swapPageUrl from '../assets/sounds/effects/swap-page.mp3';
+import { EFFECT_URLS } from '../assets/sounds/effects/clips';
 import type { SettingsService } from './SettingsService';
 
 interface SoundDefinition {
@@ -7,12 +7,62 @@ interface SoundDefinition {
   readonly volume?: number;
 }
 
-// One-shot effects. Add a file here and it becomes playable as sound.play('key').
+const STING = 0.72;
+const CEREMONY = 0.64;
+const HIT = 0.55;
+const CLOCK = 0.42;
+
+// One-shot effects. Add a file in clips.ts and it becomes playable as sound.play('key').
 const EFFECTS = {
-  'swap-page': { src: swapPageUrl, volume: 0.6 },
+  'swap-page': { src: EFFECT_URLS['swap-page'], volume: 0.55 },
+  'player-join': { src: EFFECT_URLS['player-join'], volume: HIT },
+  'player-leave': { src: EFFECT_URLS['player-leave'], volume: HIT },
+  'player-ready': { src: EFFECT_URLS['player-ready'], volume: HIT },
+  'room-start': { src: EFFECT_URLS['room-start'], volume: CEREMONY },
+  'ui-error': { src: EFFECT_URLS['ui-error'], volume: HIT },
+  'ui-copied': { src: EFFECT_URLS['ui-copied'], volume: HIT },
+  'room-closed': { src: EFFECT_URLS['room-closed'], volume: CEREMONY },
+  'deal-slide': { src: EFFECT_URLS['deal-slide'], volume: HIT },
+  'night-fall': { src: EFFECT_URLS['night-fall'], volume: CEREMONY },
+  'card-flip': { src: EFFECT_URLS['card-flip'], volume: HIT },
+  'glance-tick': { src: EFFECT_URLS['glance-tick'], volume: HIT },
+  'night-lift': { src: EFFECT_URLS['night-lift'], volume: CEREMONY },
+  'president-seal': { src: EFFECT_URLS['president-seal'], volume: CEREMONY },
+  'chancellor-seal': { src: EFFECT_URLS['chancellor-seal'], volume: CEREMONY },
+  'nominate-timeout': { src: EFFECT_URLS['nominate-timeout'], volume: STING },
+  'discuss-open': { src: EFFECT_URLS['discuss-open'], volume: HIT },
+  'discuss-warn': { src: EFFECT_URLS['discuss-warn'], volume: HIT },
+  'discuss-close': { src: EFFECT_URLS['discuss-close'], volume: HIT },
+  'ballot-tap': { src: EFFECT_URLS['ballot-tap'], volume: HIT },
+  'ballot-slide': { src: EFFECT_URLS['ballot-slide'], volume: HIT },
+  'vote-tally': { src: EFFECT_URLS['vote-tally'], volume: CEREMONY },
+  'government-elected': { src: EFFECT_URLS['government-elected'], volume: STING },
+  'government-rejected': { src: EFFECT_URLS['government-rejected'], volume: STING },
+  'tracker-tick': { src: EFFECT_URLS['tracker-tick'], volume: CEREMONY },
+  'chaos-hit': { src: EFFECT_URLS['chaos-hit'], volume: STING },
+  'chaos-enact': { src: EFFECT_URLS['chaos-enact'], volume: CEREMONY },
+  'policy-draw': { src: EFFECT_URLS['policy-draw'], volume: HIT },
+  'policy-burn': { src: EFFECT_URLS['policy-burn'], volume: HIT },
+  'policy-pass': { src: EFFECT_URLS['policy-pass'], volume: HIT },
+  'law-liberal': { src: EFFECT_URLS['law-liberal'], volume: STING },
+  'law-fascist': { src: EFFECT_URLS['law-fascist'], volume: STING },
+  'veto-offer': { src: EFFECT_URLS['veto-offer'], volume: CEREMONY },
+  'veto-agree': { src: EFFECT_URLS['veto-agree'], volume: CEREMONY },
+  'veto-refuse': { src: EFFECT_URLS['veto-refuse'], volume: CEREMONY },
+  'veto-unlock': { src: EFFECT_URLS['veto-unlock'], volume: CEREMONY },
+  'seal-open': { src: EFFECT_URLS['seal-open'], volume: CEREMONY },
+  'party-slide': { src: EFFECT_URLS['party-slide'], volume: HIT },
+  'peek-flip': { src: EFFECT_URLS['peek-flip'], volume: HIT },
+  'peek-done': { src: EFFECT_URLS['peek-done'], volume: HIT },
+  'execute-strike': { src: EFFECT_URLS['execute-strike'], volume: STING },
+  'you-died': { src: EFFECT_URLS['you-died'], volume: STING },
+  'win-liberal': { src: EFFECT_URLS['win-liberal'], volume: 0.78 },
+  'win-fascist': { src: EFFECT_URLS['win-fascist'], volume: 0.78 },
+  'role-cascade': { src: EFFECT_URLS['role-cascade'], volume: CEREMONY },
+  'timer-tick': { src: EFFECT_URLS['timer-tick'], volume: CLOCK },
+  'timer-urgent': { src: EFFECT_URLS['timer-urgent'], volume: 0.5 },
 } satisfies Record<string, SoundDefinition>;
 
-// Looping background tracks. Same shape — add a file and play it with playMusic().
 const MUSIC = {
   // 'menu-theme': { src: menuThemeUrl, volume: 0.4 },
 } satisfies Record<string, SoundDefinition>;
@@ -20,7 +70,6 @@ const MUSIC = {
 export type SoundEffect = keyof typeof EFFECTS;
 export type MusicTrack = keyof typeof MUSIC;
 
-// SSR and some test runners have no Audio constructor; degrade to a silent no-op.
 const canPlayAudio = typeof Audio !== 'undefined';
 
 /**
@@ -29,14 +78,11 @@ const canPlayAudio = typeof Audio !== 'undefined';
  * so callers never check the settings themselves.
  */
 export class SoundService {
-  // Preloaded base node per effect — cloned on each play so repeats overlap.
   private readonly samples = new Map<SoundEffect, HTMLAudioElement>();
   private music: HTMLAudioElement | null = null;
   private musicTrack: MusicTrack | null = null;
 
   constructor(private readonly settings: SettingsService) {
-    // Decode effects at startup so the first play is instant, not delayed by a
-    // load on the click that triggers it.
     if (canPlayAudio) {
       for (const effect of Object.keys(EFFECTS) as SoundEffect[]) {
         this.sampleFor(effect).load();
@@ -48,8 +94,6 @@ export class SoundService {
   play(effect: SoundEffect): void {
     if (!canPlayAudio || !this.settings.settings.soundEffects) return;
     const sample = this.sampleFor(effect);
-    // Reuse the warm element when idle (lowest latency); clone only to overlap a
-    // sound that is still playing so quick repeats don't cut each other off.
     const idle = sample.paused || sample.ended;
     const voice = idle ? sample : (sample.cloneNode() as HTMLAudioElement);
     voice.volume = sample.volume;
@@ -80,12 +124,12 @@ export class SoundService {
   setMusicEnabled(enabled: boolean): void {
     if (!enabled) {
       this.music?.pause();
-      this.music = null; // keep musicTrack so re-enabling can resume it
+      this.music = null;
       return;
     }
     if (this.musicTrack && !this.music) {
       const track = this.musicTrack;
-      this.musicTrack = null; // let playMusic re-arm from a clean slate
+      this.musicTrack = null;
       this.playMusic(track);
     }
   }
@@ -108,7 +152,6 @@ export class SoundService {
     } catch {
       /* environment can't seek (e.g. jsdom) — playback still attempts below */
     }
-    // Autoplay can reject until the first user gesture — ignore, it's not fatal.
     const played = audio.play() as Promise<void> | undefined;
     played?.catch(() => {});
   }

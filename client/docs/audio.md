@@ -89,6 +89,11 @@ Game-event sounds (policy enacted, vote reveal, execution, …) belong next to t
 event that fires them — typically a `createEffect` in the relevant screen that
 watches game state, or the handler that reacts to a server message.
 
+The catalog of those one-shots — what to bake, when they fire, and how to
+generate the files — is [`docs/sound-effects.md`](../../docs/sound-effects.md).
+Bake with `scripts/generate-sound-effects.py`. Spoken table lines stay in
+[`docs/ravi-script.md`](../../docs/ravi-script.md); do not put words in an SFX.
+
 ## Testing
 
 `SoundService` degrades to a no-op where there is no `Audio` constructor, and

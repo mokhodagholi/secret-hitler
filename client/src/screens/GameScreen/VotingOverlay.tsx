@@ -25,10 +25,14 @@ export interface VotingOverlayProps {
 /** Full-screen timed Ja/Nein agreement screen shown during the Voting phase. */
 export function VotingOverlay(props: VotingOverlayProps) {
   const { formatMessage } = props;
-  const { animation, ravi } = useApp();
+  const { animation, ravi, sound } = useApp();
   onMount(() => {
     void ravi.speak('private.vote');
   });
+  function choose(vote: Vote): void {
+    sound.play('ballot-tap');
+    props.onVote(vote);
+  }
   return (
     <div
       class={styles.backdrop}
@@ -76,7 +80,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
             <button
               type="button"
               class={styles.ja}
-              onClick={() => props.onVote('ja')}
+              onClick={() => choose('ja')}
             >
               <img class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
               <span>{formatMessage('game.voteJa')}</span>
@@ -84,7 +88,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
             <button
               type="button"
               class={styles.nein}
-              onClick={() => props.onVote('nein')}
+              onClick={() => choose('nein')}
             >
               <img class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
               <span>{formatMessage('game.voteNein')}</span>

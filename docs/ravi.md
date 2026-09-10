@@ -186,6 +186,9 @@ studio; the words still come from the catalog.
 Human record is still the gold standard if we can get one actor for
 ~80 short lines.
 
+The SFX catalog (card slides, stamps, gavel, tracker pawn) is
+[`sound-effects.md`](./sound-effects.md).
+
 Playback rules:
 
 - **Two independent toggles** (keep both for now; we can drop one later):

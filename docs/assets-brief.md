@@ -1024,3 +1024,7 @@ runtime. Bake the catalog in [`ravi-script.md`](./ravi-script.md) with
 female Dilara, same filenames in two folders. Details in
 [`ravi.md`](./ravi.md). If a voice is wrong we change the bake engine; we
 do not change the words in a live game.
+
+Table physics (card slides, stamps, gavel, tracker pawn) are a separate
+layer: [`sound-effects.md`](./sound-effects.md) and
+`scripts/generate-sound-effects.py`.

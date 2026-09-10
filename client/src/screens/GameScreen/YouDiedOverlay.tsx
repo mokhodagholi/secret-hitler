@@ -1,3 +1,4 @@
+import { onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage } from '../../i18n';
 import { Button } from '../../components/Button/Button';
@@ -12,7 +13,8 @@ export interface YouDiedOverlayProps {
 /** Shown only to the executed player: stay as a spectator, or leave. */
 export function YouDiedOverlay(props: YouDiedOverlayProps) {
   const { formatMessage } = props;
-  const { animation } = useApp();
+  const { animation, sound } = useApp();
+  onMount(() => sound.play('you-died'));
   return (
     <div
       class={styles.backdrop}
