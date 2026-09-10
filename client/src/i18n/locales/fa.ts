@@ -7,6 +7,15 @@ export const fa = {
     hitler: 'هیتلر',
     tagline: 'بازیِ استنتاج،\nفریب و فاشیسم',
   },
+  splash: {
+    offline: 'اینترنت نداری.',
+    offlineRetry: 'دوباره تلاش کن',
+    progress: '{percent}٪',
+  },
+  update: {
+    title: 'نسخهٔ جدید آماده است',
+    action: 'به‌روزرسانی',
+  },
   nav: {
     rules: 'قوانین',
     howToPlay: 'نحوهٔ بازی',
@@ -26,8 +35,6 @@ export const fa = {
   },
   playerCards: {
     title: 'کارت بازیکن',
-    choose: 'چهره‌ت رو انتخاب کن.',
-    card: 'کارت بازیکن {n}',
   },
   common: {
     comingSoon: 'به‌زودی.',

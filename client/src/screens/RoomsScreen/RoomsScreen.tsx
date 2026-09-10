@@ -14,7 +14,6 @@ import {
 import { useApp } from '../../services/AppContext';
 import { RoomApiError } from '../../services/GameStateService';
 import { ERROR_MESSAGE_KEYS, type MessageKey } from '../../i18n';
-import { GameHeader } from '../../components/GameHeader/GameHeader';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import styles from './RoomsScreen.module.scss';
@@ -40,8 +39,6 @@ export function RoomsScreen(props: RoomsScreenProps) {
     <Screen>
       <div class={styles.scene}>
         <div class={styles.backdrop} aria-hidden="true" />
-
-        <GameHeader />
 
         <div class={styles.panel}>
           <div class={styles.tabs} role="tablist">

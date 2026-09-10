@@ -1,7 +1,7 @@
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
-import { avatarImage, PAPER_FRAME } from '../../assets/avatars';
+import { avatarImage } from '../../assets/avatars';
 import heroImage from '../../assets/home/hero.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
@@ -10,7 +10,7 @@ import styles from './HomeScreen.module.scss';
 
 /**
  * Lobby splash: centered title, a settings key in the header, قوانین hanging
- * under it, and a framed portrait that opens the player-card picker.
+ * under it, and a portrait that opens the player-card picker.
  */
 export function HomeScreen() {
   const { nav, i18n, settings } = useApp();
@@ -41,7 +41,6 @@ export function HomeScreen() {
             aria-label={formatMessage('home.chooseCard')}
             onClick={() => nav.navigate('player-cards')}
           >
-            <img class={styles.avatarCardFrame} src={PAPER_FRAME} alt="" />
             <img
               class={styles.avatarPortrait}
               src={avatarImage(settings.settings.avatar)}

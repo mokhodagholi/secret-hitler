@@ -3,10 +3,8 @@ import paperFrame from './avatars/avatar_placeholder.png';
 import anarchistPrinter from './avatars/anarchist-printer.webp';
 import baker from './avatars/baker.webp';
 import cabaretSinger from './avatars/cabaret-singer.webp';
-import clarinetist from './avatars/clarinetist.webp';
 import diplomat from './avatars/diplomat.webp';
 import factoryOrganiser from './avatars/factory-organiser.webp';
-import industrialWidow from './avatars/industrial-widow.webp';
 import miner from './avatars/miner.webp';
 import nightBanker from './avatars/night-banker.webp';
 import nurse from './avatars/nurse.webp';
@@ -18,34 +16,33 @@ import tramConductor from './avatars/tram-conductor.webp';
 import typesetter from './avatars/typesetter.webp';
 import unionDockWorker from './avatars/union-dock-worker.webp';
 
-/** Worn photo-card frame; illustrated faces sit in its inner panel. */
+/** Worn photo-card frame used for empty lobby seats. */
 export const PAPER_FRAME = paperFrame;
 
-/** Seat portraits. Order is the avatar index stored on the player and in settings. */
 export const PORTRAITS = [
-  baker,
-  diplomat,
-  student,
-  nurse,
-  miner,
-  cabaretSinger,
-  schoolteacher,
-  tramConductor,
-  factoryOrganiser,
-  nightBanker,
-  clarinetist,
-  industrialWidow,
-  typesetter,
-  unionDockWorker,
-  ruralSocialist,
-  anarchistPrinter,
-  oldExile,
-];
+  { id: 'baker', src: baker, latin: 'Otto', persian: 'اتو' },
+  { id: 'diplomat', src: diplomat, latin: 'Karl', persian: 'کارل' },
+  { id: 'student', src: student, latin: 'Lotte', persian: 'لوته' },
+  { id: 'nurse', src: nurse, latin: 'Marta', persian: 'مارتا' },
+  { id: 'miner', src: miner, latin: 'Franz', persian: 'فرانتس' },
+  { id: 'cabaretSinger', src: cabaretSinger, latin: 'Lili', persian: 'لیلی' },
+  { id: 'schoolteacher', src: schoolteacher, latin: 'Clara', persian: 'کلارا' },
+  { id: 'tramConductor', src: tramConductor, latin: 'Fritz', persian: 'فریتس' },
+  { id: 'factoryOrganiser', src: factoryOrganiser, latin: 'Rosa', persian: 'رزا' },
+  { id: 'nightBanker', src: nightBanker, latin: 'Max', persian: 'ماکس' },
+  { id: 'typesetter', src: typesetter, latin: 'Edith', persian: 'ادیث' },
+  { id: 'unionDockWorker', src: unionDockWorker, latin: 'Helga', persian: 'هلگا' },
+  { id: 'ruralSocialist', src: ruralSocialist, latin: 'Anna', persian: 'آنا' },
+  { id: 'anarchistPrinter', src: anarchistPrinter, latin: 'Thea', persian: 'تئا' },
+  { id: 'oldExile', src: oldExile, latin: 'Ernst', persian: 'ارنست' },
+] as const;
+
+export type PortraitId = (typeof PORTRAITS)[number]['id'];
 
 if (PORTRAITS.length !== AVATAR_COUNT) {
   throw new Error(`PORTRAITS (${PORTRAITS.length}) must match AVATAR_COUNT (${AVATAR_COUNT})`);
 }
 
 export function avatarImage(avatar: number): string {
-  return PORTRAITS[Math.abs(avatar) % PORTRAITS.length];
+  return PORTRAITS[Math.abs(avatar) % PORTRAITS.length].src;
 }

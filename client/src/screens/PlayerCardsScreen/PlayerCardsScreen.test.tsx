@@ -6,7 +6,7 @@ import { HomeScreen } from '../HomeScreen/HomeScreen';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
 
 describe('PlayerCardsScreen', () => {
-  it('Should store the chosen portrait and return home', () => {
+  it('Should store the chosen portrait and stay on the picker', () => {
     const harness = buildHarness();
     harness.services.nav.navigate('player-cards');
     renderWithApp(
@@ -21,8 +21,8 @@ describe('PlayerCardsScreen', () => {
       harness,
     );
 
-    fireEvent.click(screen.getByRole('listitem', { name: 'Player card 1' }));
-    expect(harness.services.settings.settings.avatar).toBe(0);
-    expect(harness.services.nav.screen()).toBe('home');
+    fireEvent.click(screen.getByRole('listitem', { name: 'کارل' }));
+    expect(harness.services.settings.settings.avatar).toBe(1);
+    expect(harness.services.nav.screen()).toBe('player-cards');
   });
 });

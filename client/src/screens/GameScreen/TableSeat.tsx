@@ -2,7 +2,7 @@ import { Show } from 'solid-js';
 import type { PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { playerLabel } from '../../i18n/perspective';
-import { avatarImage, PAPER_FRAME } from '../../assets/avatars';
+import { avatarImage } from '../../assets/avatars';
 import { PARTY_FACE } from '../../assets/cards';
 import styles from './TableSeat.module.scss';
 
@@ -22,7 +22,7 @@ export interface TableSeatProps {
 }
 
 /**
- * One seat at the table: the paper photo card, a coloured office cloud when
+ * One seat at the table: the portrait, a coloured office cloud when
  * this player holds a public office, an investigated party card when this
  * viewer has checked their loyalty, and an optional chat bubble.
  */
@@ -94,7 +94,6 @@ export function TableSeat(props: TableSeatProps) {
       </Show>
 
       <span class={styles.paper}>
-        <img class={styles.paperFrame} src={PAPER_FRAME} alt="" />
         <img
           class={styles.face}
           src={avatarImage(props.player.avatar)}

@@ -8,74 +8,66 @@
   margin: -18px -16px -24px;
   padding: 10px 16px 28px;
   background:
-    radial-gradient(
-      120% 54% at 50% 18%,
-      rgba(198, 124, 50, 0.38),
-      rgba(198, 124, 50, 0) 62%
+    linear-gradient(
+      180deg,
+      rgba(8, 5, 4, 0.42) 0%,
+      rgba(6, 3, 3, 0.58) 100%
     ),
-    linear-gradient(180deg, #2b1e12 0%, #1d1409 46%, #120b05 100%);
-}
-
-.hint {
-  margin: 4px 8px 18px;
-  text-align: center;
-  font-size: 0.92rem;
-  line-height: 1.7;
-  color: #ecd9a8;
+    url('../../assets/ui/pattern.webp') center / cover no-repeat;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 20px 14px;
-  padding: 0 4px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 18px 14px;
+  padding: 8px 4px 0;
 }
 
 .card {
   @include pressable;
   display: flex;
-  justify-content: center;
-  padding: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 8px 6px 10px;
   background: none;
-  border: none;
+  border: 4px solid transparent;
+  border-radius: 18px;
   cursor: pointer;
+}
+
+.selected {
+  border-color: $gold-bright;
+  border-style: wavy;
 }
 
 .paper {
   position: relative;
   width: 100%;
-  max-width: 156px;
-  aspect-ratio: 233 / 300;
+  max-width: 140px;
+  aspect-ratio: 1;
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55));
 }
 
-.selected .paper {
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55))
-    drop-shadow(0 0 0 3px $gold-bright)
-    drop-shadow(0 0 10px rgba(227, 165, 62, 0.7));
-}
-
-.frame,
 .face {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   display: block;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
 }
 
-.frame {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.face {
-  top: 11%;
-  left: 13.5%;
-  width: 73%;
-  height: 72%;
-  object-fit: contain;
-  border-radius: 3px;
+.caption {
+  max-width: 140px;
+  color: #f3e4b8;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
 }

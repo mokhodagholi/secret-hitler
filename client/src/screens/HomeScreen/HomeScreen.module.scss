@@ -213,8 +213,8 @@
 .avatarCard {
   @include pressable;
   position: relative;
-  width: 128px;
-  aspect-ratio: 233 / 300;
+  width: 124px;
+  aspect-ratio: 1;
   flex-shrink: 0;
   padding: 0;
   background: none;
@@ -223,23 +223,12 @@
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.62));
 }
 
-// The worn placeholder card is the frame; the portrait sits inside its panel.
-.avatarCardFrame {
+.avatarPortrait {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.avatarPortrait {
-  position: absolute;
-  top: 11%;
-  left: 13.5%;
-  width: 73%;
-  height: 72%;
-  object-fit: contain;
-  border-radius: 3px;
 }
 
 // --- Stage: hero seated at the desk with the boards on it -------------------

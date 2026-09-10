@@ -1,0 +1,117 @@
+@use '../../styles/vars' as *;
+
+$lamp-gold: #e8d090;
+$lamp-gold-deep: #9a7428;
+$wood: #1a1208;
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  background: $wood;
+}
+
+.canvas {
+  position: relative;
+  width: 100%;
+  max-width: $shell-max-width;
+  height: 100%;
+  overflow: hidden;
+  background: $wood;
+}
+
+.art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+}
+
+.quote {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  padding: 14px 16px 12px;
+  background: linear-gradient(180deg, rgba(18, 12, 6, 0.88), rgba(8, 5, 2, 0.94));
+  border: 1px solid rgba($lamp-gold, 0.42);
+  border-radius: 4px;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba($lamp-gold, 0.18);
+}
+
+.quoteText {
+  margin: 0;
+  color: $cream;
+  font-size: 0.92rem;
+  line-height: 1.75;
+  text-align: center;
+}
+
+.quoteBy {
+  display: block;
+  margin-top: 8px;
+  color: $lamp-gold;
+  font-size: 0.75rem;
+  font-style: normal;
+  text-align: center;
+}
+
+.retry {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  color: $lamp-gold;
+  font-family: $font-body;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: rgba($lamp-gold, 0.08);
+  border: 1px solid rgba($lamp-gold, 0.45);
+  border-radius: 4px;
+}
+
+.bar {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba($lamp-gold, 0.16);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, $lamp-gold-deep, $lamp-gold, $lamp-gold-deep);
+  box-shadow: 0 0 10px rgba($lamp-gold, 0.45);
+  transition: width 0.28s ease;
+}
+
+.percent {
+  position: relative;
+  z-index: 1;
+  color: #1a0e06;
+  font-family: $font-body;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1;
+  -webkit-text-stroke: 0.4px rgba(255, 236, 196, 0.8);
+  paint-order: stroke fill;
+}

@@ -22,8 +22,9 @@ export interface PlayerSlotProps {
 }
 
 /**
- * Paper portrait card for a lobby seat. Ready state is a green/red glow on
- * the card; empty seats show the frame only, grayed out.
+ * Lobby seat portrait with the seat number and name under the image.
+ * Ready state is a green/red glow; empty seats show the unused paper
+ * slot, grayed out.
  */
 export function PlayerSlot(props: PlayerSlotProps) {
   return (
@@ -46,26 +47,31 @@ export function PlayerSlot(props: PlayerSlotProps) {
         const shownName = () =>
           props.isYou && props.youLabel ? props.youLabel : player().name;
         const portrait = () => (
-          <span
-            classList={{
-              [styles.paper]: true,
-              [styles.paperReady]: player().ready,
-              [styles.paperNotReady]: !player().ready,
-              [styles.paperYou]: !!props.isYou,
-            }}
-          >
-            <img class={styles.paperFrame} src={PAPER_FRAME} alt="" />
-            <img
-              class={styles.face}
-              src={avatarImage(player().avatar)}
-              alt=""
-              aria-hidden="true"
-            />
-            <span class={styles.badge}>{props.seatLabel ?? player().seat + 1}</span>
-            <span class={styles.name} dir="auto">
-              {shownName()}
+          <>
+            <span
+              classList={{
+                [styles.paper]: true,
+                [styles.paperReady]: player().ready,
+                [styles.paperNotReady]: !player().ready,
+                [styles.paperYou]: !!props.isYou,
+              }}
+            >
+              <img
+                class={styles.face}
+                src={avatarImage(player().avatar)}
+                alt=""
+                aria-hidden="true"
+              />
             </span>
-          </span>
+            <span class={styles.caption}>
+              <span class={styles.badge}>
+                {props.seatLabel ?? player().seat + 1}
+              </span>
+              <span class={styles.name} dir="auto">
+                {shownName()}
+              </span>
+            </span>
+          </>
         );
         return (
           <Show

@@ -15,6 +15,7 @@ import { SoundService } from './SoundService';
 import { AnimationService } from './AnimationService';
 import { RaviService } from './RaviService';
 import { BaleService } from './BaleService';
+import { PrefetchService, urlsForNextStep } from './prefetch';
 import { nextMusicCheckMs, trackForScene } from './music';
 
 export interface AppServices {
@@ -27,6 +28,7 @@ export interface AppServices {
   animation: AnimationService;
   ravi: RaviService;
   bale: BaleService;
+  prefetch: PrefetchService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -49,6 +51,7 @@ export function AppProvider(
     animation: overrides.animation ?? new AnimationService(settings),
     ravi: overrides.ravi ?? new RaviService(settings, i18n),
     bale: overrides.bale ?? new BaleService(),
+    prefetch: overrides.prefetch ?? new PrefetchService(),
   };
 
   if (!overrides.bale) {
@@ -89,6 +92,14 @@ export function AppProvider(
       logs: services.game.logEntries(),
     };
     services.sound.playMusic(trackForScene(scene));
+    services.prefetch.prefetch(
+      urlsForNextStep({
+        scene,
+        raviWho: services.settings.settings.raviWho,
+        music: services.settings.settings.music,
+        raviVoice: services.settings.settings.raviVoice,
+      }),
+    );
     const wait = nextMusicCheckMs(scene);
     if (wait == null) return;
     const id = setTimeout(() => {

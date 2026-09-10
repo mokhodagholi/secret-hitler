@@ -9,6 +9,15 @@ export const en = {
     hitler: 'Hitler',
     tagline: 'A game of deduction,\ndeception, and fascism',
   },
+  splash: {
+    offline: 'You have no internet.',
+    offlineRetry: 'Try again',
+    progress: '{percent}%',
+  },
+  update: {
+    title: 'A new version is ready',
+    action: 'Update',
+  },
   nav: {
     rules: 'Rules',
     howToPlay: 'How to Play',
@@ -28,8 +37,6 @@ export const en = {
   },
   playerCards: {
     title: 'Player Cards',
-    choose: 'Pick a card to use as your portrait.',
-    card: 'Player card {n}',
   },
   common: {
     comingSoon: 'Coming soon.',

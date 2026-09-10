@@ -37,6 +37,26 @@ export function trackForScene(scene: MusicScene): MusicTrack {
 }
 
 /**
+ * The bed that usually follows this scene. Prefetch it; do not play it yet.
+ * `null` means nothing useful is next (ending, or already on the last room).
+ */
+export function nextTrackForScene(scene: MusicScene): MusicTrack | null {
+  if (scene.roomClosed) return null;
+  switch (scene.screen) {
+    case 'play':
+    case 'create-room':
+    case 'join-game':
+      return 'lobby-theme';
+    case 'waiting-room':
+      return 'night-ambient';
+    case 'game':
+      return nextGameTrack(scene);
+    default:
+      return 'play-theme';
+  }
+}
+
+/**
  * Remaining ms until night or chaos should give way to the next bed.
  * `null` means the current track can sit until the next snapshot.
  */
@@ -88,6 +108,30 @@ function openingNight(view: GameStateView, now: number): boolean {
     electionTracker: view.board.electionTracker,
     now,
   });
+}
+
+function nextGameTrack(scene: MusicScene): MusicTrack | null {
+  const current = trackForGame(scene);
+  switch (current) {
+    case 'night-ambient':
+      return 'discuss-theme';
+    case 'discuss-theme':
+    case 'discuss-late':
+      return 'vote-theme';
+    case 'vote-theme':
+      return 'legislative-theme';
+    case 'legislative-theme': {
+      const fascist = scene.view?.board.fascistPolicies ?? 0;
+      return fascist >= 1 ? 'power-theme' : 'discuss-theme';
+    }
+    case 'power-theme':
+    case 'chaos-theme':
+      return scene.view && isLateBoard(scene.view)
+        ? 'discuss-late'
+        : 'discuss-theme';
+    default:
+      return null;
+  }
 }
 
 function isLateBoard(view: GameStateView): boolean {

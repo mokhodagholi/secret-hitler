@@ -16,6 +16,7 @@ import { SettingsService } from '../src/services/SettingsService';
 import { SoundService } from '../src/services/SoundService';
 import { RaviService } from '../src/services/RaviService';
 import { BaleService } from '../src/services/BaleService';
+import { PrefetchService } from '../src/services/prefetch';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -106,6 +107,7 @@ export function buildHarness(
     animation: new AnimationService(settings),
     ravi: new RaviService(settings, i18n),
     bale: new BaleService(),
+    prefetch: new PrefetchService(),
   };
   return {
     services,

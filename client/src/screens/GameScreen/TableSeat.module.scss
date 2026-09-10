@@ -153,30 +153,16 @@
 .paper {
   position: relative;
   width: min(128px, 100%);
-  aspect-ratio: 233 / 300;
+  aspect-ratio: 1;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
 }
 
-.paperFrame {
+.face {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  display: block;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-.face {
-  position: absolute;
-  top: 11%;
-  left: 13.5%;
-  width: 73%;
-  height: 72%;
-  object-fit: contain;
-  border-radius: 3px;
   display: block;
   pointer-events: none;
   user-select: none;

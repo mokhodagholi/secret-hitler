@@ -1,5 +1,5 @@
 /** Illustrated player-card portraits shipped by the client. */
-export const AVATAR_COUNT = 17;
+export const AVATAR_COUNT = 15;
 
 /** Clamp a stored or requested portrait index onto the shipped set. */
 export function normalizeAvatar(avatar: unknown): number {

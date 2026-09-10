@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@rstest/core';
 import { OPENING_CEREMONY_MS, Phase } from '@secret-hitler/shared';
 import { makeView } from '../../test/test-utils';
-import { nextMusicCheckMs, trackForScene } from './music';
+import { nextMusicCheckMs, nextTrackForScene, trackForScene } from './music';
 
 function scene(
   screen: Parameters<typeof trackForScene>[0]['screen'],
@@ -93,5 +93,40 @@ describe('nextMusicCheckMs', () => {
       }),
     });
     expect(wait).toBe(OPENING_CEREMONY_MS);
+  });
+});
+
+describe('nextTrackForScene', () => {
+  it('Should prefetch the next room, not the one already playing', () => {
+    expect(
+      nextTrackForScene({ screen: 'home', roomClosed: false, view: null }),
+    ).toBe('play-theme');
+    expect(
+      nextTrackForScene({ screen: 'play', roomClosed: false, view: null }),
+    ).toBe('lobby-theme');
+    expect(
+      nextTrackForScene({
+        screen: 'waiting-room',
+        roomClosed: false,
+        view: makeView(),
+      }),
+    ).toBe('night-ambient');
+  });
+
+  it('Should prefetch vote after talk and the desk after a vote', () => {
+    expect(
+      nextTrackForScene({
+        screen: 'game',
+        roomClosed: false,
+        view: makeView({ phase: Phase.Nomination }),
+      }),
+    ).toBe('vote-theme');
+    expect(
+      nextTrackForScene({
+        screen: 'game',
+        roomClosed: false,
+        view: makeView({ phase: Phase.Voting }),
+      }),
+    ).toBe('legislative-theme');
   });
 });
