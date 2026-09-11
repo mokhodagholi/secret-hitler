@@ -4,6 +4,7 @@ import type { FormatMessage } from '../../i18n';
 import { playerLabel } from '../../i18n/perspective';
 import { useApp } from '../../services/AppContext';
 import { avatarImage } from '../../assets/avatars';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './GameScreen.module.scss';
 
 export interface PlayerRowProps {
@@ -53,7 +54,7 @@ export function PlayerRow(props: PlayerRowProps) {
       onClick={() => props.onNominate()}
     >
       <span class={styles.playerAvatar}>
-        <img
+        <WarmImg
           class={styles.playerAvatarImage}
           src={avatarImage(props.player.avatar)}
           alt=""

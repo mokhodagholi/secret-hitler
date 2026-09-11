@@ -20,18 +20,30 @@ import {
 } from '../assets/cards';
 import { EFFECT_URLS } from '../assets/sounds/effects/clips';
 import { MUSIC_URLS } from '../assets/sounds/music/clips';
-import {
-  RAVI_CLIPS,
-  type RaviWho,
-} from '../assets/sounds/ravi/clips';
-import { Phase } from '@secret-hitler/shared';
+import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 import { createSignal } from 'solid-js';
 import type { ScreenName } from './NavigationService';
 import { nextTrackForScene, type MusicScene } from './music';
 
-type RaviLineId = keyof (typeof RAVI_CLIPS)['daniel'];
-
 const IMAGE_URL = /\.(?:webp|png|jpe?g|gif|svg)(?:\?|$)/i;
+const PREFETCH_POOL = 6;
+const FETCH_INIT: RequestInit = {
+  credentials: 'same-origin',
+  cache: 'force-cache',
+};
+
+/** Beds that play at the table — warm every one while the lobby waits. */
+const TABLE_MUSIC = [
+  MUSIC_URLS['night-ambient'],
+  MUSIC_URLS['discuss-theme'],
+  MUSIC_URLS['discuss-late'],
+  MUSIC_URLS['vote-theme'],
+  MUSIC_URLS['legislative-theme'],
+  MUSIC_URLS['power-theme'],
+  MUSIC_URLS['chaos-theme'],
+  MUSIC_URLS['over-dawn'],
+  MUSIC_URLS['over-dusk'],
+] as const;
 
 export interface PrefetchProgress {
   loaded: number;
@@ -64,21 +76,33 @@ export function criticalBootUrls(options: BootPrefetchOptions): string[] {
   return unique(urls);
 }
 
-/** Files the next room will need — never the whole catalog. */
+/**
+ * Files the next room will need. Once seated, this is the whole table kit
+ * (art, beds, SFX, Ravi) so the match does not fetch on first paint.
+ */
 export function urlsForNextStep(options: NextStepOptions): string[] {
+  if (isTableScene(options.scene)) {
+    return tableKitUrls(options);
+  }
+
   const urls: string[] = [...visualsForNextScreen(options.scene.screen)];
   if (options.music) {
     const next = nextTrackForScene(options.scene);
     if (next) urls.push(MUSIC_URLS[next]);
   }
-  if (options.soundEffects && options.scene.screen !== 'game') {
-    urls.push(...Object.values(EFFECT_URLS));
-  }
+  if (options.soundEffects) urls.push(...Object.values(EFFECT_URLS));
+  return unique(urls);
+}
+
+function tableKitUrls(options: NextStepOptions): string[] {
+  const urls: string[] = [
+    ...waitingRoomVisualUrls(),
+    ...gameTableUrls(),
+  ];
+  if (options.music) urls.push(...TABLE_MUSIC);
+  if (options.soundEffects) urls.push(...Object.values(EFFECT_URLS));
   if (options.raviVoice) {
-    for (const id of nextRaviIds(options.scene)) {
-      const src = RAVI_CLIPS[options.raviWho][id];
-      if (src) urls.push(src);
-    }
+    urls.push(...Object.values(RAVI_CLIPS[options.raviWho]));
   }
   return unique(urls);
 }
@@ -121,8 +145,6 @@ function visualsForNextScreen(screen: ScreenName): string[] {
     case 'create-room':
     case 'join-game':
       return waitingRoomVisualUrls();
-    case 'waiting-room':
-      return gameTableUrls();
     default:
       return [];
   }
@@ -132,22 +154,47 @@ function isPlayFoyer(screen: ScreenName | undefined): boolean {
   return screen === 'play' || screen === 'create-room' || screen === 'join-game';
 }
 
+/** Lobby, the table, or a live seat from another screen (rejoin). */
+function isTableScene(scene: MusicScene): boolean {
+  return (
+    scene.screen === 'waiting-room' ||
+    scene.screen === 'game' ||
+    scene.view != null
+  );
+}
+
 function unique(urls: readonly string[]): string[] {
   return [...new Set(urls)];
 }
 
-function loadImage(url: string): Promise<void> {
+function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    let settled = false;
+    const succeed = () => {
+      if (settled) return;
+      settled = true;
+      resolve(img);
+    };
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`prefetch image ${url}`));
+    };
     img.onload = () => {
       if (typeof img.decode === 'function') {
-        void img.decode().then(() => resolve(), () => resolve());
+        void img.decode().then(succeed, succeed);
         return;
       }
-      resolve();
+      succeed();
     };
-    img.onerror = () => reject(new Error(`prefetch image ${url}`));
+    img.onerror = fail;
     img.src = url;
+    if (img.complete) {
+      queueMicrotask(() => {
+        if (!settled) succeed();
+      });
+    }
   });
 }
 
@@ -156,33 +203,42 @@ function headerLength(response: Response): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
-/** Drain a response and report downloaded bytes as they land. */
+/** Drain a response into bytes and report downloaded length as they land. */
 async function consumeResponse(
   response: Response,
   onProgress?: (received: number, contentLength: number) => void,
-): Promise<void> {
+): Promise<Uint8Array> {
   const contentLength = headerLength(response);
   if (contentLength > 0) onProgress?.(0, contentLength);
 
   const body = response.body;
   if (body != null && typeof body.getReader === 'function') {
     const reader = body.getReader();
+    const chunks: Uint8Array[] = [];
     let received = 0;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      received += value.byteLength;
+      if (value == null || value.byteLength === 0) continue;
+      const copy = new Uint8Array(value.byteLength);
+      copy.set(value);
+      chunks.push(copy);
+      received += copy.byteLength;
       onProgress?.(received, contentLength > 0 ? contentLength : received);
     }
     if (received > 0) {
-      onProgress?.(received, contentLength > 0 ? Math.max(contentLength, received) : received);
+      onProgress?.(
+        received,
+        contentLength > 0 ? Math.max(contentLength, received) : received,
+      );
     }
-    return;
+    return concatChunks(chunks, received);
   }
 
-  const blob = await response.blob();
-  const size = blob.size > 0 ? blob.size : contentLength;
-  if (size > 0) onProgress?.(size, size);
+  const buffer = new Uint8Array(await response.arrayBuffer());
+  const received = buffer.byteLength > 0 ? buffer.byteLength : contentLength;
+  if (received > 0) onProgress?.(received, received);
+  return buffer;
 }
 
 function bootProgress(
@@ -220,10 +276,57 @@ function bootProgress(
   return { loaded, total };
 }
 
-/** Warm a list of URLs so the next beat is already on disk (and in the SW). */
+async function mapPool(
+  urls: readonly string[],
+  limit: number,
+  worker: (url: string) => Promise<void>,
+): Promise<void> {
+  const executing = new Set<Promise<void>>();
+  for (const url of urls) {
+    const job = worker(url).finally(() => {
+      executing.delete(job);
+    });
+    executing.add(job);
+    if (executing.size >= limit) await Promise.race(executing);
+  }
+  await Promise.all(executing);
+}
+
+function concatChunks(chunks: readonly Uint8Array[], received: number): Uint8Array {
+  const bytes = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+function playbackUrlFor(bytes: Uint8Array): string | null {
+  if (bytes.byteLength === 0) return null;
+  try {
+    if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      return URL.createObjectURL(
+        new Blob([bytes], { type: 'application/octet-stream' }),
+      );
+    }
+  } catch {
+    /* jsdom Blob/object-URL gaps */
+  }
+  try {
+    const chars = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+    return `data:application/octet-stream;base64,${btoa(chars)}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Warm a list of URLs so the next beat is already in memory (and in the SW). */
 export class PrefetchService {
   private readonly loaded = new Set<string>();
   private readonly inflight = new Map<string, Promise<void>>();
+  private readonly objectUrls = new Map<string, string>();
+  private readonly images = new Map<string, HTMLImageElement>();
   private booted = false;
   private pending: string[] = [];
 
@@ -233,6 +336,18 @@ export class PrefetchService {
   });
   readonly progress = this.progressSignal[0];
   private readonly setProgress = this.progressSignal[1];
+
+  private readonly warmedSignal = createSignal<ReadonlySet<string>>(new Set());
+  private readonly setWarmed = this.warmedSignal[1];
+
+  /**
+   * Blob URL when this file has been fully downloaded, else the original.
+   * Reads the warmed set so Solid re-renders once the blob lands.
+   */
+  src(url: string): string {
+    this.warmedSignal[0]();
+    return this.objectUrls.get(url) ?? url;
+  }
 
   /** Fetch the boot set and report byte progress. Failures still count as done. */
   async boot(urls: readonly string[]): Promise<void> {
@@ -269,7 +384,7 @@ export class PrefetchService {
       this.pending.push(...urls);
       return;
     }
-    void Promise.all(urls.map((url) => this.load(url, 0)));
+    void mapPool(unique(urls), PREFETCH_POOL, (url) => this.load(url, 1));
   }
 
   private load(
@@ -297,94 +412,34 @@ export class PrefetchService {
     retries: number,
     onProgress?: (received: number, contentLength: number) => void,
   ): Promise<void> {
+    let consumed = false;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, FETCH_INIT);
       if (!response.ok) throw new Error(`prefetch ${response.status}`);
-      await consumeResponse(response, onProgress);
+      consumed = true;
+      const bytes = await consumeResponse(response, onProgress);
+      this.keepBytes(url, bytes);
       if (IMAGE_URL.test(url) && typeof Image !== 'undefined') {
-        await loadImage(url);
+        const img = await loadImage(url);
+        this.images.set(url, img);
       }
     } catch (error) {
-      if (retries > 0) return this.fetchWithRetry(url, retries - 1, onProgress);
+      if (!consumed && retries > 0) {
+        return this.fetchWithRetry(url, retries - 1, onProgress);
+      }
       throw error;
     }
   }
-}
 
-function nextRaviIds(scene: MusicScene): RaviLineId[] {
-  if (scene.roomClosed) return [];
-  if (scene.screen === 'waiting-room') {
-    return [
-      'deal.start',
-      'deal.look',
-      'night.start',
-      'night.end',
-      'president.first',
-      'president.firstYou',
-      'private.youLiberal',
-      'private.youFascist',
-      'private.youHitler',
-    ];
-  }
-  if (scene.screen !== 'game' || !scene.view) return [];
-  if (scene.view.kickVote) {
-    return [
-      'kick.passed',
-      'kick.passedYou',
-      'kick.passedOnYou',
-      'kick.failed',
-      'kick.failedYou',
-      'kick.failedOnYou',
-    ];
-  }
-  const kickAsk: RaviLineId[] = ['kick.asked', 'kick.askedYou', 'kick.askedOnYou'];
-  switch (scene.view.phase) {
-    case Phase.Nomination:
-      return [
-        ...kickAsk,
-        'nominate.start',
-        'nominate.named',
-        'nominate.namedYou',
-        'discuss.start',
-        'vote.start',
-      ];
-    case Phase.Voting:
-      return [
-        ...kickAsk,
-        'vote.collecting',
-        'vote.count',
-        'vote.passed',
-        'vote.failed',
-        'vote.hitlerChancellor',
-      ];
-    case Phase.PresidentLegislative:
-      return [
-        ...kickAsk,
-        'law.draw',
-        'law.presidentChoosing',
-        'law.burned',
-        'law.pass',
-        'law.passYou',
-      ];
-    case Phase.ChancellorLegislative:
-      return [
-        ...kickAsk,
-        'law.chancellorChoosing',
-        'law.liberal',
-        'law.fascist',
-        'law.vetoOffered',
-      ];
-    case Phase.SpecialPower:
-      return [
-        ...kickAsk,
-        'power.investigate',
-        'power.peek',
-        'power.execution',
-        'power.specialElection',
-      ];
-    case Phase.GameOver:
-      return ['game.reveal', 'game.liberalsWin.policies', 'game.fascistsWin.policies'];
-    default:
-      return kickAsk;
+  private keepBytes(url: string, bytes: Uint8Array): void {
+    if (bytes.byteLength === 0 || this.objectUrls.has(url)) return;
+    const playback = playbackUrlFor(bytes);
+    if (!playback) return;
+    this.objectUrls.set(url, playback);
+    this.setWarmed((previous) => {
+      const next = new Set(previous);
+      next.add(url);
+      return next;
+    });
   }
 }

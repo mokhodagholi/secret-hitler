@@ -13,15 +13,20 @@ import { isolateBidi } from '../../i18n/utils';
 import { avatarImage } from '../../assets/avatars';
 import { CARD_BACK, VOTE_FACE } from '../../assets/cards';
 import { Icon } from '../../components/Icon/Icon';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import styles from './ChatPanel.module.scss';
 
 /** Handle + chrome only — feed and composer hide at this height. */
-const CHAT_MIN = 72;
+const CHAT_MIN = 96;
+/** Handle + chrome + composer; the feed collapses to no height. */
+const CHAT_COMPOSER = 196;
 const CHAT_DEFAULT = 280;
 /** Leave room for the event header, deck, and a full-size seat row. */
 const BOARD_RESERVE = 260;
 const HEIGHT_KEY = 'sh:chat-panel-height';
+/** Extra slack so a slightly-short drag still counts as the composer step. */
+const COMPOSER_SNAP_SLACK = 36;
 
 export interface ChatPanelProps {
   talkingAllowed?: boolean;
@@ -33,8 +38,9 @@ export interface ChatPanelProps {
 }
 
 /**
- * Docked table chat: stays on the board, resizes by dragging the top handle,
- * and keeps people/settings in its chrome so the scene never leaves play.
+ * Docked table chat: stays on the board, resizes by dragging the top handle
+ * through header / composer / feed steps, and keeps people/settings in its
+ * chrome so the scene never leaves play.
  */
 export function ChatPanel(props: ChatPanelProps) {
   const { game, i18n, flags, voice } = useApp();
@@ -60,7 +66,8 @@ export function ChatPanel(props: ChatPanelProps) {
   };
   const canSend = () =>
     talkingAllowed() && slowSecondsLeft() === 0 && chatDraft().trim() !== '';
-  const expanded = () => height() > CHAT_MIN + 16;
+  const showComposer = () => height() >= CHAT_COMPOSER - COMPOSER_SNAP_SLACK;
+  const feedOpen = () => height() > CHAT_COMPOSER + 8;
 
   const clampHeight = (next: number) => {
     const available = panelEl?.parentElement?.clientHeight ?? 0;
@@ -74,7 +81,7 @@ export function ChatPanel(props: ChatPanelProps) {
   const applyHeight = (next: number, persist = false) => {
     const clamped = clampHeight(next);
     setHeight(clamped);
-    if (clamped > CHAT_MIN + 24) lastExpanded = clamped;
+    if (clamped > CHAT_COMPOSER + 24) lastExpanded = clamped;
     if (persist) {
       try {
         localStorage.setItem(HEIGHT_KEY, String(clamped));
@@ -84,12 +91,18 @@ export function ChatPanel(props: ChatPanelProps) {
     }
   };
 
+  const snapHeight = (next: number) => {
+    if (next < (CHAT_MIN + CHAT_COMPOSER) / 2) return CHAT_MIN;
+    if (next < CHAT_COMPOSER + COMPOSER_SNAP_SLACK) return CHAT_COMPOSER;
+    return next;
+  };
+
   createEffect(() => props.onHeightChange?.(height()));
 
   createEffect(() => {
     game.chatMessages();
     game.unreadChat();
-    if (expanded()) game.markChatRead();
+    if (feedOpen()) game.markChatRead();
   });
 
   createEffect(() => {
@@ -186,11 +199,15 @@ export function ChatPanel(props: ChatPanelProps) {
     if (!dragging) return;
     dragging = false;
     setResizing(false);
-    applyHeight(height(), true);
+    applyHeight(snapHeight(height()), true);
   }
 
   function onResizeToggle(): void {
-    if (height() > CHAT_MIN + 32) {
+    if (feedOpen()) {
+      applyHeight(CHAT_COMPOSER, true);
+      return;
+    }
+    if (showComposer()) {
       applyHeight(CHAT_MIN, true);
       return;
     }
@@ -267,7 +284,7 @@ export function ChatPanel(props: ChatPanelProps) {
         </div>
 
         <div class={styles.tools}>
-          <Show when={flags.enabled('voice')}>
+          <Show when={flags.flags.voice}>
             <button
               type="button"
               classList={{
@@ -303,8 +320,15 @@ export function ChatPanel(props: ChatPanelProps) {
         </div>
       </header>
 
-      <Show when={expanded()}>
-        <div class={styles.feed} ref={feedScroller}>
+      <Show when={showComposer()}>
+        <div
+          classList={{
+            [styles.feed]: true,
+            [styles.feedCollapsed]: !feedOpen(),
+          }}
+          ref={feedScroller}
+          aria-hidden={!feedOpen()}
+        >
           <For each={game.chatMessages()}>
             {(message) => {
               const mine = () => message.playerId === game.view()?.you.id;
@@ -322,7 +346,7 @@ export function ChatPanel(props: ChatPanelProps) {
                       fallback={<Icon name="people" size={18} />}
                     >
                       {(seated) => (
-                        <img src={avatarImage(seated().avatar)} alt="" />
+                        <WarmImg src={avatarImage(seated().avatar)} alt="" />
                       )}
                     </Show>
                   </span>
@@ -365,13 +389,13 @@ export function ChatPanel(props: ChatPanelProps) {
                   }
                 >
                   <span class={styles.avatar}>
-                    <img src={avatarImage(player.avatar)} alt="" />
+                    <WarmImg src={avatarImage(player.avatar)} alt="" />
                   </span>
                   <div class={styles.bubble}>
                     <bdi class={styles.author}>
                       {playerLabel(mine(), player.name, formatMessage)}
                     </bdi>
-                    <img
+                    <WarmImg
                       classList={{
                         [styles.ballot]: true,
                         [styles.ballotFace]: mine() && yourVoteFace() != null,

@@ -488,6 +488,9 @@ export const en = {
     },
     player: {
       left: '{name} left the game.',
+      away: '{name} left the table. They might come back.',
+      back: '{name} is back.',
+      backYou: 'Welcome back.',
     },
     vote: {
       start: 'Voting has begun.',

@@ -62,7 +62,10 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const profileLimiter = new RateLimiter(PROFILE_LIMIT, LIMIT_WINDOW_MS);
   const supportLimiter = new RateLimiter(SUPPORT_LIMIT, LIMIT_WINDOW_MS);
 
-  app.get('/api/flags', async () => toFlagsResponse(flags));
+  app.get('/api/flags', async (_req, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return toFlagsResponse(flags);
+  });
 
   app.post('/api/auth/bale', async (req, reply) => {
     if (!bale) {

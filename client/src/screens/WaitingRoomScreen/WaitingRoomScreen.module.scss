@@ -25,7 +25,7 @@
       rgba(0, 0, 0, 0.28) 22%,
       transparent 48%
     ),
-    url('../../assets/lobby/awaiting-bg.png') no-repeat center;
+    var(--lobby-art, url('../../assets/lobby/awaiting-bg.png')) no-repeat center;
   background-size: cover, cover;
 }
 

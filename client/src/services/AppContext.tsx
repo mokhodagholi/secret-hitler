@@ -46,24 +46,21 @@ export function AppProvider(
   const socket = overrides.socket ?? new WebSocketService();
   const i18n = overrides.i18n ?? new I18nService(() => settings.settings.language);
   const flags = overrides.flags ?? new FeatureFlagService();
+  const prefetch = overrides.prefetch ?? new PrefetchService();
   const services: AppServices = {
     nav: overrides.nav ?? new NavigationService(),
     settings,
     i18n,
     socket,
     game: overrides.game ?? new GameStateService(socket),
-    sound: overrides.sound ?? new SoundService(settings),
+    sound: overrides.sound ?? new SoundService(settings, prefetch),
     animation: overrides.animation ?? new AnimationService(settings),
-    ravi: overrides.ravi ?? new RaviService(settings, i18n),
+    ravi: overrides.ravi ?? new RaviService(settings, i18n, prefetch),
     bale: overrides.bale ?? new BaleService(),
-    prefetch: overrides.prefetch ?? new PrefetchService(),
+    prefetch,
     flags,
     voice: overrides.voice ?? new VoiceService(socket, flags, settings),
   };
-
-  if (!overrides.flags) {
-    void services.flags.load();
-  }
 
   if (!overrides.bale) {
     void services.bale.boot(settings, services.nav).then(() => {
@@ -98,7 +95,11 @@ export function AppProvider(
     services.sound.setMusicEnabled(services.settings.settings.music),
   );
 
-  createEffect(() => services.voice.sync(services.game.view()));
+  createEffect(() => {
+    // Store read belongs here — VoiceService.sync is a class method and would not subscribe.
+    void services.flags.flags.voice;
+    services.voice.sync(services.game.view());
+  });
   createEffect(() =>
     services.voice.setListenEnabled(services.settings.settings.voiceEnabled),
   );

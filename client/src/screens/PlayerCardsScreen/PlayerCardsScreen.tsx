@@ -3,6 +3,7 @@ import { useApp } from '../../services/AppContext';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { PORTRAITS } from '../../assets/avatars';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './PlayerCardsScreen.module.scss';
 
 /**
@@ -57,7 +58,7 @@ export function PlayerCardsScreen() {
                 onClick={() => select(index())}
               >
                 <span class={styles.paper}>
-                  <img class={styles.face} src={portrait.src} alt="" />
+                  <WarmImg class={styles.face} src={portrait.src} alt="" />
                 </span>
                 <span class={styles.caption} dir="rtl">
                   {portrait.persian}

@@ -107,6 +107,7 @@ async function main() {
     voice,
   });
 
+  app.log.info({ flags }, 'Feature flags');
   app.log.info('Game history and live-room persistence enabled.');
   if (bale) {
     app.log.info('Bale bot webhook ready.');

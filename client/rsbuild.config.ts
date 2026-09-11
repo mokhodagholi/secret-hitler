@@ -185,7 +185,7 @@ export default defineConfig({
                   cacheName: 'assets',
                   cacheableResponse: { statuses: [200] },
                   expiration: {
-                    maxEntries: 250,
+                    maxEntries: 400,
                     maxAgeSeconds: 30 * 24 * 60 * 60,
                   },
                 },

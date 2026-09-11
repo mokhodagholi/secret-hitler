@@ -4,6 +4,7 @@ import type { FormatMessage } from '../../i18n';
 import { POLICY_FACE } from '../../assets/cards';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './PolicyBoard.module.scss';
 
 export interface PolicyBoardProps {
@@ -25,7 +26,7 @@ export function PolicyBoard(props: PolicyBoardProps) {
   return (
     <div class={styles.board}>
       <div class={`${styles.track} ${styles.trackLiberal}`}>
-        <img
+        <WarmImg
           class={styles.art}
           src={liberalBoard}
           alt={formatMessage('game.liberal')}
@@ -40,7 +41,7 @@ export function PolicyBoard(props: PolicyBoardProps) {
                 data-filled={index < props.board.liberalPolicies ? '' : undefined}
               >
                 <Show when={index < props.board.liberalPolicies}>
-                  <img
+                  <WarmImg
                     class={styles.slotCard}
                     src={POLICY_FACE.liberal}
                     alt=""
@@ -53,7 +54,7 @@ export function PolicyBoard(props: PolicyBoardProps) {
       </div>
 
       <div class={`${styles.track} ${styles.trackFascist}`}>
-        <img
+        <WarmImg
           class={styles.art}
           src={fascistBoard}
           alt={formatMessage('game.fascist')}
@@ -68,7 +69,7 @@ export function PolicyBoard(props: PolicyBoardProps) {
                 data-filled={index < props.board.fascistPolicies ? '' : undefined}
               >
                 <Show when={index < props.board.fascistPolicies}>
-                  <img
+                  <WarmImg
                     class={styles.slotCard}
                     src={POLICY_FACE.fascist}
                     alt=""

@@ -782,13 +782,7 @@ export function GameScreen() {
                 </div>
               </div>
 
-            <Show
-              when={
-                tableOverlay() === 'vote' &&
-                state().you.vote == null &&
-                !!game.you()?.isAlive
-              }
-            >
+            <Show when={tableOverlay() === 'vote'}>
               <VotingOverlay
                 formatMessage={formatMessage}
                 prompt={formatMessage(

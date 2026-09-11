@@ -77,6 +77,9 @@ LINES: dict[str, LineText] = {
     "office.chancellorLeft": "صدراعظم از بازی رفت.",
     "office.roundOver": "این دور تموم شد.",
     "player.left": "یکی از بازیکن‌ها از بازی رفت.",
+    "player.away": "یکی از میز رفت. شاید برگرده.",
+    "player.back": "یکی برگشت سر میز.",
+    "player.backYou": "خوش برگشتید.",
     "kick.asked": "یه نفر درخواست اخراج داد.",
     "kick.askedYou": "شما درخواست اخراج دادید.",
     "kick.askedOnYou": "درخواست اخراج شما اومده.",
@@ -166,6 +169,9 @@ LINES_EN: dict[str, LineText] = {
     "office.chancellorLeft": "The Chancellor has left the game.",
     "office.roundOver": "This round is over.",
     "player.left": "A player left the game.",
+    "player.away": "Someone left the table. They might come back.",
+    "player.back": "Someone is back.",
+    "player.backYou": "Welcome back.",
     "kick.asked": "Someone asked for a kick.",
     "kick.askedYou": "You asked for a kick.",
     "kick.askedOnYou": "Someone asked to kick you.",
@@ -296,6 +302,9 @@ ELEVEN_DIRECTION: dict[str, str | tuple[str, ...]] = {
     "office.chancellorLeft": "[disappointed]",
     "office.roundOver": "[firm]",
     "player.left": "[disappointed]",
+    "player.away": "[calm]",
+    "player.back": "[calm]",
+    "player.backYou": "[calm]",
     "kick.asked": "[announcing]",
     "kick.askedYou": "[calm]",
     "kick.askedOnYou": "[firm]",
@@ -738,6 +747,15 @@ def speak_eleven(key: str, voice_id: str, text: str, dest: Path, language_code: 
                 raw.write_bytes(resp.read())
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:400]
+            if "quota_exceeded" in detail:
+                keys = eleven_api_keys()
+                try:
+                    next_key = keys[keys.index(key) + 1]
+                except (ValueError, IndexError):
+                    sys.exit(f"ElevenLabs HTTP {exc.code}: {detail}")
+                print("ElevenLabs quota hit; retrying with the next key")
+                speak_eleven(next_key, voice_id, text, dest, language_code)
+                return
             sys.exit(f"ElevenLabs HTTP {exc.code}: {detail}")
         pad_and_normalize(raw, dest)
     finally:
@@ -764,10 +782,21 @@ def speak_eleven_line(
             path.unlink(missing_ok=True)
 
 
+def eleven_api_keys() -> list[str]:
+    """Prefer the second key when present — the first is often out of quota."""
+    keys: list[str] = []
+    for name in ("ELEVENLABS_API_KEY_2", "ELEVENLABS_API_KEY", "ELEVEN_API_KEY"):
+        value = os.environ.get(name, "").strip()
+        if value and value not in keys:
+            keys.append(value)
+    return keys
+
+
 def run_eleven(who: list[str], ids: list[str] | None = None, lang: str = "en") -> None:
-    key = os.environ.get("ELEVENLABS_API_KEY") or os.environ.get("ELEVEN_API_KEY")
-    if not key:
-        sys.exit("Set ELEVENLABS_API_KEY for --engine eleven")
+    keys = eleven_api_keys()
+    if not keys:
+        sys.exit("Set ELEVENLABS_API_KEY or ELEVENLABS_API_KEY_2 for --engine eleven")
+    key = keys[0]
 
     voices = {
         "james": os.environ.get("ELEVENLABS_JAMES_VOICE_ID", JAMES_VOICE_ID),

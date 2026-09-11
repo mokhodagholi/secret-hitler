@@ -4,6 +4,7 @@ import { Phase } from '@secret-hitler/shared';
 import { GameScreen } from './GameScreen';
 import { LOOK_AT_MS, LOOK_MS, CEREMONY_MS } from './NightOverlay';
 import { en } from '../../i18n/locales/en';
+import { isolateBidi } from '../../i18n/utils';
 import { buildHarness, makePlayer, makeView, renderWithApp, stubDeniedMicrophone } from '../../../test/test-utils';
 
 // Sourced from the catalog so the assertion follows the i18n text, not a literal.
@@ -76,6 +77,8 @@ describe('GameScreen — voting', () => {
 
     expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.querySelector('[data-ballot="you"]')).toBeTruthy();
+    expect(document.querySelector('[data-ballot-face="face"]')).toBeTruthy();
     expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
     expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
   });
@@ -108,14 +111,16 @@ describe('GameScreen — voting', () => {
     );
   });
 
-  it('Should throw a face-down ballot onto the table when the player votes', async () => {
+  it('Should throw this player’s ballot face-up onto the table', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
     fireEvent.click(screen.getByRole('button', { name: 'Ja!' }));
     await waitFor(() => {
-      expect(document.querySelector('[data-ballot="you"]')).toBeTruthy();
+      expect(document.querySelector('[data-ballot="you"]')?.getAttribute('data-ballot-face')).toBe(
+        'face',
+      );
     });
   });
 
@@ -149,7 +154,7 @@ describe('GameScreen — voting', () => {
     expect(document.querySelector('[data-ballot="you"]')).toBeNull();
   });
 
-  it('Should move already-cast ballots into chat after this player votes', () => {
+  it('Should keep already-cast ballots in the centre after this player votes', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -163,7 +168,13 @@ describe('GameScreen — voting', () => {
       ),
     });
 
-    expect(document.querySelector('[data-ballot-pile]')).toBeNull();
+    expect(document.querySelector('[data-ballot-pile]')).toBeTruthy();
+    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('data-ballot-face')).toBe(
+      'face',
+    );
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('data-ballot-face')).toBe(
+      'back',
+    );
     expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
     expect(document.querySelector('[data-chat-ballot="cal"]')).toBeTruthy();
     expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
@@ -407,6 +418,75 @@ describe('GameScreen — voting', () => {
     },
     12_000,
   );
+});
+
+describe('GameScreen — presence', () => {
+  it('Should have Ravi say a disconnected player might come back', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(nominationView());
+
+    harness.socket.emit({
+      type: 'log',
+      entry: {
+        id: 'away-1',
+        code: 'disconnected',
+        params: { name: 'Cal' },
+        at: Date.now(),
+      },
+    });
+
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(
+        en.ravi.player.away.replace('{name}', isolateBidi('Cal')),
+      );
+    });
+  });
+
+  it('Should have Ravi welcome a returning player', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(nominationView());
+
+    harness.socket.emit({
+      type: 'log',
+      entry: {
+        id: 'back-1',
+        code: 'reconnected',
+        params: { name: 'Cal' },
+        at: Date.now(),
+      },
+    });
+
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(
+        en.ravi.player.back.replace('{name}', isolateBidi('Cal')),
+      );
+    });
+  });
+
+  it('Should welcome the viewer back after they reconnect', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(nominationView());
+
+    harness.socket.emit({
+      type: 'log',
+      entry: {
+        id: 'back-you',
+        code: 'reconnected',
+        params: { name: 'You' },
+        at: Date.now(),
+      },
+    });
+
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe('Welcome back.');
+    });
+  });
 });
 
 function openPlayers() {

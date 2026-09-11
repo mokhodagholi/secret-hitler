@@ -27,6 +27,8 @@ const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
   chaos: 'chaos.start',
   left: 'player.left',
   kicked: 'player.left',
+  disconnected: 'player.away',
+  reconnected: 'player.back',
   kickVoteStarted: 'kick.asked',
   kickVotePassed: 'kick.passed',
   kickVoteFailed: 'kick.failed',
@@ -55,6 +57,9 @@ const LINE_SFX: Partial<Record<RaviLineId, SoundEffect>> = {
   'office.presidentLeft': 'player-leave',
   'office.chancellorLeft': 'player-leave',
   'player.left': 'player-leave',
+  'player.away': 'player-leave',
+  'player.back': 'player-ready',
+  'player.backYou': 'player-ready',
   'kick.passed': 'player-leave',
   'kick.passedYou': 'player-leave',
   'kick.passedOnYou': 'player-leave',
@@ -135,6 +140,17 @@ export function RaviNarrator(props: {
       lastDiscussionStart = state.discussionDeadline?.startedAt ?? 0;
       lastNominationOpen = state.nominationDeadline != null;
       sawSnapshot = true;
+      const myName =
+        state.players.find((player) => player.id === state.you.id)?.name ?? '';
+      const latest = entries[entries.length - 1];
+      if (
+        latest?.code === 'reconnected' &&
+        namedIsYou(latest.params?.name, myName) &&
+        Date.now() - latest.at < 8_000
+      ) {
+        sound.play('player-ready');
+        void ravi.speak('player.backYou');
+      }
       return;
     }
 
@@ -193,6 +209,12 @@ export function RaviNarrator(props: {
           namedIsYou(entry.params?.name, myName)
         ) {
           line = 'power.executedYou';
+        } else if (entry.code === 'disconnected') {
+          if (namedIsYou(entry.params?.name, myName)) continue;
+        } else if (entry.code === 'reconnected') {
+          line = namedIsYou(entry.params?.name, myName)
+            ? 'player.backYou'
+            : 'player.back';
         } else if (entry.code === 'investigated') {
           if (namedIsYou(entry.params?.name, myName)) {
             line = 'power.investigatedYou';

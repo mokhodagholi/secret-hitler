@@ -12,6 +12,7 @@ import { useApp } from '../../services/AppContext';
 import type { RaviLineId } from '../../services/RaviService';
 import { avatarImage } from '../../assets/avatars';
 import { CARD_BACK, NIGHT_VEIL, PARTY_FACE, ROLE_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { flyToTarget } from './cardFlight';
 import styles from './NightOverlay.module.scss';
 
@@ -204,7 +205,7 @@ export function NightOverlay(props: NightOverlayProps) {
       aria-label={formatMessage(dialogLabel(beat()))}
     >
       <Show when={beat() !== 'deal'}>
-        <img
+        <WarmImg
           class={styles.veil}
           src={NIGHT_VEIL}
           alt=""
@@ -223,13 +224,13 @@ export function NightOverlay(props: NightOverlayProps) {
         >
           <p class={styles.prompt}>{formatMessage('ravi.night.start')}</p>
           <div class={styles.cards}>
-            <img
+            <WarmImg
               class={styles.roleCard}
               src={ROLE_FACE[props.role]}
               alt={formatMessage(`role.${props.role}`)}
               ref={(element) => void animation.play(element, 'card-flip-in')}
             />
-            <img
+            <WarmImg
               class={styles.partyCard}
               src={PARTY_FACE[party()]}
               alt=""
@@ -258,7 +259,7 @@ export function NightOverlay(props: NightOverlayProps) {
                         n: player.seat + 1,
                       })}
                     </span>
-                    <img src={avatarImage(player.avatar)} alt="" />
+                    <WarmImg src={avatarImage(player.avatar)} alt="" />
                     <span dir="auto">{player.name}</span>
                     <Show when={player.role}>
                       {(role) => (
@@ -284,7 +285,7 @@ export function NightOverlay(props: NightOverlayProps) {
                         n: player().seat + 1,
                       })}
                     </span>
-                    <img src={avatarImage(player().avatar)} alt="" />
+                    <WarmImg src={avatarImage(player().avatar)} alt="" />
                     <span dir="auto">{player().name}</span>
                     <em>{formatMessage('game.raiseHand')}</em>
                   </div>
@@ -337,13 +338,13 @@ function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
   return (
     <div class={styles.dealLayer} aria-hidden="true">
       <div class={styles.dealDeck}>
-        <img src={CARD_BACK} alt="" />
-        <img src={CARD_BACK} alt="" />
-        <img src={CARD_BACK} alt="" />
+        <WarmImg src={CARD_BACK} alt="" />
+        <WarmImg src={CARD_BACK} alt="" />
+        <WarmImg src={CARD_BACK} alt="" />
       </div>
       <For each={props.players}>
         {(player, index) => (
-          <img
+          <WarmImg
             classList={{
               [styles.dealtBack]: true,
               [styles.dealtBackYou]: player.id === props.youId,

@@ -3,6 +3,7 @@ import type { Faction } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage } from '../../i18n';
 import { CARD_BACK, PARTY_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './InvestigateOverlay.module.scss';
 
 const NOTICE_MS =
@@ -97,7 +98,7 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
       ref={(element) => void animation.play(element, 'fade-in')}
     >
       <div class={styles.stage}>
-        <img
+        <WarmImg
           class={styles.card}
           src={shownParty() ? PARTY_FACE[shownParty()!] : CARD_BACK}
           alt={shownParty() ? formatMessage(`game.${shownParty()!}`) : ''}

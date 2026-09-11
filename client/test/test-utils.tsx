@@ -94,7 +94,12 @@ const SESSION: RoomSession = {
  * in-room screens require. Language defaults to English for readable assertions.
  */
 export function buildHarness(
-  options: { seated?: boolean; initialPath?: string; flags?: FeatureFlags } = {},
+  options: {
+    seated?: boolean;
+    initialPath?: string;
+    flags?: FeatureFlags;
+    flagFetch?: typeof fetch;
+  } = {},
 ): Harness {
   if (options.seated) {
     localStorage.setItem('sh:session', JSON.stringify(SESSION));
@@ -104,18 +109,19 @@ export function buildHarness(
   const socket = new FakeSocket();
   const game = new GameStateService(socket as unknown as WebSocketService);
   const i18n = new I18nService(() => settings.settings.language);
-  const flags = new FeatureFlagService(options.flags);
+  const flags = new FeatureFlagService(options.flags, options.flagFetch);
+  const prefetch = new PrefetchService();
   const services: AppServices = {
     nav: new NavigationService(options.initialPath ?? '/'),
     settings,
     i18n,
     socket: socket as unknown as WebSocketService,
     game,
-    sound: new SoundService(settings),
+    sound: new SoundService(settings, prefetch),
     animation: new AnimationService(settings),
-    ravi: new RaviService(settings, i18n),
+    ravi: new RaviService(settings, i18n, prefetch),
     bale: new BaleService(),
-    prefetch: new PrefetchService(),
+    prefetch,
     flags,
     voice: new VoiceService(
       socket as unknown as WebSocketService,

@@ -3,6 +3,7 @@ import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import heroImage from '../../assets/home/hero.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
@@ -15,7 +16,7 @@ import styles from './HomeScreen.module.scss';
  * can still be claimed gets its own return button above Find Game.
  */
 export function HomeScreen() {
-  const { nav, game, i18n } = useApp();
+  const { nav, game, i18n, prefetch } = useApp();
   const { formatMessage } = i18n;
 
   const canRejoin = () => game.inRoom() && game.view() != null;
@@ -53,20 +54,20 @@ export function HomeScreen() {
           <div class={styles.deskWrap}>
             <div class={styles.hero}>
               <span class={styles.heroHeadShade} aria-hidden="true" />
-              <img class={styles.heroImage} src={heroImage} alt="" />
+              <WarmImg class={styles.heroImage} src={heroImage} alt="" />
               <span
                 class={styles.heroBellyShade}
                 aria-hidden="true"
                 style={{
-                  'mask-image': `url("${heroImage}")`,
-                  '-webkit-mask-image': `url("${heroImage}")`,
+                  'mask-image': `url("${prefetch.src(heroImage)}")`,
+                  '-webkit-mask-image': `url("${prefetch.src(heroImage)}")`,
                 }}
               />
             </div>
-            <img class={styles.desk} src={deskImage} alt="" />
+            <WarmImg class={styles.desk} src={deskImage} alt="" />
             <div class={styles.boards} aria-hidden="true">
-              <img class={styles.board} src={liberalBoard} alt="" />
-              <img class={styles.board} src={fascistBoard} alt="" />
+              <WarmImg class={styles.board} src={liberalBoard} alt="" />
+              <WarmImg class={styles.board} src={fascistBoard} alt="" />
             </div>
           </div>
         </div>

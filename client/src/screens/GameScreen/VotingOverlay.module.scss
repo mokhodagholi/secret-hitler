@@ -161,10 +161,15 @@
 }
 
 .waiting {
+  position: relative;
+  z-index: 1;
+  width: min(280px, 100%);
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  pointer-events: none;
 }
 
 .yourVote {
@@ -194,6 +199,11 @@
   aspect-ratio: 2 / 3;
 }
 
+.pileFaced {
+  width: 112px;
+  aspect-ratio: 3 / 2;
+}
+
 .ballot {
   position: absolute;
   inset: 0;
@@ -203,6 +213,10 @@
   opacity: 0;
   pointer-events: none;
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+}
+
+.ballotFace {
+  z-index: 2;
 }
 
 .landed {

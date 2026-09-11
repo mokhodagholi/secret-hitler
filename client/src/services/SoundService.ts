@@ -1,5 +1,6 @@
 import { EFFECT_URLS } from '../assets/sounds/effects/clips';
 import { MUSIC_URLS } from '../assets/sounds/music/clips';
+import type { PrefetchService } from './prefetch';
 import type { SettingsService } from './SettingsService';
 
 interface SoundDefinition {
@@ -109,7 +110,10 @@ export class SoundService {
   private musicTrack: MusicTrack | null = null;
   private unlockGesture: (() => void) | null = null;
 
-  constructor(private readonly settings: SettingsService) {}
+  constructor(
+    private readonly settings: SettingsService,
+    private readonly prefetch?: PrefetchService,
+  ) {}
 
   /** Fire a one-shot effect. No-op while Sound Effects are off. */
   play(effect: SoundEffect): void {
@@ -146,7 +150,7 @@ export class SoundService {
     this.musicTrack = track;
     if (!canPlayAudio || !this.settings.settings.music) return;
     const { src, volume = 1 } = MUSIC[track];
-    const audio = new Audio(src);
+    const audio = new Audio(this.srcFor(src));
     audio.loop = true;
     audio.volume = volume;
     this.music = audio;
@@ -173,11 +177,15 @@ export class SoundService {
     }
   }
 
+  private srcFor(url: string): string {
+    return this.prefetch?.src(url) ?? url;
+  }
+
   private sampleFor(effect: SoundEffect): HTMLAudioElement {
     let sample = this.samples.get(effect);
     if (!sample) {
       const { src, volume = 1 } = EFFECTS[effect];
-      sample = new Audio(src);
+      sample = new Audio(this.srcFor(src));
       sample.preload = 'auto';
       sample.volume = volume;
       this.samples.set(effect, sample);
@@ -239,7 +247,7 @@ export class SoundService {
 
   private warmSession(): void {
     if (!canPlayAudio) return;
-    const warm = new Audio(EFFECTS['swap-page'].src);
+    const warm = new Audio(this.srcFor(EFFECTS['swap-page'].src));
     warm.muted = true;
     const played = warm.play() as Promise<void> | undefined;
     played

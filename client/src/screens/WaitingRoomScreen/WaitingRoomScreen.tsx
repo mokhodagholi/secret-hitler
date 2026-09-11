@@ -8,6 +8,7 @@ import {
   onMount,
 } from 'solid-js';
 import { MAX_PLAYERS, Phase, roomInviteLink, type GameStateView } from '@secret-hitler/shared';
+import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
 import {
   CONNECTION_STATUS_KEYS,
@@ -30,7 +31,7 @@ const TIP_ROTATION_MS = 5000;
  * Navigates to the game board as soon as the server leaves the lobby phase.
  */
 export function WaitingRoomScreen() {
-  const { nav, game, socket, i18n, animation, sound } = useApp();
+  const { nav, game, socket, i18n, animation, sound, prefetch } = useApp();
   const { formatMessage } = i18n;
 
   const [copied, setCopied] = createSignal(false);
@@ -169,7 +170,11 @@ export function WaitingRoomScreen() {
   return (
     <Screen fill>
       <div class={styles.scene}>
-        <div class={styles.backdrop} aria-hidden="true" />
+        <div
+          class={styles.backdrop}
+          aria-hidden="true"
+          style={{ '--lobby-art': `url("${prefetch.src(awaitingBg)}")` }}
+        />
 
         <ScreenHeader
           title={formatMessage('waiting.title')}

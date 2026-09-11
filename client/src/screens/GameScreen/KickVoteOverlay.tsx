@@ -4,6 +4,7 @@ import { useApp } from '../../services/AppContext';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import { VOTE_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './VotingOverlay.module.scss';
 import kickStyles from './KickVoteOverlay.module.scss';
 
@@ -106,7 +107,7 @@ export function KickVoteOverlay(props: KickVoteOverlayProps) {
                 disabled={chosen() != null}
                 onClick={() => choose(true)}
               >
-                <img class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
+                <WarmImg class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
                 <span>{formatMessage('game.voteJa')}</span>
               </button>
               <button
@@ -120,7 +121,7 @@ export function KickVoteOverlay(props: KickVoteOverlayProps) {
                 disabled={chosen() != null}
                 onClick={() => choose(false)}
               >
-                <img class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
+                <WarmImg class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
                 <span>{formatMessage('game.voteNein')}</span>
               </button>
             </div>

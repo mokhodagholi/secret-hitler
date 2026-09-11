@@ -4,6 +4,7 @@ import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import type { AnimationService } from '../../services/AnimationService';
 import { CARD_BACK, VOTE_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import styles from './VotingOverlay.module.scss';
@@ -39,9 +40,9 @@ type Ballot = {
 };
 
 /**
- * Vote dock at the top of the table. Face-down ballots land in front of the
- * dock so they stay visible on a short phone column. After this device votes,
- * the dock closes and the ballots move into chat.
+ * Vote dock at the top of the table. Face-down ballots stay in the centre
+ * until the clock ends. This seat’s card is face-up; everyone else stays
+ * face-down. The Ja/Nein dialog closes after this device votes.
  */
 export function VotingOverlay(props: VotingOverlayProps) {
   const { formatMessage } = props;
@@ -55,6 +56,9 @@ export function VotingOverlay(props: VotingOverlayProps) {
   const seen = new Set<string>();
   let primed = false;
   let closed = false;
+  const ballotSrc = (id: string) =>
+    id === props.youId && chosen() != null ? VOTE_FACE[chosen()!] : CARD_BACK;
+  const ballotFaceUp = (id: string) => id === props.youId && chosen() != null;
 
   const totalMs = Math.max(1, props.endsAt - props.startedAt);
   const elapsedMs = Math.max(0, Date.now() - props.startedAt);
@@ -72,7 +76,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
   });
 
   onMount(() => {
-    void ravi.speak('private.vote');
+    if (props.canVote) void ravi.speak('private.vote');
   });
 
   createEffect(() => {
@@ -154,7 +158,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
             class={styles.ja}
             onClick={() => choose('ja')}
           >
-            <img class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
+            <WarmImg class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
             <span>{formatMessage('game.voteJa')}</span>
           </button>
           <button
@@ -162,7 +166,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
             class={styles.nein}
             onClick={() => choose('nein')}
           >
-            <img class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
+            <WarmImg class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
             <span>{formatMessage('game.voteNein')}</span>
           </button>
         </div>
@@ -176,18 +180,51 @@ export function VotingOverlay(props: VotingOverlayProps) {
       </div>
       </Show>
 
+      <Show when={!showDialog()}>
+        <div class={styles.waiting}>
+          <Show when={props.showTimer}>
+            <div class={styles.timer}>
+              <div
+                classList={{
+                  [styles.timerBar]: true,
+                  [styles.timerBarStatic]: !animation.motionEnabled(),
+                }}
+                style={{ ...timerVars, ...timerFallback }}
+              />
+              <span class={styles.timerLabel}>
+                {formatMessage('game.secondsLeft', { seconds: props.secondsLeft })}
+              </span>
+            </div>
+          </Show>
+          <span class={styles.progress}>
+            {formatMessage('game.voteProgress', {
+              count: props.votedCount,
+              total: props.totalVoters,
+            })}
+          </span>
+        </div>
+      </Show>
+
       <div class={styles.felt}>
-        <div class={styles.pile} data-ballot-pile>
+        <div
+          classList={{
+            [styles.pile]: true,
+            [styles.pileFaced]: ballotFaceUp(props.youId),
+          }}
+          data-ballot-pile
+        >
           <For each={pile()}>
             {(ballot) => (
-              <img
+              <WarmImg
                 classList={{
                   [styles.ballot]: true,
                   [styles.landed]: ballot.instant,
+                  [styles.ballotFace]: ballotFaceUp(ballot.id),
                 }}
-                src={CARD_BACK}
+                src={ballotSrc(ballot.id)}
                 alt=""
                 data-ballot={ballot.id}
+                data-ballot-face={ballotFaceUp(ballot.id) ? 'face' : 'back'}
                 style={{
                   transform: `translate(${ballot.dx}px, ${ballot.dy}px) rotate(${ballot.rot}deg)`,
                 }}

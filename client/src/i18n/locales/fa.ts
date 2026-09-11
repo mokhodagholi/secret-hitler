@@ -480,6 +480,9 @@ export const fa = {
     },
     player: {
       left: '{name} از بازی رفت.',
+      away: '{name} از میز رفت. شاید برگرده.',
+      back: '{name} برگشت سر میز.',
+      backYou: 'خوش برگشتید.',
     },
     vote: {
       start: 'رأی‌گیری آغاز شد.',

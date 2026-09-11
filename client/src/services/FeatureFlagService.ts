@@ -15,6 +15,7 @@ export class FeatureFlagService {
   readonly flags: Store<FeatureFlags>;
   private readonly update: SetStoreFunction<FeatureFlags>;
   private readonly fetchImpl: typeof fetch;
+  private inflight: Promise<void> | null = null;
 
   constructor(
     initial: FeatureFlags = DEFAULT_FLAGS,
@@ -30,9 +31,14 @@ export class FeatureFlagService {
     return this.flags[name];
   }
 
-  async load(): Promise<void> {
+  load(): Promise<void> {
+    if (!this.inflight) this.inflight = this.pull();
+    return this.inflight;
+  }
+
+  private async pull(): Promise<void> {
     try {
-      const response = await this.fetchImpl('/api/flags');
+      const response = await this.fetchImpl('/api/flags', { cache: 'no-store' });
       if (!response.ok) return;
       const parsed = parseFlagsResponse(await response.json());
       if (!parsed) return;

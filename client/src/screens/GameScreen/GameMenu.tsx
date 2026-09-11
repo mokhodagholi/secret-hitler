@@ -68,7 +68,7 @@ export function GameMenu(props: GameMenuProps) {
               active={state.raviVoice}
               onClick={() => settings.set('raviVoice', !state.raviVoice)}
             />
-            <Show when={flags.enabled('voice')}>
+            <Show when={flags.flags.voice}>
               <MenuIcon
                 icon={state.voiceEnabled ? 'mic' : 'micOff'}
                 label={formatMessage('gameMenu.tableVoice')}

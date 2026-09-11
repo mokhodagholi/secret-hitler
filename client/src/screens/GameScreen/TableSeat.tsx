@@ -6,6 +6,7 @@ import { avatarImage } from '../../assets/avatars';
 import { PARTY_FACE } from '../../assets/cards';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './TableSeat.module.scss';
 
 export interface TableSeatProps {
@@ -36,7 +37,7 @@ export function TableSeat(props: TableSeatProps) {
 
   const showPublicMarks = () => props.showPublicMarks !== false;
 
-  const voiceOn = () => flags.enabled('voice');
+  const voiceOn = () => flags.flags.voice;
   const tableMuted = () =>
     voiceOn() && (props.isYou ? voice.selfMuted() : props.player.selfMuted);
   const locallyMuted = () =>
@@ -117,7 +118,7 @@ export function TableSeat(props: TableSeatProps) {
       </Show>
 
       <span class={styles.paper} data-seat-target>
-        <img
+        <WarmImg
           class={styles.face}
           src={avatarImage(props.player.avatar)}
           alt=""
@@ -130,7 +131,7 @@ export function TableSeat(props: TableSeatProps) {
         </Show>
         <Show when={props.player.party}>
           {(party) => (
-            <img
+            <WarmImg
               class={styles.party}
               src={PARTY_FACE[party()]}
               alt={formatMessage(

@@ -2,6 +2,7 @@ import { onCleanup, onMount } from 'solid-js';
 import type { Role } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { ROLE_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './RoleInspectOverlay.module.scss';
 
 export interface RoleInspectOverlayProps {
@@ -38,7 +39,7 @@ export function RoleInspectOverlay(props: RoleInspectOverlayProps) {
         onClick={(event) => event.stopPropagation()}
         ref={(element) => void animation.play(element, 'pop-in')}
       >
-        <img
+        <WarmImg
           class={styles.art}
           src={ROLE_FACE[props.role]}
           alt={formatMessage(`role.${props.role}`)}

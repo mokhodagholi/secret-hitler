@@ -25,10 +25,12 @@ Production (`server/src/index.ts`) passes
 returns `{ flags }` rebuilt from the catalog only — never a dump of env.
 
 The client [`FeatureFlagService`](../client/src/services/FeatureFlagService.ts)
-fetches that once at boot. Callers use `flags.enabled('voice')`. A failed or
-malformed response keeps the defaults (everything off). Tests inject a
-preloaded service (or `{ flags: { voice: true } }` on `buildServer`) and
-do not set `process.env`.
+fetches that once at boot (`cache: 'no-store'`). Splash waits for that
+response so screens never paint with a stale default-off catalog. Callers
+read `flags.flags.voice` in JSX (the store) or `flags.enabled('voice')` in
+handlers. A failed or malformed response keeps the defaults (everything
+off). Tests inject a preloaded service (or `{ flags: { voice: true } }` on
+`buildServer`) and do not set `process.env`.
 
 When `voice` is off, the client hides every mic control and the server rejects
 `voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).

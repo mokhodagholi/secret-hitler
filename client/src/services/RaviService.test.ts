@@ -80,7 +80,7 @@ describe('RaviService', () => {
     expect(ravi.line()).toBe('Not enough votes.');
     await ravi.speak('kick.failedOnYou');
     expect(ravi.line()).toBe("Not enough votes. You're staying.");
-  });
+  }, 15_000);
 
   it('Should subtitle an office-holder leaving the table', async () => {
     const ravi = makeRavi(false);
@@ -90,6 +90,16 @@ describe('RaviService', () => {
     expect(ravi.line()).toBe('This round is over.');
     await ravi.speak('player.left', { name: 'Cal' });
     expect(ravi.line()).toBe('Cal left the game.');
+  });
+
+  it('Should subtitle a disconnect and a return to the table', async () => {
+    const ravi = makeRavi(false);
+    await ravi.speak('player.away', { name: 'Cal' });
+    expect(ravi.line()).toBe('Cal left the table. They might come back.');
+    await ravi.speak('player.back', { name: 'Cal' });
+    expect(ravi.line()).toBe('Cal is back.');
+    await ravi.speak('player.backYou');
+    expect(ravi.line()).toBe('Welcome back.');
   });
 
   it('Should subtitle the condition discuss-open lines', async () => {

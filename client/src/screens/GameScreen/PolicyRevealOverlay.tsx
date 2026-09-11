@@ -1,5 +1,6 @@
 import type { Policy } from '@secret-hitler/shared';
 import { POLICY_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './PolicyRevealOverlay.module.scss';
 
 export interface PolicyRevealOverlayProps {
@@ -16,7 +17,7 @@ export function PolicyRevealOverlay(props: PolicyRevealOverlayProps) {
     <div class={styles.stage} aria-live="polite">
       <div class={styles.stack}>
         <div ref={props.cardRef} class={styles.card}>
-          <img
+          <WarmImg
             class={styles.face}
             src={POLICY_FACE[props.policy]}
             alt=""

@@ -1,5 +1,6 @@
 import { Show } from 'solid-js';
 import { avatarImage, PAPER_FRAME } from '../../assets/avatars';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './PlayerSlot.module.scss';
 
 export interface SlotPlayer {
@@ -43,7 +44,7 @@ export function PlayerSlot(props: PlayerSlotProps) {
           aria-label={props.awaitingLabel}
         >
           <span class={styles.paper}>
-            <img class={styles.paperFrame} src={PAPER_FRAME} alt="" />
+            <WarmImg class={styles.paperFrame} src={PAPER_FRAME} alt="" />
           </span>
         </div>
       }
@@ -62,7 +63,7 @@ export function PlayerSlot(props: PlayerSlotProps) {
                 [styles.paperYou]: !!props.isYou,
               }}
             >
-              <img
+              <WarmImg
                 class={styles.face}
                 src={avatarImage(player().avatar)}
                 alt=""

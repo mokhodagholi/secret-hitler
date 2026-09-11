@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from '@rstest/core';
-import { fireEvent, screen } from '@solidjs/testing-library';
-import { Phase } from '@secret-hitler/shared';
+import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
+import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
 import { ChatPanel } from './ChatPanel';
 import { en } from '../../i18n/locales/en';
 import {
@@ -246,11 +246,22 @@ describe('ChatPanel', () => {
     expect(panel.style.flexBasis).toBe('280px');
   });
 
+  it('Should keep the composer when the feed is collapsed to the composer step', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    fireEvent.dblClick(screen.getByRole('separator'));
+    expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
+    expect(screen.getByLabelText(en.game.chat).style.height).toBe('196px');
+  });
+
   it('Should hide the composer when the panel is collapsed to the header', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);
     harness.pushState(seatedView());
 
+    fireEvent.dblClick(screen.getByRole('separator'));
     fireEvent.dblClick(screen.getByRole('separator'));
     expect(screen.queryByPlaceholderText(en.game.chatPlaceholder)).toBeNull();
     expect(screen.queryByText(en.game.chat)).toBeNull();
@@ -263,6 +274,27 @@ describe('ChatPanel', () => {
 
     expect(screen.queryByRole('button', { name: en.game.unmuteSelf })).toBeNull();
     expect(screen.queryByRole('button', { name: en.game.muteSelf })).toBeNull();
+  });
+
+  it('Should show the microphone after /api/flags turns voice on', async () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({
+      seated: true,
+      flags: DEFAULT_FLAGS,
+      flagFetch: async () =>
+        new Response(JSON.stringify({ flags: { voice: true } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+    });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    expect(screen.queryByRole('button', { name: en.game.unmuteSelf })).toBeNull();
+    await harness.services.flags.load();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: en.game.unmuteSelf })).toBeTruthy();
+    });
   });
 
   it('Should toggle table mute from the chat chrome when the voice flag is on', () => {

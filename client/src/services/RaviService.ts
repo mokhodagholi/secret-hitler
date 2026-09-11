@@ -2,6 +2,7 @@ import { createSignal } from 'solid-js';
 import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 import type { MessageKey, MessageValues } from '../i18n';
 import type { I18nService } from './I18nService';
+import type { PrefetchService } from './prefetch';
 import type { SettingsService } from './SettingsService';
 
 export type { RaviWho };
@@ -43,6 +44,9 @@ export type RaviLineId =
   | 'office.chancellorLeft'
   | 'office.roundOver'
   | 'player.left'
+  | 'player.away'
+  | 'player.back'
+  | 'player.backYou'
   | 'vote.start'
   | 'vote.collecting'
   | 'vote.count'
@@ -121,6 +125,7 @@ export class RaviService {
   constructor(
     private readonly settings: SettingsService,
     private readonly i18n: I18nService,
+    private readonly prefetch?: PrefetchService,
   ) {}
 
   /** Resolve the line into the header and play the matching clip if voice is on. */
@@ -163,7 +168,7 @@ export class RaviService {
       return this.hold(generation);
     }
 
-    const audio = new Audio(src);
+    const audio = new Audio(this.prefetch?.src(src) ?? src);
     audio.preload = 'auto';
     audio.volume = 0.9;
     this.current = audio;

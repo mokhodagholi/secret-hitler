@@ -68,7 +68,7 @@ export function SettingsScreen() {
         checked={state.raviVoice}
         onChange={(value) => settings.set('raviVoice', value)}
       />
-      <Show when={flags.enabled('voice')}>
+      <Show when={flags.flags.voice}>
         <SettingRow
           kind="toggle"
           icon="mic"

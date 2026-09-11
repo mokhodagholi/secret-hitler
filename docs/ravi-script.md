@@ -232,6 +232,30 @@ Do not invent extra tags per line. If it is not in this table, it is
 - **EN audio:** A player left the game.
 - **Tone:** `[disappointed]`
 
+### `player.away`
+- **When:** A seated player disconnects and may still reconnect. Not a leave
+  or a kick — `player.left` stays for those.
+- **FA subtitle:** {name} از میز رفت. شاید برگرده.
+- **FA audio:** یکی از میز رفت. شاید برگرده.
+- **EN subtitle:** {name} left the table. They might come back.
+- **EN audio:** Someone left the table. They might come back.
+- **Tone:** `[calm]`
+
+### `player.back`
+- **When:** That player’s seat reconnects. Other seats.
+- **FA subtitle:** {name} برگشت سر میز.
+- **FA audio:** یکی برگشت سر میز.
+- **EN subtitle:** {name} is back.
+- **EN audio:** Someone is back.
+- **Tone:** `[calm]`
+
+### `player.backYou`
+- **When:** You just reconnected.
+- **FA:** خوش برگشتید.
+- **EN:** Welcome back.
+- **Tone:** `[calm]`
+- **Audio:** same as FA.
+
 ---
 
 ## Table kick vote
@@ -615,6 +639,9 @@ table is the **spoken** line.
 | `office.chancellorLeft` | `[disappointed]` | صدراعظم از بازی رفت. |
 | `office.roundOver` | `[firm]` | این دور تموم شد. |
 | `player.left` | `[disappointed]` | یکی از بازیکن‌ها از بازی رفت. |
+| `player.away` | `[calm]` | یکی از میز رفت. شاید برگرده. |
+| `player.back` | `[calm]` | یکی برگشت سر میز. |
+| `player.backYou` | `[calm]` | خوش برگشتید. |
 | `kick.asked` | `[announcing]` | یه نفر درخواست اخراج داد. |
 | `kick.askedYou` | `[calm]` | شما درخواست اخراج دادید. |
 | `kick.askedOnYou` | `[firm]` | درخواست اخراج شما اومده. |

@@ -2,6 +2,7 @@ import { onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage } from '../../i18n';
 import { avatarImage } from '../../assets/avatars';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import styles from './ChancellorReveal.module.scss';
@@ -50,7 +51,7 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
               : 'game.chancellorRevealTitle',
           )}
         </span>
-        <img
+        <WarmImg
           class={styles.face}
           src={avatarImage(props.chancellorAvatar)}
           alt=""

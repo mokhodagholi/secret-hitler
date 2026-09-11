@@ -3,6 +3,7 @@ import { type Policy } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import { CARD_BACK, POLICY_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { Icon } from '../../components/Icon/Icon';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
@@ -255,7 +256,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
                   }}
                   onClick={() => void pick(index())}
                 >
-                  <img
+                  <WarmImg
                     class={styles.cardImage}
                     src={POLICY_FACE[policy]}
                     alt={formatMessage(`game.${policy}`)}
@@ -267,7 +268,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
           <Show when={!showFaces()}>
             <Index each={Array.from({ length: travelCount() })}>
               {(_card, index) => (
-                <img
+                <WarmImg
                   classList={{
                     [styles.travelCard]: true,
                     [styles.travelVisible]: beat() === 'choose',

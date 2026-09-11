@@ -71,6 +71,19 @@ describe('urlsForNextStep', () => {
     expect(urls).not.toContain(MUSIC_URLS['over-dusk']);
   });
 
+  it('Should warm the table kit from home when a seat is still live', () => {
+    const urls = urlsForNextStep({
+      scene: { screen: 'home', roomClosed: false, view: makeView() },
+      raviWho: 'daniel',
+      music: true,
+      raviVoice: true,
+      soundEffects: false,
+    });
+    expect(urls).toContain(CARD_BACK);
+    expect(urls).toContain(MUSIC_URLS['night-ambient']);
+    expect(urls).toContain(RAVI_CLIPS.daniel['vote.start']);
+  });
+
   it('Should warm lobby art from the play foyer', () => {
     const urls = urlsForNextStep({
       scene: { screen: 'play', roomClosed: false, view: null },
@@ -84,21 +97,25 @@ describe('urlsForNextStep', () => {
     expect(urls).not.toContain(MUSIC_URLS['night-ambient']);
   });
 
-  it('Should warm night-ambient, opening Ravi, and table art from the waiting room', () => {
+  it('Should warm the whole table kit from the waiting room', () => {
     const urls = urlsForNextStep({
       scene: { screen: 'waiting-room', roomClosed: false, view: makeView() },
       raviWho: 'daniel',
       music: true,
       raviVoice: true,
-      soundEffects: false,
+      soundEffects: true,
     });
     expect(urls).toContain(MUSIC_URLS['night-ambient']);
+    expect(urls).toContain(MUSIC_URLS['over-dusk']);
     expect(urls).toContain(RAVI_CLIPS.daniel['deal.start']);
+    expect(urls).toContain(RAVI_CLIPS.daniel['vote.start']);
+    expect(urls).toContain(RAVI_CLIPS.daniel['law.vetoAgreed']);
     expect(urls).toContain(CARD_BACK);
-    expect(urls).not.toContain(MUSIC_URLS['over-dusk']);
+    expect(urls).toContain(PORTRAITS[0].src);
+    expect(urls).toContain(EFFECT_URLS['deal-slide']);
   });
 
-  it('Should skip audio the user has turned off', () => {
+  it('Should skip audio the user has turned off, but still warm table art', () => {
     const urls = urlsForNextStep({
       scene: {
         screen: 'game',
@@ -110,7 +127,10 @@ describe('urlsForNextStep', () => {
       raviVoice: false,
       soundEffects: false,
     });
-    expect(urls).toEqual([]);
+    expect(urls).toContain(CARD_BACK);
+    expect(urls).not.toContain(MUSIC_URLS['night-ambient']);
+    expect(urls).not.toContain(RAVI_CLIPS.daniel['vote.start']);
+    expect(urls).not.toContain(EFFECT_URLS['vote-tally']);
   });
 });
 
@@ -179,11 +199,17 @@ describe('PrefetchService', () => {
 
     const boot = prefetch.boot(['/a.mp3']);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy).toHaveBeenCalledWith('/a.mp3');
+    expect(fetchSpy).toHaveBeenCalledWith('/a.mp3', {
+      credentials: 'same-origin',
+      cache: 'force-cache',
+    });
 
     release?.(new Response(null, { status: 200 }));
     await boot;
-    expect(fetchSpy).toHaveBeenCalledWith('/next.mp3');
+    expect(fetchSpy).toHaveBeenCalledWith('/next.mp3', {
+      credentials: 'same-origin',
+      cache: 'force-cache',
+    });
   });
 
   it('Should retry a failed boot URL once', async () => {
@@ -205,5 +231,36 @@ describe('PrefetchService', () => {
     await prefetch.boot(['/a.mp3']);
     await prefetch.boot(['/a.mp3']);
     expect(fetchSpy).toHaveBeenCalledTimes(4);
+  });
+
+  it('Should expose a blob URL after the file has been fully downloaded', async () => {
+    rs.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      headers: { get: () => null },
+      body: {
+        getReader: () => {
+          let reads = 0;
+          return {
+            read: async () => {
+              reads += 1;
+              if (reads === 1) {
+                return { done: false, value: new Uint8Array([1, 2, 3, 4]) };
+              }
+              return { done: true };
+            },
+          };
+        },
+      },
+    } as unknown as Response);
+    const prefetch = new PrefetchService();
+    await prefetch.boot(['/line.mp3']);
+    expect(prefetch.src('/line.mp3')).not.toBe('/line.mp3');
+  });
+
+  it('Should keep the original URL when the download was empty', async () => {
+    rs.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
+    const prefetch = new PrefetchService();
+    await prefetch.boot(['/a.mp3']);
+    expect(prefetch.src('/a.mp3')).toBe('/a.mp3');
   });
 });

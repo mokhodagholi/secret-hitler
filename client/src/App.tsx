@@ -93,7 +93,7 @@ function Router() {
 
 function BootGate(props: ParentProps<{ skip?: boolean }>) {
   const skip = props.skip || process.env.NODE_ENV === 'test';
-  const { prefetch, settings, nav } = useApp();
+  const { prefetch, settings, nav, flags } = useApp();
   const [booting, setBooting] = createSignal(!skip);
   const [offline, setOffline] = createSignal(false);
   let startBoot = () => {};
@@ -134,7 +134,10 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
           avatar: settings.settings.avatar,
         });
         const bootStarted = Date.now();
-        await prefetch.boot(urls).catch(() => undefined);
+        await Promise.all([
+          prefetch.boot(urls).catch(() => undefined),
+          flags.load(),
+        ]);
         if (cancelled || finished) return;
         // Cached files finish in one tick; keep the lectern until the bar can count 0 → 100.
         const wait = SPLASH_PROGRESS_MS - (Date.now() - bootStarted);

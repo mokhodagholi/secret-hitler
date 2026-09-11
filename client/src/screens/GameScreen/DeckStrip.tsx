@@ -3,6 +3,7 @@ import type { Role } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import { CARD_BACK, ROLE_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './DeckStrip.module.scss';
 
 export interface DeckStripProps {
@@ -52,7 +53,7 @@ export function DeckStrip(props: DeckStripProps) {
             aria-label={formatMessage('game.youAreRole', { role: roleName() })}
             onClick={props.onInspectRole}
           >
-            <img class={styles.roleFace} src={ROLE_FACE[role()]} alt="" />
+            <WarmImg class={styles.roleFace} src={ROLE_FACE[role()]} alt="" />
             <span class={styles.roleName}>{roleName()}</span>
           </button>
         )}
@@ -112,7 +113,7 @@ function Pile(props: {
       data-pile={props.pile}
     >
       <span class={styles.pileCard}>
-        <img src={CARD_BACK} alt="" class={styles.pileBack} />
+        <WarmImg src={CARD_BACK} alt="" class={styles.pileBack} />
         <span class={styles.pileMark}>{props.mark}</span>
       </span>
       <span class={styles.pileCount} ref={(element) => (countEl = element)}>

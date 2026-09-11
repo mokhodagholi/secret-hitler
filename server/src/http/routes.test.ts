@@ -207,4 +207,10 @@ describe('GET /api/flags', () => {
     expect(status).toBe(200);
     expect(body).toEqual({ flags: { voice: true } });
   });
+
+  it('Should tell browsers not to cache the flag catalog', async () => {
+    const { app } = await buildServer({ flags: { voice: true } });
+    const response = await app.inject({ method: 'GET', url: '/api/flags' });
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
 });

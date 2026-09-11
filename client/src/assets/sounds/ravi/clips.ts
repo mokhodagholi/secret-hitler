@@ -50,6 +50,9 @@ import nominateTimeout from './daniel/nominate.timeout.mp3';
 import officeChancellorLeft from './daniel/office.chancellorLeft.mp3';
 import officePresidentLeft from './daniel/office.presidentLeft.mp3';
 import officeRoundOver from './daniel/office.roundOver.mp3';
+import playerAway from './daniel/player.away.mp3';
+import playerBack from './daniel/player.back.mp3';
+import playerBackYou from './daniel/player.backYou.mp3';
 import playerLeft from './daniel/player.left.mp3';
 import powerExecuted from './daniel/power.executed.mp3';
 import powerExecutedYou from './daniel/power.executedYou.mp3';
@@ -134,6 +137,9 @@ const DANIEL = {
   'office.chancellorLeft': officeChancellorLeft,
   'office.presidentLeft': officePresidentLeft,
   'office.roundOver': officeRoundOver,
+  'player.away': playerAway,
+  'player.back': playerBack,
+  'player.backYou': playerBackYou,
   'player.left': playerLeft,
   'power.executed': powerExecuted,
   'power.executedYou': powerExecutedYou,

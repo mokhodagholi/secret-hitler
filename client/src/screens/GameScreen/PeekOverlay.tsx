@@ -4,6 +4,7 @@ import { useApp } from '../../services/AppContext';
 import type { FormatMessage } from '../../i18n';
 import type { AnimationService } from '../../services/AnimationService';
 import { CARD_BACK, POLICY_FACE } from '../../assets/cards';
+import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './PeekOverlay.module.scss';
 
 const PEEK_COUNT = 3;
@@ -74,7 +75,7 @@ export function PeekOverlay(props: PeekOverlayProps) {
             const policy = () => props.policies[index()];
             const showFace = () => face() && policy() != null;
             return (
-              <img
+              <WarmImg
                 class={styles.card}
                 src={showFace() ? POLICY_FACE[policy()!] : CARD_BACK}
                 alt={showFace() ? formatMessage(`game.${policy()!}`) : ''}

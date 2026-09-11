@@ -16,11 +16,23 @@ describe('FeatureFlagService', () => {
   });
 
   it('Should apply a successful /api/flags body', async () => {
-    const flags = new FeatureFlagService(DEFAULT_FLAGS, async (url) => {
+    const flags = new FeatureFlagService(DEFAULT_FLAGS, async (url, init) => {
       expect(url).toBe('/api/flags');
+      expect(init).toEqual({ cache: 'no-store' });
       return jsonResponse({ flags: { voice: true } });
     });
     await flags.load();
+    expect(flags.enabled('voice')).toBe(true);
+  });
+
+  it('Should fetch /api/flags only once when load is called twice', async () => {
+    let calls = 0;
+    const flags = new FeatureFlagService(DEFAULT_FLAGS, async () => {
+      calls += 1;
+      return jsonResponse({ flags: { voice: true } });
+    });
+    await Promise.all([flags.load(), flags.load()]);
+    expect(calls).toBe(1);
     expect(flags.enabled('voice')).toBe(true);
   });
 
