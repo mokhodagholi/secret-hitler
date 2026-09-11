@@ -10,6 +10,8 @@ import { GameScreen } from './screens/GameScreen/GameScreen';
 import { SplashScreen } from './screens/SplashScreen/SplashScreen';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 import { UpdateModal } from './components/UpdateModal/UpdateModal';
+import { WhatsNewModal } from './components/WhatsNewModal/WhatsNewModal';
+import { ChangelogScreen } from './screens/ChangelogScreen/ChangelogScreen';
 import { criticalBootUrls } from './services/prefetch';
 import { waitForOnline } from './services/online';
 
@@ -50,6 +52,9 @@ function Router() {
       </Match>
       <Match when={nav.screen() === 'settings'}>
         <SettingsScreen />
+      </Match>
+      <Match when={nav.screen() === 'changelog'}>
+        <ChangelogScreen />
       </Match>
       <Match when={nav.screen() === 'play'}>
         <RoomsScreen initialTab="create" />
@@ -156,6 +161,7 @@ export function App(props: { services?: Partial<AppServices> }) {
         <Router />
         <RoomClosedNotice />
         <UpdateModal />
+        <WhatsNewModal />
       </BootGate>
     </AppProvider>
   );

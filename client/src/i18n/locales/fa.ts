@@ -16,6 +16,13 @@ export const fa = {
     title: 'نسخهٔ جدید آماده است',
     action: 'به‌روزرسانی',
   },
+  changelog: {
+    title: 'اعلامیه‌ها',
+    whatsNew: 'اعلامیهٔ این نسخه',
+    continue: 'متوجه شدم',
+    empty: 'هنوز اعلامیه‌ای در بایگانی نیست.',
+    version: 'نسخهٔ {version}',
+  },
   nav: {
     rules: 'قوانین',
     settings: 'تنظیمات',
@@ -149,7 +156,8 @@ export const fa = {
       daniel: 'دانیال',
     },
     reduceMotion: 'کاهش حرکت',
-    version: '{package}',
+    changelog: 'اعلامیه‌ها',
+    version: 'نسخهٔ {package}',
     restorePurchases: 'بازیابی خریدها',
   },
   screens: {

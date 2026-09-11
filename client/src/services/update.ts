@@ -1,3 +1,5 @@
+import clientPackage from '../../package.json';
+
 /** How often a live session asks the origin if a new build is sitting there. */
 export const UPDATE_POLL_MS = 30 * 60 * 1000;
 
@@ -10,7 +12,7 @@ export const APP_PACKAGE_VERSION: string =
   typeof import.meta.env.APP_PACKAGE_VERSION === 'string' &&
   import.meta.env.APP_PACKAGE_VERSION.length > 0
     ? import.meta.env.APP_PACKAGE_VERSION
-    : '0.0.1';
+    : clientPackage.version;
 
 export interface RemoteVersion {
   version: string;
@@ -50,6 +52,29 @@ export async function activateWaitingAndReload(
 /** The prompt waits until they leave a live table. */
 export function isUpdatePromptVisible(available: boolean, screen: string): boolean {
   return available && screen !== 'game';
+}
+
+const UPDATE_PREVIEW_ENABLED =
+  import.meta.env.DEV || process.env.NODE_ENV === 'test';
+
+/** `?update=1` opens sample notes in dev. Production ignores the flag. */
+export function isUpdatePreview(
+  search: string = location.search,
+  enabled: boolean = UPDATE_PREVIEW_ENABLED,
+): boolean {
+  return enabled && new URLSearchParams(search).get('update') === '1';
+}
+
+/** Drop the preview flag so dismiss does not reload the document. */
+export function clearUpdatePreview(
+  href: string = location.href,
+  replace: (url: string) => void = (next) => history.replaceState(null, '', next),
+): void {
+  const url = new URL(href);
+  if (!url.searchParams.has('update')) return;
+  url.searchParams.delete('update');
+  const query = url.searchParams.toString();
+  replace(`${url.pathname}${query ? `?${query}` : ''}${url.hash}`);
 }
 
 /** Fetch `/version.json` with no cache. `null` if the probe fails. */

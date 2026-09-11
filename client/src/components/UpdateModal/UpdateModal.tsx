@@ -1,13 +1,20 @@
-import { Show, createSignal, onCleanup, onMount } from 'solid-js';
+import { createSignal, onCleanup, onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
-import { Button } from '../Button/Button';
+import { PREVIEW_RELEASES } from '../../changelog/preview';
+import {
+  fetchRemoteChangelog,
+  writeSeenVersion,
+  type ChangelogRelease,
+} from '../../changelog/changelog';
 import {
   UPDATE_POLL_MS,
   activateWaitingAndReload,
   checkForUpdate,
+  clearUpdatePreview,
+  isUpdatePreview,
   isUpdatePromptVisible,
 } from '../../services/update';
-import styles from './UpdateModal.module.scss';
+import { ChangelogDialog } from '../ChangelogDialog/ChangelogDialog';
 
 const skipPoll =
   import.meta.env.DEV || process.env.NODE_ENV === 'test';
@@ -15,19 +22,26 @@ const skipPoll =
 /**
  * Forced update after a deploy. Silent while the table is live so a vote
  * is never interrupted; the seal drops as soon as they leave the game.
+ * `?update=1` opens a sample briefing in dev so the card can be reviewed.
  */
 export function UpdateModal() {
   const { nav, i18n } = useApp();
   const { formatMessage } = i18n;
-  const [available, setAvailable] = createSignal(false);
+  const preview = isUpdatePreview();
+  const [available, setAvailable] = createSignal(preview);
+  const [notes, setNotes] = createSignal<ChangelogRelease[]>(preview ? PREVIEW_RELEASES : []);
   const open = () => isUpdatePromptVisible(available(), nav.screen());
 
   onMount(() => {
+    if (preview) return;
     if (skipPoll) return;
     let cancelled = false;
     const tick = async () => {
       if (cancelled || available()) return;
-      if (await checkForUpdate()) setAvailable(true);
+      if (await checkForUpdate()) {
+        setAvailable(true);
+        setNotes(await fetchRemoteChangelog());
+      }
       if ('serviceWorker' in navigator) {
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.all(regs.map((reg) => reg.update().catch(() => undefined)));
@@ -47,19 +61,23 @@ export function UpdateModal() {
   });
 
   return (
-    <Show when={open()}>
-      <div class={styles.backdrop} role="presentation">
-        <div class={styles.dialog} role="alertdialog" aria-modal="true" aria-labelledby="update-title">
-          <h2 id="update-title" class={styles.title}>
-            {formatMessage('update.title')}
-          </h2>
-          <div class={styles.action}>
-            <Button onClick={() => void activateWaitingAndReload()}>
-              {formatMessage('update.action')}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Show>
+    <ChangelogDialog
+      open={open()}
+      title={formatMessage('update.title')}
+      actionLabel={formatMessage('update.action')}
+      releases={notes()}
+      language={i18n.lang()}
+      formatMessage={formatMessage}
+      onAction={() => {
+        if (preview) {
+          setAvailable(false);
+          clearUpdatePreview();
+          return;
+        }
+        const newest = notes()[0];
+        if (newest) writeSeenVersion(newest.version);
+        void activateWaitingAndReload();
+      }}
+    />
   );
 }

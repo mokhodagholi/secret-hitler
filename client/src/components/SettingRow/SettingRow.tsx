@@ -17,10 +17,12 @@ export type SettingRowProps = BaseProps & ControlProps;
 
 /**
  * One card row on the Settings screen. Renders a gold icon, label, and a
- * trailing control that is either a toggle, a value + chevron, or a chevron.
+ * trailing control that is either a toggle, a value (chevron only when the
+ * row can cycle or open), or a chevron.
  */
 export function SettingRow(props: SettingRowProps) {
-  const interactive = () => props.kind !== 'toggle';
+  const interactive = () =>
+    props.kind === 'link' || (props.kind === 'value' && props.onClick != null);
   return (
     <div
       classList={{ [styles.row]: true, [styles.tappable]: interactive() }}
@@ -53,7 +55,9 @@ function renderControl(props: SettingRowProps): JSX.Element {
       return (
         <>
           <span class={styles.value}>{props.value}</span>
-          <Icon name="chevronRight" size={18} class={styles.chevron} />
+          <Show when={props.onClick}>
+            <Icon name="chevronRight" size={18} class={styles.chevron} />
+          </Show>
         </>
       );
     case 'link':

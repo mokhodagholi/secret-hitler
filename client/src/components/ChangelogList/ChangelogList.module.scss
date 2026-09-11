@@ -1,0 +1,53 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  text-align: start;
+}
+
+.release {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.version {
+  @include display(1.05rem, 0.14em);
+  margin: 0;
+  color: $gold;
+}
+
+.changes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.change {
+  position: relative;
+  padding-inline-start: 14px;
+  font-size: 0.95rem;
+  line-height: 1.9;
+  word-spacing: 0.08em;
+  color: $text-light;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0.85em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: $gold;
+  }
+}

@@ -14,6 +14,12 @@ it should check the git status for the changes, and have some rules before, and 
 
 Read [`docs/commit-messages.md`](../../../docs/commit-messages.md). That file is the source of truth for message format. If other `docs/` files are relevant to the change (naming, comments, testing), follow them too.
 
+If the diff is a player-facing feat or fix, also read
+[`docs/changelog.md`](../../../docs/changelog.md) and apply it **before**
+staging: native `fa`/`en` notes in `client/src/changelog/releases.json`, bump
+`client/package.json`. Skip that for work a player would not notice. Do not
+bump twice if this change already added the entry.
+
 Run these in parallel:
 
 ```bash
@@ -62,9 +68,20 @@ type(scope): Capitalized summary
 
 Match recent `git log` tone: present tense, capitalized subject, concise body.
 
+## Changelog
+
+When `docs/changelog.md` says this commit is player-facing:
+
+1. Prepend one release (newest first) with `bump`, `date` (`YYYY-MM-DD`), and
+   `changes` whose `fa` and `en` are written independently — never translated
+   from the commit subject or from each other. Formal, friendly, of the table
+   (see `docs/changelog.md`).
+2. Bump `client/package.json` to match that release's `version`.
+3. Stage those two files with the rest of the work.
+
 ## Commit
 
-1. Stage only the files that belong to this change.
+1. Stage only the files that belong to this change (including changelog + version when required).
 2. Commit with a HEREDOC (never `-i`, never `--no-verify`):
 
 ```bash

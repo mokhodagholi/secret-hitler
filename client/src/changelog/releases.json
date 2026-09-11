@@ -1,0 +1,26 @@
+{
+  "releases": [
+    {
+      "version": "0.1.0",
+      "bump": "minor",
+      "date": "2026-09-11",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "پس از هر به‌روزرسانی، اعلامیهٔ تغییرات روی میز گذاشته می‌شود.",
+          "en": "Each update now arrives with a briefing of what changed at the table."
+        },
+        {
+          "kind": "feat",
+          "fa": "از تنظیمات می‌توانید بایگانی اعلامیه‌ها را باز کنید؛ شمارهٔ این نسخه همان‌جا نوشته شده است.",
+          "en": "Settings now opens the archive of briefings, with this version named on the row."
+        },
+        {
+          "kind": "fix",
+          "fa": "انتخاب زبان از تنظیمات برداشته شد؛ میز فعلاً فارسی می‌ماند.",
+          "en": "The language picker is off the page; the table stays in Persian for now."
+        }
+      ]
+    }
+  ]
+}

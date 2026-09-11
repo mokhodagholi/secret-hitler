@@ -3,7 +3,9 @@ import { afterEach } from '@rstest/core';
 import {
   activateWaitingAndReload,
   checkForUpdate,
+  clearUpdatePreview,
   isNewerVersion,
+  isUpdatePreview,
   isUpdatePromptVisible,
   reloadToLatest,
   SKIP_WAITING,
@@ -45,6 +47,27 @@ describe('isUpdatePromptVisible', () => {
     expect(isUpdatePromptVisible(true, 'game')).toBe(false);
     expect(isUpdatePromptVisible(true, 'home')).toBe(true);
     expect(isUpdatePromptVisible(false, 'home')).toBe(false);
+  });
+});
+
+describe('isUpdatePreview', () => {
+  it('Should open only when update=1 is in the query', () => {
+    expect(isUpdatePreview('')).toBe(false);
+    expect(isUpdatePreview('?v=2')).toBe(false);
+    expect(isUpdatePreview('?update=1', true)).toBe(true);
+    expect(isUpdatePreview('?update=0', true)).toBe(false);
+  });
+
+  it('Should ignore the flag outside development', () => {
+    expect(isUpdatePreview('?update=1', false)).toBe(false);
+  });
+});
+
+describe('clearUpdatePreview', () => {
+  it('Should drop the preview flag and keep the rest of the query', () => {
+    const replace = rs.fn();
+    clearUpdatePreview('http://localhost:3000/?update=1&lang=fa', replace);
+    expect(replace).toHaveBeenCalledWith('/?lang=fa');
   });
 });
 

@@ -18,6 +18,13 @@ export const en = {
     title: 'A new version is ready',
     action: 'Update',
   },
+  changelog: {
+    title: 'Briefing',
+    whatsNew: "This version's briefing",
+    continue: 'Understood',
+    empty: 'The archive is still empty.',
+    version: 'Version {version}',
+  },
   nav: {
     rules: 'Rules',
     settings: 'Settings',
@@ -153,7 +160,8 @@ export const en = {
       daniel: 'Daniel',
     },
     reduceMotion: 'Reduce Motion',
-    version: '{package}',
+    changelog: 'Briefing',
+    version: 'Version {package}',
     restorePurchases: 'Restore Purchases',
   },
   screens: {

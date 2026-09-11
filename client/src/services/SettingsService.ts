@@ -86,6 +86,8 @@ export class SettingsService {
       if (!(loaded.raviWho in RAVI_CLIPS)) {
         loaded.raviWho = DEFAULTS.raviWho;
       }
+      // Language picker is off the page; stay on Persian until it returns.
+      loaded.language = DEFAULT_LANGUAGE;
       return SettingsService.withProfileId(loaded);
     } catch {
       return SettingsService.withProfileId({ ...DEFAULTS });

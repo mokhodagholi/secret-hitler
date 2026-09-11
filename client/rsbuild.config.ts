@@ -48,12 +48,16 @@ export default defineConfig({
           const distPath = api.context.distPath;
           fs.writeFileSync(
             path.join(distPath, 'version.json'),
-            JSON.stringify({ version: APP_VERSION }),
+            JSON.stringify({ version: APP_VERSION, package: APP_PACKAGE_VERSION }),
+          );
+          fs.copyFileSync(
+            path.join(configDir, 'src/changelog/releases.json'),
+            path.join(distPath, 'changelog.json'),
           );
           await generateSW({
             globDirectory: distPath,
             globPatterns: ['**/*.{js,css,woff2}'],
-            globIgnores: ['**/sw.js', '**/version.json', '**/index.html'],
+            globIgnores: ['**/sw.js', '**/version.json', '**/changelog.json', '**/index.html'],
             swDest: path.join(distPath, 'sw.js'),
             skipWaiting: false,
             clientsClaim: true,
