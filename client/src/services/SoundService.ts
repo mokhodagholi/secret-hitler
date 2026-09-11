@@ -86,6 +86,18 @@ export type MusicTrack = keyof typeof MUSIC;
 
 const canPlayAudio = typeof Audio !== 'undefined';
 
+/** Browsers reject play() until the first tap; capture so a button still counts. */
+const UNLOCK_EVENTS = ['pointerdown', 'touchend', 'keydown', 'click'] as const;
+
+function isAutoplayBlocked(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name: string }).name === 'NotAllowedError'
+  );
+}
+
 /**
  * Owns all audio playback. One-shot effects fire on game/UI events; a single
  * looping track plays underneath. Both are gated on the user's settings toggles,
@@ -95,6 +107,7 @@ export class SoundService {
   private readonly samples = new Map<SoundEffect, HTMLAudioElement>();
   private music: HTMLAudioElement | null = null;
   private musicTrack: MusicTrack | null = null;
+  private unlockGesture: (() => void) | null = null;
 
   constructor(private readonly settings: SettingsService) {}
 
@@ -178,7 +191,63 @@ export class SoundService {
     } catch {
       /* environment can't seek (e.g. jsdom) — playback still attempts below */
     }
+    this.playWithUnlock(audio);
+  }
+
+  private playWithUnlock(audio: HTMLAudioElement): void {
     const played = audio.play() as Promise<void> | undefined;
-    played?.catch(() => {});
+    played?.catch((error) => {
+      if (isAutoplayBlocked(error)) this.armUnlock();
+    });
+  }
+
+  private armUnlock(): void {
+    if (this.unlockGesture || typeof window === 'undefined') return;
+    const onGesture = () => {
+      this.disarmUnlock();
+      this.resumeAfterGesture();
+    };
+    this.unlockGesture = onGesture;
+    for (const event of UNLOCK_EVENTS) {
+      window.addEventListener(event, onGesture, true);
+    }
+  }
+
+  private disarmUnlock(): void {
+    const onGesture = this.unlockGesture;
+    if (!onGesture) return;
+    this.unlockGesture = null;
+    for (const event of UNLOCK_EVENTS) {
+      window.removeEventListener(event, onGesture, true);
+    }
+  }
+
+  /** First tap is a user gesture — retry the bed that autoplay blocked. */
+  private resumeAfterGesture(): void {
+    if (this.music && this.settings.settings.music) {
+      this.playWithUnlock(this.music);
+      return;
+    }
+    if (this.musicTrack && this.settings.settings.music) {
+      const track = this.musicTrack;
+      this.musicTrack = null;
+      this.playMusic(track);
+      return;
+    }
+    this.warmSession();
+  }
+
+  private warmSession(): void {
+    if (!canPlayAudio) return;
+    const warm = new Audio(EFFECTS['swap-page'].src);
+    warm.muted = true;
+    const played = warm.play() as Promise<void> | undefined;
+    played
+      ?.then(() => {
+        warm.pause();
+      })
+      .catch((error) => {
+        if (isAutoplayBlocked(error)) this.armUnlock();
+      });
   }
 }

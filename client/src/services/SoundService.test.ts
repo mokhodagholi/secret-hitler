@@ -74,4 +74,22 @@ describe('SoundService — music', () => {
     // Nothing is playing yet, so there is nothing to pause.
     expect(pause).not.toHaveBeenCalled();
   });
+
+  it('Should start the bed after a tap when autoplay is blocked', async () => {
+    const settings = new SettingsService();
+    settings.set('music', true);
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() =>
+      Promise.reject(new DOMException('blocked', 'NotAllowedError')),
+    );
+    const sound = new SoundService(settings);
+
+    sound.playMusic('menu-theme');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    play.mockImplementation(() => Promise.resolve());
+    window.dispatchEvent(new Event('pointerdown'));
+
+    expect(play).toHaveBeenCalledTimes(2);
+  });
 });

@@ -71,6 +71,9 @@ The **Music** toggle is wired in `AppContext` — turning it off pauses the loop
 turning it back on resumes the last track. You do not call `setMusicEnabled`
 yourself; that effect handles it.
 
+Browsers (and the Bale WebView) reject `play()` until the first tap. `SoundService`
+retries the bed on that gesture so players do not have to toggle Music to hear it.
+
 ## Event wiring
 
 Cross-cutting sounds are triggered by effects in `AppContext`, keeping other
