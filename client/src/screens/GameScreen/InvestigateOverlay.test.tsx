@@ -86,4 +86,34 @@ describe('InvestigateOverlay', () => {
     expect(screen.queryByText(en.ravi.power.investigatedLiberal)).toBeNull();
     expect(screen.queryByText(en.ravi.power.investigatedFascist)).toBeNull();
   });
+
+  it('Should show the party face to the investigated player without the President whisper', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(
+      () => (
+        <InvestigateOverlay
+          targetId="you"
+          targetName="You"
+          party="fascist"
+          announce={false}
+          onContinue={() => {}}
+          formatMessage={harness.services.i18n.formatMessage}
+        />
+      ),
+      harness,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByAltText(en.game.fascist)).toBeTruthy();
+    });
+    expect(harness.services.ravi.line()).toBeNull();
+    expect(
+      screen.queryByText(
+        en.game.power.investigationResult
+          .replace('{name}', 'You')
+          .replace('{party}', en.game.fascist),
+      ),
+    ).toBeNull();
+  });
 });

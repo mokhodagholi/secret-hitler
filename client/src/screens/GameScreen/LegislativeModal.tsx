@@ -7,7 +7,6 @@ import { Icon } from '../../components/Icon/Icon';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import {
-  emptyWell,
   flyCard,
   flyToTarget,
   pileEl,
@@ -53,7 +52,11 @@ export function LegislativeModal(props: LegislativeModalProps) {
   const drag = useDialogDrag();
   const [picking, setPicking] = createSignal(false);
   const [beat, setBeat] = createSignal<Beat>(
-    props.mode === 'discard' ? 'deal' : 'pass',
+    props.policies.length > 0
+      ? 'choose'
+      : props.mode === 'discard'
+        ? 'deal'
+        : 'pass',
   );
   const faceCards: (HTMLButtonElement | undefined)[] = [];
   const travelCards: (HTMLImageElement | undefined)[] = [];
@@ -84,14 +87,24 @@ export function LegislativeModal(props: LegislativeModalProps) {
     // The choice clock's startedAt is when faces should be up; if it's already
     // here, the deal/pass already happened (rejoin / refresh).
     const late = props.startedAt > 0 && Date.now() >= props.startedAt;
+    const holding = props.policies.length > 0;
     setPicking(false);
-    setBeat(kind);
     if (late && previous == null) {
       setBeat('choose');
       props.onDealCaughtUp?.();
       speakIfHolder();
       return;
     }
+    if (holding) {
+      if (kind === 'deal') {
+        for (let index = 0; index < 3; index++) props.onDrewCard?.();
+        props.onDealCaughtUp?.();
+      }
+      setBeat('choose');
+      speakIfHolder();
+      return;
+    }
+    setBeat(kind);
     if (kind === 'deal') sound.play('policy-draw');
     await waitFrames(2);
     if (gen !== travelGen || closed) return;
@@ -142,19 +155,16 @@ export function LegislativeModal(props: LegislativeModalProps) {
   async function pick(index: number): Promise<void> {
     if (picking()) return;
     setPicking(true);
-    const card = faceCards[index];
     if (props.mode === 'discard') {
+      const card = faceCards[index];
       sound.play('policy-burn');
       await flyToTarget(animation, card, pileEl('discard'), { landScale: 0.28 });
       didBurn = true;
-    } else {
-      const policy = props.policies[index];
-      await flyToTarget(animation, card, emptyWell(policy), { landScale: 0.42 });
     }
     props.onPick(index);
   }
 
-  const showFaces = () => beat() === 'choose' && props.policies.length > 0;
+  const showFaces = () => props.policies.length > 0;
   const travelCount = () => {
     if (beat() === 'deal' || beat() === 'burn') return 3;
     if (beat() === 'pass') return 2;

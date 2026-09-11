@@ -13,7 +13,7 @@ const NOTICE_MS =
 export interface InvestigateOverlayProps {
   targetId: string;
   targetName: string;
-  /** Party face — President only. Everyone else sees the back. */
+  /** Party face — President and the investigated player. Everyone else sees the back. */
   party: Faction | null;
   /**
    * President-only: whisper the party and show the result caption.
@@ -25,9 +25,8 @@ export interface InvestigateOverlayProps {
 
 /**
  * A membership card lifts off the investigated seat and lands centre-stage.
- * The President then sees the party face and hears which party it was. The
- * investigated player and spectators watch the card arrive and leave; only
- * Ravi tells them what is happening.
+ * The President and the investigated player see the party face. Spectators
+ * watch the back. Only the President hears which party it was.
  */
 export function InvestigateOverlay(props: InvestigateOverlayProps) {
   const { formatMessage } = props;

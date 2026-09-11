@@ -495,10 +495,25 @@ describe('GameScreen — nomination', () => {
     expect(
       screen.getByRole('button', { name: en.game.startNomination }),
     ).toBeTruthy();
-    expect(screen.queryByText(en.game.chat)).toBeNull();
   });
 
-  it('Should notify the table when a government fails', () => {
+  it('Should hide Choose Chancellor in chat when this player is not President', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      board: { ...view.board, president: 'pres', chancellor: null },
+      discussionDeadline: { startedAt: 0, endsAt: Date.now() + 20_000 },
+      nominationDeadline: { startedAt: 0, endsAt: Date.now() + 10_000 },
+    });
+
+    expect(screen.queryByText(en.game.startNomination)).toBeNull();
+    expect(screen.queryByRole('button', { name: en.game.endRound })).toBeNull();
+  });
+
+  it('Should not open a dialog when a government fails', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const base = votingView();
@@ -509,26 +524,8 @@ describe('GameScreen — nomination', () => {
       board: { ...base.board, electionTracker: 1 },
     });
 
-    expect(screen.getByText(/election tracker is now 1 of 3/i)).toBeTruthy();
-  });
-
-  it('Should dismiss the failed-election notice when a new overlay opens', () => {
-    const harness = buildHarness({ seated: true });
-    renderWithApp(() => <GameScreen />, harness);
-    const base = votingView();
-    harness.pushState(base);
-    harness.pushState({
-      ...base,
-      phase: Phase.Nomination,
-      board: { ...base.board, electionTracker: 1 },
-    });
-    expect(screen.getByText(/election tracker is now 1 of 3/i)).toBeTruthy();
-
-    harness.pushState(votingView());
-    expect(screen.queryByText(/election tracker is now 1 of 3/i)).toBeNull();
-    expect(
-      screen.getByText(en.game.chancellorRevealTitleYou),
-    ).toBeTruthy();
+    expect(screen.queryByText(en.game.electionFailed.replace('{count}', '1'))).toBeNull();
+    expect(screen.queryByText(en.game.discussionBody)).toBeNull();
   });
 
   it('Should end the round from the table tools', () => {
@@ -696,7 +693,7 @@ describe('GameScreen — presidential power', () => {
     expect(harness.socket.lastSent('command')).toBeUndefined();
   });
 
-  it('Should not show the party card to the player being investigated', async () => {
+  it('Should show the party card to the player being investigated', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -718,6 +715,9 @@ describe('GameScreen — presidential power', () => {
 
     await waitFor(() => {
       expect(harness.services.ravi.line()).toBe(en.ravi.power.investigatedYou);
+    });
+    await waitFor(() => {
+      expect(screen.getByAltText(en.game.fascist)).toBeTruthy();
     });
     expect(screen.queryByRole('button', { name: en.game.power.continue })).toBeNull();
     expect(
@@ -862,21 +862,18 @@ describe('GameScreen — government', () => {
     expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
   });
 
-  it('Should put the current player first, then wrap around the table', () => {
+  it('Should put the current player first so the row can start at the bottom right', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
-    const rows = document.querySelectorAll('[data-game-table] [role="list"]');
-    const ids = (row: Element) =>
-      [...row.querySelectorAll('[data-seat-id]')].map((seat) =>
-        seat.getAttribute('data-seat-id'),
-      );
-    expect(ids(rows[1])).toEqual(['you', 'cal']);
-    expect(ids(rows[0])).toEqual(['pres']);
+    const ids = [...document.querySelectorAll('[data-game-table] [data-seat-id]')].map(
+      (seat) => seat.getAttribute('data-seat-id'),
+    );
+    expect(ids).toEqual(['you', 'cal', 'pres']);
   });
 
-  it('Should sit the viewer in the middle of the bottom at a five-player table', () => {
+  it('Should keep clockwise seats after the viewer so wrapping fills left, then up', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(
@@ -892,13 +889,10 @@ describe('GameScreen — government', () => {
       }),
     );
 
-    const rows = document.querySelectorAll('[data-game-table] [role="list"]');
-    const ids = (row: Element) =>
-      [...row.querySelectorAll('[data-seat-id]')].map((seat) =>
-        seat.getAttribute('data-seat-id'),
-      );
-    expect(ids(rows[1])).toEqual(['b', 'you', 'd']);
-    expect(ids(rows[0])).toEqual(['a', 'e']);
+    const ids = [...document.querySelectorAll('[data-game-table] [data-seat-id]')].map(
+      (seat) => seat.getAttribute('data-seat-id'),
+    );
+    expect(ids).toEqual(['you', 'd', 'e', 'a', 'b']);
   });
 });
 
@@ -1021,6 +1015,7 @@ describe('GameScreen — event header', () => {
     });
 
     expect(screen.getByText(/Waiting for.*Ana.*nominate/i)).toBeTruthy();
+    expect(screen.queryByText(en.game.startNomination)).toBeNull();
   });
 });
 

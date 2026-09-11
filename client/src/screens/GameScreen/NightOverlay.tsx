@@ -414,8 +414,9 @@ function seatOffset(
     row.findIndex((player) => player.id === playerId),
   );
   const rowLen = Math.max(1, row.length);
+  // You-first packing: first seat in the row sits on the right.
   return {
-    x: box.left + ((rowIndex + 0.5) / rowLen) * box.width - fromX,
+    x: box.right - ((rowIndex + 0.5) / rowLen) * box.width - fromX,
     y:
       (onBottom ? box.bottom - box.height * 0.2 : box.top + box.height * 0.2) -
       fromY,

@@ -41,21 +41,16 @@ function renderModal(
 }
 
 describe('LegislativeModal', () => {
-  it('Should deal face-down cards before the President sees the faces', async () => {
+  it('Should show policy faces to the President from the start', () => {
     const harness = buildHarness({ seated: true });
     harness.services.settings.set('raviVoice', false);
     renderModal(harness);
 
-    expect(screen.getByText(en.game.legislativeDealYou)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: en.game.liberal })).toBeNull();
-    expect(screen.queryByText('18s')).toBeNull();
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: en.game.liberal })).toBeTruthy();
-    });
+    expect(screen.getByRole('button', { name: en.game.liberal })).toBeTruthy();
     expect(screen.getAllByRole('button', { name: en.game.fascist })).toHaveLength(2);
     expect(screen.getByText(en.game.presidentDiscardHint)).toBeTruthy();
     expect(screen.getByText('18s')).toBeTruthy();
+    expect(screen.queryByText(en.game.legislativeDealYou)).toBeNull();
   });
 
   it('Should keep policy faces private from spectators', async () => {
@@ -127,30 +122,57 @@ describe('LegislativeModal', () => {
     });
   });
 
-  it('Should skip the deal when joining a legislative window late', async () => {
+  it('Should skip the deal when joining a legislative window late', () => {
     const harness = buildHarness({ seated: true });
     renderModal(harness, { startedAt: Date.now() - 8_000 });
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: en.game.liberal })).toBeTruthy();
-    });
+    expect(screen.getByRole('button', { name: en.game.liberal })).toBeTruthy();
     expect(screen.queryByText(en.game.legislativeDealYou)).toBeNull();
   });
 
-  it('Should tell the President the three policies are theirs', () => {
-    const harness = buildHarness({ seated: true });
-    renderModal(harness);
-    expect(screen.getByText(en.game.legislativeDealYou)).toBeTruthy();
-  });
-
-  it('Should tell the Chancellor the two policies are theirs', () => {
+  it('Should show policy faces to the Chancellor from the start', () => {
     const harness = buildHarness({ seated: true });
     renderModal(harness, {
       mode: 'enact',
       policies: ['liberal', 'fascist'],
       youId: 'cal',
     });
-    expect(screen.getByText(en.game.legislativePassYou)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.liberal })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.fascist })).toBeTruthy();
+    expect(screen.getByText(en.game.chancellorEnactHint)).toBeTruthy();
+    expect(screen.queryByText(en.game.legislativePassYou)).toBeNull();
+  });
+
+  it('Should enact as soon as the Chancellor taps a face', async () => {
+    const harness = buildHarness({ seated: true });
+    const picked: number[] = [];
+    renderWithApp(
+      () => (
+        <LegislativeModal
+          mode="enact"
+          policies={['liberal', 'fascist']}
+          presidentId="you"
+          chancellorId="cal"
+          youId="cal"
+          presidentName="You"
+          chancellorName="Cal"
+          secondsLeft={18}
+          canVeto={false}
+          startedAt={Date.now() + 8_000}
+          onPick={(index) => {
+            picked.push(index);
+          }}
+          onVeto={() => {}}
+          formatMessage={harness.services.i18n.formatMessage}
+        />
+      ),
+      harness,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
+    await waitFor(() => {
+      expect(picked).toEqual([0]);
+    });
   });
 
   it('Should let the player drag the legislative panel aside', () => {

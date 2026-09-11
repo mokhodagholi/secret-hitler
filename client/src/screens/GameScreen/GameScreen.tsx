@@ -31,7 +31,7 @@ import { InvestigateOverlay } from './InvestigateOverlay';
 import { PeekOverlay } from './PeekOverlay';
 import { YouDiedOverlay } from './YouDiedOverlay';
 import { RaviNarrator } from './RaviNarrator';
-import { splitTableRows, tableSeatOrder } from './tableSeats';
+import { tableSeatOrder } from './tableSeats';
 import { filledWell, flyToTarget } from './cardFlight';
 import styles from './GameScreen.module.scss';
 
@@ -135,17 +135,12 @@ export function GameScreen() {
     if (looksLikeStart && role) setCeremonyOpen(true);
   });
 
-  // --- Round-start toasts ---------------------------------------------------
-  // A strong cue when a new round's discussion opens on this player as
-  // President, a quiet one otherwise.
   const [toast, setToast] = createSignal<{
     title?: string;
     message: string;
     variant: 'prominent' | 'subtle';
   } | null>(null);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
-  let lastDiscussionStart = 0;
-  let sawDiscussionBaseline = false;
 
   function showToast(next: NonNullable<ReturnType<typeof toast>>): void {
     clearTimeout(toastTimer);
@@ -157,37 +152,11 @@ export function GameScreen() {
   }
   onCleanup(() => clearTimeout(toastTimer));
 
-  createEffect(() => {
-    const state = view();
-    const start = state?.discussionDeadline?.startedAt ?? 0;
-    if (start === 0 || start === lastDiscussionStart) return;
-    lastDiscussionStart = start;
-    // Skip the first observed window (join/rejoin) so we don't replay history.
-    if (!sawDiscussionBaseline) {
-      sawDiscussionBaseline = true;
-      return;
-    }
-    if (state!.board.president === state!.you.id) {
-      showToast({
-        variant: 'prominent',
-        title: formatMessage('game.discussionTitle'),
-        message: formatMessage('game.discussionPresidentBody'),
-      });
-    } else {
-      showToast({
-        variant: 'subtle',
-        message: formatMessage('game.discussionBody'),
-      });
-    }
-  });
-
   // --- Policy enactment reveal ----------------------------------------------
   // The server broadcasts full state, so an enactment is detected as a diff:
   // the policy total grew within the same room. (lastEnacted caps at 5 entries,
   // so its length is not a reliable counter.)
   const [revealedPolicy, setRevealedPolicy] = createSignal<Policy | null>(null);
-  // Set to the new tracker count when a government fails, for the notice dialog.
-  const [electionFailedAt, setElectionFailedAt] = createSignal<number | null>(null);
   const CHANCELLOR_REVEAL_MS = 5_000;
   const [chancellorReveal, setChancellorReveal] = createSignal(false);
   let lastPhaseForReveal: string | null = null;
@@ -234,11 +203,9 @@ export function GameScreen() {
       void ravi.speak(latest === 'liberal' ? 'law.liberal' : 'law.fascist');
       sound.play(latest === 'liberal' ? 'law-liberal' : 'law-fascist');
     }
-    // A failed government jolts the board and raises a notice (a reset to 0 is
-    // chaos, not a failure).
+    // A failed government jolts the board (a reset to 0 is chaos, not a failure).
     if (tracker > previousTracker) {
       void animation.play(boardElement, 'shake');
-      setElectionFailedAt(tracker);
     }
   });
 
@@ -509,13 +476,12 @@ export function GameScreen() {
     | 'veto'
     | 'legislative'
     | 'power'
-    | 'night'
-    | 'electionFailed';
+    | 'night';
 
   /**
    * One table overlay at a time. A new phase modal replaces leftovers
-   * (night, policy reveal, election-failed); opening menu/players/leave
-   * replaces whatever was showing.
+   * (night, policy reveal); opening menu/players/leave replaces whatever
+   * was showing.
    */
   function tableOverlay(): TableOverlay | null {
     if (killedOpen()) return 'killed';
@@ -531,7 +497,6 @@ export function GameScreen() {
     if (isLegislative()) return 'legislative';
     if (state?.phase === Phase.SpecialPower && state.activePower) return 'power';
     if (ceremonyOpen() && game.role()) return 'night';
-    if (electionFailedAt() != null) return 'electionFailed';
     return null;
   }
 
@@ -547,7 +512,6 @@ export function GameScreen() {
       overlay === 'over';
     if (!phaseTakesOver) return;
     if (ceremonyOpen()) setCeremonyOpen(false);
-    if (electionFailedAt() != null) setElectionFailedAt(null);
   });
 
   const playerName = (playerId: string | null) =>
@@ -558,8 +522,16 @@ export function GameScreen() {
     return tableSeatOrder(state?.players ?? [], state?.you.id ?? '');
   };
 
-  const topSeats = () => splitTableRows(seatedPlayers()).top;
-  const bottomSeats = () => splitTableRows(seatedPlayers()).bottom;
+  const checkedParty = () => {
+    const state = view();
+    const check = loyaltyCheck();
+    if (!state || !check) return null;
+    if (state.you.investigation?.party) return state.you.investigation.party;
+    if (state.you.id !== check.targetId) return null;
+    const role = game.role() ?? state.you.role;
+    if (!role) return null;
+    return role === 'liberal' ? 'liberal' : 'fascist';
+  };
 
   const nextPresidentId = () => {
     const seated = [...(view()?.players ?? [])].sort((a, b) => a.seat - b.seat);
@@ -726,29 +698,7 @@ export function GameScreen() {
 
               <div class={styles.players}>
                 <div class={styles.seats} role="list">
-                  <For each={topSeats()}>
-                    {(player) => (
-                      <TableSeat
-                        player={player}
-                        isYou={player.id === state().you.id}
-                        isNext={player.id === nextPresidentId()}
-                        selectable={seatSelectable(player)}
-                        termLocked={
-                          termLocked(player) ||
-                          awayFromTable(player) ||
-                          alreadyInvestigated(player)
-                        }
-                        showPublicMarks={!ceremonyOpen()}
-                        bubble={bubbleFor(player.id)}
-                        onSelect={() => onSeat(player)}
-                        formatMessage={formatMessage}
-                      />
-                    )}
-                  </For>
-                </div>
-
-                <div class={styles.seats} role="list">
-                  <For each={bottomSeats()}>
+                  <For each={seatedPlayers()}>
                     {(player) => (
                       <TableSeat
                         player={player}
@@ -800,20 +750,18 @@ export function GameScreen() {
             <ChatPanel
               talkingAllowed={!ceremonyOpen()}
               actionLabel={
-                ceremonyOpen()
+                ceremonyOpen() || !iAmPresident()
                   ? undefined
                   : game.inDiscussion()
                     ? formatMessage('game.startNomination')
-                    : inNomination() && iAmPresident()
+                    : inNomination()
                       ? formatMessage('game.endRound')
-                      : inNomination()
-                        ? formatMessage('game.startNomination')
-                        : undefined
+                      : undefined
               }
               onAction={
                 !ceremonyOpen() &&
-                ((game.inDiscussion() && iAmPresident()) ||
-                  (inNomination() && iAmPresident()))
+                iAmPresident() &&
+                (game.inDiscussion() || inNomination())
                   ? sendEndTurn
                   : undefined
               }
@@ -888,7 +836,7 @@ export function GameScreen() {
                 <InvestigateOverlay
                   targetId={check().targetId}
                   targetName={isolateBidi(check().targetName)}
-                  party={view()?.you.investigation?.party ?? null}
+                  party={checkedParty()}
                   announce={view()?.you.investigation != null}
                   formatMessage={formatMessage}
                   onContinue={() => {
@@ -1052,15 +1000,6 @@ export function GameScreen() {
               cancelLabel={formatMessage('common.cancel')}
               onConfirm={leaveRoom}
               onCancel={() => setConfirmingLeave(false)}
-            />
-
-            <ConfirmDialog
-              open={tableOverlay() === 'electionFailed'}
-              message={formatMessage('game.electionFailed', {
-                count: electionFailedAt() ?? 0,
-              })}
-              autoCloseMs={4000}
-              onConfirm={() => setElectionFailedAt(null)}
             />
 
             <Show when={tableOverlay() === 'over'}>

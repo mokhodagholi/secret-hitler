@@ -28,17 +28,17 @@ describe('tableSeatOrder', () => {
 });
 
 describe('splitTableRows', () => {
-  it('Should put neighbours on either side of the viewer at a three-player table', () => {
+  it('Should put the viewer first on the bottom row at a three-player table', () => {
     const ordered = tableSeatOrder(seats('pres', 'you', 'cal'), 'you');
     const { top, bottom } = splitTableRows(ordered);
     expect(bottom.map((player) => player.id)).toEqual(['you', 'cal']);
     expect(top.map((player) => player.id)).toEqual(['pres']);
   });
 
-  it('Should sit the viewer in the middle of the bottom at a five-player table', () => {
+  it('Should pack clockwise seats to the left of the viewer at a five-player table', () => {
     const ordered = tableSeatOrder(seats('a', 'b', 'c', 'd', 'e'), 'c');
     const { top, bottom } = splitTableRows(ordered);
-    expect(bottom.map((player) => player.id)).toEqual(['b', 'c', 'd']);
-    expect(top.map((player) => player.id)).toEqual(['a', 'e']);
+    expect(bottom.map((player) => player.id)).toEqual(['c', 'd', 'e']);
+    expect(top.map((player) => player.id)).toEqual(['a', 'b']);
   });
 });
