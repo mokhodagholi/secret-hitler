@@ -4,6 +4,12 @@ import { joinCodeFromStartApp } from './startApp';
 export type ScreenName =
   | 'home'
   | 'rules'
+  | 'rules-overview'
+  | 'rules-setup'
+  | 'rules-round'
+  | 'rules-fail'
+  | 'rules-powers'
+  | 'rules-winning'
   | 'settings'
   | 'changelog'
   | 'support'
@@ -88,6 +94,12 @@ export class NavigationService {
   navigate(next: ScreenName): void {
     if (next === this.screen()) return;
     this.stack.push(this.screen());
+    this.setScreen(next);
+  }
+
+  /** Swap the current screen without growing history — lesson prev/next stay one back from the hub. */
+  replace(next: ScreenName): void {
+    if (next === this.screen()) return;
     this.setScreen(next);
   }
 

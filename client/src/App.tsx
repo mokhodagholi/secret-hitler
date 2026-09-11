@@ -1,8 +1,10 @@
-import { Match, Show, Switch, createEffect, onCleanup, onMount, createSignal, type ParentProps } from 'solid-js';
+import { For, Match, Show, Switch, createEffect, onCleanup, onMount, createSignal, type ParentProps } from 'solid-js';
 import { AppProvider, useApp, type AppServices } from './services/AppContext';
 import { HomeScreen } from './screens/HomeScreen/HomeScreen';
 import { PlayerCardsScreen } from './screens/PlayerCardsScreen/PlayerCardsScreen';
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
+import { RulesLessonScreen } from './screens/RulesScreen/RulesLessonScreen';
+import { topicFromScreen } from './screens/RulesScreen/topics';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
@@ -51,6 +53,14 @@ function Router() {
       </Match>
       <Match when={nav.screen() === 'rules'}>
         <RulesScreen />
+      </Match>
+      <Match when={topicFromScreen(nav.screen())}>
+        {(topicId) => (
+          // Remount so Screen can play screen-enter when the topic changes.
+          <For each={[topicId()]}>
+            {(id) => <RulesLessonScreen topicId={id} />}
+          </For>
+        )}
       </Match>
       <Match when={nav.screen() === 'settings'}>
         <SettingsScreen />

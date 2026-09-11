@@ -112,6 +112,16 @@ describe('NavigationService', () => {
     expect(nav.screen()).toBe('home');
   });
 
+  it('Should replace the current screen without stacking it', () => {
+    const nav = new NavigationService('/');
+    nav.navigate('rules');
+    nav.navigate('rules-overview');
+    nav.replace('rules-setup');
+    expect(nav.screen()).toBe('rules-setup');
+    nav.back();
+    expect(nav.screen()).toBe('rules');
+  });
+
   it('Should return to play from a deep-linked join with no home on the stack', () => {
     const nav = new NavigationService('/join/ABC123');
     nav.navigate('waiting-room');

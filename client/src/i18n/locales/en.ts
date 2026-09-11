@@ -54,6 +54,17 @@ export const en = {
   },
   rules: {
     title: 'Rules',
+    pick: 'Open one card. That is the lesson.',
+    teasers: {
+      overview: 'Two parties. One secret.',
+      setup: 'Who knows whom.',
+      round: 'Vote, then a law.',
+      fail: 'Three failures in a row.',
+      powers: 'Investigate, execute, veto.',
+      winning: 'Five liberal, or six fascist.',
+    },
+    progress: '{current} / {total}',
+    stepNumber: '{number}',
     overview: 'Overview',
     overviewBody:
       'Secret Hitler is a hidden-identity game for 5–10 players set in 1930s Germany. The Liberals are the majority but know no one; the Fascists know each other, and one of them is secretly Hitler. Liberals win by enacting Liberal policies or assassinating Hitler. The Fascists scheme to enact Fascist policies — or to sweep Hitler into the chancellorship.',

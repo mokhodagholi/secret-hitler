@@ -37,7 +37,21 @@
 .title {
   @include display(1.05rem, 0.3em);
   margin-inline-end: -0.3em;
+  padding-inline: 48px;
   color: $text-light;
+  text-align: center;
+  line-height: 1.45;
+
+  // Lesson titles are spoken Persian questions, not Oswald display caps.
+  :global([dir='rtl']) & {
+    font-family: $font-body;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-inline-end: 0;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    font-weight: 700;
+  }
 }
 
 // Sepia yellow-brown variant for the warm lobby art.
