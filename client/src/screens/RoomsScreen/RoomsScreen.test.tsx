@@ -1,8 +1,15 @@
 import { describe, expect, it } from '@rstest/core';
-import { screen } from '@solidjs/testing-library';
+import { fireEvent, screen } from '@solidjs/testing-library';
 import { RoomsScreen } from './RoomsScreen';
+import { BaleService } from '../../services/BaleService';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
+
+class NativeBackBale extends BaleService {
+  usesNativeBack(): boolean {
+    return true;
+  }
+}
 
 describe('RoomsScreen', () => {
   it('Should keep create-room fields from inviting browser suggest', () => {
@@ -16,5 +23,26 @@ describe('RoomsScreen', () => {
     const password = screen.getByLabelText(en.createRoom.password);
     expect(password.getAttribute('autocomplete')).toBe('new-password');
     expect(password.getAttribute('spellcheck')).toBe('false');
+  });
+
+  it('Should put the back action in the page header', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('play');
+    renderWithApp(() => <RoomsScreen />, harness);
+
+    expect(screen.getByRole('heading', { name: en.play.title })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.common.back })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+    expect(harness.services.nav.screen()).toBe('home');
+  });
+
+  it('Should hide the in-app back arrow when Bale owns the back chrome', () => {
+    const harness = buildHarness();
+    harness.services.bale = new NativeBackBale();
+    renderWithApp(() => <RoomsScreen />, harness);
+
+    expect(screen.getByRole('heading', { name: en.play.title })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Go back' })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.common.back })).toBeNull();
   });
 });

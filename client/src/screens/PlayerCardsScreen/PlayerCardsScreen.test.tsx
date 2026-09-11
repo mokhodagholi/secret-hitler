@@ -71,4 +71,13 @@ describe('PlayerCardsScreen', () => {
     expect(harness.services.nav.screen()).toBe('home');
     expect(save).not.toHaveBeenCalled();
   });
+
+  it('Should own the viewport so Screen padding does not leave a navy strip', () => {
+    const harness = buildHarness();
+    renderPicker(harness);
+
+    const main = document.querySelector('main');
+    expect(main).toBeTruthy();
+    expect(parseFloat(getComputedStyle(main!).paddingBottom)).toBe(0);
+  });
 });

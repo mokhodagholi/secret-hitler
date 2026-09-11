@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
+import { Show } from 'solid-js';
 import { SettingsScreen } from './SettingsScreen';
+import { PlayerCardsScreen } from '../PlayerCardsScreen/PlayerCardsScreen';
 import { en } from '../../i18n/locales/en';
 import { APP_PACKAGE_VERSION } from '../../services/update';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
@@ -58,5 +60,29 @@ describe('SettingsScreen', () => {
     expect(field.getAttribute('autocorrect')).toBe('off');
     expect(field.getAttribute('spellcheck')).toBe('false');
     expect(field.getAttribute('enterkeyhint')).toBe('done');
+  });
+
+  it('Should open the player-card picker from the profile section', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('settings');
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'settings'}
+          fallback={<PlayerCardsScreen />}
+        >
+          <SettingsScreen />
+        </Show>
+      ),
+      harness,
+    );
+
+    expect(screen.getByText('Otto')).toBeTruthy();
+    fireEvent.click(screen.getByText(en.settings.playerCard));
+    expect(harness.services.nav.screen()).toBe('player-cards');
+    expect(screen.getByRole('heading', { name: en.playerCards.title })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+    expect(harness.services.nav.screen()).toBe('settings');
   });
 });

@@ -1,7 +1,6 @@
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
-import { avatarImage } from '../../assets/avatars';
 import heroImage from '../../assets/home/hero.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
@@ -9,11 +8,11 @@ import fascistBoard from '../../assets/boards/fascist.png';
 import styles from './HomeScreen.module.scss';
 
 /**
- * Lobby splash: player-card portrait at the top, settings still top-right,
- * قوانین hanging under the key.
+ * Lobby splash: Hitler at the desk, Find Game on the table, rules and
+ * settings as a brass pair in the top-right corner.
  */
 export function HomeScreen() {
-  const { nav, i18n, settings } = useApp();
+  const { nav, i18n } = useApp();
   const { formatMessage } = i18n;
 
   const enterPlay = () => nav.navigate('play');
@@ -21,41 +20,23 @@ export function HomeScreen() {
   return (
     <Screen>
       <div class={styles.home}>
-        <div class={styles.profileRow}>
+        <div class={styles.tools}>
           <button
             type="button"
-            class={styles.avatarCard}
-            aria-label={formatMessage('home.chooseCard')}
-            onClick={() => nav.navigate('player-cards')}
+            class={styles.tool}
+            aria-label={formatMessage('nav.rules')}
+            onClick={() => nav.navigate('rules')}
           >
-            <img
-              class={styles.avatarPortrait}
-              src={avatarImage(settings.settings.avatar)}
-              alt=""
-            />
+            <Icon name="scroll" size={22} />
           </button>
-          <div class={styles.topRight}>
-            <button
-              type="button"
-              class={styles.settingsButton}
-              aria-label={formatMessage('nav.settings')}
-              onClick={() => nav.navigate('settings')}
-            >
-              <Icon name="gear" size={22} />
-            </button>
-            <button
-              type="button"
-              class={styles.rulesLink}
-              onClick={() => nav.navigate('rules')}
-            >
-              <Icon name="scroll" size={16} class={styles.rulesIcon} />
-              <span class={styles.rulesLabel}>
-                <span class={styles.flourish} aria-hidden="true" />
-                <span dir="auto">{formatMessage('nav.rules')}</span>
-                <span class={styles.flourish} aria-hidden="true" />
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            class={styles.tool}
+            aria-label={formatMessage('nav.settings')}
+            onClick={() => nav.navigate('settings')}
+          >
+            <Icon name="gear" size={22} />
+          </button>
         </div>
 
         <div class={styles.stage}>

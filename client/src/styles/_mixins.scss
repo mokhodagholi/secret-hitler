@@ -24,6 +24,15 @@
   }
 }
 
+// Pull a child out of Screen's content padding. Height must include those pads
+// or the navy shell shows as a gap (usually along the bottom). Prefer
+// `Screen fill` when the child owns the whole viewport.
+@mixin bleed-out-of-screen {
+  margin: calc(-1 * var(--screen-pad-top)) calc(-1 * var(--screen-pad-x))
+    calc(-1 * var(--screen-pad-bottom));
+  height: calc(100% + var(--screen-pad-top) + var(--screen-pad-bottom));
+}
+
 // Scrollbars follow the surface, not the OS. Only the thumb is painted.
 // Set the --scroll-* tokens on a parent; `themed-scroll` is applied globally.
 // Do not restyle ::-webkit-scrollbar at a call site.

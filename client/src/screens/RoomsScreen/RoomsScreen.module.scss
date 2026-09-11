@@ -12,14 +12,19 @@ $edge: rgba(110, 65, 35, 0.6);
 
 .scene {
   position: relative;
-  height: calc(100% + var(--screen-pad-top) + var(--screen-pad-bottom));
-  margin: calc(-1 * var(--screen-pad-top)) calc(-1 * var(--screen-pad-x))
-    calc(-1 * var(--screen-pad-bottom));
-  padding-top: env(safe-area-inset-top, 0px);
+  @include bleed-out-of-screen;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
   padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.scene > :global(header) {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  padding-inline: 10px;
 }
 
 .backdrop {
@@ -35,7 +40,7 @@ $edge: rgba(110, 65, 35, 0.6);
   z-index: 1;
   flex: 1;
   min-height: 0;
-  margin: 16px 0 0;
+  margin: 8px 0 0;
   display: flex;
   flex-direction: column;
 }
@@ -337,25 +342,5 @@ $edge: rgba(110, 65, 35, 0.6);
 
   &:disabled {
     opacity: 0.4;
-  }
-}
-
-.back {
-  position: relative;
-  z-index: 1;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin: 16px 0 0 18px;
-  padding: 9px 28px;
-  border-radius: 7px;
-  @include display(0.85rem, 0.12em);
-  color: #e8d7b0;
-  background: linear-gradient(180deg, #3a281d, #221610);
-  border: 1px solid $edge;
-  box-shadow: inset 0 1px rgba(255, 220, 180, 0.1), 0 3px 8px rgba(0, 0, 0, 0.4);
-  @include pressable;
-
-  :global([dir='rtl']) & {
-    align-self: flex-end;
   }
 }

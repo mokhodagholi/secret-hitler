@@ -2,7 +2,6 @@ import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Show } from 'solid-js';
 import { HomeScreen } from './HomeScreen';
-import { PlayerCardsScreen } from '../PlayerCardsScreen/PlayerCardsScreen';
 import { RoomsScreen } from '../RoomsScreen/RoomsScreen';
 import { RulesScreen } from '../RulesScreen/RulesScreen';
 import { SettingsScreen } from '../SettingsScreen/SettingsScreen';
@@ -57,7 +56,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy();
   });
 
-  it('Should open Rules from the قوانین link under the settings icon', () => {
+  it('Should open Rules from the brass pair', () => {
     const harness = buildHarness();
     renderWithApp(
       () => (
@@ -76,22 +75,13 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: 'Rules' })).toBeTruthy();
   });
 
-  it('Should open the player-card picker when the portrait is tapped', () => {
+  it('Should keep the home poster to Find Game, rules, and settings', () => {
     const harness = buildHarness();
-    renderWithApp(
-      () => (
-        <Show
-          when={harness.services.nav.screen() === 'home'}
-          fallback={<PlayerCardsScreen />}
-        >
-          <HomeScreen />
-        </Show>
-      ),
-      harness,
-    );
+    renderWithApp(() => <HomeScreen />, harness);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Choose a player card' }));
-    expect(harness.services.nav.screen()).toBe('player-cards');
-    expect(screen.getByRole('heading', { name: 'Player Cards' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Find Game' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rules' })).toBeTruthy();
+    expect(screen.getAllByRole('button')).toHaveLength(3);
   });
 });

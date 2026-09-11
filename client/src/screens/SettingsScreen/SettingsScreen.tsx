@@ -1,6 +1,7 @@
 import { useApp } from '../../services/AppContext';
 import { APP_PACKAGE_VERSION } from '../../services/update';
 import { RAVI_CLIPS } from '../../assets/sounds/ravi/clips';
+import { PORTRAITS } from '../../assets/avatars';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { SectionTitle } from '../../components/SectionTitle/SectionTitle';
@@ -12,6 +13,10 @@ export function SettingsScreen() {
   const state = settings.settings;
   const { formatMessage } = i18n;
   const fromBale = () => bale.user() != null;
+  const cardName = () => {
+    const portrait = PORTRAITS[Math.abs(state.avatar) % PORTRAITS.length];
+    return i18n.lang() === 'fa' ? portrait.persian : portrait.latin;
+  };
 
   return (
     <Screen>
@@ -31,6 +36,13 @@ export function SettingsScreen() {
         onInput={(value) => {
           if (!fromBale()) settings.set('profileName', value);
         }}
+      />
+      <SettingRow
+        kind="value"
+        icon="cards"
+        label={formatMessage('settings.playerCard')}
+        value={cardName()}
+        onClick={() => nav.navigate('player-cards')}
       />
 
       <SectionTitle>{formatMessage('settings.display')}</SectionTitle>

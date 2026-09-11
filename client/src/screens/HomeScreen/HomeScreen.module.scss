@@ -6,10 +6,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  // Cancel Screen padding via the shell tokens so this splash stays full-bleed.
-  height: calc(100% + var(--screen-pad-top) + var(--screen-pad-bottom));
-  margin: calc(-1 * var(--screen-pad-top)) calc(-1 * var(--screen-pad-x))
-    calc(-1 * var(--screen-pad-bottom));
+  @include bleed-out-of-screen;
   background: linear-gradient(180deg, #0c0907 0%, #0a0705 42%, #120b05 100%);
 }
 
@@ -31,8 +28,21 @@
     linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 38%, transparent 58%);
 }
 
-// Raised brass plate with a gear — opens Settings.
-.settingsButton {
+// Rules + settings as one brass pair, pinned to the top-right corner.
+.tools {
+  direction: ltr;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: calc(40px + env(safe-area-inset-top, 0px)) 20px 0 12px;
+  flex-shrink: 0;
+}
+
+.tool {
+  @include pressable;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,158 +51,26 @@
   border-radius: 12px;
   flex-shrink: 0;
   color: #3a2410;
-  background:
-    linear-gradient(180deg, #f3d089 0%, #d4a24a 46%, #9a6a22 100%);
+  background: linear-gradient(180deg, #f3d089 0%, #d4a24a 46%, #9a6a22 100%);
   border: 1px solid rgba(255, 244, 214, 0.55);
   box-shadow:
     0 5px 10px rgba(0, 0, 0, 0.5),
     0 1px 0 rgba(255, 250, 220, 0.35),
     inset 0 2px 1px rgba(255, 250, 232, 0.9),
     inset 0 -4px 6px rgba(120, 68, 18, 0.55);
-  transition:
-    transform 0.08s ease,
-    box-shadow 0.12s ease,
-    filter 0.15s ease;
+  cursor: pointer;
+  filter: drop-shadow(0 1px 0 rgba(255, 250, 232, 0.55));
 }
 
-.settingsButton:hover {
+.tool:hover {
   filter: brightness(1.07);
 }
 
-.settingsButton:active {
-  transform: translateY(2px);
+.tool:active {
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.45),
     inset 0 2px 1px rgba(255, 250, 232, 0.7),
     inset 0 -3px 5px rgba(120, 68, 18, 0.5);
-}
-
-// Portrait on the left, settings top-right, قوانین hanging under the key.
-.profileRow {
-  direction: ltr;
-  position: relative;
-  z-index: 5;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: calc(30px + env(safe-area-inset-top, 0px)) 12px 0;
-  flex-shrink: 0;
-}
-
-.topRight {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.rulesLink {
-  @include pressable;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 10px 12px 8px;
-  min-width: 72px;
-  border-radius: 10px 10px 14px 14px;
-  border: 1px solid rgba(255, 244, 214, 0.5);
-  background:
-    linear-gradient(180deg, #f3d089 0%, #d4a24a 48%, #9a6a22 100%);
-  box-shadow:
-    0 6px 12px rgba(0, 0, 0, 0.5),
-    0 1px 0 rgba(255, 250, 220, 0.35),
-    inset 0 2px 1px rgba(255, 250, 232, 0.9),
-    inset 0 -4px 6px rgba(120, 68, 18, 0.55);
-  cursor: pointer;
-  color: #3a2410;
-  transition:
-    transform 0.12s ease,
-    opacity 0.12s ease,
-    filter 0.15s ease;
-}
-
-.rulesLink:hover {
-  filter: brightness(1.07);
-}
-
-// Thin brass cord so the plaque reads as hanging from the settings key.
-.rulesLink::before {
-  content: '';
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  width: 2px;
-  height: 12px;
-  transform: translateX(-50%);
-  border-radius: 1px;
-  background: linear-gradient(180deg, #f3d089, #9a6a22);
-  box-shadow: 0 0 0 1px rgba(90, 50, 12, 0.35);
-}
-
-.rulesIcon {
-  color: #3a2410;
-  filter: drop-shadow(0 1px 0 rgba(255, 250, 232, 0.55));
-}
-
-.rulesLabel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: $font-body;
-  font-size: 0.88rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  color: #3a2410;
-  text-shadow: 0 1px 0 rgba(255, 250, 232, 0.55);
-  white-space: nowrap;
-}
-
-.flourish {
-  position: relative;
-  width: 14px;
-  height: 8px;
-  flex-shrink: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(90, 50, 12, 0),
-    rgba(90, 50, 12, 0.55),
-    rgba(90, 50, 12, 0)
-  );
-}
-
-.flourish::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 5px;
-  height: 5px;
-  transform: translate(-50%, -50%) rotate(45deg);
-  background: #3a2410;
-  box-shadow: 0 1px 0 rgba(255, 250, 232, 0.45);
-}
-
-.avatarCard {
-  @include pressable;
-  position: relative;
-  width: 108px;
-  aspect-ratio: 1;
-  flex-shrink: 0;
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.62));
-}
-
-.avatarPortrait {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
 }
 
 // --- Stage: hero seated at the desk with the boards on it -------------------
@@ -295,10 +173,11 @@
 .hero {
   position: absolute;
   left: 50%;
+  // Far end of the table — the desk, boards, and CTA stay foreground.
   bottom: 84%;
   transform: translateX(-50%);
-  width: 64%;
-  max-width: 276px;
+  width: 52%;
+  max-width: 220px;
   z-index: 2;
 }
 

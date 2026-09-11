@@ -15,7 +15,8 @@
 }
 
 // Fixed-height viewport column; content scrolls inside when it overflows.
-// Bleed screens (home, rooms, player cards) cancel these via the --screen-pad-* tokens.
+// Bleed screens (home, rooms) cancel these via `bleed-out-of-screen`.
+// Player cards, table, waiting-room use `fill` instead.
 .content {
   --screen-pad-top: calc(18px + env(safe-area-inset-top, 0px));
   --screen-pad-x: 16px;

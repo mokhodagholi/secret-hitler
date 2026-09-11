@@ -41,8 +41,9 @@ Already true:
   16px so iOS does not zoom the shell.
 - `viewport-fit=cover`, `format-detection=telephone=no`, navy `theme-color`.
 - Safe-area on `Screen` padding (`--screen-pad-*`). Bleed screens (home,
-  rooms, player cards) cancel those tokens and apply the inset on their own
-  chrome. Table, splash, waiting-room, chat keep their own.
+  rooms) cancel those tokens with `bleed-out-of-screen` and apply the
+  inset on their own chrome. Table, splash, waiting-room, player cards
+  use `Screen fill` and own the viewport.
 - `pressable` on shared buttons. `type="button"` everywhere. Back control
   and chat tools are 44×44.
 - Bale `BackButton` via [`BaleService`](../src/services/BaleService.ts).

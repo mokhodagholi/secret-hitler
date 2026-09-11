@@ -16,6 +16,7 @@ import { RoomApiError } from '../../services/GameStateService';
 import { ERROR_MESSAGE_KEYS, type MessageKey } from '../../i18n';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
+import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import styles from './RoomsScreen.module.scss';
 
@@ -26,7 +27,7 @@ export interface RoomsScreenProps {
 }
 
 export function RoomsScreen(props: RoomsScreenProps) {
-  const { nav, game, i18n, bale } = useApp();
+  const { nav, game, i18n } = useApp();
   const { formatMessage } = i18n;
   const [tab, setTab] = createSignal<RoomsTab>(props.initialTab ?? 'create');
 
@@ -40,6 +41,8 @@ export function RoomsScreen(props: RoomsScreenProps) {
     <Screen>
       <div class={styles.scene}>
         <div class={styles.backdrop} aria-hidden="true" />
+
+        <ScreenHeader title={formatMessage('play.title')} tone="warm" />
 
         <div class={styles.panel}>
           <div class={styles.tabs} role="tablist">
@@ -69,12 +72,6 @@ export function RoomsScreen(props: RoomsScreenProps) {
             </Show>
           </div>
         </div>
-
-        <Show when={!bale.usesNativeBack()}>
-          <button type="button" class={styles.back} onClick={() => nav.requestBack()}>
-            {formatMessage('common.back')}
-          </button>
-        </Show>
       </div>
     </Screen>
   );

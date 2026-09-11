@@ -39,7 +39,7 @@ export function PlayerCardsScreen() {
   };
 
   return (
-    <Screen>
+    <Screen fill>
       <div class={styles.page}>
         <ScreenHeader title={formatMessage('playerCards.title')} tone="warm" />
         <div class={styles.grid} role="list">
