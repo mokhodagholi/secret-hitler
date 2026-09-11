@@ -47,12 +47,7 @@ describe('GameScreen — voting', () => {
       type: 'command',
       command: { kind: 'castVote', vote: 'ja' },
     });
-    expect(screen.getByRole('button', { name: 'Ja!' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
-    expect(screen.getByRole('button', { name: 'Nein!' }).getAttribute('aria-pressed')).toBe(
-      'false',
-    );
+    expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
   });
 
   it('Should send a Nein vote when the player picks it', () => {
@@ -67,7 +62,7 @@ describe('GameScreen — voting', () => {
     });
   });
 
-  it('Should keep the vote cards after the player has voted', () => {
+  it('Should hide the vote dock after the player has voted and show the ballot in chat', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -79,13 +74,10 @@ describe('GameScreen — voting', () => {
       ),
     });
 
-    const ja = screen.getByRole('button', { name: 'Ja!' });
-    const nein = screen.getByRole('button', { name: 'Nein!' });
-    expect(ja.getAttribute('aria-pressed')).toBe('true');
-    expect(nein.getAttribute('aria-pressed')).toBe('false');
-    expect(ja).toHaveProperty('disabled', true);
-    expect(nein).toHaveProperty('disabled', true);
-    expect(screen.getByText(/waiting for others/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
+    expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
   });
 
   it('Should keep the vote dock on the table so seats stay in view', () => {
@@ -155,6 +147,27 @@ describe('GameScreen — voting', () => {
       expect(document.querySelector('[data-ballot="cal"]')).toBeTruthy();
     });
     expect(document.querySelector('[data-ballot="you"]')).toBeNull();
+  });
+
+  it('Should move already-cast ballots into chat after this player votes', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      you: { ...view.you, vote: 'nein' },
+      players: view.players.map((player) =>
+        player.id === 'you' || player.id === 'cal'
+          ? { ...player, hasVoted: true }
+          : player,
+      ),
+    });
+
+    expect(document.querySelector('[data-ballot-pile]')).toBeNull();
+    expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
+    expect(document.querySelector('[data-chat-ballot="cal"]')).toBeTruthy();
+    expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
+    expect(screen.getByLabelText(/Cal.*cast a ballot/)).toBeTruthy();
   });
 
   it('Should play a ballot effect when someone else votes', () => {

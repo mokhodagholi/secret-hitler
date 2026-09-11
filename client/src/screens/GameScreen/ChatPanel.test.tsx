@@ -255,4 +255,36 @@ describe('ChatPanel', () => {
     });
     expect(screen.getByRole('button', { name: en.game.muteSelf })).toBeTruthy();
   });
+
+  it('Should keep ballots off the feed until this player has voted', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    const view = seatedView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Voting,
+      players: view.players.map((player) =>
+        player.id === 'sadf' ? { ...player, hasVoted: true } : player,
+      ),
+    });
+
+    expect(document.querySelector('[data-chat-ballot]')).toBeNull();
+  });
+
+  it('Should show a ballot in the feed after this player has voted', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    const view = seatedView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Voting,
+      you: { ...view.you, vote: 'ja' },
+      players: view.players.map((player) =>
+        player.id === 'you' ? { ...player, hasVoted: true } : player,
+      ),
+    });
+
+    expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
+    expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
+  });
 });

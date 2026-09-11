@@ -211,6 +211,19 @@
   align-self: flex-end;
 }
 
+.ballot {
+  width: 52px;
+  aspect-ratio: 2 / 3;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+.ballotFace {
+  width: 112px;
+  aspect-ratio: 3 / 2;
+}
+
 .mine .stamp {
   align-self: flex-start;
 }

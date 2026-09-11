@@ -6,9 +6,12 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
+import { Phase, type Vote } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { playerLabel } from '../../i18n/perspective';
+import { isolateBidi } from '../../i18n/utils';
 import { avatarImage } from '../../assets/avatars';
+import { CARD_BACK, VOTE_FACE } from '../../assets/cards';
 import { Icon } from '../../components/Icon/Icon';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import styles from './ChatPanel.module.scss';
@@ -85,6 +88,7 @@ export function ChatPanel(props: ChatPanelProps) {
 
   createEffect(() => {
     game.chatMessages();
+    ballotsInChat();
     if (feedScroller) feedScroller.scrollTop = feedScroller.scrollHeight;
   });
 
@@ -122,6 +126,23 @@ export function ChatPanel(props: ChatPanelProps) {
     if (endsAt == null) return null;
     const clock = game.view()?.kickVote?.startedAt ?? now();
     return Math.max(0, Math.ceil((endsAt - clock) / 1000));
+  };
+
+  const voting = () => game.view()?.phase === Phase.Voting;
+  // Face-down ballots sit on the vote dock until this device votes; then they
+  // belong in the feed so the dock can close.
+  const ballotsInChat = () => {
+    const state = game.view();
+    if (!state || state.phase !== Phase.Voting) return [];
+    const you = state.players.find((player) => player.id === state.you.id);
+    if (you?.isAlive && state.you.vote == null) return [];
+    return state.players.filter((player) => player.hasVoted);
+  };
+  const yourVoteFace = (): Vote | null => game.view()?.you.vote ?? null;
+  const voteSecondsLeft = () => {
+    const deadline = game.view()?.voteDeadline;
+    if (deadline == null) return null;
+    return Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000));
   };
 
   const timestamp = (at: number) =>
@@ -225,6 +246,17 @@ export function ChatPanel(props: ChatPanelProps) {
               })}
             </span>
           </Show>
+          <Show when={voting() && ballotsInChat().length > 0 && voteSecondsLeft() != null}>
+            <span
+              classList={{
+                [styles.timer]: true,
+                [styles.urgent]: (voteSecondsLeft() ?? 0) <= 10,
+              }}
+            >
+              <Icon name="clock" size={13} />
+              {formatMessage('game.secondsLeft', { seconds: voteSecondsLeft()! })}
+            </span>
+          </Show>
         </div>
 
         <div class={styles.tools}>
@@ -298,6 +330,55 @@ export function ChatPanel(props: ChatPanelProps) {
                     >
                       {timestamp(message.at)}
                     </time>
+                  </div>
+                </article>
+              );
+            }}
+          </For>
+          <For each={ballotsInChat()}>
+            {(player) => {
+              const mine = () => player.id === game.view()?.you.id;
+              const face = () =>
+                mine() && yourVoteFace() != null
+                  ? VOTE_FACE[yourVoteFace()!]
+                  : CARD_BACK;
+              return (
+                <article
+                  classList={{
+                    [styles.row]: true,
+                    [styles.mine]: mine(),
+                  }}
+                  data-chat-ballot={player.id}
+                  aria-label={
+                    mine()
+                      ? formatMessage('game.chatYourBallot')
+                      : formatMessage('game.chatBallot', {
+                          name: isolateBidi(player.name),
+                        })
+                  }
+                >
+                  <span class={styles.avatar}>
+                    <img src={avatarImage(player.avatar)} alt="" />
+                  </span>
+                  <div class={styles.bubble}>
+                    <bdi class={styles.author}>
+                      {playerLabel(mine(), player.name, formatMessage)}
+                    </bdi>
+                    <img
+                      classList={{
+                        [styles.ballot]: true,
+                        [styles.ballotFace]: mine() && yourVoteFace() != null,
+                      }}
+                      src={face()}
+                      alt=""
+                    />
+                    <span class={styles.stamp}>
+                      {mine()
+                        ? formatMessage('game.chatYourBallot')
+                        : formatMessage('game.chatBallot', {
+                            name: isolateBidi(player.name),
+                          })}
+                    </span>
                   </div>
                 </article>
               );

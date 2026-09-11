@@ -39,9 +39,9 @@ type Ballot = {
 };
 
 /**
- * Vote dock at the top of the table, with a public pile of face-down ballots
- * in the centre. Ja / Nein stay on this device; everyone else only sees a
- * back fly from the seat that voted.
+ * Vote dock at the top of the table. Face-down ballots land in front of the
+ * dock so they stay visible on a short phone column. After this device votes,
+ * the dock closes and the ballots move into chat.
  */
 export function VotingOverlay(props: VotingOverlayProps) {
   const { formatMessage } = props;
@@ -50,7 +50,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
   const [picked, setPicked] = createSignal<Vote | null>(null);
   const [pile, setPile] = createSignal<Ballot[]>([]);
   const chosen = () => props.yourVote ?? picked();
-  const showBallot = () => props.canVote || chosen() != null;
+  const showDialog = () => props.canVote && chosen() == null;
   const ballotEls: Record<string, HTMLImageElement | undefined> = {};
   const seen = new Set<string>();
   let primed = false;
@@ -117,6 +117,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
       class={styles.backdrop}
       ref={(element) => void animation.play(element, 'fade-in')}
     >
+      <Show when={showDialog()}>
       <div class={styles.shift} style={drag.style()}>
       <div
         class={styles.dialog}
@@ -147,65 +148,33 @@ export function VotingOverlay(props: VotingOverlayProps) {
           </div>
         </Show>
 
-        <Show
-          when={showBallot()}
-          fallback={
-            <div class={styles.waiting}>
-              <span class={styles.progress}>
-                {formatMessage('game.voteProgress', {
-                  count: props.votedCount,
-                  total: props.totalVoters,
-                })}
-              </span>
-            </div>
-          }
-        >
-          <div class={styles.buttons}>
-            <button
-              type="button"
-              classList={{
-                [styles.ja]: true,
-                [styles.selected]: chosen() === 'ja',
-                [styles.dimmed]: chosen() != null && chosen() !== 'ja',
-              }}
-              aria-pressed={chosen() == null ? undefined : chosen() === 'ja'}
-              disabled={chosen() != null}
-              onClick={() => choose('ja')}
-            >
-              <img class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
-              <span>{formatMessage('game.voteJa')}</span>
-            </button>
-            <button
-              type="button"
-              classList={{
-                [styles.nein]: true,
-                [styles.selected]: chosen() === 'nein',
-                [styles.dimmed]: chosen() != null && chosen() !== 'nein',
-              }}
-              aria-pressed={chosen() == null ? undefined : chosen() === 'nein'}
-              disabled={chosen() != null}
-              onClick={() => choose('nein')}
-            >
-              <img class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
-              <span>{formatMessage('game.voteNein')}</span>
-            </button>
-          </div>
-          <Show when={chosen()}>
-            <span class={styles.yourVote}>
-              {formatMessage('game.youVoted', {
-                vote: formatMessage(`vote.${chosen()!}`),
-              })}
-            </span>
-          </Show>
-          <span class={styles.progress}>
-            {formatMessage('game.voteProgress', {
-              count: props.votedCount,
-              total: props.totalVoters,
-            })}
-          </span>
-        </Show>
+        <div class={styles.buttons}>
+          <button
+            type="button"
+            class={styles.ja}
+            onClick={() => choose('ja')}
+          >
+            <img class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
+            <span>{formatMessage('game.voteJa')}</span>
+          </button>
+          <button
+            type="button"
+            class={styles.nein}
+            onClick={() => choose('nein')}
+          >
+            <img class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
+            <span>{formatMessage('game.voteNein')}</span>
+          </button>
+        </div>
+        <span class={styles.progress}>
+          {formatMessage('game.voteProgress', {
+            count: props.votedCount,
+            total: props.totalVoters,
+          })}
+        </span>
       </div>
       </div>
+      </Show>
 
       <div class={styles.felt}>
         <div class={styles.pile} data-ballot-pile>
