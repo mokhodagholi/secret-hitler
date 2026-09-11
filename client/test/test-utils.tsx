@@ -97,7 +97,7 @@ export function buildHarness(
   options: { seated?: boolean; initialPath?: string; flags?: FeatureFlags } = {},
 ): Harness {
   if (options.seated) {
-    sessionStorage.setItem('sh:session', JSON.stringify(SESSION));
+    localStorage.setItem('sh:session', JSON.stringify(SESSION));
   }
   const settings = new SettingsService();
   settings.set('language', 'en');

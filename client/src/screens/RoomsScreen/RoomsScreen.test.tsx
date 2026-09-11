@@ -5,7 +5,7 @@ import { RoomsScreen } from './RoomsScreen';
 import { BaleService } from '../../services/BaleService';
 import { RoomApiError } from '../../services/GameStateService';
 import { en } from '../../i18n/locales/en';
-import { buildHarness, renderWithApp } from '../../../test/test-utils';
+import { buildHarness, makeView, renderWithApp } from '../../../test/test-utils';
 
 class NativeBackBale extends BaleService {
   usesNativeBack(): boolean {
@@ -144,5 +144,16 @@ describe('RoomsScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: en.joinGame.submit }));
     await waitFor(() => expect(attempts).toBe(2));
     expect(harness.services.nav.screen()).toBe('waiting-room');
+  });
+
+  it('Should stay on create/join when the player already holds a live seat', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.nav.navigate('play');
+    renderWithApp(() => <RoomsScreen initialTab="create" />, harness);
+    harness.pushState(makeView());
+
+    expect(harness.services.nav.screen()).toBe('play');
+    expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: en.rooms.joinTab })).toBeTruthy();
   });
 });

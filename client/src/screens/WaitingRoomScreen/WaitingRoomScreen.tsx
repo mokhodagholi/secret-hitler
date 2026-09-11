@@ -293,9 +293,10 @@ export function WaitingRoomScreen() {
                         </div>
                         <Button
                           variant="danger"
-                          onClick={() =>
-                            setKickTarget({ id: player.id, name: player.name })
-                          }
+                          onClick={() => {
+                            sound.play('player-ready');
+                            setKickTarget({ id: player.id, name: player.name });
+                          }}
                         >
                           {formatMessage('waiting.kickNamed', {
                             name: player.name,
@@ -366,7 +367,10 @@ export function WaitingRoomScreen() {
               compact={compact()}
               onSelect={
                 game.isHost() && player.id !== props.state.you.id
-                  ? () => setKickTarget({ id: player.id, name: player.name })
+                  ? () => {
+                      sound.play('player-ready');
+                      setKickTarget({ id: player.id, name: player.name });
+                    }
                   : undefined
               }
             />

@@ -22,15 +22,9 @@ export interface RoomsScreenProps {
 }
 
 export function RoomsScreen(props: RoomsScreenProps) {
-  const { nav, game, i18n } = useApp();
+  const { i18n } = useApp();
   const { formatMessage } = i18n;
   const [tab, setTab] = createSignal<RoomsTab>(props.initialTab ?? 'create');
-
-  createEffect(() => {
-    if (!game.inRoom()) return;
-    const phase = game.view()?.phase;
-    nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
-  });
 
   return (
     <Screen>

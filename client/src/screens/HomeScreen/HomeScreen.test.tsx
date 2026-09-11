@@ -1,11 +1,14 @@
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Show } from 'solid-js';
+import { Phase } from '@secret-hitler/shared';
 import { HomeScreen } from './HomeScreen';
 import { RoomsScreen } from '../RoomsScreen/RoomsScreen';
 import { RulesScreen } from '../RulesScreen/RulesScreen';
 import { SettingsScreen } from '../SettingsScreen/SettingsScreen';
-import { buildHarness, renderWithApp } from '../../../test/test-utils';
+import { WaitingRoomScreen } from '../WaitingRoomScreen/WaitingRoomScreen';
+import { en } from '../../i18n/locales/en';
+import { buildHarness, makeView, renderWithApp } from '../../../test/test-utils';
 
 describe('HomeScreen', () => {
   it('Should send the player to the play menu when they press Play', () => {
@@ -83,5 +86,64 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Rules' })).toBeTruthy();
     expect(screen.getAllByRole('button')).toHaveLength(3);
+  });
+
+  it('Should offer a way back when a live seat is still open', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<WaitingRoomScreen />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
+    );
+    harness.pushState(makeView());
+
+    expect(screen.getByRole('button', { name: en.home.rejoin })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Find Game' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.home.rejoin }));
+    expect(harness.services.nav.screen()).toBe('waiting-room');
+  });
+
+  it('Should keep Find Game on create/join even when a live seat is open', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<RoomsScreen initialTab="create" />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
+    );
+    harness.pushState(makeView());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Find Game' }));
+    expect(harness.services.nav.screen()).toBe('play');
+    expect(screen.getByRole('tab', { name: 'Create Room' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: en.rooms.joinTab })).toBeTruthy();
+  });
+
+  it('Should send an in-game seat back to the table', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <HomeScreen />, harness);
+    harness.pushState(makeView({ phase: Phase.Nomination }));
+
+    fireEvent.click(screen.getByRole('button', { name: en.home.rejoin }));
+    expect(harness.services.nav.screen()).toBe('game');
+  });
+
+  it('Should hide the return button until a snapshot arrives', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <HomeScreen />, harness);
+
+    expect(screen.queryByRole('button', { name: en.home.rejoin })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Find Game' })).toBeTruthy();
   });
 });

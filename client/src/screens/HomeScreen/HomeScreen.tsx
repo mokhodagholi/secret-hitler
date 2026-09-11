@@ -1,3 +1,5 @@
+import { Show } from 'solid-js';
+import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
@@ -9,13 +11,21 @@ import styles from './HomeScreen.module.scss';
 
 /**
  * Lobby splash: Hitler at the desk, Find Game on the table, rules and
- * settings as a brass pair in the top-right corner.
+ * settings as a brass pair in the top-right corner. A live seat that
+ * can still be claimed gets its own return button above Find Game.
  */
 export function HomeScreen() {
-  const { nav, i18n } = useApp();
+  const { nav, game, i18n } = useApp();
   const { formatMessage } = i18n;
 
+  const canRejoin = () => game.inRoom() && game.view() != null;
+
   const enterPlay = () => nav.navigate('play');
+
+  function rejoinMatch(): void {
+    const phase = game.view()?.phase;
+    nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
+  }
 
   return (
     <Screen>
@@ -62,6 +72,13 @@ export function HomeScreen() {
         </div>
 
         <div class={styles.ctaWrap}>
+          <Show when={canRejoin()}>
+            <button type="button" class={styles.ctaRejoin} onClick={rejoinMatch}>
+              <span class={styles.ctaRejoinLabel} dir="auto">
+                {formatMessage('home.rejoin')}
+              </span>
+            </button>
+          </Show>
           <button type="button" class={styles.cta} onClick={enterPlay}>
             <span class={styles.ctaLabel} dir="auto">
               {formatMessage('home.findGame')}

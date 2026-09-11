@@ -645,14 +645,17 @@ export function GameScreen() {
 
   function onSeat(player: PublicPlayer): void {
     if (canNominate(player)) {
+      sound.play('player-ready');
       nominate(player);
       return;
     }
     if (canPowerTarget(player)) {
+      sound.play('player-ready');
       usePower(player.id);
       return;
     }
     if (termLocked(player)) {
+      sound.play('ui-error');
       const seat = document.querySelector(`[data-seat-id="${player.id}"]`);
       void animation.play(seat instanceof HTMLElement ? seat : null, 'shake');
       showToast({
@@ -662,6 +665,7 @@ export function GameScreen() {
       return;
     }
     if (alreadyInvestigated(player)) {
+      sound.play('ui-error');
       const seat = document.querySelector(`[data-seat-id="${player.id}"]`);
       void animation.play(seat instanceof HTMLElement ? seat : null, 'shake');
       showToast({
@@ -671,6 +675,7 @@ export function GameScreen() {
       return;
     }
     if (awayFromTable(player)) {
+      sound.play('ui-error');
       const seat = document.querySelector(`[data-seat-id="${player.id}"]`);
       void animation.play(seat instanceof HTMLElement ? seat : null, 'shake');
       showToast({
@@ -679,7 +684,10 @@ export function GameScreen() {
       });
       return;
     }
-    if (canReport(player)) setReporting(player);
+    if (canReport(player)) {
+      sound.play('player-ready');
+      setReporting(player);
+    }
   }
 
   function leaveRoom(): void {
@@ -1038,6 +1046,7 @@ export function GameScreen() {
               canNominate={(player) => canReport(player)}
               showOffice={!ceremonyOpen()}
               onNominate={(player) => {
+                sound.play('player-ready');
                 setPlayersOpen(false);
                 setReporting(player);
               }}

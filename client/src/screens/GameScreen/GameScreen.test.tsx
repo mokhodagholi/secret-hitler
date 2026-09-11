@@ -425,6 +425,17 @@ describe('GameScreen — nomination', () => {
     });
   });
 
+  it('Should play a stamp when the President nominates from the table', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(nominationView());
+    play.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(play).toHaveBeenCalledWith('player-ready');
+  });
+
   it('Should explain why a previous-government player cannot be Chancellor', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -442,6 +453,20 @@ describe('GameScreen — nomination', () => {
       type: 'command',
       command: { kind: 'nominateChancellor', targetId: 'pres' },
     });
+  });
+
+  it('Should knock when a locked seat is tapped', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState({
+      ...nominationView(),
+      ineligibleChancellors: ['cal'],
+    });
+    play.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(play).toHaveBeenCalledWith('ui-error');
   });
 
   it('Should explain why a disconnected player cannot be Chancellor', () => {
@@ -1120,6 +1145,17 @@ describe('GameScreen — table kick vote', () => {
     });
   });
 
+  it('Should play a stamp when a seat is tapped for a kick', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+    play.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(play).toHaveBeenCalledWith('player-ready');
+  });
+
   it('Should send a kick ballot from the table overlay', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -1146,6 +1182,32 @@ describe('GameScreen — table kick vote', () => {
       type: 'kick:vote',
       agree: true,
     });
+  });
+
+  it('Should play a ballot tap on a kick vote', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    const now = Date.now();
+    harness.pushState({
+      ...votingView(),
+      kickVote: {
+        requesterId: 'pres',
+        targetId: 'cal',
+        startedAt: now,
+        endsAt: now + 30_000,
+        votedCount: 1,
+        voterCount: 2,
+        needed: 2,
+        yourVote: null,
+        votedIds: ['pres'],
+      },
+    });
+    play.mockClear();
+
+    const dialog = screen.getByRole('dialog', { name: en.game.kickVote.title });
+    fireEvent.click(within(dialog).getByRole('button', { name: en.game.voteJa }));
+    expect(play).toHaveBeenCalledWith('ballot-tap');
   });
 });
 

@@ -33,6 +33,7 @@ export const en = {
   home: {
     play: 'Play',
     findGame: 'Find Game',
+    rejoin: 'Return to table',
     title: 'Secret Hitler',
     tagline: 'One night, a thousand secrets, one winner!',
     guest: 'Guest',
@@ -308,6 +309,8 @@ export const en = {
     voteNein: 'Nein!',
     youVoted: 'You voted {vote} — waiting for others',
     voteProgress: '{count}/{total} voted',
+    chatBallot: '{name} cast a ballot',
+    chatYourBallot: 'You cast a ballot',
     president: 'President',
     chancellor: 'Chancellor',
     yourRole: 'Your Role',

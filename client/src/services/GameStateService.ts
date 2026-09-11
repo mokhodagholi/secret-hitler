@@ -53,8 +53,8 @@ const MAX_CHAT_ENTRIES = 200;
  * per-viewer {@link GameStateView} (plus role, chat and log) as Solid signals,
  * and wraps the room HTTP endpoints + WebSocket actions behind typed methods.
  *
- * The session token is kept in sessionStorage so a page refresh silently
- * reconnects to the same seat.
+ * The session token is kept in localStorage so closing the mini-app still
+ * offers a way back to a live seat. sessionStorage is read once for older tabs.
  */
 export class GameStateService {
   private readonly viewSignal = createSignal<GameStateView | null>(null);
@@ -245,7 +245,7 @@ export class GameStateService {
     this.socket.send({ type: 'room:leave' });
     this.socket.disconnect();
     this.setSession(null);
-    sessionStorage.removeItem(SESSION_KEY);
+    clearStoredSession();
     this.setView(null);
     this.setRole(null);
     this.setChatMessages([]);
@@ -258,7 +258,7 @@ export class GameStateService {
 
   private beginSession(session: RoomSession): RoomSession {
     this.setSession(session);
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    writeStoredSession(session);
     this.setChatMessages([]);
     this.setLogEntries([]);
     this.setUnreadChat(0);
@@ -268,15 +268,10 @@ export class GameStateService {
   }
 
   private restoreSession(): void {
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      if (!raw) return;
-      const restored = JSON.parse(raw) as RoomSession;
-      this.setSession(restored);
-      this.socket.connect(restored.token);
-    } catch {
-      sessionStorage.removeItem(SESSION_KEY);
-    }
+    const restored = readStoredSession();
+    if (!restored) return;
+    this.setSession(restored);
+    this.socket.connect(restored.token);
   }
 
   private buildRouter(): MessageRouter<ServerMessage> {
@@ -343,5 +338,49 @@ export class GameStateService {
       );
     }
     return payload as T;
+  }
+}
+
+function readStoredSession(): RoomSession | null {
+  const fromLocal = parseSession(localStorage.getItem(SESSION_KEY));
+  if (fromLocal) return fromLocal;
+  const fromTab = parseSession(sessionStorage.getItem(SESSION_KEY));
+  if (!fromTab) return null;
+  writeStoredSession(fromTab);
+  return fromTab;
+}
+
+function writeStoredSession(session: RoomSession): void {
+  const raw = JSON.stringify(session);
+  localStorage.setItem(SESSION_KEY, raw);
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+function clearStoredSession(): void {
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+function parseSession(raw: string | null): RoomSession | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<RoomSession>;
+    if (
+      typeof value.roomId !== 'string' ||
+      typeof value.code !== 'string' ||
+      typeof value.token !== 'string' ||
+      typeof value.playerId !== 'string'
+    ) {
+      return null;
+    }
+    return {
+      roomId: value.roomId,
+      code: value.code,
+      token: value.token,
+      playerId: value.playerId,
+      shareLink: typeof value.shareLink === 'string' ? value.shareLink : undefined,
+    };
+  } catch {
+    return null;
   }
 }

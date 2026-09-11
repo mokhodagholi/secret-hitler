@@ -26,7 +26,7 @@ export interface KickVoteOverlayProps {
  */
 export function KickVoteOverlay(props: KickVoteOverlayProps) {
   const { formatMessage } = props;
-  const { animation } = useApp();
+  const { animation, sound } = useApp();
   const drag = useDialogDrag();
   const [picked, setPicked] = createSignal<boolean | null>(null);
   const chosen = () => props.yourVote ?? picked();
@@ -46,6 +46,7 @@ export function KickVoteOverlay(props: KickVoteOverlayProps) {
   function choose(agree: boolean): void {
     if (chosen() != null) return;
     setPicked(agree);
+    sound.play('ballot-tap');
     props.onVote(agree);
   }
 

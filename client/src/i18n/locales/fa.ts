@@ -31,6 +31,7 @@ export const fa = {
   home: {
     play: 'بازی',
     findGame: 'پیدا کردن بازی',
+    rejoin: 'بازگشت به میز',
     title: 'راز هیتلر',
     tagline: 'یک شب، هزار راز و یک برنده!',
     guest: 'مهمان',
@@ -302,6 +303,8 @@ export const fa = {
     voteNein: 'مخالف',
     youVoted: 'رأی شما: {vote} — منتظر بقیه',
     voteProgress: '{count}/{total} تا رأی دادن',
+    chatBallot: '{name} رأی داد',
+    chatYourBallot: 'شما رأی دادید',
     president: 'رئیس‌جمهور',
     chancellor: 'صدراعظم',
     yourRole: 'نقش شما',
