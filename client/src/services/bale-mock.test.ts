@@ -10,6 +10,7 @@ describe('bale-mock', () => {
     expect(isLocalBaleHost('localhost')).toBe(true);
     expect(isLocalBaleHost('127.0.0.1')).toBe(true);
     expect(isLocalBaleHost('[::1]')).toBe(true);
+    expect(isLocalBaleHost('192.168.1.5')).toBe(true);
     expect(isLocalBaleHost('mrfantastic.ir')).toBe(false);
   });
 

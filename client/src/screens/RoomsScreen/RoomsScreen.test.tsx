@@ -69,4 +69,80 @@ describe('RoomsScreen', () => {
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].options?.maxPlayers).toBeUndefined();
   });
+
+  it('Should join a share-link room by code without opening the rooms list', async () => {
+    const harness = buildHarness({ initialPath: '/join/L2YYP4' });
+    harness.services.settings.set('profileName', 'Ana');
+    const joined: string[] = [];
+    harness.services.game.listRooms = async () => {
+      throw new Error('share links must not list rooms');
+    };
+    harness.services.game.joinRoom = async (idOrCode) => {
+      joined.push(idOrCode);
+      return {
+        roomId: 'room-1',
+        code: idOrCode,
+        token: 'token-1',
+        playerId: 'you',
+      };
+    };
+    renderWithApp(() => <RoomsScreen initialTab="join" />, harness);
+
+    await waitFor(() => expect(joined).toEqual(['L2YYP4']));
+    expect(screen.queryByText(en.joinGame.noRooms)).toBeNull();
+    expect(screen.queryByText(en.joinGame.colName)).toBeNull();
+    expect(harness.services.nav.screen()).toBe('waiting-room');
+  });
+
+  it('Should ask for a name before joining a share-link room', async () => {
+    const harness = buildHarness({ initialPath: '/join/ABC123' });
+    const joined: string[] = [];
+    harness.services.game.joinRoom = async (idOrCode) => {
+      joined.push(idOrCode);
+      return {
+        roomId: 'room-1',
+        code: idOrCode,
+        token: 'token-1',
+        playerId: 'you',
+      };
+    };
+    renderWithApp(() => <RoomsScreen initialTab="join" />, harness);
+
+    expect(joined).toEqual([]);
+    expect(screen.queryByText(en.joinGame.colName)).toBeNull();
+    fireEvent.input(screen.getByLabelText(en.joinGame.yourName), {
+      target: { value: 'Ben' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.joinGame.submit }));
+    await waitFor(() => expect(joined).toEqual(['ABC123']));
+    expect(harness.services.nav.screen()).toBe('waiting-room');
+  });
+
+  it('Should ask for a password when a share-link room is locked', async () => {
+    const harness = buildHarness({ initialPath: '/join/ABC123' });
+    harness.services.settings.set('profileName', 'Ana');
+    let attempts = 0;
+    harness.services.game.joinRoom = async (_idOrCode, request) => {
+      attempts += 1;
+      if (!request.password) {
+        throw new RoomApiError('WRONG_PASSWORD', 'Wrong password');
+      }
+      return {
+        roomId: 'room-1',
+        code: 'ABC123',
+        token: 'token-1',
+        playerId: 'you',
+      };
+    };
+    renderWithApp(() => <RoomsScreen initialTab="join" />, harness);
+
+    await waitFor(() => expect(attempts).toBe(1));
+    expect(screen.queryByText(en.joinGame.colName)).toBeNull();
+    fireEvent.input(screen.getByLabelText(en.joinGame.password), {
+      target: { value: 'secret' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.joinGame.submit }));
+    await waitFor(() => expect(attempts).toBe(2));
+    expect(harness.services.nav.screen()).toBe('waiting-room');
+  });
 });

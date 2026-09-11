@@ -1,12 +1,12 @@
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
-import { Phase, miniAppStartLink, DEFAULT_BALE_BOT_USERNAME } from '@secret-hitler/shared';
+import { Phase } from '@secret-hitler/shared';
 import { WaitingRoomScreen } from './WaitingRoomScreen';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, makePlayer, makeView, renderWithApp } from '../../../test/test-utils';
 
 describe('WaitingRoomScreen', () => {
-  it('Should copy a Bale startapp invite, never the website origin', async () => {
+  it('Should copy a local /join invite on localhost, not a Bale startapp link', async () => {
     const written: string[] = [];
     Object.assign(navigator, {
       clipboard: { writeText: async (text: string) => written.push(text) },
@@ -17,11 +17,9 @@ describe('WaitingRoomScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.waiting.shareLink }));
     await waitFor(() => {
-      expect(written).toEqual([miniAppStartLink(DEFAULT_BALE_BOT_USERNAME, 'ABC123')]);
+      expect(written).toEqual([`${location.origin}/join/ABC123`]);
     });
-    expect(written[0]).toContain('ble.ir');
-    expect(written[0]).not.toContain(location.origin);
-    expect(written[0]).not.toContain('/join/');
+    expect(written[0]).not.toContain('ble.ir');
   });
 
   it('Should let a guest mark themselves ready', () => {

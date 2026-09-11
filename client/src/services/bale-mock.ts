@@ -1,9 +1,8 @@
+import { isLocalInviteHost } from '@secret-hitler/shared';
 import type { BaleWebApp } from '../bale';
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-
 export function isLocalBaleHost(hostname: string = location.hostname): boolean {
-  return LOCAL_HOSTS.has(hostname);
+  return isLocalInviteHost(hostname);
 }
 
 /**

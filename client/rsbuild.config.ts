@@ -121,6 +121,8 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Phone on the same Wi-Fi can open http://<lan-ip>:3000.
+    host: '0.0.0.0',
     // /join/CODE share links must serve the app shell, not 404.
     historyApiFallback: true,
     proxy: {

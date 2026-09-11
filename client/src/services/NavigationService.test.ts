@@ -13,6 +13,12 @@ describe('NavigationService', () => {
     expect(nav.consumeJoinCode()).toBe('ABC123');
   });
 
+  it('Should uppercase a /join/CODE share link so it matches the room', () => {
+    const nav = new NavigationService('/join/l2yyp4');
+    expect(nav.screen()).toBe('join-game');
+    expect(nav.consumeJoinCode()).toBe('L2YYP4');
+  });
+
   it('Should boot into the join screen for a mini-app startapp room code', () => {
     window.history.replaceState(null, '', '/?tgWebAppStartParam=abc123');
     const nav = new NavigationService('/');

@@ -195,14 +195,19 @@ function JoinRoomPanel() {
   const { nav, settings, game, i18n, bale } = useApp();
   const { formatMessage } = i18n;
 
-  const [rooms, { refetch }] = createResource(() => game.listRooms());
+  const [invite, setInvite] = createSignal(nav.consumeJoinCode());
+  const [rooms, { refetch }] = createResource(
+    () => (invite() ? false : true),
+    () => game.listRooms(),
+  );
   const [selectedRoomId, setSelectedRoomId] = createSignal<string | null>(null);
-  const [pendingJoinCode, setPendingJoinCode] = createSignal(nav.consumeJoinCode());
   const baleName = () => bale.user()?.firstName;
   const profileMissing = () =>
     baleName() == null && settings.settings.profileName.trim().length === 0;
   const [playerName, setPlayerName] = createSignal(settings.settings.profileName);
   const [password, setPassword] = createSignal('');
+  const [needsPassword, setNeedsPassword] = createSignal(false);
+  const [autoTried, setAutoTried] = createSignal(false);
   const [submitting, setSubmitting] = createSignal(false);
   const [errorKey, setErrorKey] = createSignal<MessageKey | null>(null);
 
@@ -211,14 +216,6 @@ function JoinRoomPanel() {
 
   const selectedRoom = (): RoomSummary | null =>
     rooms()?.find((room) => room.id === selectedRoomId()) ?? null;
-
-  createEffect(() => {
-    const code = pendingJoinCode();
-    const match = rooms()?.find((room) => room.code === code);
-    if (!code || !rooms()) return;
-    if (match && joinable(match)) setSelectedRoomId(match.id);
-    setPendingJoinCode(null);
-  });
 
   const needsDetails = (room: RoomSummary) => room.hasPassword || profileMissing();
 
@@ -231,13 +228,14 @@ function JoinRoomPanel() {
 
   async function submit(room?: RoomSummary | null): Promise<void> {
     const target = room ?? selectedRoom();
+    const idOrCode = invite() ?? target?.id;
     const name = baleName() ?? playerName().trim();
-    if (!target || submitting() || name.length === 0) return;
+    if (!idOrCode || submitting() || name.length === 0) return;
     setSubmitting(true);
     setErrorKey(null);
     settings.set('profileName', name);
     try {
-      await game.joinRoom(target.id, {
+      await game.joinRoom(idOrCode, {
         name,
         avatar: settings.settings.avatar,
         password: password().trim() || undefined,
@@ -247,73 +245,124 @@ function JoinRoomPanel() {
     } catch (error) {
       const code = error instanceof RoomApiError ? error.code : 'NETWORK';
       setErrorKey(ERROR_MESSAGE_KEYS[code]);
-      void refetch();
+      if (invite() && code === 'WRONG_PASSWORD') {
+        setNeedsPassword(true);
+      } else if (invite()) {
+        setInvite(null);
+        void refetch();
+      } else {
+        void refetch();
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
+  // Join by code so a share link never depends on the public list being ready.
+  createEffect(() => {
+    if (!invite() || autoTried() || needsPassword()) return;
+    const knownName = baleName() ?? settings.settings.profileName.trim();
+    if (!knownName) return;
+    setAutoTried(true);
+    void submit();
+  });
+
   return (
     <div class={styles.join}>
-      <div class={styles.tableHead}>
-        <span class={styles.thName}>{formatMessage('joinGame.colName')}</span>
-        <span class={styles.thPlayers}>{formatMessage('joinGame.colPlayers')}</span>
-        <button
-          type="button"
-          class={styles.refresh}
-          aria-label={formatMessage('joinGame.refresh')}
-          onClick={() => void refetch()}
-        >
-          <Icon name="refresh" size={16} />
-        </button>
-      </div>
-
       <Show
-        when={(rooms() ?? []).length > 0}
-        fallback={<p class={styles.empty}>{formatMessage('joinGame.noRooms')}</p>}
-      >
-        <ul class={styles.rows}>
-          <For each={rooms()}>
-            {(room) => (
-              <li
-                classList={{
-                  [styles.row]: true,
-                  [styles.rowSelected]: selectedRoomId() === room.id,
-                  [styles.rowUnavailable]: !joinable(room),
-                }}
+        when={invite()}
+        fallback={
+          <>
+            <div class={styles.tableHead}>
+              <span class={styles.thName}>{formatMessage('joinGame.colName')}</span>
+              <span class={styles.thPlayers}>{formatMessage('joinGame.colPlayers')}</span>
+              <button
+                type="button"
+                class={styles.refresh}
+                aria-label={formatMessage('joinGame.refresh')}
+                onClick={() => void refetch()}
               >
-                <span class={styles.roomName}>
-                  {room.name}
-                  <Show when={room.hasPassword}>
-                    <Icon name="masks" size={13} class={styles.lock} />
-                  </Show>
-                </span>
-                <span class={styles.roomPlayers}>
-                  <Show
-                    when={room.phase === Phase.Lobby}
-                    fallback={formatMessage('joinGame.inProgress')}
-                  >
-                    {formatMessage('joinGame.playerCountShort', {
-                      count: room.playerCount,
-                      max: room.maxPlayers,
-                    })}
-                  </Show>
-                </span>
+                <Icon name="refresh" size={16} />
+              </button>
+            </div>
+
+            <Show
+              when={(rooms() ?? []).length > 0}
+              fallback={<p class={styles.empty}>{formatMessage('joinGame.noRooms')}</p>}
+            >
+              <ul class={styles.rows}>
+                <For each={rooms()}>
+                  {(room) => (
+                    <li
+                      classList={{
+                        [styles.row]: true,
+                        [styles.rowSelected]: selectedRoomId() === room.id,
+                        [styles.rowUnavailable]: !joinable(room),
+                      }}
+                    >
+                      <span class={styles.roomName}>
+                        {room.name}
+                        <Show when={room.hasPassword}>
+                          <Icon name="masks" size={13} class={styles.lock} />
+                        </Show>
+                      </span>
+                      <span class={styles.roomPlayers}>
+                        <Show
+                          when={room.phase === Phase.Lobby}
+                          fallback={formatMessage('joinGame.inProgress')}
+                        >
+                          {formatMessage('joinGame.playerCountShort', {
+                            count: room.playerCount,
+                            max: room.maxPlayers,
+                          })}
+                        </Show>
+                      </span>
+                      <button
+                        type="button"
+                        class={styles.joinButton}
+                        disabled={!joinable(room) || submitting()}
+                        onClick={() => pick(room)}
+                      >
+                        {formatMessage('joinGame.join')}
+                      </button>
+                    </li>
+                  )}
+                </For>
+              </ul>
+            </Show>
+
+            <Show when={selectedRoom() && needsDetails(selectedRoom()!)}>
+              <div class={styles.form}>
+                <Show when={profileMissing()}>
+                  <Field
+                    label={formatMessage('joinGame.yourName')}
+                    value={playerName()}
+                    onInput={setPlayerName}
+                    onSubmit={() => void submit()}
+                  />
+                </Show>
+                <Show when={selectedRoom()!.hasPassword}>
+                  <Field
+                    label={formatMessage('joinGame.password')}
+                    type="password"
+                    value={password()}
+                    onInput={setPassword}
+                    onSubmit={() => void submit()}
+                  />
+                </Show>
                 <button
                   type="button"
-                  class={styles.joinButton}
-                  disabled={!joinable(room) || submitting()}
-                  onClick={() => pick(room)}
+                  class={styles.primary}
+                  disabled={submitting()}
+                  onClick={() => void submit()}
                 >
-                  {formatMessage('joinGame.join')}
+                  {formatMessage(submitting() ? 'joinGame.joining' : 'joinGame.submit')}
                 </button>
-              </li>
-            )}
-          </For>
-        </ul>
-      </Show>
-
-      <Show when={selectedRoom() && needsDetails(selectedRoom()!)}>
+              </div>
+            </Show>
+          </>
+        }
+      >
         <div class={styles.form}>
           <Show when={profileMissing()}>
             <Field
@@ -323,7 +372,7 @@ function JoinRoomPanel() {
               onSubmit={() => void submit()}
             />
           </Show>
-          <Show when={selectedRoom()!.hasPassword}>
+          <Show when={needsPassword()}>
             <Field
               label={formatMessage('joinGame.password')}
               type="password"
@@ -335,7 +384,7 @@ function JoinRoomPanel() {
           <button
             type="button"
             class={styles.primary}
-            disabled={submitting()}
+            disabled={submitting() || (baleName() ?? playerName().trim()).length === 0}
             onClick={() => void submit()}
           >
             {formatMessage(submitting() ? 'joinGame.joining' : 'joinGame.submit')}

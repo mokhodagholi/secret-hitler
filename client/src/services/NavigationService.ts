@@ -25,7 +25,7 @@ const JOIN_LINK_PATTERN = /^\/join\/([A-Za-z0-9]+)\/?$/;
 /**
  * Signal-based screen switcher — no router library.
  * Keeps a history stack so headers can offer a back button.
- * A `/join/CODE` share link boots straight into the join screen.
+ * A `/join/CODE` share link boots the join screen, which seats by code.
  */
 export class NavigationService {
   readonly screen: Accessor<ScreenName>;
@@ -41,7 +41,8 @@ export class NavigationService {
       typeof location !== 'undefined'
         ? new URLSearchParams(location.search).get('tgWebAppStartParam')
         : null;
-    this.pendingJoinCode = fromPath ?? joinCodeFromStartApp(fromQuery);
+    this.pendingJoinCode =
+      joinCodeFromStartApp(fromPath) ?? joinCodeFromStartApp(fromQuery);
     const [screen, setScreen] = createSignal<ScreenName>(
       this.pendingJoinCode ? 'join-game' : 'home',
     );
