@@ -8,6 +8,7 @@ import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
 import { GameScreen } from './screens/GameScreen/GameScreen';
 import { SplashScreen } from './screens/SplashScreen/SplashScreen';
+import { SPLASH_PROGRESS_MS } from './screens/SplashScreen/progress';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 import { UpdateModal } from './components/UpdateModal/UpdateModal';
 import { WhatsNewModal } from './components/WhatsNewModal/WhatsNewModal';
@@ -103,7 +104,6 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
       running = true;
       setOffline(false);
       try {
-        const started = Date.now();
         const online = await waitForOnline();
         if (cancelled || finished) return;
         if (!online) {
@@ -118,9 +118,11 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
           screen: nav.screen(),
           avatar: settings.settings.avatar,
         });
+        const bootStarted = Date.now();
         await prefetch.boot(urls).catch(() => undefined);
         if (cancelled || finished) return;
-        const wait = 800 - (Date.now() - started);
+        // Cached files finish in one tick; keep the lectern until the bar can count 0 → 100.
+        const wait = SPLASH_PROGRESS_MS - (Date.now() - bootStarted);
         if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
         finish();
       } finally {

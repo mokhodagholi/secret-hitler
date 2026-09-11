@@ -2,9 +2,14 @@ import { Show, createSignal, onCleanup, onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import splashArt from '../../assets/splash/hitler-splash.webp';
 import { SPLASH_QUOTES } from './quotes';
+import {
+  advanceSplashPercent,
+  splashPercentFromBytes,
+} from './progress';
 import styles from './SplashScreen.module.scss';
 
 const QUOTE_ROTATE_MS = 7_000;
+const SNAP_PERCENT = process.env.NODE_ENV === 'test';
 
 export interface SplashScreenProps {
   /** After five seconds of failed probes — stay on the lectern. */
@@ -22,13 +27,35 @@ export function SplashScreen(props: SplashScreenProps) {
   const [quoteIndex, setQuoteIndex] = createSignal(
     Math.floor(Math.random() * SPLASH_QUOTES.length),
   );
+  const [shown, setShown] = createSignal(0);
+
+  const actualPercent = () => {
+    const { loaded, total } = prefetch.progress();
+    return splashPercentFromBytes(loaded, total);
+  };
 
   onMount(() => {
-    const id = window.setInterval(() => {
+    const quoteTimer = window.setInterval(() => {
       if (props.offline) return;
       setQuoteIndex((i) => (i + 1) % SPLASH_QUOTES.length);
     }, QUOTE_ROTATE_MS);
-    onCleanup(() => clearInterval(id));
+
+    let frame = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const deltaMs = now - last;
+      last = now;
+      if (!props.offline) {
+        setShown((current) => advanceSplashPercent(current, actualPercent(), deltaMs));
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    if (!SNAP_PERCENT) frame = requestAnimationFrame(tick);
+
+    onCleanup(() => {
+      clearInterval(quoteTimer);
+      cancelAnimationFrame(frame);
+    });
   });
 
   const quote = () => SPLASH_QUOTES[quoteIndex()];
@@ -37,10 +64,10 @@ export function SplashScreen(props: SplashScreenProps) {
   const quoteBy = () => quote().by?.[lang()];
 
   const percent = () => {
-    const { done, total } = prefetch.progress();
-    if (total <= 0) return 0;
-    return Math.round((done / total) * 100);
+    const value = SNAP_PERCENT ? actualPercent() : shown();
+    return Math.min(100, Math.round(value));
   };
+  const percentLabel = () => formatMessage('splash.progress', { percent: percent() });
 
   return (
     <div class={styles.splash} role="status" aria-busy={!props.offline}>
@@ -71,10 +98,14 @@ export function SplashScreen(props: SplashScreenProps) {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percent()}
+            aria-valuetext={percentLabel()}
+            style={{ '--progress': String(percent()) }}
           >
-            <span class={styles.fill} style={{ width: `${percent()}%` }} />
-            <span class={styles.percent}>
-              {formatMessage('splash.progress', { percent: percent() })}
+            <span class={styles.percent} aria-hidden="true">
+              {percentLabel()}
+            </span>
+            <span class={styles.fill} aria-hidden="true">
+              <span class={styles.percentOnFill}>{percentLabel()}</span>
             </span>
           </div>
         </Show>

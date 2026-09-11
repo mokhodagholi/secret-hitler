@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.2.0",
+      "bump": "minor",
+      "date": "2026-09-11",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "نوار آماده‌سازی روی لوح، پیشرفت را از روی حجم فایل‌ها نشان می‌دهد.",
+          "en": "The lectern bar now fills with the bytes as they land, not merely with finished files."
+        }
+      ]
+    },
+    {
       "version": "0.1.0",
       "bump": "minor",
       "date": "2026-09-11",

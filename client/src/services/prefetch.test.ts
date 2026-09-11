@@ -18,6 +18,14 @@ afterEach(() => {
   rs.restoreAllMocks();
 });
 
+async function waitUntil(predicate: () => boolean): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if (predicate()) return;
+    await Promise.resolve();
+  }
+  throw new Error('timed out waiting');
+}
+
 describe('criticalBootUrls', () => {
   it('Should include splash art, the home stage, and menu music when audio is on', () => {
     const urls = criticalBootUrls({ music: true, soundEffects: true });
@@ -111,8 +119,40 @@ describe('PrefetchService', () => {
     rs.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const prefetch = new PrefetchService();
     await prefetch.boot(['/a.mp3', '/b.mp3']);
-    expect(prefetch.progress()).toEqual({ done: 2, total: 2 });
+    expect(prefetch.progress()).toEqual({ loaded: 2, total: 2 });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('Should report byte progress while a boot file is still downloading', async () => {
+    const pendingReads: Array<(result: { done: boolean; value?: Uint8Array }) => void> = [];
+    rs.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      headers: { get: (header: string) => (header === 'content-length' ? '8' : null) },
+      body: {
+        getReader: () => ({
+          read: () =>
+            new Promise<{ done: boolean; value?: Uint8Array }>((resolve) => {
+              pendingReads.push(resolve);
+            }),
+        }),
+      },
+    } as unknown as Response);
+
+    const prefetch = new PrefetchService();
+    const boot = prefetch.boot(['/theme.mp3']);
+    await waitUntil(() => pendingReads.length > 0);
+    expect(prefetch.progress()).toEqual({ loaded: 0, total: 8 });
+
+    pendingReads.shift()?.({ done: false, value: new Uint8Array(4) });
+    await waitUntil(() => prefetch.progress().loaded === 4);
+    expect(prefetch.progress()).toEqual({ loaded: 4, total: 8 });
+
+    await waitUntil(() => pendingReads.length > 0);
+    pendingReads.shift()?.({ done: false, value: new Uint8Array(4) });
+    await waitUntil(() => pendingReads.length > 0);
+    pendingReads.shift()?.({ done: true });
+    await boot;
+    expect(prefetch.progress()).toEqual({ loaded: 8, total: 8 });
   });
 
   it('Should not refetch a URL that already landed', async () => {
@@ -153,7 +193,7 @@ describe('PrefetchService', () => {
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
     const prefetch = new PrefetchService();
     await prefetch.boot(['/a.mp3']);
-    expect(prefetch.progress()).toEqual({ done: 1, total: 1 });
+    expect(prefetch.progress()).toEqual({ loaded: 1, total: 1 });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 

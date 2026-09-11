@@ -34,7 +34,7 @@ type RaviLineId = keyof (typeof RAVI_CLIPS)['daniel'];
 const IMAGE_URL = /\.(?:webp|png|jpe?g|gif|svg)(?:\?|$)/i;
 
 export interface PrefetchProgress {
-  done: number;
+  loaded: number;
   total: number;
 }
 
@@ -151,6 +151,75 @@ function loadImage(url: string): Promise<void> {
   });
 }
 
+function headerLength(response: Response): number {
+  const parsed = Number(response.headers.get('content-length'));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+/** Drain a response and report downloaded bytes as they land. */
+async function consumeResponse(
+  response: Response,
+  onProgress?: (received: number, contentLength: number) => void,
+): Promise<void> {
+  const contentLength = headerLength(response);
+  if (contentLength > 0) onProgress?.(0, contentLength);
+
+  const body = response.body;
+  if (body != null && typeof body.getReader === 'function') {
+    const reader = body.getReader();
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      onProgress?.(received, contentLength > 0 ? contentLength : received);
+    }
+    if (received > 0) {
+      onProgress?.(received, contentLength > 0 ? Math.max(contentLength, received) : received);
+    }
+    return;
+  }
+
+  const blob = await response.blob();
+  const size = blob.size > 0 ? blob.size : contentLength;
+  if (size > 0) onProgress?.(size, size);
+}
+
+function bootProgress(
+  urls: readonly string[],
+  receivedByUrl: ReadonlyMap<string, number>,
+  sizeByUrl: ReadonlyMap<string, number>,
+  finishedUrls: ReadonlySet<string>,
+): PrefetchProgress {
+  const knownSizes: number[] = [];
+  for (const url of urls) {
+    const size = sizeByUrl.get(url) ?? 0;
+    if (size > 0) knownSizes.push(size);
+  }
+  const average =
+    knownSizes.length > 0
+      ? knownSizes.reduce((sum, size) => sum + size, 0) / knownSizes.length
+      : 1;
+
+  let loaded = 0;
+  let total = 0;
+  for (const url of urls) {
+    const size = sizeByUrl.get(url) ?? 0;
+    const received = receivedByUrl.get(url) ?? 0;
+    if (size > 0) {
+      total += size;
+      loaded += finishedUrls.has(url) ? size : Math.min(received, size);
+    } else if (knownSizes.length > 0) {
+      total += average;
+      loaded += finishedUrls.has(url) ? average : received;
+    } else {
+      total += 1;
+      loaded += finishedUrls.has(url) ? 1 : 0;
+    }
+  }
+  return { loaded, total };
+}
+
 /** Warm a list of URLs so the next beat is already on disk (and in the SW). */
 export class PrefetchService {
   private readonly loaded = new Set<string>();
@@ -159,23 +228,32 @@ export class PrefetchService {
   private pending: string[] = [];
 
   private readonly progressSignal = createSignal<PrefetchProgress>({
-    done: 0,
+    loaded: 0,
     total: 0,
   });
   readonly progress = this.progressSignal[0];
   private readonly setProgress = this.progressSignal[1];
 
-  /** Fetch the boot set and report progress. Failures still count as done. */
+  /** Fetch the boot set and report byte progress. Failures still count as done. */
   async boot(urls: readonly string[]): Promise<void> {
     const uniqueUrls = unique(urls);
-    this.setProgress({ done: 0, total: uniqueUrls.length });
+    const receivedByUrl = new Map<string, number>();
+    const sizeByUrl = new Map<string, number>();
+    const finishedUrls = new Set<string>();
+    const publish = () => {
+      this.setProgress(bootProgress(uniqueUrls, receivedByUrl, sizeByUrl, finishedUrls));
+    };
+    this.setProgress({ loaded: 0, total: uniqueUrls.length });
     if (uniqueUrls.length > 0) {
-      let done = 0;
       await Promise.all(
         uniqueUrls.map(async (url) => {
-          await this.load(url, 1);
-          done += 1;
-          this.setProgress({ done, total: uniqueUrls.length });
+          await this.load(url, 1, (received, contentLength) => {
+            receivedByUrl.set(url, received);
+            if (contentLength > 0) sizeByUrl.set(url, Math.max(contentLength, received));
+            publish();
+          });
+          finishedUrls.add(url);
+          publish();
         }),
       );
     }
@@ -194,11 +272,15 @@ export class PrefetchService {
     void Promise.all(urls.map((url) => this.load(url, 0)));
   }
 
-  private load(url: string, retries: number): Promise<void> {
+  private load(
+    url: string,
+    retries: number,
+    onProgress?: (received: number, contentLength: number) => void,
+  ): Promise<void> {
     if (this.loaded.has(url)) return Promise.resolve();
     const existing = this.inflight.get(url);
     if (existing) return existing;
-    const job = this.fetchWithRetry(url, retries)
+    const job = this.fetchWithRetry(url, retries, onProgress)
       .then(() => {
         this.loaded.add(url);
       })
@@ -210,17 +292,20 @@ export class PrefetchService {
     return job;
   }
 
-  private async fetchWithRetry(url: string, retries: number): Promise<void> {
+  private async fetchWithRetry(
+    url: string,
+    retries: number,
+    onProgress?: (received: number, contentLength: number) => void,
+  ): Promise<void> {
     try {
-      if (IMAGE_URL.test(url) && typeof Image !== 'undefined') {
-        await loadImage(url);
-        return;
-      }
       const response = await fetch(url);
       if (!response.ok) throw new Error(`prefetch ${response.status}`);
-      await response.blob();
+      await consumeResponse(response, onProgress);
+      if (IMAGE_URL.test(url) && typeof Image !== 'undefined') {
+        await loadImage(url);
+      }
     } catch (error) {
-      if (retries > 0) return this.fetchWithRetry(url, retries - 1);
+      if (retries > 0) return this.fetchWithRetry(url, retries - 1, onProgress);
       throw error;
     }
   }

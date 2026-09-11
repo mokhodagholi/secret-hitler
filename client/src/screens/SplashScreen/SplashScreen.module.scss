@@ -87,7 +87,8 @@ $wood: #1a1208;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: rgba($lamp-gold, 0.16);
+  background: rgba(12, 8, 4, 0.78);
+  border: 1px solid rgba($lamp-gold, 0.38);
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
 }
@@ -97,21 +98,41 @@ $wood: #1a1208;
   top: 0;
   bottom: 0;
   inset-inline-start: 0;
+  z-index: 2;
+  inline-size: calc(var(--progress, 0) * 1%);
   height: 100%;
+  overflow: hidden;
   border-radius: inherit;
   background: linear-gradient(90deg, $lamp-gold-deep, $lamp-gold, $lamp-gold-deep);
   box-shadow: 0 0 10px rgba($lamp-gold, 0.45);
-  transition: width 0.28s ease;
+}
+
+.percent,
+.percentOnFill {
+  font-family: $font-body;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .percent {
   position: relative;
   z-index: 1;
-  color: #1a0e06;
-  font-family: $font-body;
-  font-size: 0.88rem;
-  font-weight: 700;
-  line-height: 1;
-  -webkit-text-stroke: 0.4px rgba(255, 236, 196, 0.8);
+  color: $cream;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+}
+
+.percentOnFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: calc(100% * 100 / max(var(--progress, 0), 0.001));
+  height: 100%;
+  color: $wood;
+  -webkit-text-stroke: 0.4px rgba(255, 236, 196, 0.75);
   paint-order: stroke fill;
 }
