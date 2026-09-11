@@ -62,7 +62,9 @@ function Notice(props: {
     >
       <div class={styles.dialog} role="alertdialog" aria-modal="true">
         <p class={styles.message}>{props.message}</p>
-        {props.children}
+        <Show when={props.children}>
+          <div class={styles.body}>{props.children}</div>
+        </Show>
         <Show when={!timed() && props.confirmLabel}>
           <div class={styles.buttons}>
             <Show when={props.cancelLabel}>
