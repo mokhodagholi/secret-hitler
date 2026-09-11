@@ -46,7 +46,8 @@ Already true:
 - `pressable` on shared buttons. `type="button"` everywhere. Back control
   and chat tools are 44×44.
 - Bale `BackButton` via [`BaleService`](../src/services/BaleService.ts).
-  `ready()` and `expand()` both run on boot.
+  `ready()` runs on boot. Do not call `expand()` — Bale stays a compact
+  sheet, not a full-height WebView.
 - Themed scrollbars, screen-enter motion, no full page loads.
 - Waiting-room invite is a tap-to-copy share link, not a highlightable code.
 
@@ -150,7 +151,7 @@ per screen unless that screen owns the viewport (the table, splash).
 
 Bale, in `BaleService.boot`:
 
-- `webApp.expand()` — we already type it; call it next to `ready()`.
+- Do not call `webApp.expand()`. Compact sheet is the intended open.
 - Header / background color to `$navy-950` if the SDK exposes it, so the
   messenger chrome matches the table.
 - Closing confirmation **while a game is live**, if the SDK exposes it —

@@ -33,7 +33,7 @@ describe('BaleService', () => {
     expect(bale.usesNativeBack()).toBe(false);
   });
 
-  it('Should expand the mini-app shell on boot', async () => {
+  it('Should not expand the mini-app shell on boot', async () => {
     const expanded: boolean[] = [];
     window.Bale = {
       WebApp: fakeWebApp({
@@ -43,7 +43,7 @@ describe('BaleService', () => {
       }),
     };
     await new BaleService().boot(new SettingsService(), new NavigationService('/'));
-    expect(expanded).toEqual([true]);
+    expect(expanded).toEqual([]);
   });
 
   it('Should hide the native back control on home and show it off home', async () => {
