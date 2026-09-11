@@ -69,7 +69,6 @@ describe('VoiceService', () => {
     const stream = {
       getAudioTracks: () => [track],
       getTracks: () => [track],
-      clone: () => stream,
     };
     grant(stream as unknown as MediaStream);
     await Promise.resolve();
@@ -78,13 +77,12 @@ describe('VoiceService', () => {
     expect(track.enabled).toBe(false);
   });
 
-  it('Should capture without noise suppression or auto-gain', async () => {
+  it('Should capture with echo cancellation and not force NS/AGC off', async () => {
     let asked: MediaStreamConstraints | undefined;
     const track = { enabled: true, stop: () => {} };
     const stream = {
       getAudioTracks: () => [track],
       getTracks: () => [track],
-      clone: () => stream,
     };
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
@@ -100,11 +98,7 @@ describe('VoiceService', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(asked).toEqual({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: false,
-        autoGainControl: false,
-      },
+      audio: { echoCancellation: true },
       video: false,
     });
   });
@@ -158,5 +152,13 @@ describe('VoiceService', () => {
     voice.toggleRemoteMute('cal');
     expect(voice.isRemoteMuted('cal')).toBe(true);
     expect(socket.lastSent('voice:mute')).toEqual({ type: 'voice:mute', muted: false });
+  });
+
+  it('Should mark a peer as speaking when the table says they are', () => {
+    stubGrantedMicrophone();
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    socket.emit({ type: 'voice:speaking', playerId: 'cal', speaking: true });
+    expect(voice.isSpeaking('cal')).toBe(true);
   });
 });

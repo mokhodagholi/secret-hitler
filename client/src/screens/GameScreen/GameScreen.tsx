@@ -424,6 +424,7 @@ export function GameScreen() {
     const state = view();
     const you = game.you();
     if (!state || !you?.isAlive) return false;
+    if (!state.you.canRequestKick) return false;
     if (state.phase === Phase.Lobby || state.phase === Phase.GameOver) return false;
     if (state.kickVote || ceremonyOpen()) return false;
     return player.isAlive && player.id !== state.you.id;
@@ -552,6 +553,10 @@ export function GameScreen() {
 
   const playerName = (playerId: string | null) =>
     view()?.players.find((player) => player.id === playerId)?.name ?? '—';
+  const playerSeat = (playerId: string) => {
+    const player = view()?.players.find((player) => player.id === playerId);
+    return player != null ? player.seat + 1 : 0;
+  };
 
   const seatedPlayers = () => {
     const state = view();
@@ -820,6 +825,8 @@ export function GameScreen() {
                     {
                       requester: isolateBidi(playerName(vote().requesterId)),
                       target: isolateBidi(playerName(vote().targetId)),
+                      requesterSeat: playerSeat(vote().requesterId),
+                      targetSeat: playerSeat(vote().targetId),
                     },
                   )}
                   canVote={

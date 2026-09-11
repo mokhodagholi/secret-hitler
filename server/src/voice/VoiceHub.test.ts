@@ -66,6 +66,16 @@ describe('VoiceHub', () => {
       voice.consume('ben', produced.producerId, { codecs: [] }),
     ).rejects.toThrow(/not in this room/);
   });
+
+  it('Should keep a new consumer paused until the listener resumes it', async () => {
+    const voice = hub();
+    const send = await voice.createTransport('room', 'ana', 'send');
+    const produced = await voice.produce('ana', send.id, { codecs: [] });
+    await voice.createTransport('room', 'ben', 'recv');
+    const consumed = await voice.consume('ben', produced.producerId, { codecs: [] });
+    expect(consumed.paused).toBe(true);
+    await voice.resumeConsumer('ben', consumed.id);
+  });
 });
 
 describe('iceServersFromEnv', () => {

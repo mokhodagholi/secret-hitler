@@ -38,9 +38,16 @@ only while `flags.enabled('voice')`.
 Join starts muted. Tap the mic to speak. The client waits for the
 microphone before `voice:join`, queues `voice:peer` until the recv
 transport exists, and passes the server’s ICE list (STUN/TURN) into
-mediasoup transports. Capture keeps echo cancellation and leaves
-browser noise-suppression / auto-gain off so word endings are not
-gated.
+mediasoup transports. Capture asks only for echo cancellation so macOS
+Voice Processing does not return a silent track. Speaking rings read
+RTP stats — Web Audio is not attached to the mic. Opus DTX is off so
+word endings are not dropped on the wire.
+
+The green seat ring is a websocket flag (`voice:speaking`). It does not
+mean the other browser is playing RTP. Remote audio is attached to a
+real `<audio>` node, the server consumer starts paused and is resumed
+after attach (`voice:resumeConsumer`), and playback is retried on any
+tap because browsers block `play()` until a gesture.
 
 ## Bale / Safari
 

@@ -237,6 +237,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.specialElectionResumeAfterId = null;
     room.vetoRequested = false;
     room.kickVote = null;
+    room.spentKickRequestIds.clear();
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.transitionTo(Phase.Nomination);
 
@@ -590,12 +591,16 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!target?.isAlive) {
       return err('INVALID_ACTION', 'That player is not in the game.');
     }
+    if (room.spentKickRequestIds.has(requesterId)) {
+      return err('INVALID_ACTION', 'You have already requested a kick.');
+    }
     const living = room.players.filter((player) => player.isAlive);
     if (living.length < 3) {
       return err('INVALID_ACTION', 'Not enough players to vote a kick.');
     }
 
     const startedAt = Date.now();
+    room.spentKickRequestIds.add(requesterId);
     room.kickVote = {
       requesterId,
       targetId,
@@ -705,6 +710,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     });
 
     this.room.kickVote = null;
+    if (kicked) this.room.spentKickRequestIds.delete(vote.requesterId);
     this.emit('kickVoteTimerChanged', { endsAt: null });
 
     if (kicked && target) {

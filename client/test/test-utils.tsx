@@ -169,6 +169,16 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     makePlayer({ id: 'you', name: 'You', seat: 0 }),
     makePlayer({ id: 'other', name: 'Other', seat: 1 }),
   ];
+  const you: GameStateView['you'] = {
+    id: 'you',
+    role: null,
+    vote: null,
+    policies: [],
+    peek: [],
+    investigation: null,
+    canRequestKick: true,
+    ...overrides.you,
+  };
   return {
     roomId: 'room-1',
     code: 'ABC123',
@@ -198,15 +208,8 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     vetoUnlocked: false,
     vetoRequested: false,
     kickVote: null,
-    you: {
-      id: 'you',
-      role: null,
-      vote: null,
-      policies: [],
-      peek: [],
-      investigation: null,
-    },
     ...overrides,
+    you,
   };
 }
 
@@ -227,7 +230,6 @@ export function stubGrantedMicrophone(): { enabled: boolean; stop: () => void } 
   const stream = {
     getAudioTracks: () => [track],
     getTracks: () => [track],
-    clone: () => stream,
   };
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,

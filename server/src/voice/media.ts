@@ -50,6 +50,7 @@ export interface VoiceMediaBackend {
     producerId: string,
     rtpCapabilities: VoiceJson,
   ): Promise<ConsumeResult>;
+  resumeConsumer(playerId: string, consumerId: string): Promise<void>;
   setProducerPaused(playerId: string, paused: boolean): Promise<boolean>;
   /** Drop transports and producers for this player. Returns the producer id if any. */
   removePlayer(playerId: string): Promise<string | null>;

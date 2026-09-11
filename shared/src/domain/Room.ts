@@ -74,6 +74,8 @@ export class Room {
   vetoRequested = false;
   /** Open table vote to remove a player, else null. Game clocks freeze while set. */
   kickVote: KickVoteState | null = null;
+  /** Viewers who already used their one kick request; refunded if that kick passes. */
+  spentKickRequestIds = new Set<string>();
 
   constructor(args: {
     id: string;
@@ -221,6 +223,7 @@ export class Room {
         policies: this.policiesFor(viewerId),
         peek: viewerId === this.presidentId ? [...this.peekedPolicies] : [],
         investigation: this.investigationFor(viewerId),
+        canRequestKick: !this.spentKickRequestIds.has(viewerId),
       },
     };
   }
@@ -302,6 +305,7 @@ export class Room {
             needed: this.kickVote.needed,
           }
         : null,
+      spentKickRequestIds: [...this.spentKickRequestIds],
     };
   }
 
@@ -356,6 +360,7 @@ export class Room {
           needed: snapshot.kickVote.needed,
         }
       : null;
+    room.spentKickRequestIds = new Set(snapshot.spentKickRequestIds ?? []);
     return room;
   }
 
@@ -424,6 +429,8 @@ export interface RoomSnapshot {
     endsAt: number;
     needed: number;
   } | null;
+  /** Absent on rooms snapshotted before the one-request kick limit. */
+  spentKickRequestIds?: string[];
 }
 
 /** Authoritative kick-vote record kept on the room. */

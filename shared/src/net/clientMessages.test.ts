@@ -42,6 +42,12 @@ describe('parseClientMessage', () => {
         '{"type":"voice:mute","muted":true,"extra":1}',
       ),
     ).toEqual({ type: 'voice:mute', muted: true });
+    expect(
+      parseClientMessage(
+        '{"type":"voice:resumeConsumer","consumerId":"cons-1","extra":1}',
+      ),
+    ).toEqual({ type: 'voice:resumeConsumer', consumerId: 'cons-1' });
+    expect(parseClientMessage('{"type":"voice:resumeConsumer"}')).toBeNull();
     expect(parseClientMessage('{"type":"voice:createTransport","direction":"both"}')).toBeNull();
     expect(parseClientMessage('{"type":"voice:produce","transportId":"t"}')).toBeNull();
   });

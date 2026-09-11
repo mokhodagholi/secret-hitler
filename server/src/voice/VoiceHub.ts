@@ -59,6 +59,10 @@ export class VoiceHub {
     return this.media.consume(playerId, producerId, rtpCapabilities);
   }
 
+  async resumeConsumer(playerId: string, consumerId: string): Promise<void> {
+    await this.media.resumeConsumer(playerId, consumerId);
+  }
+
   async setMuted(playerId: string, muted: boolean): Promise<boolean> {
     const ok = await this.media.setProducerPaused(playerId, muted);
     if (!ok) return false;

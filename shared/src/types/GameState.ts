@@ -206,6 +206,8 @@ export interface GameStateView {
     peek: Policy[];
     /** Investigation result, shown only to the President after investigating. */
     investigation: { name: string; party: Faction } | null;
+    /** False after this viewer asked the table to remove someone, until that kick passes. */
+    canRequestKick: boolean;
   };
 }
 

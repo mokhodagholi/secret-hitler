@@ -107,6 +107,9 @@ export class SocketHandler {
       )
       .on('voice:produce', (m, ctx) => this.runVoice(ctx, () => this.voiceProduce(ctx, m)))
       .on('voice:consume', (m, ctx) => this.runVoice(ctx, () => this.voiceConsume(ctx, m)))
+      .on('voice:resumeConsumer', (m, ctx) =>
+        this.runVoice(ctx, () => this.voiceResumeConsumer(ctx, m.consumerId)),
+      )
       .on('voice:mute', (m, ctx) => this.runVoice(ctx, () => this.voiceMute(ctx, m.muted)))
       .on('voice:speaking', (m, ctx) => this.runVoice(ctx, () => this.voiceSpeaking(ctx, m.speaking)));
   }
@@ -508,6 +511,10 @@ export class SocketHandler {
       rtpParameters: consumed.rtpParameters,
       paused: consumed.paused,
     });
+  }
+
+  private async voiceResumeConsumer(context: GameContext, consumerId: string): Promise<void> {
+    await this.voice!.resumeConsumer(context.playerId, consumerId);
   }
 
   private async voiceMute(context: GameContext, muted: boolean): Promise<void> {

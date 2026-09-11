@@ -104,6 +104,10 @@ export function parseClientMessage(raw: string): ClientMessage | null {
             rtpCapabilities: message.rtpCapabilities,
           }
         : null;
+    case 'voice:resumeConsumer':
+      return typeof message.consumerId === 'string'
+        ? { type: 'voice:resumeConsumer', consumerId: message.consumerId }
+        : null;
     case 'voice:mute':
       return typeof message.muted === 'boolean'
         ? { type: 'voice:mute', muted: message.muted }

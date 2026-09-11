@@ -67,6 +67,7 @@ export type ClientMessage =
       producerId: string;
       rtpCapabilities: VoiceJson;
     }
+  | { type: 'voice:resumeConsumer'; consumerId: string }
   | { type: 'voice:mute'; muted: boolean }
   | { type: 'voice:speaking'; speaking: boolean };
 

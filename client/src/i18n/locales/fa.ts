@@ -410,9 +410,12 @@ export const fa = {
       title: 'اخراج از میز',
       confirm: 'می‌خواید اخراج {name} رو به رأی بگذارید؟',
       request: 'درخواست اخراج',
-      prompt: '{requester} می‌خواد {target} از میز بره بیرون.',
-      promptYou: '{requester} می‌خواد شما رو از میز بندازه بیرون.',
-      promptYours: 'شما خواستید {target} از میز بره بیرون.',
+      prompt:
+        '{requester} ({requesterSeat}) می‌خواد {target} ({targetSeat}) از میز بره بیرون.',
+      promptYou:
+        '{requester} ({requesterSeat}) می‌خواد شما ({targetSeat}) رو از میز بندازه بیرون.',
+      promptYours:
+        'شما ({requesterSeat}) خواستید {target} ({targetSeat}) از میز بره بیرون.',
       help: 'میز داره برای اخراج {name} رأی می‌ده. زمان بازی وایستاده.',
     },
   },

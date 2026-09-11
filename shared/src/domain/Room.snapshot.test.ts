@@ -18,6 +18,7 @@ describe('Room snapshot', () => {
       endsAt: 40,
       needed: 2,
     };
+    room.spentKickRequestIds.add(players[0].id);
     const peek = room.deck.peekTop(3);
     room.peekedPolicies = peek;
 
@@ -39,9 +40,20 @@ describe('Room snapshot', () => {
     expect(restored.kickVote?.targetId).toBe(players[1].id);
     expect(restored.kickVote?.votes.get(players[0].id)).toBe(true);
     expect(restored.kickVote?.needed).toBe(2);
+    expect([...restored.spentKickRequestIds]).toEqual([players[0].id]);
     expect(restored.peekedPolicies).toEqual(peek);
     expect(restored.deck.drawCount).toBe(room.deck.drawCount);
     expect(restored.deck.discardCount).toBe(room.deck.discardCount);
     expect(restored.deck.drawTiles(3)).toEqual(peek);
+  });
+
+  it('Should treat a missing spent-kick list as empty', () => {
+    const { room } = startGame();
+    const snapshot = room.toSnapshot();
+    delete snapshot.spentKickRequestIds;
+    const restored = Room.fromSnapshot(
+      JSON.parse(JSON.stringify(snapshot)),
+    );
+    expect(restored.spentKickRequestIds.size).toBe(0);
   });
 });

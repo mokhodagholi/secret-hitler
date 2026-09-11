@@ -30,7 +30,15 @@ function votingView() {
       chancellor: 'you',
       lastEnacted: [],
     },
-    you: { id: 'you', role: 'liberal', vote: null, policies: [], peek: [], investigation: null },
+    you: {
+      id: 'you',
+      role: 'liberal',
+      vote: null,
+      policies: [],
+      peek: [],
+      investigation: null,
+      canRequestKick: true,
+    },
   });
 }
 
@@ -1129,6 +1137,25 @@ describe('GameScreen — in-game menu', () => {
       playerId: 'cal',
     });
   });
+
+  it('Should omit report from the seat menu after the player has already asked once', () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      you: { ...view.you, canRequestKick: false },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.queryByRole('button', { name: en.game.playerMenu.report })).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: en.game.mutePlayer.replace('{name}', 'Cal'),
+      }),
+    ).toBeTruthy();
+  });
 });
 
 describe('GameScreen — docked chat', () => {
@@ -1273,6 +1300,20 @@ describe('GameScreen — table kick vote', () => {
     });
   });
 
+  it('Should hide the kick request after the player has already asked once', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      you: { ...view.you, canRequestKick: false },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.queryByText(/Ask the table to remove/)).toBeNull();
+    expect(harness.socket.lastSent('kick:request')).toBeUndefined();
+  });
+
   it('Should play a stamp when a seat is tapped for a kick', () => {
     const harness = buildHarness({ seated: true });
     const play = rs.spyOn(harness.services.sound, 'play');
@@ -1304,12 +1345,50 @@ describe('GameScreen — table kick vote', () => {
     });
 
     expect(screen.getByText(en.game.kickVote.title)).toBeTruthy();
+    expect(
+      screen.getByText(
+        en.game.kickVote.prompt
+          .replace('{requester}', isolateBidi('Ana'))
+          .replace('{target}', isolateBidi('Cal'))
+          .replace('{requesterSeat}', '1')
+          .replace('{targetSeat}', '3'),
+      ),
+    ).toBeTruthy();
     const dialog = screen.getByRole('dialog', { name: en.game.kickVote.title });
     fireEvent.click(within(dialog).getByRole('button', { name: en.game.voteJa }));
     expect(harness.socket.lastSent('kick:vote')).toEqual({
       type: 'kick:vote',
       agree: true,
     });
+  });
+
+  it('Should name both seats when the kick vote is aimed at you', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const now = Date.now();
+    harness.pushState({
+      ...votingView(),
+      kickVote: {
+        requesterId: 'pres',
+        targetId: 'you',
+        startedAt: now,
+        endsAt: now + 30_000,
+        votedCount: 1,
+        voterCount: 2,
+        needed: 2,
+        yourVote: null,
+        votedIds: ['pres'],
+      },
+    });
+
+    expect(
+      screen.getByText(
+        en.game.kickVote.promptYou
+          .replace('{requester}', isolateBidi('Ana'))
+          .replace('{requesterSeat}', '1')
+          .replace('{targetSeat}', '2'),
+      ),
+    ).toBeTruthy();
   });
 
   it('Should play a ballot tap on a kick vote', () => {

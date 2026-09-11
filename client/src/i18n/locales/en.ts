@@ -418,9 +418,12 @@ export const en = {
       title: 'Remove from the table',
       confirm: 'Ask the table to remove {name}?',
       request: 'Request kick',
-      prompt: '{requester} wants the table to remove {target}.',
-      promptYou: '{requester} asked the table to remove you.',
-      promptYours: 'You asked the table to remove {target}.',
+      prompt:
+        '{requester} ({requesterSeat}) wants the table to remove {target} ({targetSeat}).',
+      promptYou:
+        '{requester} ({requesterSeat}) asked the table to remove you ({targetSeat}).',
+      promptYours:
+        'You ({requesterSeat}) asked the table to remove {target} ({targetSeat}).',
       help: 'The table is voting to remove {name}. The clocks are paused.',
     },
   },

@@ -107,6 +107,28 @@ describe('GameEngine — table kick vote', () => {
     expect(ben.isAlive).toBe(true);
     expect(engine.room.kickVote).toBeNull();
   });
+
+  it('Should refuse a second kick request after a failed vote', () => {
+    const { engine, room, players } = startGame();
+    const [ana, ben, cal] = players;
+    engine.requestKick(ana.id, ben.id);
+    engine.voteKick(cal.id, false);
+    expect(engine.requestKick(ana.id, cal.id)?.code).toBe('INVALID_ACTION');
+    expect(room.viewFor(ana.id).you.canRequestKick).toBe(false);
+    expect(engine.requestKick(cal.id, ben.id)).toBeNull();
+  });
+
+  it('Should let a requester ask again after their kick passes', () => {
+    const { engine, room, players } = startGame(['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);
+    const [ana, ben, cal, dia, eli] = players;
+    engine.requestKick(ana.id, ben.id);
+    engine.voteKick(cal.id, true);
+    engine.voteKick(dia.id, true);
+    expect(ben.isAlive).toBe(false);
+    expect(room.viewFor(ana.id).you.canRequestKick).toBe(true);
+    expect(engine.requestKick(ana.id, eli.id)).toBeNull();
+    expect(room.kickVote?.targetId).toBe(eli.id);
+  });
 });
 
 function calId(players: { name: string; id: string }[]): string {

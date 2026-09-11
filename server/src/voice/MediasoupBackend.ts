@@ -52,6 +52,8 @@ type MediasoupTransport = {
     kind: 'audio';
     rtpParameters: VoiceJson;
     paused: boolean;
+    resume: () => Promise<void>;
+    close: () => void;
   }>;
   close: () => void;
 };
@@ -69,6 +71,7 @@ interface PlayerMedia {
   send: MediasoupTransport | null;
   recv: MediasoupTransport | null;
   producer: MediasoupProducer | null;
+  consumers: Map<string, { resume: () => Promise<void>; close: () => void }>;
 }
 
 /**
@@ -215,15 +218,22 @@ export class MediasoupBackend implements VoiceMediaBackend {
     const consumer = await seat.recv.consume({
       producerId,
       rtpCapabilities,
-      paused: false,
+      paused: true,
     });
+    seat.consumers.set(consumer.id, consumer);
     return {
       id: consumer.id,
       producerId: consumer.producerId,
       kind: 'audio',
       rtpParameters: consumer.rtpParameters,
-      paused: consumer.paused,
+      paused: true,
     };
+  }
+
+  async resumeConsumer(playerId: string, consumerId: string): Promise<void> {
+    const consumer = this.players.get(playerId)?.consumers.get(consumerId);
+    if (!consumer) throw new Error('consumer is missing');
+    await consumer.resume();
   }
 
   async setProducerPaused(playerId: string, paused: boolean): Promise<boolean> {
@@ -238,6 +248,7 @@ export class MediasoupBackend implements VoiceMediaBackend {
     const seat = this.players.get(playerId);
     this.players.delete(playerId);
     if (!seat) return null;
+    for (const consumer of seat.consumers.values()) consumer.close();
     seat.send?.close();
     seat.recv?.close();
     const producerId = seat.producer?.id ?? null;
@@ -275,6 +286,7 @@ export class MediasoupBackend implements VoiceMediaBackend {
       send: null,
       recv: null,
       producer: null,
+      consumers: new Map(),
     };
     this.players.set(playerId, created);
     return created;

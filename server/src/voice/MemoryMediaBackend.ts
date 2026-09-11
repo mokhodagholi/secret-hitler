@@ -13,6 +13,7 @@ interface PlayerMedia {
   recvId: string | null;
   producerId: string | null;
   paused: boolean;
+  consumers: Set<string>;
 }
 
 /** In-memory SFU stand-in so VoiceHub tests never load the native worker. */
@@ -73,14 +74,20 @@ export class MemoryMediaBackend implements VoiceMediaBackend {
     if (!producer || !seat || seat.roomId !== producer.roomId) {
       throw new Error('producer is not in this room');
     }
-    const owner = this.players.get(producer.playerId);
+    const id = `cons-${playerId}-${producerId}`;
+    seat.consumers.add(id);
     return {
-      id: `cons-${playerId}-${producerId}`,
+      id,
       producerId,
       kind: 'audio',
       rtpParameters: {},
-      paused: owner?.paused ?? false,
+      paused: true,
     };
+  }
+
+  async resumeConsumer(playerId: string, consumerId: string): Promise<void> {
+    const seat = this.players.get(playerId);
+    if (!seat?.consumers.has(consumerId)) throw new Error('consumer is missing');
   }
 
   async setProducerPaused(playerId: string, paused: boolean): Promise<boolean> {
@@ -126,6 +133,7 @@ export class MemoryMediaBackend implements VoiceMediaBackend {
       recvId: null,
       producerId: null,
       paused: true,
+      consumers: new Set(),
     };
     this.players.set(playerId, created);
     return created;
