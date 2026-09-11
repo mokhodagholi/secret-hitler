@@ -9,6 +9,9 @@ import { registerBaleCommands, webhookListenUrl, type BaleRuntime } from './bale
 import { parseSupportChatId } from './bale/support';
 import { connectDatabase } from './db/connection';
 import { drizzleFolder, migrateDatabase } from './db/migrate';
+import { iceServersFromEnv } from './voice/media';
+import { MediasoupBackend } from './voice/MediasoupBackend';
+import { VoiceHub } from './voice/VoiceHub';
 
 // Load the repo-root .env for dev. Anchored to this file (not cwd) so it works
 // the same under `tsx` and the built `dist/`. Production may inject env directly.
@@ -32,12 +35,8 @@ async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
 
   if (webhookUrl) {
-    const url = webhookListenUrl(webhookUrl, webhookSecret);
-    try {
-      await bot.setWebhook(webhookSecret ? { url, secret_token: webhookSecret } : { url });
-    } catch {
-      await bot.setWebhook({ url });
-    }
+    // Bale's setWebhook only documents `url`. The secret lives in the path.
+    await bot.setWebhook({ url: webhookListenUrl(webhookUrl, webhookSecret) });
   }
   await registerBaleCommands(bot);
 
@@ -75,6 +74,19 @@ async function main() {
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
 
+  const flags = parseFeatureFlags(process.env);
+  let voice = null;
+  if (flags.voice) {
+    const announced = process.env.MEDIASOUP_ANNOUNCED_IP?.trim();
+    const backend = await MediasoupBackend.create({
+      listenIp: process.env.MEDIASOUP_LISTEN_IP?.trim() || '0.0.0.0',
+      announcedIp: announced || undefined,
+      rtcMinPort: Number(process.env.MEDIASOUP_RTC_MIN_PORT ?? 40000),
+      rtcMaxPort: Number(process.env.MEDIASOUP_RTC_MAX_PORT ?? 40999),
+    });
+    voice = new VoiceHub(backend, iceServersFromEnv(process.env));
+  }
+
   const { app } = await buildServer({
     logger: true,
     history,
@@ -82,7 +94,8 @@ async function main() {
     live,
     publicUrl,
     bale,
-    flags: parseFeatureFlags(process.env),
+    flags,
+    voice,
   });
 
   app.log.info('Game history and live-room persistence enabled.');
