@@ -95,8 +95,9 @@ export class MediasoupBackend implements VoiceMediaBackend {
       rtcMinPort: listen.rtcMinPort,
       rtcMaxPort: listen.rtcMaxPort,
       // Docker seccomp blocks io_uring; the glibc prebuilt then exits 1.
+      // mediasoup 3.26's published types omit this WorkerSettings field.
       disableLiburing: process.env.MEDIASOUP_DISABLE_LIBURING === 'true',
-    });
+    } as Parameters<typeof mediasoup.createWorker>[0]);
     const backend = new MediasoupBackend(worker as never, listen);
     await backend.ensureRouter('__capabilities__');
     return backend;
