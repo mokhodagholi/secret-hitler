@@ -10,6 +10,7 @@ import {
   makeView,
   renderWithApp,
   stubDeniedMicrophone,
+  stubGrantedMicrophone,
 } from '../../../test/test-utils';
 
 function seatedView() {
@@ -315,11 +316,14 @@ describe('ChatPanel', () => {
     });
   });
 
-  it('Should toggle table mute from the chat chrome when the voice flag is on', () => {
-    stubDeniedMicrophone();
+  it('Should toggle table mute from the chat chrome when the voice flag is on', async () => {
+    stubGrantedMicrophone();
     const harness = buildHarness({ seated: true, flags: { voice: true } });
     renderPanel(harness);
     harness.pushState(seatedView());
+    await waitFor(() => {
+      expect(harness.socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
+    });
 
     const mic = screen.getByRole('button', { name: en.game.unmuteSelf });
     fireEvent.click(mic);

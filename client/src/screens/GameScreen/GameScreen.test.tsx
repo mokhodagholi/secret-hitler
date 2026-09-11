@@ -1122,6 +1122,23 @@ describe('GameScreen — in-game menu', () => {
     ).toBeNull();
   });
 
+  it('Should ask for microphone access when unmute has no stream', async () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+    await waitFor(() => {
+      expect(harness.services.voice.status()).toBe('denied');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.unmuteSelf }));
+    expect(screen.getByText(en.game.micAccess.message)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.micAccess.allow }));
+    await waitFor(() => {
+      expect(screen.getByText(en.game.micAccess.blocked)).toBeTruthy();
+    });
+  });
+
   it('Should show a speaker-off badge when this player muted another seat', () => {
     stubDeniedMicrophone();
     const harness = buildHarness({ seated: true, flags: { voice: true } });

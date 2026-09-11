@@ -35,10 +35,14 @@ toggle — this class does. Settings `voiceEnabled` is “hear the table”
 Chrome (mic in chat, mute-other from the seat menu, live mic badge on
 seats, seat rings) renders only while `flags.enabled('voice')`.
 
-Join starts muted. Tap the mic to speak. The client waits for the
-microphone before `voice:join`, queues `voice:peer` until the recv
-transport exists, and passes the server’s ICE list (STUN/TURN) into
-mediasoup transports. Capture asks for echo cancellation, noise suppression, and auto-gain.
+Join starts muted after opening night. The browser microphone prompt
+waits until day — it must not sit on the role cards. Tap the mic to speak.
+If this browser still has no mic, unmute opens a dialog that retries
+`getUserMedia` from that tap so the permission sheet can appear again.
+The client waits for the microphone before `voice:join`, queues `voice:peer`
+until the recv transport exists, and passes the server’s ICE list
+(STUN/TURN) into mediasoup transports. Capture asks for echo cancellation,
+noise suppression, and auto-gain.
 Do not tap the capture stream with Web Audio: Chrome then turns AEC off
 and Ravi/music ride the send track. Speaking rings read outbound RTP
 levels instead. This player’s seat still updates locally so the green glow

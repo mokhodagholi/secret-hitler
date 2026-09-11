@@ -1,7 +1,9 @@
 import { createSignal, type Accessor } from 'solid-js';
 import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
 import {
+  OPENING_CEREMONY_MS,
   Phase,
+  isOpeningNight,
   type GameStateView,
   type IceServer,
   type ServerMessage,
@@ -82,11 +84,18 @@ interface MsDevice {
 export class VoiceService {
   readonly status: Accessor<VoiceStatus>;
   readonly ui: Store<VoiceUiState>;
+  readonly needsMicAccess: Accessor<boolean>;
+  readonly micBlocked: Accessor<boolean>;
   private readonly setStatus: (status: VoiceStatus) => void;
   private readonly update: SetStoreFunction<VoiceUiState>;
+  private readonly setNeedsMicAccess: (value: boolean) => void;
+  private readonly setMicBlocked: (value: boolean) => void;
   private joined = false;
   private produced = false;
   private selfId: string | null = null;
+  private waitingForDay = false;
+  private pendingUnmute = false;
+  private nightWait: ReturnType<typeof setTimeout> | null = null;
   private localStream: MediaStream | null = null;
   private device: MsDevice | null = null;
   private iceServers: IceServer[] = [];
@@ -112,6 +121,8 @@ export class VoiceService {
     private readonly settings: SettingsService,
   ) {
     const [status, setStatus] = createSignal<VoiceStatus>('off');
+    const [needsMicAccess, setNeedsMicAccess] = createSignal(false);
+    const [micBlocked, setMicBlocked] = createSignal(false);
     const [ui, update] = createStore<VoiceUiState>({
       selfMuted: true,
       speaking: {},
@@ -120,6 +131,10 @@ export class VoiceService {
     });
     this.status = status;
     this.setStatus = setStatus;
+    this.needsMicAccess = needsMicAccess;
+    this.setNeedsMicAccess = setNeedsMicAccess;
+    this.micBlocked = micBlocked;
+    this.setMicBlocked = setMicBlocked;
     this.ui = ui;
     this.update = update;
     socket.onMessage((message) => this.onMessage(message));
@@ -146,27 +161,56 @@ export class VoiceService {
   /** Join or leave based on the current snapshot. Safe to call often. */
   sync(view: GameStateView | null): void {
     this.selfId = view?.you.id ?? null;
+    this.clearNightWait();
     const enabled = this.flags.enabled('voice');
     const inGame = view != null && view.phase !== Phase.Lobby;
     if (!enabled || !inGame) {
+      this.waitingForDay = false;
       this.leave();
+      this.setMicBlocked(false);
       this.setStatus(enabled ? 'idle' : 'off');
       return;
     }
+    const wait = openingNightRemaining(view);
+    if (wait != null) {
+      this.waitingForDay = true;
+      if (!this.joined) this.setStatus('idle');
+      this.nightWait = setTimeout(() => this.sync(view), wait);
+      return;
+    }
+    this.waitingForDay = false;
     if (this.joined || this.status() === 'connecting') return;
+    if (this.status() === 'denied' || this.status() === 'failed') return;
     void this.join();
   }
 
   toggleSelfMute(): void {
     if (!this.flags.enabled('voice')) return;
-    const muted = !this.ui.selfMuted;
-    this.update('selfMuted', muted);
-    const track = this.localStream?.getAudioTracks()[0];
-    if (track) track.enabled = !muted;
-    this.socket.send({ type: 'voice:mute', muted });
-    if (muted) this.applySpeakingLevel(0);
-    if (!muted) void this.tryProduce();
-    this.unlockPlayback();
+    if (this.localStream) {
+      this.setSelfMuted(!this.ui.selfMuted);
+      return;
+    }
+    if (this.status() === 'connecting') return;
+    this.pendingUnmute = this.ui.selfMuted;
+    // Browser prompt during night sits on the role cards.
+    if (!this.waitingForDay) this.setNeedsMicAccess(true);
+  }
+
+  /** Confirm on the mic-access dialog — user gesture so the browser may prompt again. */
+  async grantMicAccess(): Promise<void> {
+    if (!this.flags.enabled('voice')) return;
+    if (this.localStream) {
+      this.setNeedsMicAccess(false);
+      if (this.ui.selfMuted) this.setSelfMuted(false);
+      return;
+    }
+    const ok = await this.join({ unmute: true });
+    this.setNeedsMicAccess(!ok);
+  }
+
+  dismissMicAccess(): void {
+    this.pendingUnmute = false;
+    this.setNeedsMicAccess(false);
   }
 
   toggleRemoteMute(playerId: string): void {
@@ -181,7 +225,7 @@ export class VoiceService {
     if (enabled) this.unlockPlayback();
   }
 
-  private async join(): Promise<void> {
+  private async join(opts: { unmute?: boolean } = {}): Promise<boolean> {
     this.setStatus('connecting');
     try {
       // Mic first — capabilities/produce used to race ahead of getUserMedia.
@@ -193,19 +237,39 @@ export class VoiceService {
       if (track) track.enabled = false;
       this.update('selfMuted', true);
       this.joined = true;
+      this.setMicBlocked(false);
       this.armUnlock();
       this.socket.send({ type: 'voice:join' });
       await this.tryProduce();
+      if (opts.unmute || this.pendingUnmute) {
+        this.pendingUnmute = false;
+        this.setSelfMuted(false);
+      }
+      return true;
     } catch (error) {
       const denied =
         error instanceof DOMException &&
         (error.name === 'NotAllowedError' || error.name === 'NotFoundError');
-      this.joined = true;
       this.setStatus(denied ? 'denied' : 'failed');
+      if (opts.unmute) this.setMicBlocked(denied);
+      return false;
     }
   }
 
+  private setSelfMuted(muted: boolean): void {
+    this.update('selfMuted', muted);
+    const track = this.localStream?.getAudioTracks()[0];
+    if (track) track.enabled = !muted;
+    this.socket.send({ type: 'voice:mute', muted });
+    if (muted) this.applySpeakingLevel(0);
+    if (!muted) void this.tryProduce();
+    this.unlockPlayback();
+  }
+
   private leave(): void {
+    this.clearNightWait();
+    this.pendingUnmute = false;
+    this.setNeedsMicAccess(false);
     if (!this.joined && this.status() !== 'connecting') return;
     if (this.joined) this.socket.send({ type: 'voice:leave' });
     this.joined = false;
@@ -520,6 +584,11 @@ export class VoiceService {
     }
   }
 
+  private clearNightWait(): void {
+    if (this.nightWait) clearTimeout(this.nightWait);
+    this.nightWait = null;
+  }
+
   /** RTP stats, not Web Audio — tapping capture for an analyser disables AEC. */
   private startLevelWatch(): void {
     if (this.analyserTimer) return;
@@ -584,4 +653,20 @@ function audioLevelFromStats(stats: RTCStatsReport | undefined): number {
     if (typeof value === 'number' && value > level) level = value;
   });
   return level;
+}
+
+function openingNightRemaining(view: GameStateView): number | null {
+  const startedAt = view.discussionDeadline?.startedAt ?? 0;
+  if (
+    !isOpeningNight({
+      phase: view.phase,
+      discussionStartedAt: startedAt,
+      liberalPolicies: view.board.liberalPolicies,
+      fascistPolicies: view.board.fascistPolicies,
+      electionTracker: view.board.electionTracker,
+    })
+  ) {
+    return null;
+  }
+  return OPENING_CEREMONY_MS - (Date.now() - startedAt) + 1;
 }

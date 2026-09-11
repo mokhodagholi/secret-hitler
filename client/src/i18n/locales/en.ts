@@ -328,6 +328,12 @@ export const en = {
     send: 'Send',
     muteSelf: 'Mute microphone',
     unmuteSelf: 'Unmute microphone',
+    micAccess: {
+      message: 'Allow the microphone so you can speak at the table.',
+      blocked:
+        'The microphone is still blocked. Allow it for this game in the browser.',
+      allow: 'Allow',
+    },
     mutePlayer: 'Mute {name}',
     unmutePlayer: 'Unmute {name}',
     playerMenu: {

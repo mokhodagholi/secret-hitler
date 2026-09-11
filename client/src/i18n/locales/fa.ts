@@ -322,6 +322,11 @@ export const fa = {
     send: 'ارسال',
     muteSelf: 'میکروفون خاموش',
     unmuteSelf: 'میکروفون روشن',
+    micAccess: {
+      message: 'بدون میکروفون نمی‌تونید سر میز حرف بزنید.',
+      blocked: 'مرورگر هنوز میکروفون رو نداده. از تنظیمات این بازی بازش کنید.',
+      allow: 'اجازه بدهید',
+    },
     mutePlayer: 'صدای {name} رو قطع کنید',
     unmutePlayer: 'صدای {name} رو وصل کنید',
     playerMenu: {

@@ -79,6 +79,10 @@ export function GameScreen() {
         setPlayerMenu(null);
         return;
       }
+      if (voice.needsMicAccess()) {
+        voice.dismissMicAccess();
+        return;
+      }
       if (menuOpen()) {
         setMenuOpen(false);
         return;
@@ -1124,6 +1128,19 @@ export function GameScreen() {
                 onLeave={leaveRoom}
               />
             </Show>
+
+            <ConfirmDialog
+              open={voice.needsMicAccess()}
+              message={formatMessage(
+                voice.micBlocked()
+                  ? 'game.micAccess.blocked'
+                  : 'game.micAccess.message',
+              )}
+              confirmLabel={formatMessage('game.micAccess.allow')}
+              cancelLabel={formatMessage('common.cancel')}
+              onConfirm={() => void voice.grantMicAccess()}
+              onCancel={() => voice.dismissMicAccess()}
+            />
 
             <ConfirmDialog
               open={reporting() != null}

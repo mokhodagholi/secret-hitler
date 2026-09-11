@@ -42,6 +42,49 @@ describe('VoiceService', () => {
     expect(socket.lastSent('voice:join')).toBeUndefined();
   });
 
+  it('Should not ask for the microphone during opening night', () => {
+    let asked = 0;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: () => {
+          asked += 1;
+          return Promise.resolve({ getAudioTracks: () => [], getTracks: () => [] });
+        },
+      },
+    });
+    const { voice, socket } = makeVoice(true);
+    voice.sync(
+      makeView({
+        phase: Phase.Nomination,
+        discussionDeadline: {
+          startedAt: Date.now(),
+          endsAt: Date.now() + 60_000,
+        },
+      }),
+    );
+    expect(asked).toBe(0);
+    expect(voice.status()).toBe('idle');
+    expect(socket.lastSent('voice:join')).toBeUndefined();
+    voice.sync(makeView({ phase: Phase.Lobby }));
+  });
+
+  it('Should ask for the microphone again when unmute has no stream', async () => {
+    stubDeniedMicrophone();
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    await Promise.resolve();
+    expect(voice.status()).toBe('denied');
+    expect(socket.lastSent('voice:join')).toBeUndefined();
+    expect(voice.selfMuted()).toBe(true);
+    voice.toggleSelfMute();
+    expect(voice.needsMicAccess()).toBe(true);
+    expect(voice.selfMuted()).toBe(true);
+    await voice.grantMicAccess();
+    expect(voice.needsMicAccess()).toBe(true);
+    expect(voice.micBlocked()).toBe(true);
+  });
+
   it('Should not join the SFU when the microphone is denied', async () => {
     stubDeniedMicrophone();
     const { voice, socket } = makeVoice(true);
@@ -146,8 +189,12 @@ describe('VoiceService', () => {
     });
   });
 
-  it('Should send a table-wide mute and keep mute-other off the wire', () => {
+  it('Should send a table-wide mute and keep mute-other off the wire', async () => {
+    stubGrantedMicrophone();
     const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    await Promise.resolve();
+    await Promise.resolve();
     expect(voice.selfMuted()).toBe(true);
     voice.toggleSelfMute();
     expect(voice.selfMuted()).toBe(false);
