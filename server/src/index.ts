@@ -74,17 +74,26 @@ async function main() {
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
 
-  const flags = parseFeatureFlags(process.env);
+  let flags = parseFeatureFlags(process.env);
   let voice = null;
   if (flags.voice) {
-    const announced = process.env.MEDIASOUP_ANNOUNCED_IP?.trim();
-    const backend = await MediasoupBackend.create({
-      listenIp: process.env.MEDIASOUP_LISTEN_IP?.trim() || '0.0.0.0',
-      announcedIp: announced || undefined,
-      rtcMinPort: Number(process.env.MEDIASOUP_RTC_MIN_PORT ?? 40000),
-      rtcMaxPort: Number(process.env.MEDIASOUP_RTC_MAX_PORT ?? 40999),
-    });
-    voice = new VoiceHub(backend, iceServersFromEnv(process.env));
+    try {
+      const announced = process.env.MEDIASOUP_ANNOUNCED_IP?.trim();
+      const backend = await MediasoupBackend.create({
+        listenIp: process.env.MEDIASOUP_LISTEN_IP?.trim() || '0.0.0.0',
+        announcedIp: announced || undefined,
+        rtcMinPort: Number(process.env.MEDIASOUP_RTC_MIN_PORT ?? 40000),
+        rtcMaxPort: Number(process.env.MEDIASOUP_RTC_MAX_PORT ?? 40999),
+      });
+      voice = new VoiceHub(backend, iceServersFromEnv(process.env));
+    } catch (err) {
+      // Prefer a mute table over killing the lobby when the worker binary is missing.
+      console.error(
+        'FEATURE_VOICE is on but mediasoup failed to start; voice is off.',
+        err,
+      );
+      flags = { ...flags, voice: false };
+    }
   }
 
   const { app } = await buildServer({
