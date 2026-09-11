@@ -32,6 +32,7 @@ const KNOWN_COMMANDS = new Set([
   'game',
   'join',
   'invite',
+  'create',
 ]);
 
 /**
@@ -95,6 +96,7 @@ function startReply(botUsername: string): BotReply {
       '/games — بازی‌های در جریان',
       '/join CODE — با کد اتاق بیا تو',
       '/invite — لینک دعوت دوستات',
+      '/create — تو گروه میز باز کن',
       '',
       playMarkdownLink(botUsername),
     ].join('\n'),
@@ -179,9 +181,64 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   };
 }
 
+/** `/create` only opens a table in a group, not in a private chat. */
+export function createInPrivateReply(): BotReply {
+  return {
+    text: 'این دستور مال گروه‌هاست. تو یه گروه /create بزن تا میز باز بشه.',
+  };
+}
+
+export function createRateLimitedReply(): BotReply {
+  return { text: 'یه کم صبر کن. الان نمی‌شه پشت‌سرهم اتاق ساخت.' };
+}
+
+export function createFailedReply(): BotReply {
+  return { text: 'نتونستم اتاق بسازم. دوباره بزن.' };
+}
+
+/** Posted in the group after `/create`. Password stays out of this message. */
+export function createGroupPostedReply(params: {
+  creatorName: string;
+  code: string;
+  botUsername: string;
+}): BotReply {
+  const link = baleStartLink(params.botUsername, params.code);
+  return {
+    text: [
+      'اتاق ساخته شد.',
+      `میز ${params.creatorName} — کد ${params.code}`,
+      'از همین گروه با دکمه بیا تو. از بیرون رمز می‌خواد.',
+      `[ورود به اتاق](${link})`,
+    ].join('\n'),
+    reply_markup: {
+      inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
+    },
+  };
+}
+
+/** Private DM to the person who ran `/create`, so outsiders can still be invited. */
+export function createPasswordDm(params: {
+  name: string;
+  code: string;
+  password: string;
+}): BotReply {
+  return {
+    text: [
+      `رمز اتاق ${params.name} (${params.code}) برای کسی که تو گروه نیست:`,
+      '',
+      params.password,
+    ].join('\n'),
+  };
+}
+
+export function createPasswordFallbackReply(password: string): BotReply {
+  return { text: `رمز برای کسی که تو گروه نیست: ${password}` };
+}
+
 /**
- * Map an inbound private-chat text to a reply. Unknown slash-commands get help;
- * a bare 6-character code is treated as /join.
+ * Map inbound private-chat text to a reply. Unknown slash-commands get help;
+ * a bare 6-character code is treated as /join. Group `/create` is handled in
+ * the webhook, not here.
  */
 export function handleBotText(ctx: BotCommandContext): BotReply {
   const parsed = parseBotCommand(ctx.text);
@@ -206,6 +263,8 @@ export function handleBotText(ctx: BotCommandContext): BotReply {
       return joinReply(ctx, arg);
     case 'invite':
       return inviteReply(ctx, arg);
+    case 'create':
+      return createInPrivateReply();
     case 'help':
       return startReply(ctx.botUsername);
     default:
@@ -219,4 +278,5 @@ export const BALE_BOT_COMMANDS = [
   { command: 'games', description: 'بازی‌های در جریان' },
   { command: 'join', description: 'ورود با کد اتاق' },
   { command: 'invite', description: 'دعوت دوستان' },
+  { command: 'create', description: 'ساخت میز تو گروه' },
 ];

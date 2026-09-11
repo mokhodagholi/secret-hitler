@@ -117,6 +117,12 @@ describe('handleBotText', () => {
     );
   });
 
+  it('Should tell a private /create to open a table in a group instead', () => {
+    const reply = ctx({ text: '/create' });
+    expect(reply.text).toContain('گروه');
+    expect(reply.reply_markup).toBeUndefined();
+  });
+
   it('Should list in-progress games on /games', () => {
     const playing: RoomSummary = { ...lobby, code: 'PLAY01', phase: Phase.Nomination };
     const reply = ctx({ text: '/games', games: [lobby, playing], lobbies: [lobby] });

@@ -41,6 +41,11 @@ export interface RoomOptions {
   maxPlayers: number;
   timerEnabled: boolean;
   confirmActions: boolean;
+  /**
+   * Bale group this table was opened from (`/create`). Members of that
+   * chat skip the password; everyone else still types it.
+   */
+  originChatId?: number;
 }
 
 /** Internal, authoritative player record kept on the server. */

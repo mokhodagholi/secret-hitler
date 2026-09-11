@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
+import { createHmac } from 'node:crypto';
 import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
 import { BaleSeatIndex } from './BaleSeatIndex';
@@ -7,6 +8,24 @@ import {
   webhookSecretMatches,
   type BaleMessenger,
 } from './webhook';
+
+const TOKEN = '123456:test-token';
+
+function signInitData(userId: number, firstName: string): string {
+  const fields = {
+    auth_date: String(Math.floor(Date.now() / 1000)),
+    user: JSON.stringify({ id: userId, first_name: firstName }),
+  };
+  const params = new URLSearchParams(fields);
+  const dataCheckString = [...params.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+  const secretKey = createHmac('sha256', 'WebAppData').update(TOKEN).digest();
+  const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+  params.set('hash', hash);
+  return params.toString();
+}
 
 describe('Bale webhook', () => {
   it('Should reply to /start with a mini-app Play button', async () => {
@@ -245,6 +264,198 @@ describe('Bale webhook', () => {
     });
     const { status } = await httpJson(app, 'POST', '/api/auth/bale', { initData: 'hash=nope' });
     expect(status).toBe(401);
+  });
+});
+
+describe('Bale webhook — group /create', () => {
+  it('Should ignore /start in a group', async () => {
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const { app } = await buildServer({
+      bale: {
+        bot: {
+          sendMessage: async (params) => {
+            sent.push(params);
+            return {};
+          },
+        },
+        botToken: 'test-token',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/start',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: -100, type: 'group', title: 'Friday' },
+      },
+    });
+    expect(status).toBe(200);
+    expect(sent).toHaveLength(0);
+  });
+
+  it('Should open a named, locked table from /create in a group', async () => {
+    const sent: Array<{ chat_id: number | string; text: string; reply_markup?: unknown }> = [];
+    const { app, repo } = await buildServer({
+      bale: {
+        bot: {
+          sendMessage: async (params) => {
+            sent.push(params);
+            return {};
+          },
+        },
+        botToken: 'test-token',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/create',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: -401, type: 'group', title: 'Friday' },
+      },
+    });
+
+    expect(status).toBe(200);
+    const rooms = repo.listAll();
+    expect(rooms).toHaveLength(1);
+    expect(rooms[0]).toMatchObject({
+      name: 'Ana',
+      hasPassword: true,
+      playerCount: 1,
+    });
+    expect(repo.resolve(rooms[0].code)?.room.options.originChatId).toBe(-401);
+
+    const groupPost = sent.find((item) => item.chat_id === -401);
+    expect(groupPost?.text).toContain('اتاق ساخته شد');
+    expect(groupPost?.text).toContain('Ana');
+    expect(groupPost?.text).toContain(rooms[0].code);
+    expect(JSON.stringify(groupPost?.reply_markup)).toContain(
+      `https://ble.ir/secret_hitler_bot?startapp=${rooms[0].code}`,
+    );
+
+    const dm = sent.find((item) => item.chat_id === 9);
+    expect(dm?.text).toContain(rooms[0].code);
+    const password = dm?.text.trim().split('\n').pop();
+    expect(password).toMatch(/^[A-Z0-9]{6}$/);
+    expect(password).not.toBe(rooms[0].code);
+    expect(groupPost?.text).not.toContain(password!);
+  });
+
+  it('Should post the password in the group when the creator cannot be DMed', async () => {
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const { app, repo } = await buildServer({
+      bale: {
+        bot: {
+          sendMessage: async (params) => {
+            if (params.chat_id === 9) throw new Error('forbidden');
+            sent.push(params);
+            return {};
+          },
+        },
+        botToken: 'test-token',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/create',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: -402, type: 'group', title: 'Friday' },
+      },
+    });
+
+    const fallback = sent.find((item) => item.text.startsWith('رمز برای کسی که تو گروه نیست'));
+    expect(fallback).toBeTruthy();
+    expect(repo.listAll()).toHaveLength(1);
+  });
+
+  it('Should let group members join without a password and keep outsiders behind it', async () => {
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const members = new Set<number>([9, 10]);
+    const { app, repo, seats } = await buildServer({
+      bale: {
+        bot: {
+          sendMessage: async (params) => {
+            sent.push(params);
+            return {};
+          },
+          getChatMember: async ({ user_id }) => {
+            if (!members.has(user_id)) throw new Error('not in chat');
+            return { status: 'member' as const };
+          },
+        },
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/create',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: -403, type: 'group', title: 'Friday' },
+      },
+    });
+
+    const room = repo.listAll()[0];
+    const hostId = seats.get(9)?.playerId;
+    const password = sent.find((item) => item.chat_id === 9)?.text.trim().split('\n').pop();
+    expect(password).toBeTruthy();
+
+    const memberJoin = await httpJson<{ playerId: string }>(
+      app,
+      'POST',
+      `/api/rooms/${room.code}/join`,
+      { name: 'Ben', initData: signInitData(10, 'Ben') },
+    );
+    expect(memberJoin.status).toBe(200);
+    expect(memberJoin.body.playerId).not.toBe(hostId);
+
+    const outsiderDenied = await httpJson(app, 'POST', `/api/rooms/${room.code}/join`, {
+      name: 'Cal',
+      initData: signInitData(11, 'Cal'),
+    });
+    expect(outsiderDenied.status).toBe(403);
+
+    const fromTheWeb = await httpJson(app, 'POST', `/api/rooms/${room.code}/join`, {
+      name: 'Dan',
+    });
+    expect(fromTheWeb.status).toBe(403);
+
+    const outsiderAllowed = await httpJson<{ playerId: string }>(
+      app,
+      'POST',
+      `/api/rooms/${room.code}/join`,
+      { name: 'Cal', password, initData: signInitData(11, 'Cal') },
+    );
+    expect(outsiderAllowed.status).toBe(200);
+
+    const creatorRejoin = await httpJson<{ playerId: string }>(
+      app,
+      'POST',
+      `/api/rooms/${room.code}/join`,
+      { name: 'Ana', initData: signInitData(9, 'Ana') },
+    );
+    expect(creatorRejoin.status).toBe(200);
+    expect(creatorRejoin.body.playerId).toBe(hostId);
   });
 });
 

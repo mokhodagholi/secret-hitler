@@ -15,6 +15,8 @@ export interface RoomCreateArgs {
   maxPlayers?: number;
   timerEnabled?: boolean;
   confirmActions?: boolean;
+  /** Bale group chat id when the table was opened with `/create`. */
+  originChatId?: number;
 }
 
 /** Creates {@link Room} instances with validated defaults. */
@@ -33,6 +35,7 @@ export class RoomFactory {
       maxPlayers,
       timerEnabled: args.timerEnabled ?? false,
       confirmActions: args.confirmActions ?? true,
+      ...(args.originChatId != null ? { originChatId: args.originChatId } : {}),
     };
     return new Room({
       id: makeId(),

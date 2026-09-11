@@ -36,6 +36,7 @@ the Bale HTTP client the server embeds. Table voice (mediasoup) ships dark behin
 | Live rooms / restart survival | `server/src/rooms/` |
 | Finished games / ELO later | `server/src/history/` |
 | Bale webhook / seats | `server/src/bale/` + `bale-bot/` |
+| Bale bot commands | `docs/bale-bot.md` + `server/src/bale/commands.ts` |
 | Postgres schema / migrate | `server/src/db/` + `server/drizzle/` |
 | Screen / route | `client/src/App.tsx` + `client/src/screens/<Name>/` |
 | Game table UI | `client/src/screens/GameScreen/` |

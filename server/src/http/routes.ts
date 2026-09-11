@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
@@ -8,7 +8,7 @@ import type {
   ProfileResponse,
   SaveProfileRequest,
 } from '@secret-hitler/shared';
-import { normalizeAvatar, toFlagsResponse, DEFAULT_BALE_BOT_USERNAME, miniAppStartLink } from '@secret-hitler/shared';
+import { normalizeAvatar, toFlagsResponse, roomInviteLink } from '@secret-hitler/shared';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
@@ -18,6 +18,7 @@ import type { GameHistoryStore } from '../history/GameHistoryStore';
 import type { ProfileStore } from '../profiles/ProfileStore';
 import { hashPassword, verifyPassword } from './password';
 import { validateBaleInitData } from '../bale/initData';
+import { baleUserInOriginChat } from '../bale/groupMember';
 import { handleBaleWebhook, registerBaleBodyParser, type BaleRuntime } from '../bale/webhook';
 import { formatSupportLetter, isSupportTopic } from '../bale/support';
 
@@ -172,10 +173,10 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   });
 
   app.post('/api/bale/webhook', async (req, reply) => {
-    return handleBaleWebhook(req, reply, repo, bale);
+    return handleBaleWebhook(req, reply, repo, bale, { sockets, recorder });
   });
   app.post('/api/bale/webhook/:secret', async (req, reply) => {
-    return handleBaleWebhook(req, reply, repo, bale);
+    return handleBaleWebhook(req, reply, repo, bale, { sockets, recorder });
   });
 
   // Create a room and seat the host.
@@ -215,7 +216,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     const res: CreateRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
-      shareLink: inviteLink(entry.room.code, bale?.botUsername),
+      shareLink: requestInviteLink(req, entry.room.code, bale?.botUsername),
       token,
       playerId: host.id,
     };
@@ -248,7 +249,31 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!entry) {
       return reply.code(404).send({ error: 'Room not found', code: 'ROOM_NOT_FOUND' });
     }
-    if (!verifyPassword(body.password ?? '', entry.room.passwordHash)) {
+
+    const baleUser =
+      bale && typeof body.initData === 'string'
+        ? validateBaleInitData(body.initData, bale.botToken)
+        : null;
+    const reserved = baleUser ? bale?.seats.get(baleUser.id) : undefined;
+    if (reserved && reserved.roomId === entry.room.id) {
+      const token = tokens.issue({ roomId: entry.room.id, playerId: reserved.playerId });
+      return reply.send({
+        roomId: entry.room.id,
+        code: entry.room.code,
+        token,
+        playerId: reserved.playerId,
+      } satisfies JoinRoomResponse);
+    }
+
+    const passwordOk = verifyPassword(body.password ?? '', entry.room.passwordHash);
+    const inOriginGroup =
+      baleUser != null &&
+      (await baleUserInOriginChat(
+        bale?.bot,
+        entry.room.options.originChatId,
+        baleUser.id,
+      ));
+    if (!passwordOk && !inOriginGroup) {
       return reply.code(403).send({ error: 'Wrong password', code: 'WRONG_PASSWORD' });
     }
 
@@ -285,6 +310,19 @@ function bindBaleSeat(
   bale.seats.occupy(user.id, { roomId, code, playerId, roomName });
 }
 
-function inviteLink(code: string, botUsername?: string): string {
-  return miniAppStartLink(botUsername || DEFAULT_BALE_BOT_USERNAME, code);
+function requestInviteLink(
+  req: FastifyRequest,
+  code: string,
+  botUsername?: string,
+): string {
+  const host = typeof req.headers.host === 'string' ? req.headers.host : 'localhost';
+  const proto = typeof req.headers['x-forwarded-proto'] === 'string'
+    ? req.headers['x-forwarded-proto']
+    : 'http';
+  return roomInviteLink({
+    code,
+    hostname: host,
+    origin: `${proto}://${host}`,
+    botUsername,
+  });
 }

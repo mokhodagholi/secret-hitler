@@ -2,7 +2,19 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Chat, Update } from 'bale-bot' with { 'resolution-mode': 'import' };
 import type { RoomRepository } from '../rooms/RoomRepository';
-import { BALE_BOT_COMMANDS, handleBotText, type BotReply } from './commands';
+import type { SocketHandler } from '../ws/SocketHandler';
+import type { GameResultRecorder } from '../history/GameResultRecorder';
+import { RateLimiter } from '../util/RateLimiter';
+import {
+  BALE_BOT_COMMANDS,
+  createPasswordDm,
+  createPasswordFallbackReply,
+  createRateLimitedReply,
+  handleBotText,
+  parseBotCommand,
+  type BotReply,
+} from './commands';
+import { createGroupRoom } from './createGroupRoom';
 import type { BaleSeatIndex } from './BaleSeatIndex';
 
 /** Minimal Bale send surface so tests can stub the client. */
@@ -14,6 +26,10 @@ export interface BaleMessenger {
   }): Promise<unknown>;
   setMyCommands?(params: { commands: { command: string; description: string }[] }): Promise<unknown>;
   setWebhook?(params: { url: string; secret_token?: string }): Promise<unknown>;
+  getChatMember?(params: {
+    chat_id: number | string;
+    user_id: number;
+  }): Promise<{ status: string; is_member?: boolean }>;
 }
 
 export interface BaleRuntime {
@@ -28,7 +44,14 @@ export interface BaleRuntime {
   supportChatId?: number | string;
 }
 
+/** Live table hooks so `/create` in a group can open a real room. */
+export interface BaleTableHooks {
+  sockets: SocketHandler;
+  recorder: GameResultRecorder;
+}
+
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
+const GROUP_CREATE_LIMIT = new RateLimiter(3, 60_000);
 
 /** Append the secret as a path segment so Bale POSTs to an unguessable URL. */
 export function webhookListenUrl(base: string, secret: string | undefined): string {
@@ -81,6 +104,12 @@ function isDirectMessage(chat: Chat | undefined): chat is Chat {
   return !chat.title;
 }
 
+function isGroupChat(chat: Chat | undefined): chat is Chat {
+  if (!chat) return false;
+  const type = chat.type?.toLowerCase();
+  return type === 'group' || type === 'supergroup';
+}
+
 /**
  * Bale sometimes POSTs JSON as text/plain or with no Content-Type. Fastify
  * would otherwise 415 before the webhook handler runs.
@@ -105,6 +134,7 @@ export async function handleBaleWebhook(
   reply: FastifyReply,
   repo: RoomRepository,
   bale: BaleRuntime | undefined,
+  table?: BaleTableHooks,
 ): Promise<void> {
   if (!bale) {
     return reply.code(503).send({ error: 'Bale bot is not configured' });
@@ -120,12 +150,19 @@ export async function handleBaleWebhook(
   const message = body.message;
   const text = message?.text?.trim();
   const chat = message?.chat;
-  if (!message || !text || !isDirectMessage(chat)) {
+  if (!message || !text) {
     return reply.code(200).send({ ok: true });
   }
 
   const fromId = Number(message.from?.id);
   if (!Number.isFinite(fromId)) {
+    return reply.code(200).send({ ok: true });
+  }
+
+  if (!isDirectMessage(chat)) {
+    if (isGroupChat(chat) && table) {
+      await handleGroupCreate(chat, text, fromId, message.from?.first_name, repo, bale, table, req);
+    }
     return reply.code(200).send({ ok: true });
   }
 
@@ -138,26 +175,88 @@ export async function handleBaleWebhook(
     botUsername: bale.botUsername,
   });
 
+  return sendBotReply(req, reply, bale, chat.id, response);
+}
+
+async function handleGroupCreate(
+  chat: Chat,
+  text: string,
+  fromId: number,
+  firstName: string | undefined,
+  repo: RoomRepository,
+  bale: BaleRuntime,
+  table: BaleTableHooks,
+  req: FastifyRequest,
+): Promise<void> {
+  if (parseBotCommand(text)?.command !== 'create') return;
+  if (!GROUP_CREATE_LIMIT.allow(`group:${chat.id}`)) {
+    await sendChat(req, bale, chat.id, createRateLimitedReply());
+    return;
+  }
+
+  const created = createGroupRoom({
+    repo,
+    sockets: table.sockets,
+    recorder: table.recorder,
+    seats: bale.seats,
+    botUsername: bale.botUsername,
+    chatId: chat.id,
+    fromId,
+    creatorName: firstName ?? '',
+  });
+  await sendChat(req, bale, chat.id, created.reply);
+  if (!('password' in created)) return;
+
+  const dm = createPasswordDm({
+    name: firstName?.trim() || 'میزبان',
+    code: created.code,
+    password: created.password,
+  });
+  const dmSent = await sendChat(req, bale, fromId, dm);
+  if (!dmSent) {
+    await sendChat(req, bale, chat.id, createPasswordFallbackReply(created.password));
+  }
+}
+
+async function sendBotReply(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  bale: BaleRuntime,
+  chatId: number,
+  response: BotReply,
+): Promise<void> {
+  const sent = await sendChat(req, bale, chatId, response);
+  if (!sent) {
+    return reply.code(500).send({ error: 'Failed to send reply' });
+  }
+  return reply.code(200).send({ ok: true });
+}
+
+/** Best-effort send; retries without the keyboard if Bale rejects markup. */
+async function sendChat(
+  req: FastifyRequest,
+  bale: BaleRuntime,
+  chatId: number,
+  response: BotReply,
+): Promise<boolean> {
   try {
     await bale.bot.sendMessage({
-      chat_id: chat.id,
+      chat_id: chatId,
       text: response.text,
       reply_markup: response.reply_markup,
     });
+    return true;
   } catch (error) {
     req.log.error(error, 'Failed to send Bale bot reply');
-    if (!response.reply_markup) {
-      return reply.code(500).send({ error: 'Failed to send reply' });
-    }
+    if (!response.reply_markup) return false;
     try {
-      await bale.bot.sendMessage({ chat_id: chat.id, text: response.text });
+      await bale.bot.sendMessage({ chat_id: chatId, text: response.text });
+      return true;
     } catch (retryError) {
       req.log.error(retryError, 'Failed to send Bale bot reply without markup');
-      return reply.code(500).send({ error: 'Failed to send reply' });
+      return false;
     }
   }
-
-  return reply.code(200).send({ ok: true });
 }
 
 export async function registerBaleCommands(bot: BaleMessenger): Promise<void> {
