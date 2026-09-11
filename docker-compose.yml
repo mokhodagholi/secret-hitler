@@ -69,6 +69,8 @@ services:
     restart: unless-stopped
     extra_hosts:
       - 'host.docker.internal:host-gateway'
+      # Old nginx images still proxy to hostname `server`.
+      - 'server:host-gateway'
     ports:
       - '80:80'
       - '443:443'
