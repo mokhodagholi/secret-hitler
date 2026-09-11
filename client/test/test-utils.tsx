@@ -45,6 +45,10 @@ export class FakeSocket {
     this.statusSignal[1]('disconnected');
   }
 
+  setStatus(status: ConnectionStatus): void {
+    this.statusSignal[1](status);
+  }
+
   send(message: ClientMessage): void {
     this.sent.push(message);
   }

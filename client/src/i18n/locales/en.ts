@@ -602,6 +602,9 @@ export const en = {
     connected: 'Connected',
     connecting: 'Connecting…',
     disconnected: 'Disconnected',
+    lost: "You're disconnected. Reconnecting…",
+    failed: "Couldn't get through.",
+    reload: 'Open again',
   },
   error: {
     AUTH_FAILED: 'Your session expired. Join the room again.',

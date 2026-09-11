@@ -12,6 +12,7 @@ import { GameScreen } from './screens/GameScreen/GameScreen';
 import { SplashScreen } from './screens/SplashScreen/SplashScreen';
 import { SPLASH_PROGRESS_MS } from './screens/SplashScreen/progress';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
+import { ConnectionNotice } from './components/ConnectionNotice/ConnectionNotice';
 import { UpdateModal } from './components/UpdateModal/UpdateModal';
 import { WhatsNewModal } from './components/WhatsNewModal/WhatsNewModal';
 import { ChangelogScreen } from './screens/ChangelogScreen/ChangelogScreen';
@@ -176,6 +177,7 @@ export function App(props: { services?: Partial<AppServices> }) {
       <BootGate skip={props.services != null}>
         <Router />
         <RoomClosedNotice />
+        <ConnectionNotice />
         <UpdateModal />
         <WhatsNewModal />
       </BootGate>

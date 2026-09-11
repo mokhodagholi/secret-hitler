@@ -593,6 +593,9 @@ export const fa = {
     connected: 'متصل',
     connecting: 'در حال اتصال…',
     disconnected: 'قطع شد',
+    lost: 'قطع شد. داریم وصل می‌شیم…',
+    failed: 'وصل نشد.',
+    reload: 'باز کردن مجدد',
   },
   error: {
     AUTH_FAILED: 'نشست‌تان تمام شده. دوباره وارد اتاق شوید.',

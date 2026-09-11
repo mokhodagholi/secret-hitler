@@ -9,7 +9,8 @@ export interface ConfirmDialogProps {
   confirmLabel?: string;
   /** Omit for a single-button notice (e.g. "the host left"). */
   cancelLabel?: string;
-  onConfirm: () => void;
+  /** Omit with no labels for a blocking status card (reconnect). */
+  onConfirm?: () => void;
   onCancel?: () => void;
   /** Auto-dismiss after this many ms. Hides action buttons when set. */
   autoCloseMs?: number;
@@ -38,7 +39,7 @@ function Notice(props: {
   children?: JSX.Element;
   confirmLabel?: string;
   cancelLabel?: string;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   onCancel?: () => void;
   autoCloseMs?: number;
 }) {
@@ -46,7 +47,7 @@ function Notice(props: {
 
   onMount(() => {
     if (!timed()) return;
-    const timer = window.setTimeout(() => props.onConfirm(), props.autoCloseMs);
+    const timer = window.setTimeout(() => props.onConfirm?.(), props.autoCloseMs);
     onCleanup(() => clearTimeout(timer));
   });
 
@@ -55,7 +56,7 @@ function Notice(props: {
       class={styles.backdrop}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return;
-        if (timed()) props.onConfirm();
+        if (timed()) props.onConfirm?.();
         else props.onCancel?.();
       }}
     >
@@ -69,7 +70,7 @@ function Notice(props: {
                 {props.cancelLabel}
               </Button>
             </Show>
-            <Button onClick={() => props.onConfirm()}>{props.confirmLabel}</Button>
+            <Button onClick={() => props.onConfirm?.()}>{props.confirmLabel}</Button>
           </div>
         </Show>
       </div>

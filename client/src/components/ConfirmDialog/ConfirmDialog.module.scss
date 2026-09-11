@@ -4,7 +4,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 180; // above table overlays (95) and the briefing card (160)
   display: grid;
   place-items: center;
   padding: 24px;
