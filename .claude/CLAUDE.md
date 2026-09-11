@@ -1,5 +1,9 @@
 # Secret Hitler — Multiplayer Web Game
 
+**Start at [`AGENTS.md`](../AGENTS.md).** That is the current map (packages,
+task → files, hard rules). Do not explore the whole repo first. This file is
+a historical design dump — some paths and checklists are stale.
+
 ## Project Overview
 
 A real-time multiplayer Secret Hitler board game played in the browser, with voice chat, heavy animations, and high performance as top priorities.
@@ -7,6 +11,7 @@ A real-time multiplayer Secret Hitler board game played in the browser, with voi
 ## Agent Conventions
 
 All project documentation and coding rules live in [`docs/`](../docs/) — read and follow them. The files under [`.agents/rules/`](../.agents/rules/) are thin pointers to those docs (kept so the `.agents/` convention still resolves). Tool permissions stay in [`settings.local.json`](settings.local.json).
+
 
 - [`docs/naming.md`](../docs/naming.md) — use descriptive names, not 1–2 character abbreviations.
 - [`docs/commit-messages.md`](../docs/commit-messages.md) — Conventional Commits with a capitalized subject.
