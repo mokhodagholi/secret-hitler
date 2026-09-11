@@ -329,6 +329,9 @@ describe('GameScreen — voting', () => {
 
     expect(screen.queryByRole('dialog', { name: en.ravi.deal.start })).toBeNull();
     expect(document.querySelector('[data-seat-number]')).toBeTruthy();
+    expect(
+      document.querySelector('[data-seat-id="you"]')?.textContent,
+    ).toMatch(/2/);
     expect(screen.getByText(en.game.president)).toBeTruthy();
     expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
   });
@@ -1037,6 +1040,31 @@ describe('GameScreen — event header', () => {
 
     expect(screen.getByText(en.game.help.voteYou)).toBeTruthy();
     expect(screen.getByText(en.game.government.second)).toBeTruthy();
+  });
+
+  it('Should keep the enacted well empty until the card finishes flying', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('reduceMotion', true);
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState(view);
+    expect(document.querySelector('[data-policy-party="fascist"][data-filled]')).toBeNull();
+
+    harness.pushState({
+      ...view,
+      board: {
+        ...view.board,
+        fascistPolicies: 1,
+        lastEnacted: ['fascist'],
+      },
+    });
+
+    expect(document.querySelector('[data-policy-party="fascist"][data-filled]')).toBeNull();
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-policy-party="fascist"][data-filled]')).toBeTruthy();
+    });
   });
 
   it('Should wait on the president during nomination', () => {

@@ -18,6 +18,8 @@
   background: none;
   text-align: center;
   cursor: default;
+  // Row packing is RTL so you sit bottom-right; keep the portrait internals LTR.
+  direction: ltr;
 }
 
 .selectable {
@@ -237,6 +239,10 @@
 
 .name {
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   max-width: 100%;
   padding: 2px 6px;
   border-radius: 999px;
@@ -246,8 +252,19 @@
   font-weight: 700;
   line-height: 1.25;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.nameNumber {
+  flex-shrink: 0;
+  min-width: 14px;
+  font-weight: 800;
+  color: $gold;
+}
+
+.name > span[dir] {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @keyframes seat-sway {

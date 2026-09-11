@@ -12,24 +12,25 @@ $stack-gap: 8px;
   flex-direction: column;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: $stack-gap;
   width: 92%;
   max-width: 92%;
   margin: 0 auto;
   padding: 2px 0 0;
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-height: 0;
 }
 
 .track {
   position: relative;
-  width: 100%;
+  // Leave a seat row in the table container, then split the rest across tracks.
+  width: min(100%, calc((100cqh - 96px) / 2 * #{$track-ratio}));
   max-width: 100%;
   aspect-ratio: #{$track-ratio};
   height: auto;
   overflow: hidden;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
 }
 
 .art {

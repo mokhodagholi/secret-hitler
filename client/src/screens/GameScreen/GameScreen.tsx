@@ -33,7 +33,7 @@ import { PeekOverlay } from './PeekOverlay';
 import { YouDiedOverlay } from './YouDiedOverlay';
 import { RaviNarrator } from './RaviNarrator';
 import { tableSeatOrder } from './tableSeats';
-import { filledWell, flyToTarget } from './cardFlight';
+import { emptyWell, flyToTarget } from './cardFlight';
 import styles from './GameScreen.module.scss';
 
 /**
@@ -160,6 +160,9 @@ export function GameScreen() {
   // the policy total grew within the same room. (lastEnacted caps at 5 entries,
   // so its length is not a reliable counter.)
   const [revealedPolicy, setRevealedPolicy] = createSignal<Policy | null>(null);
+  // Server counts update immediately; the well stays empty until the card lands.
+  const [shownLiberal, setShownLiberal] = createSignal(0);
+  const [shownFascist, setShownFascist] = createSignal(0);
   const CHANCELLOR_REVEAL_MS = 5_000;
   const [chancellorReveal, setChancellorReveal] = createSignal(false);
   let lastPhaseForReveal: string | null = null;
@@ -185,6 +188,8 @@ export function GameScreen() {
       seenPolicyTotal = null;
       seenElectionTracker = null;
       seenRoomId = null;
+      setShownLiberal(0);
+      setShownFascist(0);
       return;
     }
     const total = state.board.liberalPolicies + state.board.fascistPolicies;
@@ -194,6 +199,8 @@ export function GameScreen() {
       seenRoomId = state.roomId;
       seenPolicyTotal = total;
       seenElectionTracker = tracker;
+      setShownLiberal(state.board.liberalPolicies);
+      setShownFascist(state.board.fascistPolicies);
       return;
     }
     const previousTotal = seenPolicyTotal ?? total;
@@ -327,11 +334,13 @@ export function GameScreen() {
       setRevealedPolicy(policy);
       await animation.play(revealCard, 'policy-reveal');
       await animation.hold(700);
-      await flyToTarget(animation, revealCard, filledWell(policy), {
+      await flyToTarget(animation, revealCard, emptyWell(policy), {
         landScale: 0.46,
         duration: 620,
       });
       setRevealedPolicy(null);
+      if (policy === 'liberal') setShownLiberal((count) => count + 1);
+      else setShownFascist((count) => count + 1);
     });
   }
 
@@ -712,7 +721,11 @@ export function GameScreen() {
               ref={(element) => (boardElement = element)}
             >
               <PolicyBoard
-                board={state().board}
+                board={{
+                  ...state().board,
+                  liberalPolicies: shownLiberal(),
+                  fascistPolicies: shownFascist(),
+                }}
                 formatMessage={formatMessage}
               />
 

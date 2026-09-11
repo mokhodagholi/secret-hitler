@@ -10,10 +10,9 @@ import {
 import type { MessageKey } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import type { RaviLineId } from '../../services/RaviService';
-import type { AnimationService } from '../../services/AnimationService';
 import { avatarImage } from '../../assets/avatars';
 import { CARD_BACK, NIGHT_VEIL, PARTY_FACE, ROLE_FACE } from '../../assets/cards';
-import { splitTableRows } from './tableSeats';
+import { flyToTarget } from './cardFlight';
 import styles from './NightOverlay.module.scss';
 
 export interface NightOverlayProps {
@@ -327,7 +326,10 @@ function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
       for (let index = 0; index < props.players.length; index++) {
         if (cancelled) return;
         sound.play('deal-slide');
-        await flyToSeat(animation, cards[index], props.players[index].id, props.players);
+        await flyToTarget(animation, cards[index], seatPortrait(props.players[index].id), {
+          landScale: 0.45,
+          duration: 560,
+        });
       }
     })();
   });
@@ -358,67 +360,10 @@ function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
   );
 }
 
-function flyToSeat(
-  animation: AnimationService,
-  card: HTMLImageElement | undefined,
-  playerId: string,
-  players: readonly { id: string }[],
-): Promise<void> {
-  if (!card) return Promise.resolve();
-  const dest = seatOffset(card, playerId, players);
-  if (!dest) {
-    card.style.opacity = '1';
-    return Promise.resolve();
-  }
-  const seatIndex = players.findIndex((player) => player.id === playerId);
-  const tilt = seatIndex % 2 ? 8 : -8;
-  const landed = `translate(${dest.x}px, ${dest.y}px) scale(0.45) rotate(${tilt}deg)`;
-  const play = animation.playCustom(
-    card,
-    [
-      { opacity: 1, transform: 'translate(0px, 0px) scale(1) rotate(0deg)' },
-      { opacity: 1, transform: landed },
-    ],
-    { duration: 560, easing: 'ease-in-out', fill: 'forwards' },
+function seatPortrait(playerId: string): Element | null {
+  return (
+    document.querySelector(
+      `[data-seat-id="${escapeAttr(playerId)}"] [data-seat-target]`,
+    ) ?? document.querySelector(`[data-seat-id="${escapeAttr(playerId)}"]`)
   );
-  return play.then(() => {
-    card.style.opacity = '1';
-    card.style.transform = landed;
-  });
-}
-
-function seatOffset(
-  card: HTMLElement,
-  playerId: string,
-  players: readonly { id: string }[],
-): { x: number; y: number } | null {
-  const origin = card.getBoundingClientRect();
-  const fromX = origin.left + origin.width / 2;
-  const fromY = origin.top + origin.height / 2;
-  const seat = document.querySelector(`[data-seat-id="${escapeAttr(playerId)}"]`);
-  if (seat instanceof HTMLElement) {
-    const dest = seat.getBoundingClientRect();
-    return {
-      x: dest.left + dest.width / 2 - fromX,
-      y: dest.top + dest.height / 2 - fromY,
-    };
-  }
-  const table = document.querySelector('[data-game-table]');
-  if (!(table instanceof HTMLElement)) return null;
-  const box = table.getBoundingClientRect();
-  const { top, bottom } = splitTableRows(players);
-  const onBottom = bottom.some((player) => player.id === playerId);
-  const row = onBottom ? bottom : top;
-  const rowIndex = Math.max(
-    0,
-    row.findIndex((player) => player.id === playerId),
-  );
-  const rowLen = Math.max(1, row.length);
-  // You-first packing: first seat in the row sits on the right.
-  return {
-    x: box.right - ((rowIndex + 0.5) / rowLen) * box.width - fromX,
-    y:
-      (onBottom ? box.bottom - box.height * 0.2 : box.top + box.height * 0.2) -
-      fromY,
-  };
 }

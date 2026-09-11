@@ -74,7 +74,7 @@
 }
 
 .dealtBack {
-  position: fixed;
+  position: absolute;
   left: 50%;
   top: 50%;
   width: 72px;
@@ -88,7 +88,9 @@
 }
 
 .dealtBackYou {
-  filter: drop-shadow(0 0 8px rgba($gold, 0.85));
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba($gold, 0.85);
 }
 
 .sheet {

@@ -4,7 +4,7 @@
 .panel {
   position: relative;
   z-index: 8;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;

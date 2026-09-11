@@ -172,7 +172,7 @@ export function ChatPanel(props: ChatPanelProps) {
   return (
     <section
       classList={{ [styles.panel]: true, [styles.resizing]: resizing() }}
-      style={{ height: `${height()}px` }}
+      style={{ height: `${height()}px`, 'flex-basis': `${height()}px` }}
       aria-label={formatMessage('game.chat')}
       ref={(element) => (panelEl = element)}
     >

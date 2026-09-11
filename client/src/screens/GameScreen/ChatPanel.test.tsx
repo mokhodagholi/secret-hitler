@@ -212,6 +212,16 @@ describe('ChatPanel', () => {
     ).toBeTruthy();
   });
 
+  it('Should size the dock from its height so the table can shrink above it', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    const panel = screen.getByLabelText(en.game.chat);
+    expect(panel.style.height).toBe('280px');
+    expect(panel.style.flexBasis).toBe('280px');
+  });
+
   it('Should hide the composer when the panel is collapsed to the header', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);

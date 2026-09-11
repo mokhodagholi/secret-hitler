@@ -116,7 +116,7 @@ export function TableSeat(props: TableSeatProps) {
         <span class={styles.next}>{formatMessage('game.nextPresident')}</span>
       </Show>
 
-      <span class={styles.paper}>
+      <span class={styles.paper} data-seat-target>
         <img
           class={styles.face}
           src={avatarImage(props.player.avatar)}
@@ -146,8 +146,15 @@ export function TableSeat(props: TableSeatProps) {
           </span>
         </Show>
       </span>
-      <span class={styles.name} dir="auto">
-        {playerLabel(props.isYou, props.player.name, formatMessage)}
+      <span class={styles.name}>
+        <Show when={showPublicMarks()}>
+          <span class={styles.nameNumber} data-seat-number>
+            {formatMessage('game.seatNumber', { n: props.player.seat + 1 })}
+          </span>
+        </Show>
+        <span dir="auto">
+          {playerLabel(props.isYou, props.player.name, formatMessage)}
+        </span>
       </span>
     </button>
   );
