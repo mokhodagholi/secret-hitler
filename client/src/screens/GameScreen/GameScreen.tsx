@@ -32,6 +32,7 @@ import { PeekOverlay } from './PeekOverlay';
 import { YouDiedOverlay } from './YouDiedOverlay';
 import { RaviNarrator } from './RaviNarrator';
 import { splitTableRows, tableSeatOrder } from './tableSeats';
+import { filledWell, flyToTarget } from './cardFlight';
 import styles from './GameScreen.module.scss';
 
 /**
@@ -355,8 +356,11 @@ export function GameScreen() {
     void animation.enqueue(async () => {
       setRevealedPolicy(policy);
       await animation.play(revealCard, 'policy-reveal');
-      await animation.hold(900);
-      await animation.play(revealCard, 'policy-exit');
+      await animation.hold(700);
+      await flyToTarget(animation, revealCard, filledWell(policy), {
+        landScale: 0.46,
+        duration: 620,
+      });
       setRevealedPolicy(null);
     });
   }
@@ -506,7 +510,6 @@ export function GameScreen() {
     | 'legislative'
     | 'power'
     | 'night'
-    | 'policy'
     | 'electionFailed';
 
   /**
@@ -528,7 +531,6 @@ export function GameScreen() {
     if (isLegislative()) return 'legislative';
     if (state?.phase === Phase.SpecialPower && state.activePower) return 'power';
     if (ceremonyOpen() && game.role()) return 'night';
-    if (revealedPolicy()) return 'policy';
     if (electionFailedAt() != null) return 'electionFailed';
     return null;
   }
@@ -546,7 +548,6 @@ export function GameScreen() {
     if (!phaseTakesOver) return;
     if (ceremonyOpen()) setCeremonyOpen(false);
     if (electionFailedAt() != null) setElectionFailedAt(null);
-    if (revealedPolicy()) setRevealedPolicy(null);
   });
 
   const playerName = (playerId: string | null) =>
@@ -860,7 +861,7 @@ export function GameScreen() {
               )}
             </Show>
 
-            <Show when={tableOverlay() === 'policy' && revealedPolicy()}>
+            <Show when={revealedPolicy()}>
               {(policy) => (
                 <PolicyRevealOverlay
                   policy={policy()}

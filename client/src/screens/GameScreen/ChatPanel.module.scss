@@ -132,6 +132,7 @@
   align-items: flex-end;
   justify-content: flex-start;
   gap: 8px;
+  min-width: 0;
 }
 
 .mine {
@@ -144,11 +145,13 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+  min-width: 0;
   max-width: min(78%, 320px);
   padding: 8px 12px 6px;
   border-radius: 14px 14px 14px 4px;
   background: #3d2a1f;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 
   &::after {
     content: '';
@@ -184,8 +187,14 @@
   color: $cream;
   font-size: 0.88rem;
   line-height: 1.45;
-  overflow-wrap: break-word;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   text-align: start;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
 }
 
 .stamp,
@@ -252,10 +261,10 @@
 .input {
   flex: 1;
   min-width: 0;
-  min-height: 1.45em;
-  max-height: calc(1.45em * 4);
-  height: 1.45em;
-  padding: 4px 2px;
+  min-height: 44px;
+  max-height: calc(1.45em * 4 + 20px);
+  height: 44px;
+  padding: 10px 2px;
   background: transparent;
   border: none;
   color: $cream;
@@ -279,7 +288,7 @@
   flex: 0 0 44px;
   width: 44px;
   height: 44px;
-  margin: 0 0 2px;
+  margin: 0;
   padding: 0;
   border: none;
   border-radius: 50%;

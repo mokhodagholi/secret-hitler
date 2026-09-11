@@ -311,8 +311,15 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `law.draw`
 - **When:** Three backs leave the deck toward the President.
-- **FA:** سه تا قانون می‌ره دست رئیس‌جمهور.
-- **EN:** Three policies are given to the President.
+- **FA:** سه تا قانون می‌اد دست رئیس‌جمهور.
+- **EN:** Three policies are coming to the President.
+
+### `law.drawYou`
+- **When:** You are the President; the three laws are coming to you.
+- **FA:** سه تا قانون می‌اد دستتون.
+- **EN:** Three policies are coming to you.
+- **Tone:** `[whispering]`
+- **Audio:** same line; clip may still be missing — subtitle still runs.
 
 ### `law.presidentChoosing`
 - **When:** President is looking. Public; no colours.
@@ -328,13 +335,13 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `law.pass`
 - **When:** Two backs travel to the Chancellor.
-- **FA:** دو تا قانون می‌ره دست صدراعظم.
-- **EN:** Two policies pass to the Chancellor.
+- **FA:** دو تا قانون می‌اد دست صدراعظم.
+- **EN:** Two policies are coming to the Chancellor.
 
 ### `law.passYou`
 - **When:** You are the Chancellor; the two remaining laws are coming to you.
-- **FA:** دو تا قانون می‌ره دستتون.
-- **EN:** Two policies pass to you.
+- **FA:** دو تا قانون می‌اد دستتون.
+- **EN:** Two policies are coming to you.
 - **Tone:** `[whispering]`
 
 ### `law.chancellorChoosing`
@@ -542,12 +549,13 @@ table is the **spoken** line.
 | `tracker.advance` | `[announcing]` | شُمارَنده یکی رفت جلو. |
 | `chaos.start` | `[grave]` | سه دولت پشت‌سرهم رای نیاورد. آشوب شروع شد. |
 | `chaos.enacted` | `[grave]` | قانونِ بالای دسته تصویب می‌شه. رئیس‌جمهور قدرتی نمی‌گیره. |
-| `law.draw` | `[calm]` | سه تا قانون می‌ره دست رئیس‌جمهور. |
+| `law.draw` | `[calm]` | سه تا قانون می‌اد دست رئیس‌جمهور. |
+| `law.drawYou` | `[whispering]` | سه تا قانون می‌اد دستتون. *(President only)* |
 | `law.presidentChoosing` | `[calm]` | رئیس جمهور یه کارت رو می‌سوزونه. |
 | `private.discard` | `[whispering]` | یه قانون رو بسوزونید. *(President only)* |
 | `law.burned` | `[calm]` | یه قانون سوخت. |
-| `law.pass` | `[calm]` | دو تا قانون می‌ره دست صدراعظم. |
-| `law.passYou` | `[whispering]` | دو تا قانون می‌ره دستتون. *(Chancellor only)* |
+| `law.pass` | `[calm]` | دو تا قانون می‌اد دست صدراعظم. |
+| `law.passYou` | `[whispering]` | دو تا قانون می‌اد دستتون. *(Chancellor only)* |
 | `law.chancellorChoosing` | `[calm]` | صدراعظم یکی رو تصویب می‌کنه. |
 | `law.liberal` | `[calm]` | یه قانون لیبرالی تصویب شد. |
 | `law.fascist` | `[grave]` | یه قانون فاشیستی تصویب شد. |

@@ -13,6 +13,7 @@ import type { RaviLineId } from '../../services/RaviService';
 import type { AnimationService } from '../../services/AnimationService';
 import { avatarImage } from '../../assets/avatars';
 import { CARD_BACK, NIGHT_VEIL, PARTY_FACE, ROLE_FACE } from '../../assets/cards';
+import { splitTableRows } from './tableSeats';
 import styles from './NightOverlay.module.scss';
 
 export interface NightOverlayProps {
@@ -326,13 +327,7 @@ function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
       for (let index = 0; index < props.players.length; index++) {
         if (cancelled) return;
         sound.play('deal-slide');
-        await flyToSeat(
-          animation,
-          cards[index],
-          props.players[index].id,
-          index,
-          props.players.length,
-        );
+        await flyToSeat(animation, cards[index], props.players[index].id, props.players);
       }
     })();
   });
@@ -367,16 +362,16 @@ function flyToSeat(
   animation: AnimationService,
   card: HTMLImageElement | undefined,
   playerId: string,
-  index: number,
-  total: number,
+  players: readonly { id: string }[],
 ): Promise<void> {
   if (!card) return Promise.resolve();
-  const dest = seatOffset(card, playerId, index, total);
+  const dest = seatOffset(card, playerId, players);
   if (!dest) {
     card.style.opacity = '1';
     return Promise.resolve();
   }
-  const tilt = index % 2 ? 8 : -8;
+  const seatIndex = players.findIndex((player) => player.id === playerId);
+  const tilt = seatIndex % 2 ? 8 : -8;
   const landed = `translate(${dest.x}px, ${dest.y}px) scale(0.45) rotate(${tilt}deg)`;
   const play = animation.playCustom(
     card,
@@ -395,8 +390,7 @@ function flyToSeat(
 function seatOffset(
   card: HTMLElement,
   playerId: string,
-  index: number,
-  total: number,
+  players: readonly { id: string }[],
 ): { x: number; y: number } | null {
   const origin = card.getBoundingClientRect();
   const fromX = origin.left + origin.width / 2;
@@ -412,10 +406,14 @@ function seatOffset(
   const table = document.querySelector('[data-game-table]');
   if (!(table instanceof HTMLElement)) return null;
   const box = table.getBoundingClientRect();
-  const bottomCount = Math.ceil(total / 2);
-  const onBottom = index < bottomCount;
-  const rowIndex = onBottom ? index : index - bottomCount;
-  const rowLen = onBottom ? bottomCount : Math.max(1, total - bottomCount);
+  const { top, bottom } = splitTableRows(players);
+  const onBottom = bottom.some((player) => player.id === playerId);
+  const row = onBottom ? bottom : top;
+  const rowIndex = Math.max(
+    0,
+    row.findIndex((player) => player.id === playerId),
+  );
+  const rowLen = Math.max(1, row.length);
   return {
     x: box.left + ((rowIndex + 0.5) / rowLen) * box.width - fromX,
     y:

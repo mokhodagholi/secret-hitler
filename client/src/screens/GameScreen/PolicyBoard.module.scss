@@ -1,14 +1,11 @@
 @use '../../styles/vars' as *;
 
-// Liberal PNG is 600×300 with painted art at (21,31)–(577,270) → 557×240.
-// Fascist PNG is 600×400 with painted art at (29,62)–(574,318) → 546×257.
-// Tracks crop to those boxes so the 8px gap is between the painted edges.
-// The stack fills leftover table height so seats keep a fixed size above chat.
-$liberal-crop-w: 557;
-$liberal-crop-h: 240;
-$fascist-crop-w: 546;
-$fascist-crop-h: 257;
+// Both tracks share one box so they read as a matched pair. Extra padding
+// on the fascist PNG is cropped; leftover table height stays empty, not
+// stretched into the boards.
+$track-ratio: 2.32;
 $stack-gap: 8px;
+
 .board {
   direction: ltr;
   display: flex;
@@ -21,71 +18,43 @@ $stack-gap: 8px;
   max-width: 92%;
   margin: 0 auto;
   padding: 2px 0 0;
-  flex: 1 1 0;
+  flex: 0 1 auto;
   min-height: 0;
 }
 
 .track {
   position: relative;
-  height: calc((100% - #{$stack-gap}) / 2);
-  width: auto;
+  width: 100%;
   max-width: 100%;
+  aspect-ratio: #{$track-ratio};
+  height: auto;
   overflow: hidden;
-  flex: 0 1 auto;
-}
-
-.trackLiberal {
-  aspect-ratio: #{$liberal-crop-w + ' / ' + $liberal-crop-h};
-}
-
-.trackFascist {
-  aspect-ratio: #{$fascist-crop-w + ' / ' + $fascist-crop-h};
+  flex: 0 0 auto;
 }
 
 .art {
   position: absolute;
-  height: auto;
-  max-width: none;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   display: block;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
 }
 
-.trackLiberal .art {
-  width: calc(100% * 600 / #{$liberal-crop-w});
-  left: calc(-100% * 21 / #{$liberal-crop-w});
-  top: calc(-100% * 31 / #{$liberal-crop-h});
-}
-
-.trackFascist .art {
-  width: calc(100% * 600 / #{$fascist-crop-w});
-  left: calc(-100% * 29 / #{$fascist-crop-w});
-  top: calc(-100% * 62 / #{$fascist-crop-h});
-}
-
 .slots {
   position: absolute;
+  left: 13%;
+  right: 13%;
+  top: 24%;
+  height: 55%;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
   pointer-events: none;
-}
-
-// Wells x 94–504, y 88–220, relative to the cropped liberal box.
-.trackLiberal .slots {
-  left: calc(100% * (94 - 21) / #{$liberal-crop-w});
-  right: calc(100% * (577 - 504) / #{$liberal-crop-w});
-  top: calc(100% * (88 - 31) / #{$liberal-crop-h});
-  height: calc(100% * (220 - 88) / #{$liberal-crop-h});
-}
-
-// Wells x 99–502, y 124–268, relative to the cropped fascist box.
-.trackFascist .slots {
-  left: calc(100% * (99 - 29) / #{$fascist-crop-w});
-  right: calc(100% * (574 - 502) / #{$fascist-crop-w});
-  top: calc(100% * (124 - 62) / #{$fascist-crop-h});
-  height: calc(100% * (268 - 124) / #{$fascist-crop-h});
 }
 
 .slot {

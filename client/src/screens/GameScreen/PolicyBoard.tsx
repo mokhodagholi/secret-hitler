@@ -33,7 +33,12 @@ export function PolicyBoard(props: PolicyBoardProps) {
         <div class={styles.slots}>
           <Index each={Array.from({ length: LIBERAL_SLOTS })}>
             {(_slot, index) => (
-              <span class={styles.slot}>
+              <span
+                class={styles.slot}
+                data-policy-party="liberal"
+                data-policy-well={`liberal-${index}`}
+                data-filled={index < props.board.liberalPolicies ? '' : undefined}
+              >
                 <Show when={index < props.board.liberalPolicies}>
                   <img
                     class={styles.slotCard}
@@ -56,7 +61,12 @@ export function PolicyBoard(props: PolicyBoardProps) {
         <div class={styles.slots}>
           <Index each={Array.from({ length: FASCIST_SLOTS })}>
             {(_slot, index) => (
-              <span class={styles.slot}>
+              <span
+                class={styles.slot}
+                data-policy-party="fascist"
+                data-policy-well={`fascist-${index}`}
+                data-filled={index < props.board.fascistPolicies ? '' : undefined}
+              >
                 <Show when={index < props.board.fascistPolicies}>
                   <img
                     class={styles.slotCard}

@@ -63,6 +63,19 @@ describe('ChatPanel', () => {
     expect(screen.getByText(line)).toBeTruthy();
   });
 
+  it('Should keep a glued join link inside the bubble', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+    const line =
+      'http://localhost:3000/join/MWXJGKhttp://localhost:3000/join/MWXJGK';
+    emitChat(harness, line);
+
+    const text = screen.getByText(line);
+    expect(text.className).toMatch(/text/);
+    expect(text.closest('div')?.className).toMatch(/bubble/);
+  });
+
   it('Should keep the composer from inviting browser suggest', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);

@@ -875,6 +875,31 @@ describe('GameScreen — government', () => {
     expect(ids(rows[1])).toEqual(['you', 'cal']);
     expect(ids(rows[0])).toEqual(['pres']);
   });
+
+  it('Should sit the viewer in the middle of the bottom at a five-player table', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(
+      makeView({
+        phase: Phase.Nomination,
+        players: [
+          makePlayer({ id: 'a', name: 'A', seat: 0 }),
+          makePlayer({ id: 'b', name: 'B', seat: 1 }),
+          makePlayer({ id: 'you', name: 'You', seat: 2 }),
+          makePlayer({ id: 'd', name: 'D', seat: 3 }),
+          makePlayer({ id: 'e', name: 'E', seat: 4 }),
+        ],
+      }),
+    );
+
+    const rows = document.querySelectorAll('[data-game-table] [role="list"]');
+    const ids = (row: Element) =>
+      [...row.querySelectorAll('[data-seat-id]')].map((seat) =>
+        seat.getAttribute('data-seat-id'),
+      );
+    expect(ids(rows[1])).toEqual(['b', 'you', 'd']);
+    expect(ids(rows[0])).toEqual(['a', 'e']);
+  });
 });
 
 describe('GameScreen — in-game menu', () => {

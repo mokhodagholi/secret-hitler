@@ -1,15 +1,17 @@
 import { For, Index, Show, createEffect, createSignal, onCleanup } from 'solid-js';
-import {
-  LEGISLATIVE_TRAVEL_CARD_MS,
-  type Policy,
-} from '@secret-hitler/shared';
+import { type Policy } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
-import type { AnimationService } from '../../services/AnimationService';
 import { CARD_BACK, POLICY_FACE } from '../../assets/cards';
 import { Icon } from '../../components/Icon/Icon';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
+import {
+  emptyWell,
+  flyCard,
+  flyToTarget,
+  pileEl,
+} from './cardFlight';
 import styles from './LegislativeModal.module.scss';
 
 export interface LegislativeModalProps {
@@ -38,7 +40,7 @@ export interface LegislativeModalProps {
 /** Reveal between stagger so the cards flip in one after another. */
 const REVEAL_STEP_MS = 110;
 
-type Beat = 'deal' | 'pass' | 'choose';
+type Beat = 'deal' | 'burn' | 'pass' | 'choose';
 
 /**
  * Public legislative theater: face-down cards leave the draw pile for the
@@ -58,6 +60,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
   let closed = false;
   let travelGen = 0;
   let seenMode: 'discard' | 'enact' | null = null;
+  let didBurn = false;
 
   onCleanup(() => {
     closed = true;
@@ -93,6 +96,11 @@ export function LegislativeModal(props: LegislativeModalProps) {
     await waitFrames(2);
     if (gen !== travelGen || closed) return;
 
+    if (kind === 'pass' && previous === 'discard' && !didBurn) {
+      await burnPublicCard(gen);
+      if (gen !== travelGen || closed) return;
+    }
+
     const from =
       kind === 'deal'
         ? document.querySelector('[data-pile="draw"]')
@@ -112,6 +120,19 @@ export function LegislativeModal(props: LegislativeModalProps) {
     speakIfHolder();
   }
 
+  async function burnPublicCard(gen: number): Promise<void> {
+    setBeat('burn');
+    await waitFrames(2);
+    if (gen !== travelGen || closed) return;
+    sound.play('policy-burn');
+    const burned = travelCards[2] ?? travelCards[travelCards.length - 1];
+    await flyToTarget(animation, burned, pileEl('discard'), { landScale: 0.28 });
+    if (burned) burned.style.opacity = '0';
+    didBurn = true;
+    setBeat('pass');
+    await waitFrames(2);
+  }
+
   function speakIfHolder(): void {
     if (closed || props.policies.length === 0) return;
     sound.play('card-flip');
@@ -121,15 +142,21 @@ export function LegislativeModal(props: LegislativeModalProps) {
   async function pick(index: number): Promise<void> {
     if (picking()) return;
     setPicking(true);
-    if (props.mode === 'discard') sound.play('policy-burn');
-    const exit = props.mode === 'enact' ? 'card-to-board' : 'policy-exit';
-    await animation.play(faceCards[index], exit);
+    const card = faceCards[index];
+    if (props.mode === 'discard') {
+      sound.play('policy-burn');
+      await flyToTarget(animation, card, pileEl('discard'), { landScale: 0.28 });
+      didBurn = true;
+    } else {
+      const policy = props.policies[index];
+      await flyToTarget(animation, card, emptyWell(policy), { landScale: 0.42 });
+    }
     props.onPick(index);
   }
 
   const showFaces = () => beat() === 'choose' && props.policies.length > 0;
   const travelCount = () => {
-    if (beat() === 'deal') return 3;
+    if (beat() === 'deal' || beat() === 'burn') return 3;
     if (beat() === 'pass') return 2;
     return props.mode === 'discard' ? 3 : 2;
   };
@@ -141,6 +168,9 @@ export function LegislativeModal(props: LegislativeModalProps) {
           ? 'game.legislativeDealYou'
           : 'game.legislativeDeal',
       );
+    }
+    if (beat() === 'burn') {
+      return formatMessage('ravi.law.burned');
     }
     if (beat() === 'pass') {
       return formatMessage(
@@ -287,62 +317,3 @@ function seatEl(playerId: string | null): Element | null {
   return document.querySelector(`[data-seat-id="${escapeAttr(playerId)}"]`);
 }
 
-function centerOf(element: Element): { x: number; y: number } {
-  const box = element.getBoundingClientRect();
-  return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
-}
-
-function offsetFrom(
-  card: HTMLElement,
-  origin: Element | null,
-): { x: number; y: number } | null {
-  if (!origin) return null;
-  const from = centerOf(origin);
-  const here = centerOf(card);
-  return { x: from.x - here.x, y: from.y - here.y };
-}
-
-function flyCard(
-  animation: AnimationService,
-  card: HTMLImageElement | undefined,
-  from: Element | null,
-  via: Element | null,
-): Promise<void> {
-  if (!card) return Promise.resolve();
-  const start = offsetFrom(card, from);
-  const mid = offsetFrom(card, via);
-  if (!start) {
-    card.style.opacity = '1';
-    return Promise.resolve();
-  }
-  const tilt = mid ? 10 : -12;
-  const keyframes: Keyframe[] = mid
-    ? [
-        {
-          opacity: 1,
-          transform: `translate(${start.x}px, ${start.y}px) scale(0.32) rotate(-18deg)`,
-        },
-        {
-          opacity: 1,
-          transform: `translate(${mid.x}px, ${mid.y}px) scale(0.44) rotate(${tilt}deg)`,
-          offset: 0.55,
-        },
-        { opacity: 1, transform: 'translate(0px, 0px) scale(1) rotate(0deg)' },
-      ]
-    : [
-        {
-          opacity: 1,
-          transform: `translate(${start.x}px, ${start.y}px) scale(0.32) rotate(-12deg)`,
-        },
-        { opacity: 1, transform: 'translate(0px, 0px) scale(1) rotate(0deg)' },
-      ];
-  return animation
-    .playCustom(card, keyframes, {
-      duration: LEGISLATIVE_TRAVEL_CARD_MS,
-      easing: 'ease-in-out',
-    })
-    .then(() => {
-      card.style.opacity = '1';
-      card.style.transform = '';
-    });
-}

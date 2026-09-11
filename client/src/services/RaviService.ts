@@ -44,6 +44,7 @@ export type RaviLineId =
   | 'chaos.start'
   | 'chaos.enacted'
   | 'law.draw'
+  | 'law.drawYou'
   | 'law.presidentChoosing'
   | 'law.burned'
   | 'law.pass'

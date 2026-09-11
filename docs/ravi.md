@@ -135,8 +135,8 @@ end Night for the table.
 | `Night` (new) | Deal, private look, team glance, first President |
 | `Nomination` | Discussion, then “صدراعظم رو انتخاب کنه” |
 | `Voting` | “رأی‌گیری آغاز شد” |
-| `PresidentLegislative` | “سه تا قانون می‌ره دست رئیس‌جمهور” |
-| `ChancellorLegislative` | “دو تا قانون می‌ره دست صدراعظم” |
+| `PresidentLegislative` | “سه تا قانون می‌اد دست رئیس‌جمهور” (President: `law.drawYou`) |
+| `ChancellorLegislative` | “دو تا قانون می‌اد دست صدراعظم” (Chancellor: `law.passYou`) |
 | `SpecialPower` | The matching power line |
 | `GameOver` | Winner line + role cascade (no voice over secrets until cards are up) |
 
