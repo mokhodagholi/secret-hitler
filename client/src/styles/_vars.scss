@@ -1,7 +1,5 @@
-// Color palette — deep blue + orange theme.
-// Variable names are kept ($navy-*, $gold*) so the ~250 existing references
-// stay valid; only the values changed. $navy-* = the deep-blue surfaces,
-// $gold* = the orange accent.
+// Color palette — deep blue + brass gold.
+// $gold* is the primary accent (gold to brown). $navy-* = deep-blue surfaces.
 $navy-950: #051528;
 $navy-900: #0a2344;
 $navy-850: #0e2c54;
@@ -12,10 +10,10 @@ $navy-600: #2a63ad;
 $line-soft: rgba(106, 154, 199, 0.25);
 $line-strong: rgba(106, 154, 199, 0.45);
 
-$gold: #f5852a;
-$gold-bright: #ff9f4d;
-$gold-dark: #c5631d;
-$gold-deep: #7a3d11;
+$gold: #f3d27a;
+$gold-bright: #f8e3a4;
+$gold-dark: #c9a14a;
+$gold-deep: #7a4e1a;
 
 $cream: #f3e7c9;
 $white: #fbfaf7;

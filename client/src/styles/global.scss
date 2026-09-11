@@ -1,20 +1,27 @@
 @use './vars' as *;
+@use './mixins' as *;
 @use './fonts';
+
+:root {
+  @include scroll-navy;
+}
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  @include themed-scroll;
 }
 
 html,
 body,
 #root {
   height: 100%;
+  // Letterbox around the 430px shell — wood, so wide viewports match the theme.
+  background: #1a1208;
 }
 
 body {
-  background: #04132a;
   color: $cream;
   font-family: $font-body;
   -webkit-font-smoothing: antialiased;
