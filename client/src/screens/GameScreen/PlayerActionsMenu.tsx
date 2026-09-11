@@ -58,7 +58,7 @@ export function PlayerActionsMenu(props: PlayerActionsMenuProps) {
         <div class={styles.actions}>
           <Show when={props.canMute}>
             <MenuIcon
-              icon={props.muted ? 'micOff' : 'mic'}
+              icon={props.muted ? 'speakerOff' : 'speaker'}
               label={formatMessage(
                 props.muted ? 'game.playerMenu.unmute' : 'game.playerMenu.mute',
               )}

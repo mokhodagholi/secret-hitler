@@ -11,7 +11,8 @@ How the client plays sound. One service owns all playback:
   audio nodes.
 - **Settings-gated at the source.** `play` is a no-op while **Sound Effects** is
   off; music is a no-op while **Music** is off. Callers never read the toggles
-  themselves — just fire the sound.
+  themselves — just fire the sound. Table voice does not mute the bed —
+  [`VoiceService`](./voice.md) echo-cancels this tab’s speakers off the mic.
 - **Registries, not call sites.** Every sound is one entry in the `EFFECTS` or
   `MUSIC` registry. Adding a sound is a one-line change; playing it is a
   string-keyed call the type checker validates.

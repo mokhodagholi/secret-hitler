@@ -98,7 +98,11 @@ describe('VoiceService', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(asked).toEqual({
-      audio: { echoCancellation: true },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
       video: false,
     });
   });
@@ -154,11 +158,61 @@ describe('VoiceService', () => {
     expect(socket.lastSent('voice:mute')).toEqual({ type: 'voice:mute', muted: false });
   });
 
+  it('Should keep a local mute when this player unmutes themselves', () => {
+    const { voice } = makeVoice(true);
+    voice.toggleRemoteMute('cal');
+    expect(voice.isRemoteMuted('cal')).toBe(true);
+    voice.toggleSelfMute();
+    expect(voice.isRemoteMuted('cal')).toBe(true);
+  });
+
   it('Should mark a peer as speaking when the table says they are', () => {
     stubGrantedMicrophone();
     const { voice, socket } = makeVoice(true);
     voice.sync(makeView({ phase: Phase.Nomination }));
     socket.emit({ type: 'voice:speaking', playerId: 'cal', speaking: true });
     expect(voice.isSpeaking('cal')).toBe(true);
+  });
+
+  it('Should treat a speaking peer as live even without a mute frame', () => {
+    stubGrantedMicrophone();
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    expect(voice.isTableMuted('cal')).toBe(true);
+    socket.emit({ type: 'voice:speaking', playerId: 'cal', speaking: true });
+    expect(voice.isSpeaking('cal')).toBe(true);
+    expect(voice.isTableMuted('cal')).toBe(false);
+  });
+
+  it('Should light this player’s seat from a speaking frame for their id', () => {
+    stubGrantedMicrophone();
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    socket.emit({ type: 'voice:speaking', playerId: 'you', speaking: true });
+    expect(voice.isSpeaking('you')).toBe(true);
+  });
+
+  it('Should show a peer as live after they unmute on the table', () => {
+    stubGrantedMicrophone();
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    expect(voice.isTableMuted('cal')).toBe(true);
+    socket.emit({
+      type: 'voice:peer',
+      playerId: 'cal',
+      producerId: 'prod-cal',
+      muted: true,
+    });
+    expect(voice.isTableMuted('cal')).toBe(true);
+    socket.emit({
+      type: 'voice:peer',
+      playerId: 'cal',
+      producerId: 'prod-cal',
+      muted: false,
+    });
+    expect(voice.isTableMuted('cal')).toBe(false);
+    voice.toggleRemoteMute('cal');
+    expect(voice.isTableMuted('cal')).toBe(false);
+    expect(voice.isRemoteMuted('cal')).toBe(true);
   });
 });

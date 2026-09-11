@@ -38,15 +38,12 @@ export function TableSeat(props: TableSeatProps) {
   const showPublicMarks = () => props.showPublicMarks !== false;
 
   const voiceOn = () => flags.flags.voice;
-  const tableMuted = () =>
-    voiceOn() && (props.isYou ? voice.selfMuted() : props.player.selfMuted);
+  const tableMuted = () => voiceOn() && voice.isTableMuted(props.player.id);
   const locallyMuted = () =>
     voiceOn() && !props.isYou && voice.isRemoteMuted(props.player.id);
   const speaking = () =>
-    voiceOn() &&
-    voice.isSpeaking(props.player.id) &&
-    !tableMuted() &&
-    !locallyMuted();
+    voiceOn() && voice.ui.speaking[props.player.id] === true;
+  const micOpen = () => voiceOn() && !tableMuted();
 
   const office = () => {
     if (!showPublicMarks()) return null;
@@ -78,6 +75,9 @@ export function TableSeat(props: TableSeatProps) {
       }}
       aria-label={playerLabel(props.isYou, props.player.name, formatMessage)}
       data-seat-id={props.player.id}
+      data-speaking={speaking() ? 'true' : undefined}
+      data-mic={voiceOn() ? (tableMuted() ? 'off' : 'live') : undefined}
+      data-local-mute={locallyMuted() ? 'true' : undefined}
       aria-disabled={!interactive()}
       tabIndex={interactive() ? 0 : -1}
       onClick={() => {
@@ -141,9 +141,25 @@ export function TableSeat(props: TableSeatProps) {
             />
           )}
         </Show>
-        <Show when={tableMuted() || locallyMuted()}>
+        <Show when={tableMuted()}>
           <span class={styles.micBadge} aria-hidden="true">
             <Icon name="micOff" size={12} />
+          </span>
+        </Show>
+        <Show when={micOpen()}>
+          <span
+            classList={{ [styles.micBadge]: true, [styles.micLive]: true }}
+            aria-hidden="true"
+          >
+            <Icon name="mic" size={12} />
+          </span>
+        </Show>
+        <Show when={locallyMuted()}>
+          <span
+            classList={{ [styles.micBadge]: true, [styles.micLocal]: true }}
+            aria-hidden="true"
+          >
+            <Icon name="speakerOff" size={12} />
           </span>
         </Show>
       </span>

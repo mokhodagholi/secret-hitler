@@ -34,7 +34,8 @@ export type IconName =
   | 'hand'
   | 'smile'
   | 'mic'
-  | 'micOff';
+  | 'micOff'
+  | 'speakerOff';
 
 const glyphs: Record<IconName, () => JSX.Element> = {
   book: () => (
@@ -118,6 +119,13 @@ const glyphs: Record<IconName, () => JSX.Element> = {
       <path d="M11 5 6 9H2v6h4l5 4z" />
       <path d="M15.5 8.5a5 5 0 0 1 0 7" />
       <path d="M19 5a10 10 0 0 1 0 14" />
+    </>
+  ),
+  speakerOff: () => (
+    <>
+      <path d="M11 5 6 9H2v6h4l5 4z" />
+      <line x1="23" x2="17" y1="9" y2="15" />
+      <line x1="17" x2="23" y1="9" y2="15" />
     </>
   ),
   question: () => (

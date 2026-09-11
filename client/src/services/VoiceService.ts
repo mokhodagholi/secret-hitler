@@ -14,13 +14,18 @@ import type { WebSocketService } from './WebSocketService';
 
 export type VoiceStatus = 'off' | 'idle' | 'connecting' | 'live' | 'denied' | 'failed';
 
-/** Exact NS/AGC false + AEC can return a silent macOS Voice Processing track. */
+/**
+ * AEC subtracts this tab’s speakers from the send track so Ravi/music stay local.
+ * Do not tap the capture stream with Web Audio — Chrome then disables AEC.
+ */
 const MIC_AUDIO: MediaTrackConstraints = {
   echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
 };
 
-const SPEAKING_ON = 0.02;
-const SPEAKING_OFF = 0.01;
+const SPEAKING_ON = 0.04;
+const SPEAKING_OFF = 0.02;
 const SPEAKING_HOLD_MS = 500;
 const UNLOCK_EVENTS = ['pointerdown', 'touchend', 'keydown', 'click'] as const;
 
@@ -28,6 +33,7 @@ interface VoiceUiState {
   selfMuted: boolean;
   speaking: Record<string, boolean>;
   remoteMuted: Record<string, boolean>;
+  tableMuted: Record<string, boolean>;
 }
 
 interface PendingPeer {
@@ -38,6 +44,7 @@ interface PendingPeer {
 interface MsProducer {
   id: string;
   getStats?: () => Promise<RTCStatsReport>;
+  rtpSender?: { getStats: () => Promise<RTCStatsReport> };
 }
 
 interface MsTransport {
@@ -85,14 +92,19 @@ export class VoiceService {
   private iceServers: IceServer[] = [];
   private sendTransport: MsTransport | null = null;
   private recvTransport: MsTransport | null = null;
-  private readonly remotes = new Map<string, HTMLAudioElement>();
+  private localProducer: MsProducer | null = null;
+  private readonly remotes = new Map<string, HTMLMediaElement>();
+  private readonly remoteTracks = new Map<string, MediaStreamTrack>();
+  private readonly producerPlayers = new Map<string, string>();
   private readonly pendingPeers: PendingPeer[] = [];
   private readonly connectWaiters = new Map<string, () => void>();
   private readonly produceWaiters = new Map<string, (arg: { id: string }) => void>();
   private speaking = false;
   private speakingHoldUntil = 0;
   private analyserTimer: ReturnType<typeof setInterval> | null = null;
+  private levelPollInFlight = false;
   private unlockGesture: (() => void) | null = null;
+  private playbackUnlocked = false;
 
   constructor(
     private readonly socket: WebSocketService,
@@ -104,6 +116,7 @@ export class VoiceService {
       selfMuted: true,
       speaking: {},
       remoteMuted: {},
+      tableMuted: {},
     });
     this.status = status;
     this.setStatus = setStatus;
@@ -122,6 +135,12 @@ export class VoiceService {
 
   isRemoteMuted(playerId: string): boolean {
     return this.ui.remoteMuted[playerId] === true;
+  }
+
+  /** Table-wide mute. Unknown peers count as muted — join starts that way. */
+  isTableMuted(playerId: string): boolean {
+    if (playerId === this.selfId) return this.ui.selfMuted;
+    return this.ui.tableMuted[playerId] !== false;
   }
 
   /** Join or leave based on the current snapshot. Safe to call often. */
@@ -145,6 +164,7 @@ export class VoiceService {
     const track = this.localStream?.getAudioTracks()[0];
     if (track) track.enabled = !muted;
     this.socket.send({ type: 'voice:mute', muted });
+    if (muted) this.applySpeakingLevel(0);
     if (!muted) void this.tryProduce();
     this.unlockPlayback();
   }
@@ -153,14 +173,11 @@ export class VoiceService {
     if (!this.flags.enabled('voice')) return;
     const muted = !this.isRemoteMuted(playerId);
     this.update('remoteMuted', playerId, muted);
-    const audio = this.remotes.get(playerId);
-    if (audio) audio.muted = muted || !this.settings.settings.voiceEnabled;
+    this.applyRemoteMute(playerId);
   }
 
   setListenEnabled(enabled: boolean): void {
-    for (const [playerId, audio] of this.remotes) {
-      audio.muted = !enabled || this.isRemoteMuted(playerId);
-    }
+    for (const playerId of this.remotes.keys()) this.applyRemoteMute(playerId);
     if (enabled) this.unlockPlayback();
   }
 
@@ -193,6 +210,7 @@ export class VoiceService {
     if (this.joined) this.socket.send({ type: 'voice:leave' });
     this.joined = false;
     this.produced = false;
+    this.localProducer = null;
     this.localStream?.getTracks().forEach((track) => track.stop());
     this.localStream = null;
     this.stopLevel();
@@ -206,12 +224,16 @@ export class VoiceService {
     this.pendingPeers.length = 0;
     this.connectWaiters.clear();
     this.produceWaiters.clear();
-    for (const audio of this.remotes.values()) {
-      audio.srcObject = null;
-      audio.remove();
+    this.producerPlayers.clear();
+    this.remoteTracks.clear();
+    this.playbackUnlocked = false;
+    for (const media of this.remotes.values()) {
+      media.srcObject = null;
+      media.remove();
     }
     this.remotes.clear();
     this.update('speaking', {});
+    this.update('tableMuted', {});
   }
 
   private onMessage(message: ServerMessage): void {
@@ -240,7 +262,11 @@ export class VoiceService {
         break;
       case 'voice:speaking':
         this.update('speaking', message.playerId, message.speaking);
-        if (message.speaking) this.unlockPlayback();
+        // Missed voice:peer unmute used to leave the seat “muted” and hide the glow.
+        if (message.speaking) {
+          this.update('tableMuted', message.playerId, false);
+          this.unlockPlayback();
+        }
         break;
       case 'room:closed':
         this.leave();
@@ -252,6 +278,8 @@ export class VoiceService {
   }
 
   private onPeer(message: Extract<ServerMessage, { type: 'voice:peer' }>): void {
+    this.update('tableMuted', message.playerId, message.muted);
+    if (message.muted) this.update('speaking', message.playerId, false);
     if (message.playerId === this.selfId) return;
     if (message.producerId == null) {
       this.dropRemote(message.playerId);
@@ -261,6 +289,7 @@ export class VoiceService {
   }
 
   private consumePeer(playerId: string, producerId: string): void {
+    this.producerPlayers.set(producerId, playerId);
     if (this.recvTransport && this.device) {
       this.socket.send({
         type: 'voice:consume',
@@ -284,13 +313,14 @@ export class VoiceService {
     if (!track) return;
     this.produced = true;
     try {
-      const producer = await this.sendTransport.produce({
+      this.localProducer = await this.sendTransport.produce({
         track,
         codecOptions: { opusDtx: false, opusFec: true },
       });
-      this.watchSpeaking(producer);
+      this.startLevelWatch();
     } catch {
       this.produced = false;
+      this.localProducer = null;
     }
   }
 
@@ -388,7 +418,9 @@ export class VoiceService {
       });
       consumer.track.enabled = true;
       await consumer.resume?.();
-      this.attachRemote(message.playerId, consumer.track);
+      const playerId = this.producerPlayers.get(message.producerId) ?? message.playerId;
+      if (!playerId) return;
+      this.attachRemote(playerId, consumer.track);
       this.socket.send({ type: 'voice:resumeConsumer', consumerId: message.id });
     } catch {
       this.attachSilentRemote(message.playerId);
@@ -397,31 +429,47 @@ export class VoiceService {
 
   private attachRemote(playerId: string, track: MediaStreamTrack): void {
     this.dropRemote(playerId);
-    const audio = document.createElement('audio');
-    audio.autoplay = true;
-    audio.playsInline = true;
-    audio.setAttribute('playsinline', 'true');
-    audio.setAttribute('webkit-playsinline', 'true');
-    audio.volume = 1;
-    // 1px — iOS can refuse playback on a zero-size, display:none node.
-    audio.style.cssText =
-      'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-    document.body.appendChild(audio);
-    audio.srcObject = new MediaStream([track]);
-    this.remotes.set(playerId, audio);
+    // iOS Safari is silent with <audio srcObject>; <video playsinline> plays WebRTC.
+    const media = document.createElement('video');
+    media.autoplay = true;
+    media.playsInline = true;
+    media.defaultMuted = true;
+    media.muted = true;
+    media.setAttribute('playsinline', 'true');
+    media.setAttribute('webkit-playsinline', 'true');
+    media.setAttribute('muted', 'true');
+    media.volume = 1;
+    media.style.cssText =
+      'position:absolute;width:2px;height:2px;opacity:0.01;pointer-events:none;';
+    document.body.appendChild(media);
+    media.srcObject = new MediaStream([track]);
+    this.remotes.set(playerId, media);
+    this.remoteTracks.set(playerId, track);
     this.applyRemoteMute(playerId);
-    this.playRemote(audio);
-    track.addEventListener('unmute', () => this.playRemote(audio));
+    this.playRemote(media);
+    media.addEventListener('loadedmetadata', () => this.playRemote(media));
+    track.addEventListener('unmute', () => this.applyRemoteMute(playerId));
   }
 
   private applyRemoteMute(playerId: string): void {
-    const audio = this.remotes.get(playerId);
-    if (!audio) return;
-    audio.muted = this.isRemoteMuted(playerId) || !this.settings.settings.voiceEnabled;
+    const silence =
+      this.isRemoteMuted(playerId) || !this.settings.settings.voiceEnabled;
+    const track = this.remoteTracks.get(playerId);
+    if (track) track.enabled = !silence;
+    const media = this.remotes.get(playerId);
+    if (!media) return;
+    media.volume = silence ? 0 : 1;
+    media.muted = silence || !this.playbackUnlocked;
+    if (silence) {
+      media.pause();
+      return;
+    }
+    if (this.playbackUnlocked) this.playRemote(media);
   }
 
-  private playRemote(audio: HTMLAudioElement): void {
-    const played = audio.play() as Promise<void> | undefined;
+  private playRemote(media: HTMLMediaElement): void {
+    if (media.volume === 0) return;
+    const played = media.play() as Promise<void> | undefined;
     played?.catch((error) => {
       const name = error instanceof Error ? error.name : '';
       if (name === 'NotAllowedError' || name === 'NotSupportedError') this.armUnlock();
@@ -430,27 +478,26 @@ export class VoiceService {
 
   private attachSilentRemote(playerId: string): void {
     if (this.remotes.has(playerId)) return;
-    const audio = document.createElement('audio');
-    audio.autoplay = true;
-    audio.muted = this.isRemoteMuted(playerId) || !this.settings.settings.voiceEnabled;
-    this.remotes.set(playerId, audio);
+    const media = document.createElement('video');
+    media.autoplay = true;
+    media.muted = true;
+    this.remotes.set(playerId, media);
   }
 
   private dropRemote(playerId: string): void {
-    const audio = this.remotes.get(playerId);
-    if (audio) {
-      audio.srcObject = null;
-      audio.remove();
+    const media = this.remotes.get(playerId);
+    if (media) {
+      media.srcObject = null;
+      media.remove();
       this.remotes.delete(playerId);
     }
+    this.remoteTracks.delete(playerId);
     this.update('speaking', playerId, false);
   }
 
   private unlockPlayback(): void {
-    for (const [playerId, audio] of this.remotes) {
-      this.applyRemoteMute(playerId);
-      this.playRemote(audio);
-    }
+    this.playbackUnlocked = true;
+    for (const playerId of this.remotes.keys()) this.applyRemoteMute(playerId);
   }
 
   private armUnlock(): void {
@@ -473,38 +520,41 @@ export class VoiceService {
     }
   }
 
-  /** Web Audio on the capture stream (even a clone) silences the WebRTC send track. */
-  private watchSpeaking(producer: MsProducer): void {
-    this.stopLevel();
-    if (!producer.getStats) return;
+  /** RTP stats, not Web Audio — tapping capture for an analyser disables AEC. */
+  private startLevelWatch(): void {
+    if (this.analyserTimer) return;
     this.analyserTimer = setInterval(() => {
-      void this.sampleSpeaking(producer);
+      void this.pollLocalLevel();
     }, 120);
   }
 
-  private async sampleSpeaking(producer: MsProducer): Promise<void> {
-    if (!producer.getStats) return;
-    let level = 0;
+  private async pollLocalLevel(): Promise<void> {
+    if (this.levelPollInFlight) return;
+    this.levelPollInFlight = true;
     try {
-      const stats = await producer.getStats();
-      stats.forEach((report) => {
-        const audioLevel = (report as RTCStats & { audioLevel?: number }).audioLevel;
-        if (
-          typeof audioLevel === 'number' &&
-          (report.type === 'media-source' || report.type === 'track')
-        ) {
-          level = Math.max(level, audioLevel);
-        }
-      });
-    } catch {
-      return;
+      if (this.ui.selfMuted || !this.localProducer) {
+        this.applySpeakingLevel(0);
+        return;
+      }
+      const stats = await readProducerStats(this.localProducer);
+      if (this.ui.selfMuted) {
+        this.applySpeakingLevel(0);
+        return;
+      }
+      this.applySpeakingLevel(audioLevelFromStats(stats));
+    } finally {
+      this.levelPollInFlight = false;
     }
-    if (level > SPEAKING_ON) this.speakingHoldUntil = Date.now() + SPEAKING_HOLD_MS;
+  }
+
+  private applySpeakingLevel(rms: number): void {
+    if (rms > SPEAKING_ON) this.speakingHoldUntil = Date.now() + SPEAKING_HOLD_MS;
     const loud =
       !this.ui.selfMuted &&
-      (level > SPEAKING_OFF || Date.now() < this.speakingHoldUntil);
+      (rms > SPEAKING_OFF || Date.now() < this.speakingHoldUntil);
     if (loud === this.speaking) return;
     this.speaking = loud;
+    if (this.selfId) this.update('speaking', this.selfId, loud);
     this.socket.send({ type: 'voice:speaking', speaking: loud });
   }
 
@@ -514,7 +564,24 @@ export class VoiceService {
     this.speakingHoldUntil = 0;
     if (this.speaking) {
       this.speaking = false;
+      if (this.selfId) this.update('speaking', this.selfId, false);
       this.socket.send({ type: 'voice:speaking', speaking: false });
     }
   }
+}
+
+function readProducerStats(producer: MsProducer): Promise<RTCStatsReport | undefined> {
+  if (producer.getStats) return producer.getStats();
+  if (producer.rtpSender) return producer.rtpSender.getStats();
+  return Promise.resolve(undefined);
+}
+
+function audioLevelFromStats(stats: RTCStatsReport | undefined): number {
+  if (!stats) return 0;
+  let level = 0;
+  stats.forEach((report) => {
+    const value = (report as { audioLevel?: number }).audioLevel;
+    if (typeof value === 'number' && value > level) level = value;
+  });
+  return level;
 }

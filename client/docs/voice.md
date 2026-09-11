@@ -32,29 +32,46 @@ in-game and the flag is on. Callers never check the flag or the listen
 toggle — this class does. Settings `voiceEnabled` is “hear the table”
 (remote playback), not self-mute.
 
-Chrome (mic in chat, mute-other from the seat menu, seat rings) renders
-only while `flags.enabled('voice')`.
+Chrome (mic in chat, mute-other from the seat menu, live mic badge on
+seats, seat rings) renders only while `flags.enabled('voice')`.
 
 Join starts muted. Tap the mic to speak. The client waits for the
 microphone before `voice:join`, queues `voice:peer` until the recv
 transport exists, and passes the server’s ICE list (STUN/TURN) into
-mediasoup transports. Capture asks only for echo cancellation so macOS
-Voice Processing does not return a silent track. Speaking rings read
-RTP stats — Web Audio is not attached to the mic. Opus DTX is off so
-word endings are not dropped on the wire.
+mediasoup transports. Capture asks for echo cancellation, noise suppression, and auto-gain.
+Do not tap the capture stream with Web Audio: Chrome then turns AEC off
+and Ravi/music ride the send track. Speaking rings read outbound RTP
+levels instead. This player’s seat still updates locally so the green glow
+does not wait on the websocket. `.you.speaking` overrides the cyan “you”
+outline and the portrait pulses.
 
-The green seat ring is a websocket flag (`voice:speaking`). It does not
-mean the other browser is playing RTP. Remote audio is attached to a
-real `<audio>` node, the server consumer starts paused and is resumed
-after attach (`voice:resumeConsumer`), and playback is retried on any
-tap because browsers block `play()` until a gesture.
+Live mic vs muted on a seat comes from `voice:peer`, not the game
+snapshot — unmute does not wait for the next round. A crossed mic is
+their table mute. Local mute-other is a speaker-off badge on the other
+side of the portrait so it does not look like they muted themselves.
+
+The green seat ring is a websocket flag (`voice:speaking`). A speaking
+frame also marks that seat live, so a missed unmute still shows the
+glow on other devices. It does not mean the other browser is playing RTP.
+Remote audio is attached to a
+`<video playsinline>` node so Chrome on phones can play the MediaStream,
+the server consumer starts paused and is resumed after attach
+(`voice:resumeConsumer`), and playback starts muted then unmutes on a
+tap. Local mute-other zeros volume, pauses the element, and disables
+the track so a later unlock cannot start them again.
+
+Ravi, music, and sound effects keep playing locally. Capture asks for
+echo cancellation so this device’s speakers (including that bed) are
+subtracted from the send track — only the player’s voice goes out the
+mic. Two devices in the same physical room can still leak: AEC only
+cancels *this* device’s output. Headphones remove that.
 
 ## Bale / Safari
 
 `getUserMedia` in the Bale mini-app WebView is unproven. Keep the flag
 off in production until a real device on that path can produce and
-consume. iOS Safari needs a user gesture before `AudioContext` / play;
-the analyser already fails open if the context is blocked.
+consume. iOS Safari needs a user gesture before play; remote playback
+already fails open if autoplay is blocked.
 
 ## Tests
 

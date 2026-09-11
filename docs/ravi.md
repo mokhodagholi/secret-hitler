@@ -196,6 +196,8 @@ Playback rules:
   - **Ravi voice** — spoken lines only. Subtitle and cameo still run
     when voice is off.
 - Music stays its own toggle, as today.
+- Table voice does not skip clips. Echo cancellation on the mic keeps
+  Ravi (and the rest of the bed) off the wire on this device.
 - Voice *who*: Farid or Dilara, a third setting, independent of on/off.
 - `RaviService` ducking: start the clip, cancel the previous one if a new
   beat starts (never layer two sentences).

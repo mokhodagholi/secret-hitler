@@ -1122,6 +1122,46 @@ describe('GameScreen — in-game menu', () => {
     ).toBeNull();
   });
 
+  it('Should show a speaker-off badge when this player muted another seat', () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    const cal = screen.getByRole('button', { name: /Cal/ });
+    expect(cal.getAttribute('data-mic')).toBe('off');
+    expect(cal.getAttribute('data-local-mute')).toBeNull();
+
+    harness.socket.emit({
+      type: 'voice:peer',
+      playerId: 'cal',
+      producerId: 'prod-cal',
+      muted: false,
+    });
+    expect(cal.getAttribute('data-mic')).toBe('live');
+
+    fireEvent.click(cal);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: en.game.mutePlayer.replace('{name}', 'Cal'),
+      }),
+    );
+    expect(cal.getAttribute('data-local-mute')).toBe('true');
+    expect(cal.getAttribute('data-mic')).toBe('live');
+  });
+
+  it('Should pulse another seat when that player is speaking', () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    const cal = screen.getByRole('button', { name: /Cal/ });
+    expect(cal.getAttribute('data-speaking')).toBeNull();
+    harness.socket.emit({ type: 'voice:speaking', playerId: 'cal', speaking: true });
+    expect(cal.getAttribute('data-speaking')).toBe('true');
+  });
+
   it('Should confirm a kick from the seat menu when voice is on', () => {
     stubDeniedMicrophone();
     const harness = buildHarness({ seated: true, flags: { voice: true } });

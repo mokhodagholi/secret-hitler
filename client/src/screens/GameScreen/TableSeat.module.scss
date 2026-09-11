@@ -31,6 +31,10 @@
   }
 }
 
+.speaking.selectable .paper {
+  animation: seat-speak 0.85s ease-in-out infinite;
+}
+
 .reportable {
   cursor: pointer;
 }
@@ -73,13 +77,12 @@
   filter: drop-shadow(0 0 6px rgba(127, 208, 138, 0.7));
 }
 
-.speaking .paper {
-  filter: drop-shadow(0 0 10px rgba(127, 208, 138, 0.95));
-}
-
-.tableMuted .paper,
-.locallyMuted .paper {
-  opacity: 0.72;
+.speaking .paper,
+.you.speaking .paper {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 0 3px #7fd08a)
+    drop-shadow(0 0 16px rgba(127, 208, 138, 1));
+  animation: seat-speak 0.85s ease-in-out infinite;
 }
 
 .micBadge {
@@ -97,6 +100,22 @@
   pointer-events: none;
 }
 
+.micLive {
+  background: rgba(18, 42, 24, 0.92);
+  color: #7fd08a;
+}
+
+.micLocal {
+  right: auto;
+  left: 6%;
+  background: rgba(42, 18, 10, 0.92);
+  color: #e8a070;
+}
+
+.speaking .micLive {
+  animation: mic-speak 0.85s ease-in-out infinite;
+}
+
 .bubble,
 .office,
 .next {
@@ -109,6 +128,8 @@
 
 .bubble {
   bottom: calc(100% + 22px);
+  box-sizing: border-box;
+  width: max-content;
   max-width: 140px;
   padding: 6px 10px;
   border-radius: 10px;
@@ -118,6 +139,14 @@
   font-weight: 700;
   line-height: 1.35;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  // Glued strings have no wrap points; without this the cloud grows the table.
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
 
   &::after {
     content: '';
@@ -280,8 +309,33 @@
   }
 }
 
+@keyframes seat-speak {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes mic-speak {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.75;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .selectable .paper {
+  .selectable .paper,
+  .speaking .paper,
+  .you.speaking .paper,
+  .speaking .micLive {
     animation: none;
   }
 }
