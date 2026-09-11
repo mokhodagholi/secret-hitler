@@ -19,7 +19,7 @@ mediasoup.
 | WS frames | [`shared/src/types/events.ts`](../../shared/src/types/events.ts) |
 | SFU | [`server/src/voice/`](../../server/src/voice/) (`VoiceHub` + mediasoup) |
 | Signaling | existing `/ws` in [`SocketHandler`](../../server/src/ws/SocketHandler.ts) |
-| ICE | UDP mediasoup ports + coturn. Do not publish 40000–40999 in Compose; Docker hangs on that range and 443 dies. Host-network the server (or a handful of ports) when this flag turns on. |
+| ICE | UDP mediasoup ports on the host-networked server + coturn. Compose must not publish 40000–40999 — Docker hangs on that range and 443 dies. |
 | Client | [`VoiceService`](../src/services/VoiceService.ts) |
 
 `VoiceHub` watches engine events (death, leave, disconnect) and pauses
