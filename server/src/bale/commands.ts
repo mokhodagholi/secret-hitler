@@ -22,10 +22,13 @@ export interface BotReply {
 
 const ROOM_CODE = /^[A-Za-z0-9]{6}$/;
 
-/** `https://ble.ir/@secret_hitler_bot?start=` or `...?start=ABC123`. */
-export function baleStartLink(botUsername: string, start = ''): string {
-  const nick = botUsername.startsWith('@') ? botUsername : `@${botUsername}`;
-  return `https://ble.ir/${nick}?start=${start.toUpperCase()}`;
+/**
+ * Opens the mini-app: `https://ble.ir/bot_name?startapp=` plus an optional
+ * payload (room code for invites, anything else later).
+ */
+export function baleStartLink(botUsername: string, startApp = ''): string {
+  const nick = botUsername.replace(/^@/, '');
+  return `https://ble.ir/${nick}?startapp=${startApp}`;
 }
 
 /** Normalize `/find-game@bot args` → `{ command: 'find_game', arg }`. */
@@ -51,7 +54,7 @@ function formatLobby(room: RoomSummary): string {
 }
 
 function formatGame(room: RoomSummary): string {
-  const status = room.phase === Phase.Lobby ? 'لابی' : 'در حال بازی';
+  const status = room.phase === Phase.Lobby ? 'اتاق انتظار' : 'در حال بازی';
   const lock = room.hasPassword ? ' 🔒' : '';
   return `${room.name}${lock} — ${status} — ${room.playerCount}/${room.maxPlayers} — کد ${room.code}`;
 }
@@ -67,13 +70,14 @@ function roomButtons(botUsername: string, rooms: RoomSummary[]) {
 function startReply(botUsername: string): BotReply {
   return {
     text: [
-      'به هیتلر مخفی خوش آمدید.',
+      'به راز هیتلر خوش اومدید.',
       '',
-      'اتاق‌ها همان اتاق‌های مینی‌اپ هستند:',
+      'برای شروع، دکمهٔ پایین رو بزن. اگه لینک دعوت داری، همون رو باز کن تا مستقیم بری سر میز.',
+      '',
       '/find_game — اتاق باز پیدا کن',
-      '/games — همه بازی‌های جاری',
-      '/join CODE — ورود با کد اتاق',
-      '/invite — لینک دعوت اتاقت',
+      '/games — بازی‌های در جریان',
+      '/join CODE — با کد اتاق بیا تو',
+      '/invite — لینک دعوت دوستات',
       '',
       baleStartLink(botUsername),
     ].join('\n'),
@@ -85,12 +89,12 @@ function findGameReply(ctx: BotCommandContext): BotReply {
   const open = ctx.lobbies.filter((room) => room.playerCount < room.maxPlayers);
   if (open.length === 0) {
     return {
-      text: ['الان اتاق بازی بازی نیست. یکی بسازید:', baleStartLink(ctx.botUsername)].join('\n'),
+      text: ['الان اتاق بازی نیست. یکی بساز:', baleStartLink(ctx.botUsername)].join('\n'),
       reply_markup: playKeyboard(ctx.botUsername),
     };
   }
   return {
-    text: ['اتاق‌های باز (همان لیست مینی‌اپ):', '', ...open.map(formatLobby)].join('\n'),
+    text: ['اتاق‌های باز:', '', ...open.map(formatLobby)].join('\n'),
     reply_markup: roomButtons(ctx.botUsername, open),
   };
 }
@@ -98,12 +102,12 @@ function findGameReply(ctx: BotCommandContext): BotReply {
 function gamesReply(ctx: BotCommandContext): BotReply {
   if (ctx.games.length === 0) {
     return {
-      text: ['هیچ بازی زنده‌ای نیست. یکی بسازید:', baleStartLink(ctx.botUsername)].join('\n'),
+      text: ['الان هیچ بازی‌ای در جریان نیست. یکی بساز:', baleStartLink(ctx.botUsername)].join('\n'),
       reply_markup: playKeyboard(ctx.botUsername),
     };
   }
   return {
-    text: ['بازی‌های جاری:', '', ...ctx.games.map(formatGame)].join('\n'),
+    text: ['بازی‌های در جریان:', '', ...ctx.games.map(formatGame)].join('\n'),
     reply_markup: roomButtons(
       ctx.botUsername,
       ctx.games.filter((room) => room.phase === Phase.Lobby && room.playerCount < room.maxPlayers),
@@ -115,7 +119,7 @@ function joinReply(ctx: BotCommandContext, arg: string): BotReply {
   const code = arg.toUpperCase();
   if (!ROOM_CODE.test(code)) {
     return {
-      text: 'کد اتاق را بعد از دستور بفرستید، مثلاً:\n/join ABC123',
+      text: 'کد اتاق رو بعد از دستور بنویس، مثلاً:\n/join ABC123',
       reply_markup:
         ctx.lobbies.length > 0
           ? roomButtons(ctx.botUsername, ctx.lobbies)
@@ -127,12 +131,12 @@ function joinReply(ctx: BotCommandContext, arg: string): BotReply {
     return { text: `اتاقی با کد ${code} پیدا نشد.` };
   }
   if (room.phase !== Phase.Lobby) {
-    return { text: `اتاق ${room.name} (${code}) دیگر در لابی نیست.` };
+    return { text: `اتاق ${room.name} (${code}) دیگه تو اتاق انتظار نیست.` };
   }
   if (room.playerCount >= room.maxPlayers) {
-    return { text: `اتاق ${room.name} (${code}) پر است.` };
+    return { text: `اتاق ${room.name} (${code}) پره.` };
   }
-  const lock = room.hasPassword ? '\nاین اتاق رمز دارد؛ مینی‌اپ رمز را می‌پرسد.' : '';
+  const lock = room.hasPassword ? '\nاین اتاق رمز داره؛ تو بازی ازت می‌پرسه.' : '';
   const link = baleStartLink(ctx.botUsername, code);
   return {
     text: `ورود به ${room.name} — کد ${code}${lock}\n${link}`,
@@ -144,7 +148,7 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   const code = (arg || ctx.seated?.code || '').toUpperCase();
   if (!ROOM_CODE.test(code)) {
     return {
-      text: 'اول در مینی‌اپ یک اتاق بسازید یا بپیوندید، بعد /invite بزنید.\nیا کد را بنویسید: /invite ABC123',
+      text: 'اول تو بازی یه اتاق بساز یا برو تو یکی، بعد /invite بزن.\nیا کد رو بنویس: /invite ABC123',
       reply_markup: playKeyboard(ctx.botUsername),
     };
   }
@@ -152,7 +156,7 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   const name = room?.name ?? ctx.seated?.roomName ?? code;
   const link = baleStartLink(ctx.botUsername, code);
   return {
-    text: `دعوت به ${name}\nکد: ${code}\n${link}`,
+    text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}\n${link}`,
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
     },
@@ -194,9 +198,9 @@ export function handleBotText(ctx: BotCommandContext): BotReply {
 }
 
 export const BALE_BOT_COMMANDS = [
-  { command: 'start', description: 'شروع و ورود به مینی‌اپ' },
+  { command: 'start', description: 'شروع بازی' },
   { command: 'find_game', description: 'پیدا کردن اتاق باز' },
-  { command: 'games', description: 'لیست بازی‌های جاری' },
-  { command: 'join', description: 'پیوستن با کد اتاق' },
-  { command: 'invite', description: 'دعوت دوستان به اتاق' },
+  { command: 'games', description: 'بازی‌های در جریان' },
+  { command: 'join', description: 'ورود با کد اتاق' },
+  { command: 'invite', description: 'دعوت دوستان' },
 ];

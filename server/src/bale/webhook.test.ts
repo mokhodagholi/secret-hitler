@@ -41,9 +41,10 @@ describe('Bale webhook', () => {
 
     expect(status).toBe(200);
     expect(sent).toHaveLength(1);
-    expect(sent[0].text).toContain('هیتلر مخفی');
+    expect(sent[0].text).toContain('راز هیتلر');
+    expect(sent[0].text).not.toContain('هیتلر مخفی');
     expect(JSON.stringify(sent[0].reply_markup)).toContain(
-      'https://ble.ir/@secret_hitler_bot?start=',
+      'https://ble.ir/secret_hitler_bot?startapp=',
     );
     expect(JSON.stringify(sent[0])).not.toContain('mrfantastic');
   });

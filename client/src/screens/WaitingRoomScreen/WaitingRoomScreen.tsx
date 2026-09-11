@@ -53,7 +53,7 @@ export function WaitingRoomScreen() {
 
   // Session dropped (left room / token expired) → back to the play menu.
   createEffect(() => {
-    if (!game.inRoom()) nav.navigate('play');
+    if (!game.inRoom()) nav.returnTo('play');
   });
 
   // Host pressed start → server flips the phase → everyone moves to the board.
@@ -117,7 +117,7 @@ export function WaitingRoomScreen() {
   function leaveRoom(): void {
     setConfirmingLeave(false);
     game.leaveRoom();
-    nav.navigate('play');
+    nav.returnTo('play');
   }
 
   function tryStart(): void {
@@ -157,7 +157,7 @@ export function WaitingRoomScreen() {
         <ScreenHeader
           title={formatMessage('waiting.title')}
           tone="warm"
-          onBack={() => setConfirmingLeave(true)}
+          onBack={() => setConfirmingLeave((open) => !open)}
         />
 
         <Show

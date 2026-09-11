@@ -1,6 +1,8 @@
 import { createSignal, type Accessor } from 'solid-js';
+import { isLocalBaleHost } from './bale-mock';
 import type { NavigationService } from './NavigationService';
 import type { SettingsService } from './SettingsService';
+import { joinCodeFromStartApp } from './startApp';
 
 export interface BaleUser {
   id: number;
@@ -26,6 +28,18 @@ export class BaleService {
     return typeof window !== 'undefined' && window.Bale?.WebApp != null;
   }
 
+  /** Real Bale WebView — not the localhost mock, where native chrome is invisible. */
+  usesNativeBack(): boolean {
+    return this.isMiniApp() && !isLocalBaleHost();
+  }
+
+  syncBackButton(canGoBack: boolean): void {
+    const webApp = typeof window !== 'undefined' ? window.Bale?.WebApp : undefined;
+    if (!webApp || !this.usesNativeBack()) return;
+    if (canGoBack) webApp.BackButton.show();
+    else webApp.BackButton.hide();
+  }
+
   /** Raw `initData` string to send on create/join so the bot can /invite. */
   initData(): string | undefined {
     return this.rawInitData ?? undefined;
@@ -36,13 +50,11 @@ export class BaleService {
     if (!webApp) return;
 
     webApp.ready();
-    webApp.BackButton.onClick(() => nav.back());
-    webApp.BackButton.show();
+    webApp.BackButton.onClick(() => nav.requestBack());
+    this.syncBackButton(nav.canGoBack());
 
-    const startParam = webApp.initDataUnsafe?.start_param?.trim();
-    if (startParam && /^[A-Za-z0-9]{6}$/.test(startParam)) {
-      nav.offerJoinCode(startParam);
-    }
+    const joinCode = joinCodeFromStartApp(webApp.initDataUnsafe?.start_param);
+    if (joinCode) nav.offerJoinCode(joinCode);
 
     const initData = webApp.initData?.trim();
     if (!initData) return;

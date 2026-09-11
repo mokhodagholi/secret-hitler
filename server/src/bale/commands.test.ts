@@ -37,38 +37,52 @@ describe('parseBotCommand', () => {
   });
 });
 
+describe('baleStartLink', () => {
+  it('Should open the mini-app with startapp, with or without a payload', () => {
+    expect(baleStartLink(BOT)).toBe('https://ble.ir/secret_hitler_bot?startapp=');
+    expect(baleStartLink('secret_hitler_bot', 'ABC123')).toBe(
+      'https://ble.ir/secret_hitler_bot?startapp=ABC123',
+    );
+    expect(baleStartLink(BOT, 'naqvvxd7vbc2xvky')).toBe(
+      'https://ble.ir/secret_hitler_bot?startapp=naqvvxd7vbc2xvky',
+    );
+  });
+});
+
 describe('handleBotText', () => {
-  it('Should never mention the public domain in bot replies', () => {
+  it('Should greet /start in natural Persian and never mention the public domain', () => {
     const reply = ctx({ text: '/start' });
+    expect(reply.text).toContain('راز هیتلر');
+    expect(reply.text).not.toContain('هیتلر مخفی');
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
-    expect(reply.text).toContain('https://ble.ir/@secret_hitler_bot?start=');
+    expect(reply.text).toContain('https://ble.ir/secret_hitler_bot?startapp=');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
-      'https://ble.ir/@secret_hitler_bot?start=',
+      'https://ble.ir/secret_hitler_bot?startapp=',
     );
   });
 
-  it('Should list the same lobby rooms on /find-game with Bale start links', () => {
+  it('Should list the same lobby rooms on /find-game with Bale startapp links', () => {
     const reply = ctx({ text: '/find-game' });
     expect(reply.text).toContain('ABC123');
     expect(reply.text).toContain('Friday');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
-      'https://ble.ir/@secret_hitler_bot?start=ABC123',
+      'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
   });
 
-  it('Should join by code with a ble.ir start link', () => {
+  it('Should join by code with a ble.ir startapp link', () => {
     const reply = ctx({ text: '/join ABC123' });
     expect(reply.text).toContain('Friday');
-    expect(reply.text).toContain('https://ble.ir/@secret_hitler_bot?start=ABC123');
+    expect(reply.text).toContain('https://ble.ir/secret_hitler_bot?startapp=ABC123');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
-      'https://ble.ir/@secret_hitler_bot?start=ABC123',
+      'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
   });
 
   it('Should treat a bare room code as /join', () => {
     const reply = ctx({ text: 'abc123' });
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
-      'https://ble.ir/@secret_hitler_bot?start=ABC123',
+      'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
   });
 
@@ -80,6 +94,9 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('ABC123');
     expect(reply.text).toContain('Friday');
     expect(reply.text).toContain(baleStartLink(BOT, 'ABC123'));
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
+      'https://ble.ir/secret_hitler_bot?startapp=ABC123',
+    );
   });
 
   it('Should list in-progress games on /games', () => {

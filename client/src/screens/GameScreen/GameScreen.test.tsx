@@ -867,6 +867,25 @@ describe('GameScreen — in-game menu', () => {
     fireEvent.click(screen.getByRole('button', { name: en.gameMenu.quit }));
     expect(screen.getByText(en.leaveDialog.message)).toBeTruthy();
   });
+
+  it('Should close the menu from the shared back action before asking to leave', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.nav.navigate('game');
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
+    expect(screen.getByRole('button', { name: en.gameMenu.music })).toBeTruthy();
+
+    harness.services.nav.requestBack();
+    expect(screen.queryByRole('button', { name: en.gameMenu.music })).toBeNull();
+    expect(screen.queryByText(en.leaveDialog.message)).toBeNull();
+    expect(harness.services.nav.screen()).toBe('game');
+
+    harness.services.nav.requestBack();
+    expect(screen.getByText(en.leaveDialog.message)).toBeTruthy();
+    expect(harness.services.nav.screen()).toBe('game');
+  });
 });
 
 describe('GameScreen — docked chat', () => {

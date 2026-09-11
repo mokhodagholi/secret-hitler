@@ -78,6 +78,10 @@ export function AppProvider(
     }),
   );
 
+  createEffect(() => {
+    services.bale.syncBackButton(services.nav.canGoBack());
+  });
+
   // Stop or resume the background loop when the Music setting is toggled.
   createEffect(() =>
     services.sound.setMusicEnabled(services.settings.settings.music),

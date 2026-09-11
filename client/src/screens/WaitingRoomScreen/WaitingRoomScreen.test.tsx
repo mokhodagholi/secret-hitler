@@ -2,6 +2,7 @@ import { describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { WaitingRoomScreen } from './WaitingRoomScreen';
+import { en } from '../../i18n/locales/en';
 import { buildHarness, makePlayer, makeView, renderWithApp } from '../../../test/test-utils';
 
 describe('WaitingRoomScreen', () => {
@@ -179,6 +180,22 @@ describe('WaitingRoomScreen', () => {
     expect(screen.getByRole('listitem', { name: 'You' }).className).not.toMatch(
       /compact/,
     );
+  });
+
+  it('Should ask before leaving the room when the shared back action fires', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.nav.navigate('waiting-room');
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    harness.services.nav.requestBack();
+    expect(screen.getByText(en.leaveDialog.hostMessage)).toBeTruthy();
+    expect(harness.services.nav.screen()).toBe('waiting-room');
   });
 
   it('Should navigate to the game board once the lobby phase ends', () => {

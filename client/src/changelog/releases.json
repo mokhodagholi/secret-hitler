@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.3.0",
+      "bump": "minor",
+      "date": "2026-09-11",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "لینک‌های بله خودِ بازی را باز می‌کنند.",
+          "en": "Bale links now open the table itself."
+        },
+        {
+          "kind": "feat",
+          "fa": "در مینی‌اپ دکمهٔ بازگشت تکراری دیده نمی‌شود؛ خروج از میز یا اتاق انتظار پیش از رفتن می‌پرسد.",
+          "en": "The mini-app no longer draws a second back arrow, and leaving the table or waiting room now asks first."
+        },
+        {
+          "kind": "feat",
+          "fa": "ربات بله کوتاه‌تر و خودمانی‌تر جواب می‌دهد.",
+          "en": "The Bale bot now answers in shorter, spoken Persian."
+        }
+      ]
+    },
+    {
       "version": "0.2.0",
       "bump": "minor",
       "date": "2026-09-11",

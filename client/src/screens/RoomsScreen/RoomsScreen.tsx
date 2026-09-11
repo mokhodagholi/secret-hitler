@@ -25,7 +25,7 @@ export interface RoomsScreenProps {
 }
 
 export function RoomsScreen(props: RoomsScreenProps) {
-  const { nav, game, i18n } = useApp();
+  const { nav, game, i18n, bale } = useApp();
   const { formatMessage } = i18n;
   const [tab, setTab] = createSignal<RoomsTab>(props.initialTab ?? 'create');
 
@@ -69,9 +69,11 @@ export function RoomsScreen(props: RoomsScreenProps) {
           </div>
         </div>
 
-        <button type="button" class={styles.back} onClick={() => nav.back()}>
-          {formatMessage('common.back')}
-        </button>
+        <Show when={!bale.usesNativeBack()}>
+          <button type="button" class={styles.back} onClick={() => nav.requestBack()}>
+            {formatMessage('common.back')}
+          </button>
+        </Show>
       </div>
     </Screen>
   );

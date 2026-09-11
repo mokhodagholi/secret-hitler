@@ -63,12 +63,27 @@ export function GameScreen() {
 
   // Session dropped (left / expired) → back to the play menu.
   createEffect(() => {
-    if (!game.inRoom()) nav.navigate('play');
+    if (!game.inRoom()) nav.returnTo('play');
   });
 
   onMount(() => {
+    const handleBack = () => {
+      if (menuOpen()) {
+        setMenuOpen(false);
+        return;
+      }
+      if (playersOpen()) {
+        setPlayersOpen(false);
+        return;
+      }
+      setConfirmingLeave((open) => !open);
+    };
+    nav.setBackHandler(handleBack);
     const ticker = setInterval(() => setNow(Date.now()), 1000);
-    onCleanup(() => clearInterval(ticker));
+    onCleanup(() => {
+      nav.clearBackHandler(handleBack);
+      clearInterval(ticker);
+    });
   });
 
   // Hold the draw-pile count at its pre-deal value, then tick down as each
@@ -667,7 +682,7 @@ export function GameScreen() {
   function leaveRoom(): void {
     setConfirmingLeave(false);
     game.leaveRoom();
-    nav.navigate('play');
+    nav.returnTo('play');
   }
 
   return (
@@ -1046,7 +1061,7 @@ export function GameScreen() {
                 showRoles={showRoles()}
                 onLeave={() => {
                   game.leaveRoom();
-                  nav.navigate('play');
+                  nav.returnTo('play');
                 }}
               />
             </Show>

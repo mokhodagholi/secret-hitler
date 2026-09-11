@@ -1,4 +1,4 @@
-import { Show, type JSX } from 'solid-js';
+import { Show, createEffect, onCleanup, type JSX } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../Icon/Icon';
 import styles from './ScreenHeader.module.scss';
@@ -14,19 +14,29 @@ export interface ScreenHeaderProps {
 
 /** Inner-screen header: back button, small logo, screen title, optional right action. */
 export function ScreenHeader(props: ScreenHeaderProps) {
-  const { nav, i18n } = useApp();
+  const { nav, i18n, bale } = useApp();
+
+  createEffect(() => {
+    const override = props.onBack;
+    if (!override) return;
+    nav.setBackHandler(override);
+    onCleanup(() => nav.clearBackHandler(override));
+  });
+
   return (
     <header
       classList={{ [styles.header]: true, [styles.warm]: props.tone === 'warm' }}
     >
-      <button
-        type="button"
-        class={styles.back}
-        onClick={() => (props.onBack ? props.onBack() : nav.back())}
-        aria-label={i18n.formatMessage('common.goBack')}
-      >
-        <Icon name="arrowLeft" size={24} />
-      </button>
+      <Show when={!bale.usesNativeBack()}>
+        <button
+          type="button"
+          class={styles.back}
+          onClick={() => nav.requestBack()}
+          aria-label={i18n.formatMessage('common.goBack')}
+        >
+          <Icon name="arrowLeft" size={24} />
+        </button>
+      </Show>
       <Show when={props.right}>
         <div class={styles.right}>{props.right}</div>
       </Show>
