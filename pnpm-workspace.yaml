@@ -9,10 +9,15 @@ packages:
 minimumReleaseAge: 0
 minimumReleaseAgeStrict: false
 
+# VPS Docker installs hit ECONNRESET against the npm registry when many
+# tarballs are fetched in parallel.
+networkConcurrency: 1
+fetchTimeout: 100000
+
 # Lifecycle scripts are blocked unless listed. esbuild/core-js ship native
 # binaries via postinstall; strictDepBuilds would fail CI without this map.
 strictDepBuilds: false
 allowBuilds:
   esbuild: true
   core-js: true
-
+  '@parcel/watcher': true

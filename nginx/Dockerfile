@@ -11,7 +11,8 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/
 COPY client/package.json ./client/
 
-RUN pnpm install --frozen-lockfile --filter @secret-hitler/client...
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter @secret-hitler/client...
 
 COPY shared ./shared
 COPY client ./client

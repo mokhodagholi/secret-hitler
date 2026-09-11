@@ -11,7 +11,8 @@ COPY shared/package.json ./shared/
 COPY bale-bot/package.json ./bale-bot/
 COPY server/package.json ./server/
 
-RUN pnpm install --frozen-lockfile --filter @secret-hitler/server...
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter @secret-hitler/server...
 
 COPY shared ./shared
 COPY bale-bot ./bale-bot
@@ -36,7 +37,8 @@ COPY shared/package.json ./shared/
 COPY bale-bot/package.json ./bale-bot/
 COPY server/package.json ./server/
 
-RUN pnpm install --frozen-lockfile --filter @secret-hitler/server... --prod
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter @secret-hitler/server... --prod
 
 COPY --from=build /app/shared/dist ./shared/dist
 COPY --from=build /app/bale-bot/dist ./bale-bot/dist
