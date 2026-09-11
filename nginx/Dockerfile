@@ -1,8 +1,6 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-ARG APP_VERSION
-ENV APP_VERSION=$APP_VERSION
 ENV NPM_CONFIG_FETCH_RETRIES=5
 ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
 ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
@@ -18,6 +16,9 @@ RUN pnpm install --frozen-lockfile --filter @secret-hitler/client...
 COPY shared ./shared
 COPY client ./client
 COPY tsconfig.base.json ./
+
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
 
 RUN pnpm --filter @secret-hitler/shared build \
   && pnpm --filter @secret-hitler/client build

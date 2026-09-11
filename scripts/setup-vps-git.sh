@@ -22,7 +22,7 @@ while read -r _oldrev _newrev ref; do
   fi
   git checkout -f master
   cd "${WORK}"
-  exec ./scripts/deploy.sh
+  exec ./scripts/deploy.sh "\$_oldrev"
 done
 EOF
 chmod +x "$BARE/hooks/post-receive"

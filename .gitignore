@@ -4,6 +4,7 @@ dist
 *.log
 .DS_Store
 .env
+.deployed-revision
 ssl/*.pem
 ssl/*.key
 ssl/*.crt
