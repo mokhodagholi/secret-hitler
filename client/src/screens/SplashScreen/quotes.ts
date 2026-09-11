@@ -23,32 +23,32 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'The liberals have the numbers. The fascists have the names.',
-    'لیبرال‌ها تعداد دارن. فاشیست‌ها اسم‌ها رو.',
+    'لیبرال‌ها بیشترن. فاشیست‌ها می‌دونن کی کیه.',
   ),
   line('Ja or Nein. The rest is theatre.', 'یا موافق یا مخالف. بقیه نمایشه.'),
   line(
     'Trust is the first policy you enact — and the first they burn.',
-    'اعتماد اولین قانونیه که تصویب می‌کنی — و اولین قانونی که می‌سوزونن.',
+    'اعتماد اولین قانونیه که تصویب می‌کنید — و اولین قانونی که می‌سوزونن.',
   ),
 
   line(
     'The great masses of the people will more easily fall victims to a big lie than to a small one.',
-    'توده‌ها خیلی راحت‌تر فریب دروغ بزرگ را می‌خورند تا دروغ کوچک را.',
+    'مردم دروغ بزرگ را آسان‌تر باور می‌کنند تا دروغ کوچک را.',
     mk('Mein Kampf', 'نبرد من'),
   ),
   line(
     'Make the lie big. Keep it simple. Keep saying it.',
-    'دروغ را بزرگ کن. ساده کن. تکرار کن.',
-    mk('on propaganda', 'دربارهٔ تبلیغات'),
+    'دروغ را بزرگ بگویید. ساده بگویید. مدام تکرارش کنید.',
+    mk('on propaganda', 'در باب تبلیغات'),
   ),
   line(
     'It is always more difficult to fight against faith than against knowledge.',
-    'جنگیدن با ایمان همیشه سخت‌تر از جنگیدن با دانش است.',
+    'جنگ با ایمان همیشه سخت‌تر از جنگ با دانش است.',
     mk('Mein Kampf', 'نبرد من'),
   ),
   line(
     'Born in Braunau am Inn, 20 April 1889.',
-    '۲۰ آوریل ۱۸۸۹، در براونائو آم این به دنیا آمد.',
+    'در براونائو آم این به دنیا آمد؛ بیستم آوریل ۱۸۸۹.',
   ),
   line(
     'His father Alois was a customs official. He wanted the son to follow.',
@@ -56,7 +56,7 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'His mother Klara spoiled him. The house never recovered from that.',
-    'مادرش کلارا لوسش کرد. خانه از آن حال بیرون نیامد.',
+    'مادرش کلارا لوسش کرد. خانه دیگر سر پا نشد.',
   ),
   line(
     'He was a poor student and left school without the diploma his father wanted.',
@@ -100,7 +100,7 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He decided the army had been stabbed in the back. He never let that story go.',
-    'تصمیم گرفت ارتش از پشت خنجر خورده. آن قصه را هیچ‌وقت ول نکرد.',
+    'گفت ارتش را از پشت زده‌اند. از این قصه دست برنداشت.',
   ),
   line(
     'He stayed in the army as an informant. Politics was his next uniform.',
@@ -108,23 +108,23 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He joined a tiny workers’ party in Munich because someone told him to go listen.',
-    'به یک حزب کوچک کارگری در مونیخ پیوست، چون کسی گفت برو بشنو.',
+    'به یک حزب کوچک کارگری در مونیخ پیوست، چون کسی گفته بود برود بشنود.',
   ),
   line(
     'He discovered the microphone. The room discovered him.',
-    'میکروفون را کشف کرد. اتاق هم او را کشف کرد.',
+    'میکروفون را پیدا کرد. سالن هم او را پیدا کرد.',
   ),
   line(
     'He could speak for hours without notes. The crowd did the remembering.',
-    'ساعت‌ها بدون یادداشت حرف می‌زد. جمعیت حفظ می‌کرد.',
+    'ساعت‌ها بی‌یادداشت حرف می‌زد. ازبر کردن کارِ جمعیت بود.',
   ),
   line(
     'He rehearsed the gestures. The rage was theatre with a schedule.',
-    'حرکات دست را تمرین می‌کرد. خشم تئاتری بود با برنامه.',
+    'حرکت دست را تمرین می‌کرد. خشم تئاتر بود؛ برنامه داشت.',
   ),
   line(
     'The Beer Hall Putsch of 1923 was a farce. Sixteen of his men died. He ran.',
-    'کودتای آبجوفروشی ۱۹۲۳ مسخره بود. شانزده نفر از آدم‌هایش مردند. او فرار کرد.',
+    'کودتای آبجوفروشی ۱۹۲۳ مضحکه بود. شانزده نفر از آدم‌هایش مردند. خودش فرار کرد.',
   ),
   line(
     'A court that admired him gave a light sentence. Prison became a study.',
@@ -140,7 +140,7 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He learned that ballots could finish what bullets had failed.',
-    'فهمید رأی می‌تواند کاری را تمام کند که گلوله نتوانسته.',
+    'فهمید رأی همان کاری را تمام می‌کند که گلوله نتوانست.',
   ),
   line(
     'He rebuilt the party around one man. The man was himself.',
@@ -152,7 +152,7 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He waited through the Depression. Hunger made the speeches louder.',
-    'رکود را صبر کرد. گرسنگی صدای سخنرانی‌ها را بلندتر کرد.',
+    'رکود را تاب آورد. گرسنگی سخنرانی‌ها را بلندتر کرد.',
   ),
   line(
     'On 30 January 1933 he was appointed chancellor. The old elite thought they could use him.',
@@ -172,7 +172,7 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'The Night of the Long Knives was a massacre of his own. Loyalty had a limit: him.',
-    'شب کاردهای بلند کشتار خودی‌ها بود. وفاداری یک سقف داشت: خودش.',
+    'شب دشنه‌های بلند کشتار خودی‌ها بود. وفاداری یک سقف داشت: خودش.',
   ),
   line(
     'He never learned to drive. Someone else held the wheel. He held the map.',
@@ -192,7 +192,7 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He loved dogs, especially German Shepherds. Blondi died with him.',
-    'سگ دوست داشت، مخصوصاً ژرمن شپرد. بلوندی با او مرد.',
+    'سگ دوست داشت، مخصوصاً سگِ ژرمن. بلوندی با او مرد.',
   ),
   line(
     'He hated the smell of hospitals. Other people’s pain was abstract until it was useful.',
@@ -228,8 +228,8 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'What luck for rulers that men do not think.',
-    'چه شانسی برای حاکمان که آدم‌ها فکر نمی‌کنند.',
-    mk('attributed', 'نقل‌شده'),
+    'چه شانس بزرگی برای حاکمان، که مردم فکر نمی‌کنند.',
+    mk('attributed', 'منسوب به او'),
   ),
   line(
     'The victor will never be asked if he told the truth.',
@@ -238,17 +238,17 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'Propaganda must be popular and must adapt to the least intelligent.',
-    'تبلیغات باید عامه‌پسند باشد و خودش را با کم‌هوش‌ترین‌ها جور کند.',
+    'تبلیغات باید پسندِ مردم باشد و خودش را با کم‌هوش‌ترین‌ها جور کند.',
     mk('Mein Kampf', 'نبرد من'),
   ),
   line(
     'Words build bridges into unexplored regions.',
-    'کلمات پل می‌سازند به جاهایی که هنوز دیده نشده.',
+    'واژه راه باز می‌کند به جایی که هنوز کسی نرفته.',
     mk('Mein Kampf', 'نبرد من'),
   ),
   line(
     'He called himself an artist to the end. History called him something else.',
-    'تا آخر خودش را هنرمند نامید. تاریخ چیز دیگری صداش کرد.',
+    'تا آخر خودش را هنرمند نامید. تاریخ چیز دیگری صدایش کرد.',
   ),
   line(
     'He painted decent watercolors of buildings. He could not paint people.',
@@ -280,11 +280,11 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He used radio the way earlier tyrants used the square.',
-    'از رادیو همان‌طور استفاده کرد که ستمگرهای قبلی از میدان.',
+    'از رادیو همان‌طور استفاده کرد که ستمگران پیشین از میدان.',
   ),
   line(
     'Film was a weapon. He sat through the rushes like a general.',
-    'فیلم اسلحه بود. راش‌ها را مثل ژنرال می‌دید.',
+    'فیلم اسلحه بود. فیلم خام را مثل ژنرال می‌دید.',
   ),
   line(
     'He simplified every enemy into one face. Complexity was a liberal vice.',
@@ -296,11 +296,11 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He was legally appointed. That is the sentence that should keep you awake.',
-    'قانونی منصوب شد. همین جمله باید بیدارت نگه دارد.',
+    'قانونی منصوب شد. همین جمله باید بیدارتان نگه دارد.',
   ),
   line(
     'He did not seize the state in one night. He was handed keys, then changed the locks.',
-    'دولت را یک‌شبه نگرفت. کلید را دادند دستش، بعد قفل‌ها را عوض کرد.',
+    'دولت را یک‌شبه نگرفت. کلید را به دستش دادند؛ بعد قفل‌ها را عوض کرد.',
   ),
   line(
     'He made the lie feel like loyalty. That is harder to vote against.',
@@ -376,11 +376,11 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He made obedience feel like belonging.',
-    'اطاعت را شبیه تعلق خاطر کرد.',
+    'اطاعت را شبیه باهم‌بودن کرد.',
   ),
   line(
     'He made belonging feel like a debt you could only pay in other people’s blood.',
-    'تعلق را شبیه بدهی کرد که فقط با خون دیگران ادا می‌شد.',
+    'باهم‌بودن را شبیه بدهی کرد که فقط با خون دیگران ادا می‌شد.',
   ),
   line(
     'He died in a bunker in April 1945. The voice stopped. The lesson did not.',
@@ -404,7 +404,7 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'He was not inevitable. That is the only comforting sentence, and it is not very comforting.',
-    'اجتناب‌ناپذیر نبود. تنها جملهٔ تسلی همین است، و خیلی هم تسلی نیست.',
+    'حتمی نبود. تنها جمله‌ای که کمی آرام می‌کند همین است — و خیلی هم آرام نمی‌کند.',
   ),
   line(
     'He needed ordinary people to nod. The nodding is the part that still happens.',
@@ -424,6 +424,6 @@ export const SPLASH_QUOTES: readonly SplashQuote[] = [
   ),
   line(
     'The last trick was to make you think it could never happen at your table.',
-    'آخرین حقه این بود که فکر کنی سر میز تو هیچ‌وقت اتفاق نمی‌افتد.',
+    'آخرین حقه این بود که فکر کنید سر میز شما هیچ‌وقت اتفاق نمی‌افتد.',
   ),
 ];

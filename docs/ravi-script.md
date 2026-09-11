@@ -99,7 +99,7 @@ Do not invent extra tags per line. If it is not in this table, it is
 
 ### `president.nextYou`
 - **When:** The presidency passes to you.
-- **FA:** شما رئیس جمهور شدید.
+- **FA:** شما رئیس‌جمهور شدید.
 - **EN:** You are President.
 - **Tone:** `[announcing]`
 - **Audio:** same as FA.
@@ -130,7 +130,7 @@ Do not invent extra tags per line. If it is not in this table, it is
 
 ### `discuss.afterPower`
 - **When:** Discussion opens after the President finished an executive power.
-- **FA:** خب از قدرتا استفاده کردیم بسه، حالا حرف بزنیم
+- **FA:** خب از قدرت‌ها استفاده کردیم، بسه. حالا حرف بزنیم.
 - **EN:** Okay, enough with the powers. Now we talk.
 - **Tone:** `[calm]`
 
@@ -249,7 +249,7 @@ word already means “or”, so «یا یا نِین» is noise.
 ### `vote.collecting`
 - **When:** Cards are flying face-down to the centre. Optional; skip if
   it talks over the motion.
-- **FA:** رای‌ها داره جمع می‌شه.
+- **FA:** رأی‌ها داره جمع می‌شه.
 - **EN:** The votes are being gathered.
 - **Tone:** `[calm]`
 
@@ -263,7 +263,7 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `vote.passed`
 - **When:** Strict Ja majority.
-- **FA subtitle:** دولت رای آورد. {ja} موافق، {nein} مخالف.
+- **FA subtitle:** دولت رأی آورد. {ja} موافق، {nein} مخالف.
 - **FA audio:** دولت رای آورد.
 - **EN subtitle:** The government is elected. {ja} Ja, {nein} Nein.
 - **EN audio:** The government is elected.
@@ -295,7 +295,7 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `chaos.start`
 - **When:** Third consecutive failure.
-- **FA:** سه دولت پشت‌سرهم رای نیاورد. آشوب شروع شد.
+- **FA:** سه دولت پشت‌سرهم رأی نیاورد. آشوب شروع شد.
 - **EN:** Three governments failed in a row. Chaos begins.
 
 ### `chaos.enacted`
@@ -316,10 +316,10 @@ word already means “or”, so «یا یا نِین» is noise.
 
 ### `law.presidentChoosing`
 - **When:** President is looking. Public; no colours.
-- **FA:** رئیس جمهور یه کارت رو می‌سوزونه.
+- **FA:** رئیس‌جمهور یه کارت رو می‌سوزونه.
 - **EN:** The President burns a card.
 - **Tone:** `[calm]`
-- **President-only (whisper):** `private.discard` — `یه قانون رو بسوزون.`
+- **President-only (whisper):** `private.discard` — `یه قانون رو بسوزونید.`
 
 ### `law.burned`
 - **When:** One back lands on the discard pile.
@@ -484,8 +484,8 @@ view — the overlay already has the text.
 | `private.nightFascistLarge` | فاشیست‌های دیگه و هیتلر رو ببینید. هیتلر شما رو نمی‌بینه. | See the other Fascists and Hitler. Hitler does not see you. |
 | `private.nightHitlerSmall` | فاشیست‌هاتون رو ببینید. | See your Fascists. |
 | `private.nominate` | شما رئیس‌جمهورید. صدراعظم رو انتخاب کنید. | You are President. Choose a Chancellor. |
-| `private.vote` | به این دولت رای بدید. | Vote on this government. |
-| `private.discard` | یه قانون رو بسوزون. | Burn a policy. |
+| `private.vote` | به این دولت رأی بدید. | Vote on this government. |
+| `private.discard` | یه قانون رو بسوزونید. | Burn a policy. |
 | `private.enact` | یکی رو تصویب کنید. به کسی نشون ندید. | Enact one policy. Show it to no one. |
 
 Hitler at 7–10 uses `private.nightLiberal` (eyes closed). There is no
@@ -511,7 +511,7 @@ table is the **spoken** line.
 | `president.special` | `[announcing]` | انتخابات ویژه شروع شد. |
 | `discuss.start` | `[calm]` | خب، وقت حرف زدنه. |
 | `discuss.afterFail` | `[firm]` | این سری سعی کنید به اجماع برسید! |
-| `discuss.afterPower` | `[calm]` | خب از قدرتا استفاده کردیم بسه، حالا حرف بزنیم. |
+| `discuss.afterPower` | `[calm]` | خب از قدرت‌ها استفاده کردیم، بسه. حالا حرف بزنیم. |
 | `discuss.afterLeave` | `[calm]` | یکی فرار کرد. بقیه سر میز بمونید. |
 | `discuss.afterLeave2` | `[calm]` | یه صندلی خالی شد. دل‌تون واسش تنگ نشه. |
 | `discuss.afterLeave3` | `[calm]` | یکی زد بیرون. صندلی حرف نمی‌زنه — شما بزنید. |
@@ -537,7 +537,7 @@ table is the **spoken** line.
 | `chaos.enacted` | `[grave]` | قانونِ بالای دسته تصویب می‌شه. رئیس‌جمهور قدرتی نمی‌گیره. |
 | `law.draw` | `[calm]` | سه تا قانون می‌ره دست رئیس‌جمهور. |
 | `law.presidentChoosing` | `[calm]` | رئیس جمهور یه کارت رو می‌سوزونه. |
-| `private.discard` | `[whispering]` | یه قانون رو بسوزون. *(President only)* |
+| `private.discard` | `[whispering]` | یه قانون رو بسوزونید. *(President only)* |
 | `law.burned` | `[calm]` | یه قانون سوخت. |
 | `law.pass` | `[calm]` | دو تا قانون می‌ره دست صدراعظم. |
 | `law.chancellorChoosing` | `[calm]` | صدراعظم یکی رو تصویب می‌کنه. |
@@ -571,5 +571,5 @@ table is the **spoken** line.
 | `private.nightHitlerSmall` | `[whispering]` | فاشیست‌هاتون رو ببینید. |
 | `private.nominate` | `[whispering]` | شما رئیس‌جمهورید. صدراعظم رو انتخاب کنید. |
 | `private.vote` | `[whispering]` | به این دولت رای بدید. |
-| `private.discard` | `[whispering]` | یه قانون رو بسوزون. |
+| `private.discard` | `[whispering]` | یه قانون رو بسوزونید. |
 | `private.enact` | `[whispering]` | یکی رو تصویب کنید. به کسی نشون ندید. |

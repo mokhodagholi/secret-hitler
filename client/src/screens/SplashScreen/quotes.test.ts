@@ -7,6 +7,7 @@ describe('SPLASH_QUOTES', () => {
     expect(SPLASH_QUOTES.length).toBeLessThanOrEqual(110);
     for (const quote of SPLASH_QUOTES) {
       expect(quote.by?.fa).not.toBe('سال‌های وین');
+      expect(quote.by?.fa).not.toBe('نقل‌شده');
       expect(quote.by?.en).not.toBe('on the Vienna years');
     }
   });

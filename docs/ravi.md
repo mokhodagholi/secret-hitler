@@ -134,7 +134,7 @@ end Night for the table.
 |---|---|
 | `Night` (new) | Deal, private look, team glance, first President |
 | `Nomination` | Discussion, then “صدراعظم رو انتخاب کنه” |
-| `Voting` | “رای‌گیری آغاز شد” |
+| `Voting` | “رأی‌گیری آغاز شد” |
 | `PresidentLegislative` | “سه تا قانون می‌ره دست رئیس‌جمهور” |
 | `ChancellorLegislative` | “دو تا قانون می‌ره دست صدراعظم” |
 | `SpecialPower` | The matching power line |

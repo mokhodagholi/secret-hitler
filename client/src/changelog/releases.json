@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "0.5.0",
+      "bump": "minor",
+      "date": "2026-09-11",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "عبارت‌های فارسی به زبان خود میز نزدیک‌تر شدند.",
+          "en": "Persian at the table now sounds as if it was spoken there first."
+        },
+        {
+          "kind": "fix",
+          "fa": "دو خط راوی با خطاب درست دوباره ضبط شد.",
+          "en": "Two narrator lines were recorded again, with the address set right."
+        }
+      ]
+    },
+    {
       "version": "0.4.0",
       "bump": "minor",
       "date": "2026-09-11",

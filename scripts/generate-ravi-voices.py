@@ -62,7 +62,7 @@ LINES: dict[str, LineText] = {
     "president.special": "انتخابات ویژه شروع شد.",
     "discuss.start": "خب، وقت حرف زدنه.",
     "discuss.afterFail": "این سری سعی کنید به اجماع برسید!",
-    "discuss.afterPower": "خب از قدرتا استفاده کردیم بسه، حالا حرف بزنیم.",
+    "discuss.afterPower": "خب از قدرت‌ها استفاده کردیم، بسه. حالا حرف بزنیم.",
     "discuss.afterLeave": "یکی فرار کرد. بقیه سر میز بمونید.",
     "discuss.afterLeave2": "یه صندلی خالی شد. دل‌تون واسش تنگ نشه.",
     "discuss.afterLeave3": "یکی زد بیرون. صندلی حرف نمی‌زنه. شما بزنید.",
@@ -121,7 +121,7 @@ LINES: dict[str, LineText] = {
     "private.nightHitlerSmall": "فاشیست‌هاتون رو ببینید.",
     "private.nominate": "شما رئیس‌جمهورید. صدراعظم رو انتخاب کنید.",
     "private.vote": "به این دولت رای بدید.",
-    "private.discard": "یه قانون رو بسوزون.",
+    "private.discard": "یه قانون رو بسوزونید.",
     "private.enact": "یکی رو تصویب کنید. به کسی نشون ندید.",
 }
 
