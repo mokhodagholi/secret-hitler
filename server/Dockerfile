@@ -1,31 +1,12 @@
-FROM node:22-alpine AS build
+# mediasoup's prebuilt worker is glibc. Alpine musl rejects it (status 127) and
+# then compiles via PyPI, which this VPS cannot reach.
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 ENV NPM_CONFIG_FETCH_RETRIES=5
 ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
 ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
 RUN npm install -g pnpm@11.25.0
-# Official Alpine CDN TLS often fails on the VPS. apk still verifies signed
-# packages, so HTTP + Tehran / ParsPack mirrors are enough for the mediasoup toolchain.
-# Alpine's python3 has no pip; mediasoup compiles the worker when the glibc prebuilt fails on musl.
-RUN set -eu; \
-    alpine_version=$(cut -d. -f1,2 /etc/alpine-release); \
-    installed=0; \
-    for mirror in \
-      http://dl-cdn.alpinelinux.org/alpine \
-      http://mirrors.pardisco.co/alpine \
-      http://mirror.mobinhost.com/alpine \
-      https://repo.abrha.net/alpine \
-      http://uk.alpinelinux.org/alpine; do \
-      printf '%s/v%s/main\n%s/v%s/community\n' \
-        "$mirror" "$alpine_version" "$mirror" "$alpine_version" \
-        > /etc/apk/repositories; \
-      if apk add --no-cache python3 py3-pip make g++ linux-headers; then \
-        installed=1; \
-        break; \
-      fi; \
-    done; \
-    test "$installed" -eq 1
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/
@@ -44,7 +25,7 @@ RUN pnpm --filter @secret-hitler/shared build \
   && pnpm --filter bale-bot build \
   && pnpm --filter @secret-hitler/server build
 
-FROM node:22-alpine
+FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NPM_CONFIG_FETCH_RETRIES=5
@@ -52,24 +33,6 @@ ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
 ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
 RUN npm install -g pnpm@11.25.0
-RUN set -eu; \
-    alpine_version=$(cut -d. -f1,2 /etc/alpine-release); \
-    installed=0; \
-    for mirror in \
-      http://dl-cdn.alpinelinux.org/alpine \
-      http://mirrors.pardisco.co/alpine \
-      http://mirror.mobinhost.com/alpine \
-      https://repo.abrha.net/alpine \
-      http://uk.alpinelinux.org/alpine; do \
-      printf '%s/v%s/main\n%s/v%s/community\n' \
-        "$mirror" "$alpine_version" "$mirror" "$alpine_version" \
-        > /etc/apk/repositories; \
-      if apk add --no-cache python3 py3-pip make g++ linux-headers; then \
-        installed=1; \
-        break; \
-      fi; \
-    done; \
-    test "$installed" -eq 1
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/
