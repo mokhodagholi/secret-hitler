@@ -97,7 +97,11 @@ export class MediasoupBackend implements VoiceMediaBackend {
     return backend;
   }
 
-  rtpCapabilities(): VoiceJson {
+  rtpCapabilities(roomId?: string): VoiceJson {
+    if (roomId) {
+      const roomRouter = this.rooms.get(roomId);
+      if (roomRouter) return roomRouter.rtpCapabilities as VoiceJson;
+    }
     const router = this.rooms.get('__capabilities__');
     if (!router) throw new Error('voice worker is not ready');
     return router.rtpCapabilities as VoiceJson;
@@ -137,14 +141,24 @@ export class MediasoupBackend implements VoiceMediaBackend {
   ): Promise<TransportOffer> {
     const router = await this.ensureRouter(roomId);
     const announced = this.listen.announcedIp;
+    const listenInfos: Array<{
+      protocol: 'udp' | 'tcp';
+      ip: string;
+      announcedAddress?: string;
+    }> = [
+      {
+        protocol: 'udp',
+        ip: this.listen.listenIp,
+        ...(announced ? { announcedAddress: announced } : {}),
+      },
+      {
+        protocol: 'tcp',
+        ip: this.listen.listenIp,
+        ...(announced ? { announcedAddress: announced } : {}),
+      },
+    ];
     const transport = await router.createWebRtcTransport({
-      listenInfos: [
-        {
-          protocol: 'udp',
-          ip: this.listen.listenIp,
-          ...(announced ? { announcedAddress: announced } : {}),
-        },
-      ],
+      listenInfos,
       enableUdp: true,
       enableTcp: true,
       preferUdp: true,

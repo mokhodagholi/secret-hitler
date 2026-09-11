@@ -11,7 +11,14 @@ export function shouldClaimWaitingWorker(
 /** Register the Workbox worker. Skip in dev so hashed assets stay fresh. */
 export function registerServiceWorker(): void {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
-  if (import.meta.env.DEV) return;
+  if (import.meta.env.DEV) {
+    // `pnpm dev:https` is a secure context, so a leftover production worker
+    // would keep serving the last build and a default-off flag catalog.
+    void navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) void registration.unregister();
+    });
+    return;
+  }
   void navigator.serviceWorker
     .register('/sw.js')
     .then((registration) => {

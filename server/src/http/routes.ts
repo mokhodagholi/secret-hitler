@@ -198,6 +198,8 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       ? hashPassword(body.password.trim())
       : null;
 
+    const previousSeat = reservedBaleSeat(bale, body.initData);
+
     const entry = repo.create({
       name: body.name,
       passwordHash,
@@ -215,6 +217,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: host.id });
     void sockets.persistRoom(entry.room.id);
+    vacatePreviousBaleSeat(sockets, repo, previousSeat, entry.room.id);
     bindBaleSeat(bale, body.initData, host.id, entry.room.id, entry.room.code, entry.room.options.name);
     const res: CreateRoomResponse = {
       roomId: entry.room.id,
@@ -288,6 +291,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: player.id });
     void sockets.persistRoom(entry.room.id);
+    vacatePreviousBaleSeat(sockets, repo, reserved, entry.room.id);
     bindBaleSeat(bale, body.initData, player.id, entry.room.id, entry.room.code, entry.room.options.name);
     const res: JoinRoomResponse = {
       roomId: entry.room.id,
@@ -297,6 +301,29 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     };
     return reply.send(res);
   });
+}
+
+function reservedBaleSeat(
+  bale: BaleRuntime | undefined,
+  initData: string | undefined,
+): { roomId: string; playerId: string } | undefined {
+  if (!bale || !initData) return undefined;
+  const user = validateBaleInitData(initData, bale.botToken);
+  if (!user) return undefined;
+  return bale.seats.get(user.id);
+}
+
+/** Find Game of a different table must drop the previous Bale seat, not keep both. */
+function vacatePreviousBaleSeat(
+  sockets: SocketHandler,
+  repo: RoomRepository,
+  previous: { roomId: string; playerId: string } | undefined,
+  nextRoomId: string,
+): void {
+  if (!previous || previous.roomId === nextRoomId) return;
+  const old = repo.get(previous.roomId);
+  if (!old) return;
+  sockets.dropSeat(old, previous.playerId);
 }
 
 function bindBaleSeat(

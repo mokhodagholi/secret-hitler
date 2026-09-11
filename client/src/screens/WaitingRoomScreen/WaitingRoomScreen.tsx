@@ -59,13 +59,15 @@ export function WaitingRoomScreen() {
   });
 
   // Host pressed start → server flips the phase → everyone moves to the board.
+  // A leftover snapshot from a previous table must not yank them onto that board.
   createEffect(() => {
-    const phase = view()?.phase;
-    if (phase && phase !== Phase.Lobby) {
-      sound.play('room-start');
-      game.clearError(); // don't carry a lobby error into the game
-      nav.navigate('game');
-    }
+    const state = view();
+    const session = game.currentSession();
+    if (!state || !session || state.roomId !== session.roomId) return;
+    if (state.phase === Phase.Lobby) return;
+    sound.play('room-start');
+    game.clearError(); // don't carry a lobby error into the game
+    nav.navigate('game');
   });
 
   let seenPlayerIds: Set<string> | null = null;

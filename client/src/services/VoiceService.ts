@@ -3,6 +3,7 @@ import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
 import {
   Phase,
   type GameStateView,
+  type IceServer,
   type ServerMessage,
   type VoiceJson,
   type VoiceTransportDirection,
@@ -19,6 +20,11 @@ interface VoiceUiState {
   remoteMuted: Record<string, boolean>;
 }
 
+interface PendingPeer {
+  playerId: string;
+  producerId: string;
+}
+
 interface MsTransport {
   id: string;
   on: (event: string, handler: (...args: never[]) => void) => void;
@@ -28,7 +34,7 @@ interface MsTransport {
     producerId: string;
     kind: 'audio';
     rtpParameters: VoiceJson;
-  }) => Promise<{ track: MediaStreamTrack }>;
+  }) => Promise<{ track: MediaStreamTrack; paused?: boolean; resume?: () => Promise<void> }>;
   close: () => void;
 }
 
@@ -50,14 +56,20 @@ export class VoiceService {
   private readonly setStatus: (status: VoiceStatus) => void;
   private readonly update: SetStoreFunction<VoiceUiState>;
   private joined = false;
+  private produced = false;
+  private selfId: string | null = null;
   private localStream: MediaStream | null = null;
   private device: MsDevice | null = null;
+  private iceServers: IceServer[] = [];
   private sendTransport: MsTransport | null = null;
   private recvTransport: MsTransport | null = null;
   private readonly remotes = new Map<string, HTMLAudioElement>();
+  private readonly pendingPeers: PendingPeer[] = [];
   private readonly connectWaiters = new Map<string, () => void>();
+  private readonly produceWaiters = new Map<string, (arg: { id: string }) => void>();
   private speaking = false;
   private analyserTimer: ReturnType<typeof setInterval> | null = null;
+  private levelContext: AudioContext | null = null;
 
   constructor(
     private readonly socket: WebSocketService,
@@ -91,6 +103,7 @@ export class VoiceService {
 
   /** Join or leave based on the current snapshot. Safe to call often. */
   sync(view: GameStateView | null): void {
+    this.selfId = view?.you.id ?? null;
     const enabled = this.flags.enabled('voice');
     const inGame = view != null && view.phase !== Phase.Lobby;
     if (!enabled || !inGame) {
@@ -109,6 +122,8 @@ export class VoiceService {
     const track = this.localStream?.getAudioTracks()[0];
     if (track) track.enabled = !muted;
     this.socket.send({ type: 'voice:mute', muted });
+    if (!muted) void this.tryProduce();
+    this.unlockPlayback();
   }
 
   toggleRemoteMute(playerId: string): void {
@@ -123,12 +138,13 @@ export class VoiceService {
     for (const [playerId, audio] of this.remotes) {
       audio.muted = !enabled || this.isRemoteMuted(playerId);
     }
+    if (enabled) this.unlockPlayback();
   }
 
   private async join(): Promise<void> {
     this.setStatus('connecting');
-    this.socket.send({ type: 'voice:join' });
     try {
+      // Mic first — capabilities/produce used to race ahead of getUserMedia.
       this.localStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
@@ -138,6 +154,8 @@ export class VoiceService {
       this.update('selfMuted', true);
       this.watchLevel(this.localStream);
       this.joined = true;
+      this.socket.send({ type: 'voice:join' });
+      await this.tryProduce();
     } catch (error) {
       const denied =
         error instanceof DOMException &&
@@ -151,6 +169,7 @@ export class VoiceService {
     if (!this.joined && this.status() !== 'connecting') return;
     if (this.joined) this.socket.send({ type: 'voice:leave' });
     this.joined = false;
+    this.produced = false;
     this.localStream?.getTracks().forEach((track) => track.stop());
     this.localStream = null;
     this.stopLevel();
@@ -159,6 +178,10 @@ export class VoiceService {
     this.sendTransport = null;
     this.recvTransport = null;
     this.device = null;
+    this.iceServers = [];
+    this.pendingPeers.length = 0;
+    this.connectWaiters.clear();
+    this.produceWaiters.clear();
     for (const audio of this.remotes.values()) {
       audio.srcObject = null;
       audio.remove();
@@ -171,7 +194,7 @@ export class VoiceService {
     if (!this.flags.enabled('voice')) return;
     switch (message.type) {
       case 'voice:capabilities':
-        void this.onCapabilities(message.rtpCapabilities, message);
+        void this.onCapabilities(message);
         break;
       case 'voice:transportCreated':
         void this.onTransportCreated(message);
@@ -180,15 +203,13 @@ export class VoiceService {
         this.connectWaiters.get(message.id)?.();
         this.connectWaiters.delete(message.id);
         break;
+      case 'voice:produced':
+        this.produceWaiters.get(message.transportId)?.({ id: message.id });
+        this.produceWaiters.delete(message.transportId);
+        this.socket.send({ type: 'voice:mute', muted: this.ui.selfMuted });
+        break;
       case 'voice:peer':
-        if (message.producerId == null) this.dropRemote(message.playerId);
-        else if (this.recvTransport && this.device) {
-          this.socket.send({
-            type: 'voice:consume',
-            producerId: message.producerId,
-            rtpCapabilities: this.device.rtpCapabilities,
-          });
-        }
+        this.onPeer(message);
         break;
       case 'voice:consumed':
         void this.onConsumed(message);
@@ -205,8 +226,46 @@ export class VoiceService {
     }
   }
 
+  private onPeer(message: Extract<ServerMessage, { type: 'voice:peer' }>): void {
+    if (message.playerId === this.selfId) return;
+    if (message.producerId == null) {
+      this.dropRemote(message.playerId);
+      return;
+    }
+    this.consumePeer(message.playerId, message.producerId);
+  }
+
+  private consumePeer(playerId: string, producerId: string): void {
+    if (this.recvTransport && this.device) {
+      this.socket.send({
+        type: 'voice:consume',
+        producerId,
+        rtpCapabilities: this.device.rtpCapabilities,
+      });
+      return;
+    }
+    if (this.pendingPeers.some((peer) => peer.producerId === producerId)) return;
+    this.pendingPeers.push({ playerId, producerId });
+  }
+
+  private flushPendingPeers(): void {
+    const waiting = this.pendingPeers.splice(0);
+    for (const peer of waiting) this.consumePeer(peer.playerId, peer.producerId);
+  }
+
+  private async tryProduce(): Promise<void> {
+    if (this.produced || !this.sendTransport || !this.localStream) return;
+    const track = this.localStream.getAudioTracks()[0];
+    if (!track) return;
+    this.produced = true;
+    try {
+      await this.sendTransport.produce({ track });
+    } catch {
+      this.produced = false;
+    }
+  }
+
   private async onCapabilities(
-    rtpCapabilities: VoiceJson,
     message: Extract<ServerMessage, { type: 'voice:capabilities' }>,
   ): Promise<void> {
     try {
@@ -214,11 +273,11 @@ export class VoiceService {
         Device: new () => MsDevice;
       };
       const device = new loaded.Device();
-      await device.load({ routerRtpCapabilities: rtpCapabilities });
+      await device.load({ routerRtpCapabilities: message.rtpCapabilities });
       this.device = device;
+      this.iceServers = message.iceServers;
       this.socket.send({ type: 'voice:createTransport', direction: 'send' });
       this.socket.send({ type: 'voice:createTransport', direction: 'recv' });
-      void message;
     } catch {
       if (this.status() === 'connecting') this.setStatus('live');
     }
@@ -229,11 +288,12 @@ export class VoiceService {
   ): Promise<void> {
     const device = this.device;
     if (!device) return;
-    const options = {
+    const options: VoiceJson = {
       id: message.id,
       iceParameters: message.iceParameters,
       iceCandidates: message.iceCandidates,
       dtlsParameters: message.dtlsParameters,
+      iceServers: this.iceServers,
     };
     const transport =
       message.direction === 'send'
@@ -242,16 +302,10 @@ export class VoiceService {
     this.bindTransport(transport, message.direction);
     if (message.direction === 'send') {
       this.sendTransport = transport;
-      const track = this.localStream?.getAudioTracks()[0];
-      if (track) {
-        try {
-          await transport.produce({ track });
-        } catch {
-          /* produce can fail if DTLS never connects; mute still works */
-        }
-      }
+      await this.tryProduce();
     } else {
       this.recvTransport = transport;
+      this.flushPendingPeers();
     }
     if (this.sendTransport && this.recvTransport) this.setStatus('live');
   }
@@ -275,12 +329,12 @@ export class VoiceService {
           { rtpParameters }: { rtpParameters: VoiceJson },
           callback: (arg: { id: string }) => void,
         ) => {
+          this.produceWaiters.set(transport.id, callback);
           this.socket.send({
             type: 'voice:produce',
             transportId: transport.id,
             rtpParameters,
           });
-          callback({ id: `local-${transport.id}` });
         }) as (...args: never[]) => void,
       );
     }
@@ -297,10 +351,14 @@ export class VoiceService {
         kind: 'audio',
         rtpParameters: message.rtpParameters,
       });
+      if (consumer.paused) await consumer.resume?.();
       const audio = new Audio();
       audio.autoplay = true;
+      audio.playsInline = true;
+      audio.setAttribute('playsinline', 'true');
       audio.srcObject = new MediaStream([consumer.track]);
       audio.muted = this.isRemoteMuted(message.playerId) || !this.settings.settings.voiceEnabled;
+      document.body.appendChild(audio);
       this.remotes.set(message.playerId, audio);
       void audio.play().catch(() => undefined);
     } catch {
@@ -326,10 +384,18 @@ export class VoiceService {
     this.update('speaking', playerId, false);
   }
 
+  private unlockPlayback(): void {
+    void this.levelContext?.resume();
+    for (const audio of this.remotes.values()) {
+      void audio.play().catch(() => undefined);
+    }
+  }
+
   private watchLevel(stream: MediaStream): void {
     this.stopLevel();
     try {
       const context = new AudioContext();
+      this.levelContext = context;
       const source = context.createMediaStreamSource(stream);
       const analyser = context.createAnalyser();
       analyser.fftSize = 512;
@@ -355,6 +421,8 @@ export class VoiceService {
   private stopLevel(): void {
     if (this.analyserTimer) clearInterval(this.analyserTimer);
     this.analyserTimer = null;
+    void this.levelContext?.close();
+    this.levelContext = null;
     if (this.speaking) {
       this.speaking = false;
       this.socket.send({ type: 'voice:speaking', speaking: false });

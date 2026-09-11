@@ -58,7 +58,7 @@ function connectAuthed(): { service: WebSocketService; socket: FakeWebSocket } {
   service.connect('seat-token');
   const socket = lastSocket();
   socket.completeOpen();
-  socket.receive({ type: 'authed', playerId: 'p1' });
+  socket.receive({ type: 'authed', playerId: 'p1', flags: { voice: false } });
   return { service, socket };
 }
 
@@ -75,7 +75,7 @@ describe('WebSocketService', () => {
     service.connect('seat-token');
     const second = lastSocket();
     second.completeOpen();
-    second.receive({ type: 'authed', playerId: 'p1' });
+    second.receive({ type: 'authed', playerId: 'p1', flags: { voice: false } });
 
     expect(first.onclose).toBeNull();
     first.close(AUTH_REJECTED_CLOSE_CODE);

@@ -2,18 +2,20 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
+  @include overlay-pad(18px);
   z-index: 87; // above the players sheet (86); kick confirm (180) still wins
-  display: grid;
-  place-items: center;
-  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(4, 12, 22, 0.78);
 }
 
 .sheet {
   @include card;
   width: min(360px, 100%);
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   border-color: rgba($gold, 0.45);

@@ -2,12 +2,12 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
+  @include overlay-pad(24px);
   z-index: 90;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   pointer-events: none;
 }
@@ -16,6 +16,8 @@
   pointer-events: auto;
   width: 100%;
   max-width: 360px;
+  min-width: 0;
+  margin-inline: auto;
 }
 
 .dialog {

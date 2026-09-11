@@ -400,7 +400,7 @@ export class SocketHandler {
   private async voiceJoin(context: GameContext): Promise<void> {
     const roomId = context.entry.room.id;
     await this.voice!.prepareRoom(roomId);
-    const caps = this.voice!.capabilities();
+    const caps = this.voice!.capabilities(roomId);
     this.sendTo(context.ws, {
       type: 'voice:capabilities',
       rtpCapabilities: caps.rtpCapabilities,
@@ -473,6 +473,11 @@ export class SocketHandler {
       message.transportId,
       message.rtpParameters,
     );
+    this.sendTo(context.ws, {
+      type: 'voice:produced',
+      id: produced.producerId,
+      transportId: message.transportId,
+    });
     this.broadcast(context.entry.room.id, {
       type: 'voice:peer',
       playerId: context.playerId,
@@ -579,18 +584,23 @@ export class SocketHandler {
   }
 
   /** Host leave destroys the room; a guest just vacates their seat. */
-  private leaveRoom(context: GameContext): void {
-    const { entry, engine, playerId } = context;
-    if (entry.room.findPlayer(playerId)?.isHost) {
+  dropSeat(entry: RoomEntry, playerId: string): void {
+    const player = entry.room.findPlayer(playerId);
+    if (!player) return;
+    if (player.isHost) {
       this.broadcast(entry.room.id, { type: 'room:closed', reason: 'HOST_LEFT' });
       this.destroyRoom(entry);
-    } else {
-      void this.voice?.removePlayer(playerId);
-      engine.removePlayer(playerId);
-      this.tokens.revokePlayer(playerId);
-      this.seats?.releasePlayer(playerId);
-      this.connections.close(playerId);
+      return;
     }
+    void this.voice?.removePlayer(playerId);
+    entry.engine.removePlayer(playerId);
+    this.tokens.revokePlayer(playerId);
+    this.seats?.releasePlayer(playerId);
+    this.connections.close(playerId);
+  }
+
+  private leaveRoom(context: GameContext): void {
+    this.dropSeat(context.entry, context.playerId);
   }
 
   /** Kick every remaining connection and drop the room from the repository. */
@@ -639,7 +649,7 @@ export class SocketHandler {
     }
     entry.engine.setConnected(player.id, true);
 
-    this.sendTo(ws, { type: 'authed', playerId: player.id });
+    this.sendTo(ws, { type: 'authed', playerId: player.id, flags: this.flags });
     this.sendTo(ws, { type: 'state', state: this.viewerState(entry.room.id, player.id) });
     if (player.role) this.sendTo(ws, { type: 'private', role: player.role });
   }

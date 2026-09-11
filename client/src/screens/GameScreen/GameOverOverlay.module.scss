@@ -2,19 +2,20 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
+  @include overlay-pad(24px);
   z-index: 95;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(2, 8, 16, 0.85);
 }
 
 .dialog {
   @include card;
   width: 100%;
-  max-width: 360px;
+  max-width: min(360px, 100%);
+  min-width: 0;
   padding: 26px 22px;
   display: flex;
   flex-direction: column;

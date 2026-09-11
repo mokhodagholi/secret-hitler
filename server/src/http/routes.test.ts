@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
+import { createHmac } from 'node:crypto';
 import type {
   CreateRoomResponse,
   FlagsResponse,
@@ -7,6 +8,25 @@ import type {
 } from '@secret-hitler/shared';
 import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
+import { BaleSeatIndex } from '../bale/BaleSeatIndex';
+
+const BALE_TOKEN = '123456:test-token';
+
+function signInitData(userId: number, firstName: string): string {
+  const fields = {
+    auth_date: String(Math.floor(Date.now() / 1000)),
+    user: JSON.stringify({ id: userId, first_name: firstName }),
+  };
+  const params = new URLSearchParams(fields);
+  const dataCheckString = [...params.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+  const secretKey = createHmac('sha256', 'WebAppData').update(BALE_TOKEN).digest();
+  const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+  params.set('hash', hash);
+  return params.toString();
+}
 
 async function createRoom(
   app: Awaited<ReturnType<typeof buildServer>>['app'],
@@ -142,6 +162,69 @@ describe('room HTTP endpoints', () => {
       avatar: 12,
     });
     expect(repo.resolve(created.code)?.room.players[1].avatar).toBe(12);
+  });
+});
+
+describe('room HTTP — previous Bale seat', () => {
+  it('Should drop a reserved seat when the player joins a different room', async () => {
+    const seats = new BaleSeatIndex();
+    const { app, repo } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: BALE_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats,
+      },
+    });
+
+    const first = (await createRoom(app, { hostName: 'Ben' })).body;
+    const seated = await httpJson<JoinRoomResponse>(
+      app,
+      'POST',
+      `/api/rooms/${first.code}/join`,
+      { name: 'Ana', initData: signInitData(9, 'Ana') },
+    );
+    expect(seated.status).toBe(200);
+    expect(seats.get(9)?.roomId).toBe(first.roomId);
+
+    const second = (await createRoom(app, { name: 'Other Table', hostName: 'Cal' })).body;
+    const moved = await httpJson<JoinRoomResponse>(
+      app,
+      'POST',
+      `/api/rooms/${second.code}/join`,
+      { name: 'Ana', initData: signInitData(9, 'Ana') },
+    );
+
+    expect(moved.status).toBe(200);
+    expect(moved.body.roomId).toBe(second.roomId);
+    expect(moved.body.playerId).not.toBe(seated.body.playerId);
+    expect(seats.get(9)?.roomId).toBe(second.roomId);
+    expect(repo.get(first.roomId)?.room.findPlayer(seated.body.playerId)).toBeUndefined();
+    expect(repo.get(second.roomId)?.room.findPlayer(moved.body.playerId)).toBeTruthy();
+  });
+
+  it('Should still rejoin the reserved room when that is the one they asked for', async () => {
+    const seats = new BaleSeatIndex();
+    const { app } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: BALE_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats,
+      },
+    });
+
+    const created = (await createRoom(app, { initData: signInitData(9, 'Ana') })).body;
+    const again = await httpJson<JoinRoomResponse>(
+      app,
+      'POST',
+      `/api/rooms/${created.code}/join`,
+      { name: 'Ana', initData: signInitData(9, 'Ana') },
+    );
+
+    expect(again.status).toBe(200);
+    expect(again.body.roomId).toBe(created.roomId);
+    expect(again.body.playerId).toBe(created.playerId);
   });
 });
 

@@ -2,12 +2,17 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
   z-index: 160;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 24px 16px;
+  padding-inline: Max(
+    16px,
+    env(safe-area-inset-left, 0px),
+    env(safe-area-inset-right, 0px)
+  );
   background:
     radial-gradient(ellipse at 50% 28%, rgba($gold, 0.16), transparent 52%),
     rgba(4, 10, 20, 0.82);
@@ -17,7 +22,8 @@
 .dialog {
   position: relative;
   width: 100%;
-  max-width: 360px;
+  max-width: min(360px, 100%);
+  min-width: 0;
   max-height: min(86dvh, 640px);
   padding: 24px 18px 18px;
   display: flex;

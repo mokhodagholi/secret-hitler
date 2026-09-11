@@ -25,6 +25,12 @@ describe('FeatureFlagService', () => {
     expect(flags.enabled('voice')).toBe(true);
   });
 
+  it('Should apply an incoming catalog without fetching', () => {
+    const flags = new FeatureFlagService();
+    flags.apply({ voice: true });
+    expect(flags.enabled('voice')).toBe(true);
+  });
+
   it('Should fetch /api/flags only once when load is called twice', async () => {
     let calls = 0;
     const flags = new FeatureFlagService(DEFAULT_FLAGS, async () => {

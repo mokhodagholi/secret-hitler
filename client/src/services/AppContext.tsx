@@ -6,6 +6,7 @@ import {
   useContext,
   type ParentProps,
 } from 'solid-js';
+import { parseFlagsResponse } from '@secret-hitler/shared';
 import { NavigationService } from './NavigationService';
 import { SettingsService } from './SettingsService';
 import { I18nService } from './I18nService';
@@ -61,6 +62,15 @@ export function AppProvider(
     flags,
     voice: overrides.voice ?? new VoiceService(socket, flags, settings),
   };
+
+  // HTTPS dev can keep a stale catalog from /api/flags; the auth frame is the live switch.
+  onCleanup(
+    socket.onMessage((message) => {
+      if (message.type !== 'authed') return;
+      const parsed = parseFlagsResponse({ flags: message.flags });
+      if (parsed) flags.apply(parsed);
+    }),
+  );
 
   if (!overrides.bale) {
     void services.bale.boot(settings, services.nav).then(() => {

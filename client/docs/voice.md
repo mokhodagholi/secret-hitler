@@ -35,7 +35,10 @@ toggle — this class does. Settings `voiceEnabled` is “hear the table”
 Chrome (mic in chat, mute-other from the seat menu, seat rings) renders
 only while `flags.enabled('voice')`.
 
-Join starts muted. Tap the mic to speak.
+Join starts muted. Tap the mic to speak. The client waits for the
+microphone before `voice:join`, queues `voice:peer` until the recv
+transport exists, and passes the server’s ICE list (STUN/TURN) into
+mediasoup transports.
 
 ## Bale / Safari
 

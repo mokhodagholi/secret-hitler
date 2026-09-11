@@ -9,6 +9,7 @@ import type {
   Role,
   Vote,
 } from './GameState';
+import type { FeatureFlags } from '../flags';
 
 // ---------------------------------------------------------------------------
 // In-game command payloads (envelope is `{ type: 'command', command: ... }`).
@@ -100,7 +101,7 @@ export type RoomClosedReason = 'HOST_LEFT' | 'KICKED';
 
 export type ServerMessage =
   /** Sent once after a successful auth handshake. */
-  | { type: 'authed'; playerId: string }
+  | { type: 'authed'; playerId: string; flags: FeatureFlags }
   /** Full per-viewer state snapshot — sent on every change. */
   | { type: 'state'; state: GameStateView }
   /** Private role/hand reveal for the recipient only. */
@@ -125,6 +126,7 @@ export type ServerMessage =
       dtlsParameters: VoiceJson;
     }
   | { type: 'voice:transportConnected'; id: string }
+  | { type: 'voice:produced'; id: string; transportId: string }
   | {
       type: 'voice:consumed';
       id: string;

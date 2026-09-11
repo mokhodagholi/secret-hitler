@@ -2,11 +2,11 @@
 @use '../../styles/mixins' as *;
 
 .stage {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
   z-index: 95;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
 }
 
@@ -19,10 +19,12 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  max-width: 280px;
 }
 
 .face {
-  width: min(160px, 42vw);
+  width: min(160px, 100%);
   height: auto;
   aspect-ratio: 2 / 3;
   object-fit: contain;

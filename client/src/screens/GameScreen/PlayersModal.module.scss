@@ -2,18 +2,20 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
+  @include overlay-pad(18px);
   z-index: 86;
-  display: grid;
-  place-items: center;
-  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(4, 12, 22, 0.78);
 }
 
 .sheet {
   @include card;
   width: min(420px, 100%);
+  max-width: 100%;
+  min-width: 0;
   max-height: 86vh;
   display: flex;
   flex-direction: column;

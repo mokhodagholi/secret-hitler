@@ -2,12 +2,12 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
+  @include overlay-pad(20px);
   z-index: 90;
-  display: grid;
-  place-items: center;
-  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   pointer-events: none;
 }
@@ -15,6 +15,9 @@
 .shift {
   pointer-events: auto;
   width: min(360px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
 }
 
 .dialog {
@@ -25,6 +28,8 @@
   gap: 14px;
   padding: 18px 18px 22px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border-color: rgba($gold, 0.5);
 }
 
@@ -66,11 +71,12 @@
   display: flex;
   gap: 14px;
   justify-content: center;
+  width: 100%;
   min-height: calc(92px * 3 / 2);
 }
 
 .travelCard {
-  width: 92px;
+  width: min(92px, 30%);
   aspect-ratio: 2 / 3;
   object-fit: contain;
   border-radius: $radius;
@@ -84,7 +90,7 @@
 
 .card {
   @include pressable;
-  width: 92px;
+  width: min(92px, 30%);
   aspect-ratio: 2 / 3;
   border-radius: $radius;
   overflow: hidden;

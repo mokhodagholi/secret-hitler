@@ -93,8 +93,7 @@ export class GameStateService {
   readonly roomClosedNotice = this.roomClosedSignal[0];
   private readonly setRoomClosedNotice = this.roomClosedSignal[1];
 
-  // A signal so screens can react to entering/leaving a room (e.g. the play
-  // flow redirects back into the active room instead of seating a new player).
+  // Reactive so lobby/table screens can bounce when the seat is dropped.
   private readonly sessionSignal = createSignal<RoomSession | null>(null);
   private readonly session = this.sessionSignal[0];
   private readonly setSession = this.sessionSignal[1];
@@ -267,8 +266,17 @@ export class GameStateService {
   // --- Internals -----------------------------------------------------------
 
   private beginSession(session: RoomSession): RoomSession {
+    const previous = this.session();
+    // Find Game while a live seat is still open must leave that table first —
+    // otherwise the leftover in-game snapshot yanks the player back into it.
+    if (previous && previous.roomId !== session.roomId) {
+      this.socket.send({ type: 'room:leave' });
+      this.socket.disconnect();
+    }
     this.setSession(session);
     writeStoredSession(session);
+    this.setView(null);
+    this.setRole(null);
     this.setChatMessages([]);
     this.setLogEntries([]);
     this.setUnreadChat(0);

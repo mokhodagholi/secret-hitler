@@ -28,7 +28,7 @@ export interface PeerProducer {
 
 /** SFU operations VoiceHub needs. Tests inject a memory backend. */
 export interface VoiceMediaBackend {
-  rtpCapabilities(): VoiceJson;
+  rtpCapabilities(roomId?: string): VoiceJson;
   prepareRoom?(roomId: string): Promise<void>;
   createTransport(
     roomId: string,

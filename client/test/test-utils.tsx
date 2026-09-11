@@ -220,3 +220,19 @@ export function stubDeniedMicrophone(): void {
     },
   });
 }
+
+/** Resolve getUserMedia with a silent track so join can reach the SFU. */
+export function stubGrantedMicrophone(): { enabled: boolean; stop: () => void } {
+  const track = { enabled: true, stop: () => {} };
+  const stream = {
+    getAudioTracks: () => [track],
+    getTracks: () => [track],
+  };
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: {
+      getUserMedia: () => Promise.resolve(stream),
+    },
+  });
+  return track;
+}

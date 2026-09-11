@@ -2,20 +2,21 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
+  @include overlay-pad(24px);
   z-index: 180; // above table overlays (95) and the briefing card (160)
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(2, 8, 16, 0.7);
 }
 
 .dialog {
   @include card;
   width: 100%;
-  max-width: 360px;
-  // Grid items default to min-height: auto (content size), which would push
+  max-width: min(360px, 100%);
+  min-width: 0;
+  // Flex items default to min-height: auto (content size), which would push
   // the action row off-screen when children are long. Cap to the overlay.
   max-height: 100%;
   min-height: 0;

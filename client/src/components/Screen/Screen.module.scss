@@ -4,8 +4,9 @@
 .shell {
   position: relative;
   height: 100dvh;
+  width: 100%;
   max-width: $shell-max-width;
-  margin: 0 auto;
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, $navy-850 0%, $navy-900 45%, $navy-950 100%);

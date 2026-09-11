@@ -1,7 +1,9 @@
-import { describe, expect, it } from '@rstest/core';
+import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
-import type { CreateRoomRequest } from '@secret-hitler/shared';
+import { Show } from 'solid-js';
+import { Phase, type CreateRoomRequest, type RoomSummary } from '@secret-hitler/shared';
 import { RoomsScreen } from './RoomsScreen';
+import { WaitingRoomScreen } from '../WaitingRoomScreen/WaitingRoomScreen';
 import { BaleService } from '../../services/BaleService';
 import { RoomApiError } from '../../services/GameStateService';
 import { en } from '../../i18n/locales/en';
@@ -14,6 +16,9 @@ class NativeBackBale extends BaleService {
 }
 
 describe('RoomsScreen', () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+  });
   it('Should keep create-room fields from inviting browser suggest', () => {
     const harness = buildHarness();
     renderWithApp(() => <RoomsScreen initialTab="create" />, harness);
@@ -155,5 +160,53 @@ describe('RoomsScreen', () => {
     expect(harness.services.nav.screen()).toBe('play');
     expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
     expect(screen.getByRole('tab', { name: en.rooms.joinTab })).toBeTruthy();
+  });
+
+  it('Should seat Find Game in the chosen lobby, not the previous table', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('profileName', 'Ana');
+    const openLobby: RoomSummary = {
+      id: 'room-2',
+      code: 'XYZ789',
+      name: 'New Table',
+      playerCount: 2,
+      maxPlayers: 10,
+      hasPassword: false,
+      phase: Phase.Lobby,
+    };
+    harness.services.game.listRooms = async () => [openLobby];
+    rs.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          roomId: 'room-2',
+          code: 'XYZ789',
+          token: 'token-2',
+          playerId: 'you-2',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    harness.services.nav.navigate('play');
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'play'}
+          fallback={<WaitingRoomScreen />}
+        >
+          <RoomsScreen initialTab="join" />
+        </Show>
+      ),
+      harness,
+    );
+    harness.pushState(makeView({ phase: Phase.Nomination }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: en.joinGame.join })).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: en.joinGame.join }));
+    await waitFor(() => expect(harness.services.nav.screen()).toBe('waiting-room'));
+    expect(harness.services.game.view()).toBeNull();
+    expect(harness.services.game.currentSession()?.roomId).toBe('room-2');
   });
 });

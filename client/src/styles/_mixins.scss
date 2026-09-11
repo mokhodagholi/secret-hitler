@@ -24,6 +24,27 @@
   }
 }
 
+// Cover the containing block without `right: 0`. Mobile WebKit + `dir=rtl`
+// + `inset: 0` shifts the layer, so a centered dialog looks off to one side.
+@mixin overlay-cover($position: fixed) {
+  position: $position;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+// Same gutter on both inline sides, even when one safe-area inset is larger.
+@mixin overlay-pad($pad: 20px) {
+  padding: $pad;
+  padding-inline: Max(
+    #{$pad},
+    env(safe-area-inset-left, 0px),
+    env(safe-area-inset-right, 0px)
+  );
+}
+
 // Pull a child out of Screen's content padding. Height must include those pads
 // or the navy shell shows as a gap (usually along the bottom). Prefer
 // `Screen fill` when the child owns the whole viewport.

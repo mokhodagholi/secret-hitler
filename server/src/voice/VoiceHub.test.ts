@@ -47,6 +47,16 @@ describe('VoiceHub', () => {
     expect(voice.peers('room')).toEqual([]);
   });
 
+  it('Should expose ICE servers with the room capabilities', () => {
+    const voice = hub();
+    expect(voice.capabilities('room')).toEqual({
+      rtpCapabilities: {
+        codecs: [{ mimeType: 'audio/opus', clockRate: 48000, channels: 2 }],
+      },
+      iceServers: [{ urls: 'stun:example' }],
+    });
+  });
+
   it('Should refuse to consume a producer from another room', async () => {
     const voice = hub();
     const send = await voice.createTransport('room-a', 'ana', 'send');

@@ -2,7 +2,12 @@ import { describe, expect, it } from '@rstest/core';
 import { FeatureFlagService } from './FeatureFlagService';
 import { SettingsService } from './SettingsService';
 import { VoiceService } from './VoiceService';
-import { FakeSocket, makeView, stubDeniedMicrophone } from '../../test/test-utils';
+import {
+  FakeSocket,
+  makeView,
+  stubDeniedMicrophone,
+  stubGrantedMicrophone,
+} from '../../test/test-utils';
 import { Phase } from '@secret-hitler/shared';
 import type { WebSocketService } from './WebSocketService';
 
@@ -37,13 +42,77 @@ describe('VoiceService', () => {
     expect(socket.lastSent('voice:join')).toBeUndefined();
   });
 
-  it('Should ask to join once the game has started', async () => {
+  it('Should not join the SFU when the microphone is denied', async () => {
     stubDeniedMicrophone();
     const { voice, socket } = makeVoice(true);
     voice.sync(makeView({ phase: Phase.Nomination }));
-    expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
+    expect(socket.lastSent('voice:join')).toBeUndefined();
     await Promise.resolve();
     expect(voice.status()).toBe('denied');
+    expect(socket.lastSent('voice:join')).toBeUndefined();
+  });
+
+  it('Should wait for the microphone before joining the SFU', async () => {
+    let grant: (stream: MediaStream) => void = () => {};
+    const pending = new Promise<MediaStream>((resolve) => {
+      grant = resolve;
+    });
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: () => pending },
+    });
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    expect(socket.lastSent('voice:join')).toBeUndefined();
+
+    const track = { enabled: true, stop: () => {} };
+    grant({
+      getAudioTracks: () => [track],
+      getTracks: () => [track],
+    } as unknown as MediaStream);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
+    expect(track.enabled).toBe(false);
+  });
+
+  it('Should not consume this player’s own producer', () => {
+    stubGrantedMicrophone();
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    socket.emit({
+      type: 'voice:peer',
+      playerId: 'you',
+      producerId: 'prod-you',
+      muted: false,
+    });
+    expect(socket.lastSent('voice:consume')).toBeUndefined();
+  });
+
+  it('Should queue a peer until the recv transport exists', () => {
+    stubGrantedMicrophone();
+    const { voice, socket } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    socket.emit({
+      type: 'voice:peer',
+      playerId: 'cal',
+      producerId: 'prod-cal',
+      muted: false,
+    });
+    expect(socket.lastSent('voice:consume')).toBeUndefined();
+  });
+
+  it('Should push the current mute once the SFU has a producer', () => {
+    const { voice, socket } = makeVoice(true);
+    socket.emit({
+      type: 'voice:produced',
+      id: 'prod-you',
+      transportId: 'send-you',
+    });
+    expect(socket.lastSent('voice:mute')).toEqual({
+      type: 'voice:mute',
+      muted: true,
+    });
   });
 
   it('Should send a table-wide mute and keep mute-other off the wire', () => {

@@ -101,6 +101,16 @@ function waitFrames(count: number): Promise<void> {
   });
 }
 
+function undealtRoleCards(count: number): number[] {
+  return Array.from({ length: count }, (_, index) => index);
+}
+
+/** Tight fan so a 5–10 card pile still reads as a deck, not a spread. */
+function undealtCardTransform(index: number, count: number): string {
+  const fromMid = index - (count - 1) / 2;
+  return `rotate(${fromMid * 3}deg) translate(${fromMid * 2.5}px, ${Math.abs(fromMid)}px)`;
+}
+
 /**
  * Opening ceremony: face-down cards split to every seat, night falls with
  * the private look, then the team glance. Beats stay on the shared clock.
@@ -315,6 +325,7 @@ function ClosedLids() {
 function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
   const { animation, sound } = useApp();
   const cards: (HTMLImageElement | undefined)[] = [];
+  const [undealtCount, setUndealtCount] = createSignal(props.players.length);
 
   onMount(() => {
     let cancelled = false;
@@ -327,21 +338,37 @@ function DealBacks(props: { players: PublicPlayer[]; youId: string }) {
       for (let index = 0; index < props.players.length; index++) {
         if (cancelled) return;
         sound.play('deal-slide');
-        await flyToTarget(animation, cards[index], seatPortrait(props.players[index].id), {
-          landScale: 0.45,
-          duration: 560,
-        });
+        const flight = flyToTarget(
+          animation,
+          cards[index],
+          seatPortrait(props.players[index].id),
+          {
+            landScale: 0.45,
+            duration: 560,
+          },
+        );
+        // One card per seat. Lift this one off the pile so nothing is left after the last deal.
+        setUndealtCount(props.players.length - index - 1);
+        await flight;
       }
     })();
   });
 
   return (
     <div class={styles.dealLayer} aria-hidden="true">
-      <div class={styles.dealDeck}>
-        <WarmImg src={CARD_BACK} alt="" />
-        <WarmImg src={CARD_BACK} alt="" />
-        <WarmImg src={CARD_BACK} alt="" />
-      </div>
+      <Show when={undealtCount() > 0}>
+        <div class={styles.dealDeck} data-role-pile>
+          <For each={undealtRoleCards(undealtCount())}>
+            {(index) => (
+              <WarmImg
+                src={CARD_BACK}
+                alt=""
+                style={{ transform: undealtCardTransform(index, undealtCount()) }}
+              />
+            )}
+          </For>
+        </div>
+      </Show>
       <For each={props.players}>
         {(player, index) => (
           <WarmImg

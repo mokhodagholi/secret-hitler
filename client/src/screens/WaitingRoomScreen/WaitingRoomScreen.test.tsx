@@ -276,4 +276,13 @@ describe('WaitingRoomScreen', () => {
     harness.pushState(makeView({ hostId: 'you', phase: Phase.Nomination }));
     expect(harness.services.nav.screen()).toBe('game');
   });
+
+  it('Should ignore an in-game snapshot that belongs to a previous room', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({ hostId: 'you', phase: Phase.Nomination, roomId: 'other-room' }),
+    );
+    expect(harness.services.nav.screen()).not.toBe('game');
+  });
 });

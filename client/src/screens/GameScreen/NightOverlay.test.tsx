@@ -22,6 +22,7 @@ function renderOverlay(
     onDone?: () => void;
     role?: 'liberal' | 'fascist' | 'hitler';
     playerCount?: number;
+    players?: ReturnType<typeof makePlayer>[];
     teammates?: ReturnType<typeof makePlayer>[];
   } = {},
 ) {
@@ -30,7 +31,7 @@ function renderOverlay(
       <NightOverlay
         role={overrides.role ?? 'liberal'}
         playerCount={overrides.playerCount ?? 5}
-        players={players}
+        players={overrides.players ?? players}
         youId="you"
         teammates={overrides.teammates ?? []}
         presidentName="Ana"
@@ -54,6 +55,22 @@ describe('NightOverlay', () => {
     await waitFor(() => {
       expect(harness.services.ravi.line()).toBe(en.ravi.deal.start);
     });
+  });
+
+  it('Should keep one face-down role card in the pile per seated player', () => {
+    const harness = buildHarness({ seated: true });
+    const table = [
+      makePlayer({ id: 'you', name: 'You', seat: 0 }),
+      makePlayer({ id: 'ana', name: 'Ana', seat: 1 }),
+      makePlayer({ id: 'ben', name: 'Ben', seat: 2 }),
+      makePlayer({ id: 'cam', name: 'Cam', seat: 3 }),
+      makePlayer({ id: 'drew', name: 'Drew', seat: 4 }),
+    ];
+    renderOverlay(harness, { players: table, playerCount: table.length });
+
+    expect(document.querySelectorAll('[data-role-pile] img')).toHaveLength(
+      table.length,
+    );
   });
 
   it('Should open night with the private role after the deal', () => {

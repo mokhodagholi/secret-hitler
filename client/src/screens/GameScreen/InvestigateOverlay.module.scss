@@ -2,12 +2,12 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  position: fixed;
-  inset: 0;
+  @include overlay-cover;
+  @include overlay-pad(24px);
   z-index: 92;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(2, 8, 16, 0.72);
 }
 
@@ -16,10 +16,13 @@
   flex-direction: column;
   align-items: center;
   gap: 18px;
+  width: 100%;
+  max-width: 280px;
+  min-width: 0;
 }
 
 .card {
-  width: min(168px, 46vw);
+  width: min(168px, 100%);
   aspect-ratio: 2 / 3;
   object-fit: contain;
   display: block;

@@ -297,6 +297,23 @@ describe('ChatPanel', () => {
     });
   });
 
+  it('Should show the microphone when auth turns voice on', async () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    expect(screen.queryByRole('button', { name: en.game.unmuteSelf })).toBeNull();
+    harness.socket.emit({
+      type: 'authed',
+      playerId: 'you',
+      flags: { voice: true },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: en.game.unmuteSelf })).toBeTruthy();
+    });
+  });
+
   it('Should toggle table mute from the chat chrome when the voice flag is on', () => {
     stubDeniedMicrophone();
     const harness = buildHarness({ seated: true, flags: { voice: true } });

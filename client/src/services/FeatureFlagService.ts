@@ -31,6 +31,12 @@ export class FeatureFlagService {
     return this.flags[name];
   }
 
+  apply(next: FeatureFlags): void {
+    for (const name of FLAG_NAMES) {
+      this.update(name, next[name]);
+    }
+  }
+
   load(): Promise<void> {
     if (!this.inflight) this.inflight = this.pull();
     return this.inflight;
@@ -41,10 +47,7 @@ export class FeatureFlagService {
       const response = await this.fetchImpl('/api/flags', { cache: 'no-store' });
       if (!response.ok) return;
       const parsed = parseFlagsResponse(await response.json());
-      if (!parsed) return;
-      for (const name of FLAG_NAMES) {
-        this.update(name, parsed[name]);
-      }
+      if (parsed) this.apply(parsed);
     } catch {
       /* keep whatever we already hold — usually defaults */
     }

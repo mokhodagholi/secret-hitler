@@ -22,9 +22,9 @@ export class VoiceHub {
     await this.media.prepareRoom?.(roomId);
   }
 
-  capabilities(): { rtpCapabilities: VoiceJson; iceServers: IceServer[] } {
+  capabilities(roomId: string): { rtpCapabilities: VoiceJson; iceServers: IceServer[] } {
     return {
-      rtpCapabilities: this.media.rtpCapabilities(),
+      rtpCapabilities: this.media.rtpCapabilities(roomId),
       iceServers: this.iceServers,
     };
   }

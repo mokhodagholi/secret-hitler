@@ -20,7 +20,7 @@ export class MemoryMediaBackend implements VoiceMediaBackend {
   private readonly players = new Map<string, PlayerMedia>();
   private readonly producers = new Map<string, { playerId: string; roomId: string }>();
 
-  rtpCapabilities(): VoiceJson {
+  rtpCapabilities(_roomId?: string): VoiceJson {
     return {
       codecs: [{ mimeType: 'audio/opus', clockRate: 48000, channels: 2 }],
     };

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, rs } from '@rstest/core';
-import { CHAT_SLOWMODE_MS } from '@secret-hitler/shared';
+import { CHAT_SLOWMODE_MS, Phase } from '@secret-hitler/shared';
 import { GameStateService } from './GameStateService';
-import { FakeSocket } from '../../test/test-utils';
+import { FakeSocket, makeView } from '../../test/test-utils';
 import type { WebSocketService } from './WebSocketService';
 
 const SESSION = {
@@ -12,6 +12,9 @@ const SESSION = {
 };
 
 describe('GameStateService — seat persistence', () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+  });
   it('Should keep a live seat in localStorage so a later visit can return', () => {
     localStorage.setItem('sh:session', JSON.stringify(SESSION));
     const socket = new FakeSocket();
@@ -41,6 +44,63 @@ describe('GameStateService — seat persistence', () => {
     expect(game.inRoom()).toBe(false);
     expect(localStorage.getItem('sh:session')).toBeNull();
     expect(sessionStorage.getItem('sh:session')).toBeNull();
+  });
+
+  it('Should leave the previous table and drop its snapshot when joining another room', async () => {
+    localStorage.setItem('sh:session', JSON.stringify(SESSION));
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    socket.emit({
+      type: 'state',
+      state: makeView({ phase: Phase.Nomination }),
+    });
+    expect(game.view()?.phase).toBe(Phase.Nomination);
+
+    rs.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          roomId: 'room-2',
+          code: 'XYZ789',
+          token: 'token-2',
+          playerId: 'you-2',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    await game.joinRoom('room-2', { name: 'Ana' });
+
+    expect(socket.lastSent('room:leave')).toEqual({ type: 'room:leave' });
+    expect(game.view()).toBeNull();
+    expect(game.currentSession()).toEqual({
+      roomId: 'room-2',
+      code: 'XYZ789',
+      token: 'token-2',
+      playerId: 'you-2',
+    });
+  });
+
+  it('Should keep the same-room seat when the join is a return to that table', async () => {
+    localStorage.setItem('sh:session', JSON.stringify(SESSION));
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+
+    rs.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          roomId: SESSION.roomId,
+          code: SESSION.code,
+          token: 'token-rejoin',
+          playerId: SESSION.playerId,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    await game.joinRoom(SESSION.roomId, { name: 'Ana' });
+
+    expect(socket.lastSent('room:leave')).toBeUndefined();
+    expect(game.currentSession()?.token).toBe('token-rejoin');
   });
 });
 
