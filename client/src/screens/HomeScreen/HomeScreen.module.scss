@@ -31,46 +31,6 @@
     linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 38%, transparent 58%);
 }
 
-// --- Header bar: title in the center, settings key on the right -------------
-.statusBar {
-  // Pin the physical layout (title center, settings right) even in RTL locales.
-  direction: ltr;
-  position: relative;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  align-items: center;
-  padding: 8px 12px;
-  flex-shrink: 0;
-  background: linear-gradient(180deg, #8a6230 0%, #5d4020 58%, #45301a 100%);
-  border-bottom: 2px solid rgba($gold, 0.7);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 240, 200, 0.18),
-    0 3px 10px rgba(0, 0, 0, 0.5);
-}
-
-.headerSpacer {
-  width: 44px;
-  height: 44px;
-}
-
-.title {
-  margin: 0;
-  justify-self: center;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: $font-body;
-  font-size: 1.18rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  color: #fff4e3;
-  text-shadow:
-    0 1px 0 rgba(255, 240, 200, 0.28),
-    0 2px 6px rgba(0, 0, 0, 0.55);
-  white-space: nowrap;
-}
-
 // Raised brass plate with a gear — opens Settings.
 .settingsButton {
   display: inline-flex;
@@ -80,7 +40,6 @@
   height: 44px;
   border-radius: 12px;
   flex-shrink: 0;
-  justify-self: end;
   color: #3a2410;
   background:
     linear-gradient(180deg, #f3d089 0%, #d4a24a 46%, #9a6a22 100%);
@@ -108,7 +67,7 @@
     inset 0 -3px 5px rgba(120, 68, 18, 0.5);
 }
 
-// --- Below the header: portrait on the left, قوانین under the settings key --
+// Portrait on the left, settings top-right, قوانین hanging under the key.
 .profileRow {
   direction: ltr;
   position: relative;
@@ -116,9 +75,15 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 0 12px;
-  margin-top: 10px;
+  padding: 8px 12px 0;
   flex-shrink: 0;
+}
+
+.topRight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .rulesLink {
@@ -128,7 +93,6 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  margin-top: 2px;
   padding: 10px 12px 8px;
   min-width: 72px;
   border-radius: 10px 10px 14px 14px;

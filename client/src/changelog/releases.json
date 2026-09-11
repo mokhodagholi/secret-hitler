@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.4.0",
+      "bump": "minor",
+      "date": "2026-09-11",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "عنوان از نوار خانه برداشته شد تا چهره و تنظیمات کنار هم بمانند.",
+          "en": "The home bar no longer repeats the title, so the portrait and settings sit together."
+        }
+      ]
+    },
+    {
       "version": "0.3.0",
       "bump": "minor",
       "date": "2026-09-11",

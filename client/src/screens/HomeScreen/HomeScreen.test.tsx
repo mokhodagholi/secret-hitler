@@ -28,17 +28,17 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('tab', { name: 'Create Room' })).toBeTruthy();
   });
 
-  it('Should title the header Secret Hitler and keep currency off the bar', () => {
+  it('Should hide the title and keep currency off the home screen', () => {
     const harness = buildHarness();
     renderWithApp(() => <HomeScreen />, harness);
 
-    expect(screen.getByRole('heading', { name: 'Secret Hitler' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Secret Hitler' })).toBeNull();
     expect(screen.queryByText('3.3K')).toBeNull();
     expect(screen.queryByText('Guest')).toBeNull();
     expect(screen.queryByText('How to Play')).toBeNull();
   });
 
-  it('Should open Settings from the gear in the header', () => {
+  it('Should open Settings from the gear', () => {
     const harness = buildHarness();
     renderWithApp(
       () => (
