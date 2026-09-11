@@ -14,6 +14,17 @@ import type { WebSocketService } from './WebSocketService';
 
 export type VoiceStatus = 'off' | 'idle' | 'connecting' | 'live' | 'denied' | 'failed';
 
+/** Browser NS/AGC gate the ends of words; AEC stays so table speakers don't feedback. */
+const MIC_AUDIO: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: false,
+  autoGainControl: false,
+};
+
+const SPEAKING_ON = 0.02;
+const SPEAKING_OFF = 0.01;
+const SPEAKING_HOLD_MS = 500;
+
 interface VoiceUiState {
   selfMuted: boolean;
   speaking: Record<string, boolean>;
@@ -68,6 +79,7 @@ export class VoiceService {
   private readonly connectWaiters = new Map<string, () => void>();
   private readonly produceWaiters = new Map<string, (arg: { id: string }) => void>();
   private speaking = false;
+  private speakingHoldUntil = 0;
   private analyserTimer: ReturnType<typeof setInterval> | null = null;
   private levelContext: AudioContext | null = null;
 
@@ -146,13 +158,14 @@ export class VoiceService {
     try {
       // Mic first — capabilities/produce used to race ahead of getUserMedia.
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: MIC_AUDIO,
         video: false,
       });
       const track = this.localStream.getAudioTracks()[0];
       if (track) track.enabled = false;
       this.update('selfMuted', true);
-      this.watchLevel(this.localStream);
+      const monitor = this.localStream.clone?.() ?? this.localStream;
+      this.watchLevel(monitor);
       this.joined = true;
       this.socket.send({ type: 'voice:join' });
       await this.tryProduce();
@@ -408,7 +421,11 @@ export class VoiceService {
           const centered = (sample - 128) / 128;
           sum += centered * centered;
         }
-        const loud = Math.sqrt(sum / data.length) > 0.04 && !this.ui.selfMuted;
+        const rms = Math.sqrt(sum / data.length);
+        if (rms > SPEAKING_ON) this.speakingHoldUntil = Date.now() + SPEAKING_HOLD_MS;
+        const loud =
+          !this.ui.selfMuted &&
+          (rms > SPEAKING_OFF || Date.now() < this.speakingHoldUntil);
         if (loud === this.speaking) return;
         this.speaking = loud;
         this.socket.send({ type: 'voice:speaking', speaking: loud });
@@ -421,6 +438,7 @@ export class VoiceService {
   private stopLevel(): void {
     if (this.analyserTimer) clearInterval(this.analyserTimer);
     this.analyserTimer = null;
+    this.speakingHoldUntil = 0;
     void this.levelContext?.close();
     this.levelContext = null;
     if (this.speaking) {

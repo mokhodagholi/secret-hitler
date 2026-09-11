@@ -11,7 +11,7 @@ import { useApp } from '../../services/AppContext';
 import { playerLabel } from '../../i18n/perspective';
 import { isolateBidi } from '../../i18n/utils';
 import { avatarImage } from '../../assets/avatars';
-import { CARD_BACK, VOTE_FACE } from '../../assets/cards';
+import { VOTE_BACK, VOTE_FACE } from '../../assets/cards';
 import { Icon } from '../../components/Icon/Icon';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
@@ -20,7 +20,7 @@ import styles from './ChatPanel.module.scss';
 /** Handle + chrome only — feed and composer hide at this height. */
 const CHAT_MIN = 96;
 /** Handle + chrome + composer; the feed collapses to no height. */
-const CHAT_COMPOSER = 196;
+const CHAT_COMPOSER = 152;
 const CHAT_DEFAULT = 280;
 /** Leave room for the event header, deck, and a full-size seat row. */
 const BOARD_RESERVE = 260;
@@ -372,7 +372,7 @@ export function ChatPanel(props: ChatPanelProps) {
               const face = () =>
                 mine() && yourVoteFace() != null
                   ? VOTE_FACE[yourVoteFace()!]
-                  : CARD_BACK;
+                  : VOTE_BACK;
               return (
                 <article
                   classList={{
@@ -402,6 +402,9 @@ export function ChatPanel(props: ChatPanelProps) {
                       }}
                       src={face()}
                       alt=""
+                      data-ballot-face={
+                        mine() && yourVoteFace() != null ? 'face' : 'back'
+                      }
                     />
                     <span class={styles.stamp}>
                       {mine()

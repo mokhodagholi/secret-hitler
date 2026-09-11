@@ -2,6 +2,7 @@ import type { ExecutivePower, Policy, Role } from '@secret-hitler/shared';
 import cardBack from '../table/card-back.webp';
 import policyLiberal from '../table/policy/liberal.webp';
 import policyFascist from '../table/policy/fascist.webp';
+import voteBack from '../table/votes/back.webp';
 import voteJa from '../table/votes/ja.webp';
 import voteNein from '../table/votes/nein.webp';
 import roleLiberal from '../table/roles/liberal.webp';
@@ -26,6 +27,8 @@ export const POLICY_FACE: Record<Policy, string> = {
   liberal: policyLiberal,
   fascist: policyFascist,
 };
+
+export const VOTE_BACK = voteBack;
 
 export const VOTE_FACE = {
   ja: voteJa,

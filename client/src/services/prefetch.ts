@@ -16,6 +16,7 @@ import {
   RAVI,
   ROLE_FACE,
   VETO_SEAL,
+  VOTE_BACK,
   VOTE_FACE,
 } from '../assets/cards';
 import { EFFECT_URLS } from '../assets/sounds/effects/clips';
@@ -124,6 +125,7 @@ function gameTableUrls(): string[] {
     liberalBoard,
     fascistBoard,
     CARD_BACK,
+    VOTE_BACK,
     NIGHT_VEIL,
     RAVI.idle,
     RAVI.speaking,

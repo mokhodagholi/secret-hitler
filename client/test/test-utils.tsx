@@ -227,6 +227,7 @@ export function stubGrantedMicrophone(): { enabled: boolean; stop: () => void } 
   const stream = {
     getAudioTracks: () => [track],
     getTracks: () => [track],
+    clone: () => stream,
   };
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,

@@ -5,6 +5,7 @@ import { GameScreen } from './GameScreen';
 import { LOOK_AT_MS, LOOK_MS, CEREMONY_MS } from './NightOverlay';
 import { en } from '../../i18n/locales/en';
 import { isolateBidi } from '../../i18n/utils';
+import { CARD_BACK, VOTE_BACK, VOTE_FACE } from '../../assets/cards';
 import { buildHarness, makePlayer, makeView, renderWithApp, stubDeniedMicrophone } from '../../../test/test-utils';
 
 // Sourced from the catalog so the assertion follows the i18n text, not a literal.
@@ -152,6 +153,12 @@ describe('GameScreen — voting', () => {
       expect(document.querySelector('[data-ballot="cal"]')).toBeTruthy();
     });
     expect(document.querySelector('[data-ballot="you"]')).toBeNull();
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(
+      VOTE_BACK,
+    );
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).not.toBe(
+      CARD_BACK,
+    );
   });
 
   it('Should keep already-cast ballots in the centre after this player votes', () => {
@@ -175,8 +182,19 @@ describe('GameScreen — voting', () => {
     expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('data-ballot-face')).toBe(
       'back',
     );
+    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.nein,
+    );
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(
+      VOTE_BACK,
+    );
     expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
     expect(document.querySelector('[data-chat-ballot="cal"]')).toBeTruthy();
+    expect(
+      document
+        .querySelector('[data-chat-ballot="cal"] [data-ballot-face="back"]')
+        ?.getAttribute('src'),
+    ).toBe(VOTE_BACK);
     expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
     expect(screen.getByLabelText(/Cal.*cast a ballot/)).toBeTruthy();
   });

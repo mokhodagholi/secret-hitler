@@ -3,7 +3,7 @@ import type { Vote } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import type { AnimationService } from '../../services/AnimationService';
-import { CARD_BACK, VOTE_FACE } from '../../assets/cards';
+import { VOTE_BACK, VOTE_FACE } from '../../assets/cards';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
@@ -57,7 +57,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
   let primed = false;
   let closed = false;
   const ballotSrc = (id: string) =>
-    id === props.youId && chosen() != null ? VOTE_FACE[chosen()!] : CARD_BACK;
+    id === props.youId && chosen() != null ? VOTE_FACE[chosen()!] : VOTE_BACK;
   const ballotFaceUp = (id: string) => id === props.youId && chosen() != null;
 
   const totalMs = Math.max(1, props.endsAt - props.startedAt);

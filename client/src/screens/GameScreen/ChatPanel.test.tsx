@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
 import { ChatPanel } from './ChatPanel';
 import { en } from '../../i18n/locales/en';
+import { VOTE_BACK } from '../../assets/cards';
 import {
   buildHarness,
   makePlayer,
@@ -253,7 +254,7 @@ describe('ChatPanel', () => {
 
     fireEvent.dblClick(screen.getByRole('separator'));
     expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
-    expect(screen.getByLabelText(en.game.chat).style.height).toBe('196px');
+    expect(screen.getByLabelText(en.game.chat).style.height).toBe('152px');
   });
 
   it('Should hide the composer when the panel is collapsed to the header', () => {
@@ -359,5 +360,27 @@ describe('ChatPanel', () => {
 
     expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
     expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
+  });
+
+  it('Should show the vote back for another player’s ballot', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    const view = seatedView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Voting,
+      you: { ...view.you, vote: 'ja' },
+      players: view.players.map((player) =>
+        player.id === 'you' || player.id === 'sadf'
+          ? { ...player, hasVoted: true }
+          : player,
+      ),
+    });
+
+    expect(
+      document
+        .querySelector('[data-chat-ballot="sadf"] [data-ballot-face="back"]')
+        ?.getAttribute('src'),
+    ).toBe(VOTE_BACK);
   });
 });

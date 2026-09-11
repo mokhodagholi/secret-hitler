@@ -51,9 +51,15 @@ scene. Do not copy the man.
 
 ---
 
-## 1. Card backs (1 file)
+## 1. Card backs
 
-One back, reused for roles, votes, and the draw / discard piles. It
+Policy / role / draw piles use the navy-gold eagle (`card-back.png`).
+Vote ballots use a separate landscape back (`votes/back.webp`) so a
+face-down Ja/Nein never looks like a leftover law.
+
+### Policy back (1 file)
+
+One back, reused for roles and the draw / discard piles. It
 must still read at **~28×38 px** (the deck strip). Tiny banknote
 filigree turns to brown mush at that size — so the ornament has to be
 **big**: a fat gold frame, four corner medallions, one large centre

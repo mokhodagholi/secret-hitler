@@ -38,7 +38,9 @@ only while `flags.enabled('voice')`.
 Join starts muted. Tap the mic to speak. The client waits for the
 microphone before `voice:join`, queues `voice:peer` until the recv
 transport exists, and passes the server’s ICE list (STUN/TURN) into
-mediasoup transports.
+mediasoup transports. Capture keeps echo cancellation and leaves
+browser noise-suppression / auto-gain off so word endings are not
+gated.
 
 ## Bale / Safari
 

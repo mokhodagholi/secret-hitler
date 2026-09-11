@@ -66,14 +66,47 @@ describe('VoiceService', () => {
     expect(socket.lastSent('voice:join')).toBeUndefined();
 
     const track = { enabled: true, stop: () => {} };
-    grant({
+    const stream = {
       getAudioTracks: () => [track],
       getTracks: () => [track],
-    } as unknown as MediaStream);
+      clone: () => stream,
+    };
+    grant(stream as unknown as MediaStream);
     await Promise.resolve();
     await Promise.resolve();
     expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
     expect(track.enabled).toBe(false);
+  });
+
+  it('Should capture without noise suppression or auto-gain', async () => {
+    let asked: MediaStreamConstraints | undefined;
+    const track = { enabled: true, stop: () => {} };
+    const stream = {
+      getAudioTracks: () => [track],
+      getTracks: () => [track],
+      clone: () => stream,
+    };
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: (constraints: MediaStreamConstraints) => {
+          asked = constraints;
+          return Promise.resolve(stream);
+        },
+      },
+    });
+    const { voice } = makeVoice(true);
+    voice.sync(makeView({ phase: Phase.Nomination }));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(asked).toEqual({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+      video: false,
+    });
   });
 
   it('Should not consume this player’s own producer', () => {

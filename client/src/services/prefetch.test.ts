@@ -3,7 +3,7 @@ import { Phase } from '@secret-hitler/shared';
 import heroImage from '../assets/home/hero.webp';
 import deskImage from '../assets/home/desk.png';
 import { PORTRAITS } from '../assets/avatars';
-import { CARD_BACK } from '../assets/cards';
+import { CARD_BACK, VOTE_BACK } from '../assets/cards';
 import { EFFECT_URLS } from '../assets/sounds/effects/clips';
 import { MUSIC_URLS } from '../assets/sounds/music/clips';
 import { RAVI_CLIPS } from '../assets/sounds/ravi/clips';
@@ -80,6 +80,7 @@ describe('urlsForNextStep', () => {
       soundEffects: false,
     });
     expect(urls).toContain(CARD_BACK);
+    expect(urls).toContain(VOTE_BACK);
     expect(urls).toContain(MUSIC_URLS['night-ambient']);
     expect(urls).toContain(RAVI_CLIPS.daniel['vote.start']);
   });
@@ -111,6 +112,7 @@ describe('urlsForNextStep', () => {
     expect(urls).toContain(RAVI_CLIPS.daniel['vote.start']);
     expect(urls).toContain(RAVI_CLIPS.daniel['law.vetoAgreed']);
     expect(urls).toContain(CARD_BACK);
+    expect(urls).toContain(VOTE_BACK);
     expect(urls).toContain(PORTRAITS[0].src);
     expect(urls).toContain(EFFECT_URLS['deal-slide']);
   });
@@ -128,6 +130,7 @@ describe('urlsForNextStep', () => {
       soundEffects: false,
     });
     expect(urls).toContain(CARD_BACK);
+    expect(urls).toContain(VOTE_BACK);
     expect(urls).not.toContain(MUSIC_URLS['night-ambient']);
     expect(urls).not.toContain(RAVI_CLIPS.daniel['vote.start']);
     expect(urls).not.toContain(EFFECT_URLS['vote-tally']);
