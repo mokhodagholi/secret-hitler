@@ -7,6 +7,7 @@ ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 RUN npm install -g pnpm@11.25.0
 # Official Alpine CDN TLS often fails on the VPS. apk still verifies signed
 # packages, so HTTP + Tehran / ParsPack mirrors are enough for the mediasoup toolchain.
+# Alpine's python3 has no pip; mediasoup compiles the worker when the glibc prebuilt fails on musl.
 RUN set -eu; \
     alpine_version=$(cut -d. -f1,2 /etc/alpine-release); \
     installed=0; \
@@ -19,7 +20,7 @@ RUN set -eu; \
       printf '%s/v%s/main\n%s/v%s/community\n' \
         "$mirror" "$alpine_version" "$mirror" "$alpine_version" \
         > /etc/apk/repositories; \
-      if apk add --no-cache python3 make g++ linux-headers; then \
+      if apk add --no-cache python3 py3-pip make g++ linux-headers; then \
         installed=1; \
         break; \
       fi; \
@@ -63,7 +64,7 @@ RUN set -eu; \
       printf '%s/v%s/main\n%s/v%s/community\n' \
         "$mirror" "$alpine_version" "$mirror" "$alpine_version" \
         > /etc/apk/repositories; \
-      if apk add --no-cache python3 make g++ linux-headers; then \
+      if apk add --no-cache python3 py3-pip make g++ linux-headers; then \
         installed=1; \
         break; \
       fi; \
