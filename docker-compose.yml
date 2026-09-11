@@ -43,8 +43,7 @@ services:
         condition: service_healthy
     expose:
       - '3001'
-    ports:
-      - '${MEDIASOUP_RTC_MIN_PORT:-40000}-${MEDIASOUP_RTC_MAX_PORT:-40999}:40000-40999/udp'
+    # Publishing 40000–40999 UDP makes Docker bind ~1000 ports and OOM the VPS.
 
   turn:
     image: coturn/coturn:4.6
@@ -74,8 +73,7 @@ services:
     volumes:
       # Put fullchain.pem and privkey.pem in ./ssl on the host.
       - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - server
+    # Do not wait for the game process — 443 should stay up if the API is down.
 
 volumes:
   postgres-data:
