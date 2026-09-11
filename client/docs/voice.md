@@ -32,7 +32,7 @@ in-game and the flag is on. Callers never check the flag or the listen
 toggle — this class does. Settings `voiceEnabled` is “hear the table”
 (remote playback), not self-mute.
 
-Chrome (mic in chat, mute-other in the players sheet, seat rings) renders
+Chrome (mic in chat, mute-other from the seat menu, seat rings) renders
 only while `flags.enabled('voice')`.
 
 Join starts muted. Tap the mic to speak.

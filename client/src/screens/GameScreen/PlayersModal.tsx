@@ -20,7 +20,7 @@ export interface PlayersModalProps {
 /** Sheet listing every player, opened from the board's player-count chip. */
 export function PlayersModal(props: PlayersModalProps) {
   const { formatMessage } = props;
-  const { animation, flags, voice } = useApp();
+  const { animation } = useApp();
   const seated = () => [...props.players].sort((a, b) => a.seat - b.seat);
 
   return (
@@ -54,37 +54,14 @@ export function PlayersModal(props: PlayersModalProps) {
           <div class={styles.list}>
             <Index each={seated()}>
               {(player) => (
-                <div class={styles.entry}>
-                  <div class={styles.seatRow}>
-                    <PlayerRow
-                      player={player()}
-                      isYou={player().id === props.youId}
-                      nominatable={props.canNominate(player())}
-                      showOffice={props.showOffice}
-                      onNominate={() => props.onNominate(player())}
-                      formatMessage={formatMessage}
-                    />
-                  </div>
-                  <Show when={flags.enabled('voice') && player().id !== props.youId}>
-                    <button
-                      type="button"
-                      class={styles.mute}
-                      aria-label={formatMessage(
-                        voice.isRemoteMuted(player().id)
-                          ? 'game.unmutePlayer'
-                          : 'game.mutePlayer',
-                        { name: player().name },
-                      )}
-                      aria-pressed={voice.isRemoteMuted(player().id)}
-                      onClick={() => voice.toggleRemoteMute(player().id)}
-                    >
-                      <Icon
-                        name={voice.isRemoteMuted(player().id) ? 'micOff' : 'mic'}
-                        size={18}
-                      />
-                    </button>
-                  </Show>
-                </div>
+                <PlayerRow
+                  player={player()}
+                  isYou={player().id === props.youId}
+                  nominatable={props.canNominate(player())}
+                  showOffice={props.showOffice}
+                  onNominate={() => props.onNominate(player())}
+                  formatMessage={formatMessage}
+                />
               )}
             </Index>
           </div>

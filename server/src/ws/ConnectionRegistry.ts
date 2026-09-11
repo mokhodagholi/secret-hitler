@@ -11,9 +11,12 @@ export class ConnectionRegistry {
   private readonly bySocket = new Map<WebSocket, string>();
 
   bind(playerId: string, ws: WebSocket): void {
-    // Drop any stale socket for the same player (reconnect).
+    // Drop any stale socket for the same player (reconnect / second tab).
     const existing = this.byPlayer.get(playerId);
-    if (existing && existing !== ws) existing.close(4001, 'Replaced by new connection');
+    if (existing && existing !== ws) {
+      this.bySocket.delete(existing);
+      existing.close(4001, 'Replaced by new connection');
+    }
     this.byPlayer.set(playerId, ws);
     this.bySocket.set(ws, playerId);
   }

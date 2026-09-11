@@ -1,0 +1,93 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 87; // above the players sheet (86); kick confirm (180) still wins
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 12, 22, 0.78);
+}
+
+.sheet {
+  @include card;
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  border-color: rgba($gold, 0.45);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid $line-soft;
+}
+
+.playerName {
+  @include display(0.92rem, 0.14em);
+  color: $gold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.close {
+  @include pressable;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  color: $text-dim;
+  border: 1px solid $line-soft;
+  flex-shrink: 0;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+  gap: 8px;
+  padding: 16px;
+}
+
+.iconButton {
+  @include pressable;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 6px;
+  border-radius: $radius;
+  border: 1px solid $line-soft;
+  background: rgba($navy-900, 0.5);
+  color: $gold;
+}
+
+.iconLabel {
+  @include display(0.54rem, 0.08em);
+  color: $text-dim;
+  text-align: center;
+}
+
+.muted {
+  color: $text-dim;
+  opacity: 0.6;
+
+  .iconLabel {
+    text-decoration: line-through;
+  }
+}
+
+.danger {
+  color: $red-bright;
+  border-color: rgba($red-bright, 0.5);
+
+  .iconLabel {
+    color: rgba($red-bright, 0.85);
+  }
+}

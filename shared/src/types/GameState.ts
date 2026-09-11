@@ -241,6 +241,8 @@ export const LEGISLATIVE_PASS_MS = 100 + 2 * LEGISLATIVE_TRAVEL_CARD_MS;
 export const NOMINATION_DURATION_MS = 25_000;
 /** How long a table kick vote stays open before it is counted as-is. */
 export const KICK_VOTE_DURATION_MS = 30_000;
+/** Pause between a player's table-chat messages — one line, then wait. */
+export const CHAT_SLOWMODE_MS = 7_000;
 
 /** Yes votes needed to remove a player — half the living table, rounded up. */
 export function kickVoteYesNeeded(livingCount: number): number {

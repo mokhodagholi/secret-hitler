@@ -93,6 +93,32 @@ describe('WebSocket gameplay', () => {
     await ws.waitFor('pong');
   });
 
+  it('Should keep a player connected after they reopen the socket with the same token', async () => {
+    server = await listenServer();
+    const created = (
+      await httpJson<CreateRoomResponse>(server.app, 'POST', '/api/rooms', {
+        name: 'Bunker',
+        hostName: 'Ana',
+      })
+    ).body;
+
+    const first = await connect();
+    await first.auth(created.token);
+    const firstClosed = first.waitForClose();
+
+    const second = await connect();
+    await second.auth(created.token);
+    await firstClosed;
+
+    second.send({ type: 'player:unready' });
+    const state = await second.waitFor('state');
+    const self = state.state.players.find((player) => player.id === created.playerId);
+    expect(self?.connected).toBe(true);
+
+    second.send({ type: 'ping' });
+    await second.waitFor('pong');
+  });
+
   it('Should run a full round: ready, start, nominate, vote, legislate', async () => {
     server = await listenServer();
     const { created, ben, cal, hostWs, benWs, calWs } = await seatThreePlayers();
@@ -183,13 +209,12 @@ describe('WebSocket gameplay', () => {
     expect(hostState.state.players.map((p) => p.name)).toEqual(['Ana', 'Cal']);
   });
 
-  it('Should rate-limit chat flooding', async () => {
+  it('Should wait between chat messages from the same player', async () => {
     server = await listenServer();
     const { hostWs } = await seatThreePlayers();
 
-    for (let i = 0; i < 9; i++) {
-      hostWs.send({ type: 'chat:message', text: `spam ${i}` });
-    }
+    hostWs.send({ type: 'chat:message', text: 'first' });
+    hostWs.send({ type: 'chat:message', text: 'too soon' });
     const limited = await hostWs.waitFor('error');
     expect(limited.code).toBe('RATE_LIMITED');
   });

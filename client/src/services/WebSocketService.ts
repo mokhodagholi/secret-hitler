@@ -7,6 +7,10 @@ type MessageListener = (message: ServerMessage) => void;
 
 const RECONNECT_BASE_DELAY_MS = 500;
 const RECONNECT_MAX_DELAY_MS = 8000;
+/** Keep the proxied socket alive; Node 18+ otherwise 408s idle upgrades. */
+const HEARTBEAT_INTERVAL_MS = 25_000;
+/** Server close code for a rejected token — retrying it is futile. */
+export const AUTH_REJECTED_CLOSE_CODE = 4001;
 
 /**
  * Owns the WebSocket connection to the game server: opens `/ws`, performs the
@@ -24,6 +28,7 @@ export class WebSocketService {
   private listeners = new Set<MessageListener>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     const [status, setStatus] = createSignal<ConnectionStatus>('disconnected');
@@ -48,11 +53,9 @@ export class WebSocketService {
   disconnect(): void {
     this.token = null;
     this.clearReconnectTimer();
-    if (this.socket) {
-      this.socket.onclose = null;
-      this.socket.close();
-      this.socket = null;
-    }
+    this.stopHeartbeat();
+    this.dropSocket(this.socket);
+    this.socket = null;
     this.setStatus('disconnected');
   }
 
@@ -65,6 +68,8 @@ export class WebSocketService {
   private open(): void {
     if (!this.token) return;
     this.clearReconnectTimer();
+    this.stopHeartbeat();
+    this.dropSocket(this.socket);
     this.setStatus('connecting');
 
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -72,11 +77,12 @@ export class WebSocketService {
     this.socket = socket;
 
     socket.onopen = () => {
-      if (!this.token) return;
+      if (this.socket !== socket || !this.token) return;
       socket.send(JSON.stringify({ type: 'auth', token: this.token }));
     };
 
     socket.onmessage = (event) => {
+      if (this.socket !== socket) return;
       let message: ServerMessage;
       try {
         message = JSON.parse(String(event.data)) as ServerMessage;
@@ -86,15 +92,18 @@ export class WebSocketService {
       if (message.type === 'authed') {
         this.reconnectAttempts = 0;
         this.setStatus('connected');
+        this.startHeartbeat();
       }
       for (const listener of this.listeners) listener(message);
     };
 
     socket.onclose = (event) => {
+      // A replaced socket must not clear the live one (reconnect / second tab).
+      if (this.socket !== socket) return;
+      this.stopHeartbeat();
       this.socket = null;
       this.setStatus('disconnected');
-      // 4001 = auth rejected by the server; retrying the same token is futile.
-      if (event.code === 4001) {
+      if (event.code === AUTH_REJECTED_CLOSE_CODE) {
         this.token = null;
         return;
       }
@@ -102,6 +111,31 @@ export class WebSocketService {
     };
 
     socket.onerror = () => socket.close();
+  }
+
+  private dropSocket(socket: WebSocket | null): void {
+    if (!socket) return;
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    if (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN) {
+      socket.close();
+    }
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      this.send({ type: 'ping' });
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
   }
 
   private scheduleReconnect(): void {

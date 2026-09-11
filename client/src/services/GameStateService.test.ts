@@ -1,4 +1,5 @@
-import { describe, expect, it } from '@rstest/core';
+import { afterEach, describe, expect, it, rs } from '@rstest/core';
+import { CHAT_SLOWMODE_MS } from '@secret-hitler/shared';
 import { GameStateService } from './GameStateService';
 import { FakeSocket } from '../../test/test-utils';
 import type { WebSocketService } from './WebSocketService';
@@ -40,5 +41,30 @@ describe('GameStateService — seat persistence', () => {
     expect(game.inRoom()).toBe(false);
     expect(localStorage.getItem('sh:session')).toBeNull();
     expect(sessionStorage.getItem('sh:session')).toBeNull();
+  });
+});
+
+describe('GameStateService — table chat', () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+  });
+
+  it('Should refuse a second chat line until the pause elapses', () => {
+    let now = 1_000;
+    rs.spyOn(Date, 'now').mockImplementation(() => now);
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+
+    game.sendChat('first');
+    game.sendChat('too soon');
+    expect(
+      socket.sent.filter((message) => message.type === 'chat:message'),
+    ).toHaveLength(1);
+
+    now += CHAT_SLOWMODE_MS;
+    game.sendChat('later');
+    expect(
+      socket.sent.filter((message) => message.type === 'chat:message'),
+    ).toHaveLength(2);
   });
 });

@@ -118,6 +118,30 @@ describe('ChatPanel', () => {
     });
   });
 
+  it('Should wait seven seconds before the next chat message', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    const input = screen.getByPlaceholderText(en.game.chatPlaceholder);
+    fireEvent.input(input, { target: { value: 'first' } });
+    fireEvent.click(screen.getByRole('button', { name: en.game.send }));
+
+    fireEvent.input(screen.getByPlaceholderText(/Wait 7s/), {
+      target: { value: 'too soon' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: en.game.chatSlowWait.replace('{seconds}', '7'),
+      }),
+    );
+
+    expect(
+      harness.socket.sent.filter((message) => message.type === 'chat:message'),
+    ).toHaveLength(1);
+    expect(screen.getByText('7')).toBeTruthy();
+  });
+
   it('Should show the discussion countdown while discussion is open', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);

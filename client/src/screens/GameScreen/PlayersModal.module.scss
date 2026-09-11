@@ -52,32 +52,3 @@
   padding: 12px 12px 16px;
   overflow-y: auto;
 }
-
-.entry {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-}
-
-.seatRow {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-}
-
-.seatRow > * {
-  flex: 1;
-  min-width: 0;
-}
-
-.mute {
-  @include pressable;
-  display: grid;
-  place-items: center;
-  flex: 0 0 44px;
-  width: 44px;
-  border-radius: 12px;
-  border: 1px solid rgba($cream, 0.12);
-  background: rgba(12, 8, 4, 0.35);
-  color: $cream;
-}

@@ -16,7 +16,7 @@ export interface TableSeatProps {
   selectable: boolean;
   /** Previous-government lock: clickable so we can explain why not. */
   termLocked: boolean;
-  /** Tap to ask the table to remove this player. */
+  /** Tap opens the player sheet (report / mute) when no table action applies. */
   reportable?: boolean;
   /** Seat numbers and office ribbons — hidden until the opening night ends. */
   showPublicMarks?: boolean;

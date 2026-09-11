@@ -18,6 +18,7 @@ import { TableSeat } from './TableSeat';
 import { ChatPanel } from './ChatPanel';
 import { PolicyBoard } from './PolicyBoard';
 import { PlayersModal } from './PlayersModal';
+import { PlayerActionsMenu } from './PlayerActionsMenu';
 import { GameMenu } from './GameMenu';
 import { LegislativeModal } from './LegislativeModal';
 import { VotingOverlay } from './VotingOverlay';
@@ -42,12 +43,13 @@ import styles from './GameScreen.module.scss';
  * docked chat panel. Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
-  const { nav, game, i18n, animation, ravi, sound } = useApp();
+  const { nav, game, i18n, animation, ravi, sound, flags, voice } = useApp();
   const { formatMessage } = i18n;
 
   const view = game.view;
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
+  const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [playersOpen, setPlayersOpen] = createSignal(false);
   const [chatHeight, setChatHeight] = createSignal(280);
@@ -73,6 +75,10 @@ export function GameScreen() {
 
   onMount(() => {
     const handleBack = () => {
+      if (playerMenu()) {
+        setPlayerMenu(null);
+        return;
+      }
       if (menuOpen()) {
         setMenuOpen(false);
         return;
@@ -423,6 +429,14 @@ export function GameScreen() {
     return player.isAlive && player.id !== state.you.id;
   };
 
+  const canMuteOther = (player: PublicPlayer) => {
+    const state = view();
+    return flags.enabled('voice') && state != null && player.id !== state.you.id;
+  };
+
+  const canOpenPlayerMenu = (player: PublicPlayer) =>
+    canReport(player) || canMuteOther(player);
+
   function nominate(player: PublicPlayer): void {
     game.sendCommand({ kind: 'nominateChancellor', targetId: player.id });
     setPlayersOpen(false);
@@ -684,8 +698,12 @@ export function GameScreen() {
       });
       return;
     }
-    if (canReport(player)) {
+    if (canOpenPlayerMenu(player)) {
       sound.play('player-ready');
+      if (flags.enabled('voice')) {
+        setPlayerMenu(player);
+        return;
+      }
       setReporting(player);
     }
   }
@@ -746,7 +764,9 @@ export function GameScreen() {
                         isYou={player.id === state().you.id}
                         isNext={player.id === nextPresidentId()}
                         selectable={seatSelectable(player)}
-                        reportable={canReport(player) && !seatSelectable(player)}
+                        reportable={
+                          canOpenPlayerMenu(player) && !seatSelectable(player)
+                        }
                         termLocked={
                           termLocked(player) ||
                           awayFromTable(player) ||
@@ -1049,15 +1069,41 @@ export function GameScreen() {
               players={state().players}
               youId={state().you.id}
               formatMessage={formatMessage}
-              canNominate={(player) => canReport(player)}
+              canNominate={(player) => canOpenPlayerMenu(player)}
               showOffice={!ceremonyOpen()}
               onNominate={(player) => {
                 sound.play('player-ready');
+                if (flags.enabled('voice')) {
+                  setPlayerMenu(player);
+                  return;
+                }
                 setPlayersOpen(false);
                 setReporting(player);
               }}
               onClose={() => setPlayersOpen(false)}
             />
+
+            <Show when={playerMenu()}>
+              {(target) => (
+                <PlayerActionsMenu
+                  player={target()}
+                  canReport={canReport(target())}
+                  canMute={canMuteOther(target())}
+                  muted={voice.isRemoteMuted(target().id)}
+                  formatMessage={formatMessage}
+                  onReport={() => {
+                    const player = target();
+                    setPlayerMenu(null);
+                    setReporting(player);
+                  }}
+                  onMute={() => {
+                    voice.toggleRemoteMute(target().id);
+                    setPlayerMenu(null);
+                  }}
+                  onClose={() => setPlayerMenu(null)}
+                />
+              )}
+            </Show>
 
             <GameMenu
               open={tableOverlay() === 'menu'}

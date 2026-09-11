@@ -1,5 +1,6 @@
 import type { WebSocket } from 'ws';
 import {
+  CHAT_SLOWMODE_MS,
   DEFAULT_FLAGS,
   HOST_MIGRATION_GRACE_MS,
   LIVE_ROOM_RECONNECT_GRACE_MS,
@@ -31,10 +32,6 @@ interface GameContext {
   playerId: string;
 }
 
-/** Chat flood control: max messages per window, per player. */
-const CHAT_LIMIT = 8;
-const CHAT_WINDOW_MS = 10_000;
-
 /**
  * Bridges raw WebSocket traffic and the game engine. Validates and
  * deserializes inbound {@link ClientMessage}s into engine calls, and
@@ -61,7 +58,8 @@ export class SocketHandler {
   private readonly reconnectGrace = new Map<string, ReturnType<typeof setTimeout>>();
   /** Serialize durable writes so a token issue cannot lose a racing snapshot. */
   private readonly persistChain = new Map<string, Promise<void>>();
-  private readonly chatLimiter = new RateLimiter(CHAT_LIMIT, CHAT_WINDOW_MS);
+  /** One table-chat line per player, then a pause. */
+  private readonly chatLimiter = new RateLimiter(1, CHAT_SLOWMODE_MS);
   private readonly router: MessageRouter<ClientMessage, GameContext>;
 
   constructor(
@@ -651,6 +649,8 @@ export class SocketHandler {
     const roomId = this.socketRoom.get(ws);
     this.socketRoom.delete(ws);
     if (!playerId || !roomId) return;
+    // Reconnect already bound a newer socket; this close is the leftover.
+    if (this.connections.isConnected(playerId)) return;
     this.chatLimiter.clear(playerId);
 
     const entry = this.repo.get(roomId);

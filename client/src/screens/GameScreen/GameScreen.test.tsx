@@ -1003,7 +1003,8 @@ describe('GameScreen — in-game menu', () => {
     expect(screen.getByRole('button', { name: en.gameMenu.tableVoice })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
 
-    openPlayers();
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.getByRole('button', { name: en.game.playerMenu.report })).toBeTruthy();
     const muteCal = screen.getByRole('button', {
       name: en.game.mutePlayer.replace('{name}', 'Cal'),
     });
@@ -1013,6 +1014,22 @@ describe('GameScreen — in-game menu', () => {
     expect(
       screen.queryByRole('button', { name: en.game.mutePlayer.replace('{name}', 'You') }),
     ).toBeNull();
+  });
+
+  it('Should confirm a kick from the seat menu when voice is on', () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    fireEvent.click(screen.getByRole('button', { name: en.game.playerMenu.report }));
+    expect(screen.getByText(/Ask the table to remove/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.kickVote.request }));
+    expect(harness.socket.lastSent('kick:request')).toEqual({
+      type: 'kick:request',
+      playerId: 'cal',
+    });
   });
 });
 

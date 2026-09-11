@@ -116,4 +116,11 @@ export class TestClient {
   close(): void {
     this.socket.close();
   }
+
+  waitForClose(): Promise<void> {
+    if (this.socket.readyState === WebSocket.CLOSED) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.socket.once('close', () => resolve());
+    });
+  }
 }

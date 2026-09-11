@@ -1,5 +1,6 @@
 import { createSignal } from 'solid-js';
 import {
+  CHAT_SLOWMODE_MS,
   MessageRouter,
   Phase,
   type ChatMessage,
@@ -81,6 +82,11 @@ export class GameStateService {
   private readonly lastErrorSignal = createSignal<ServerError | null>(null);
   readonly lastError = this.lastErrorSignal[0];
   private readonly setLastError = this.lastErrorSignal[1];
+
+  /** Epoch ms when this seat may send another table-chat line. */
+  private readonly chatSlowUntilSignal = createSignal(0);
+  readonly chatSlowUntil = this.chatSlowUntilSignal[0];
+  private readonly setChatSlowUntil = this.chatSlowUntilSignal[1];
 
   /** Set when the server destroys the room (e.g. the host left). */
   private readonly roomClosedSignal = createSignal<RoomClosedReason | null>(null);
@@ -233,7 +239,10 @@ export class GameStateService {
 
   sendChat(text: string): void {
     const body = text.trim();
-    if (body) this.socket.send({ type: 'chat:message', text: body });
+    if (!body) return;
+    if (Date.now() < this.chatSlowUntil()) return;
+    this.socket.send({ type: 'chat:message', text: body });
+    this.setChatSlowUntil(Date.now() + CHAT_SLOWMODE_MS);
   }
 
   sendCommand(command: GameCommand): void {
@@ -252,6 +261,7 @@ export class GameStateService {
     this.setLogEntries([]);
     this.setUnreadChat(0);
     this.setLastError(null);
+    this.setChatSlowUntil(0);
   }
 
   // --- Internals -----------------------------------------------------------
@@ -263,6 +273,7 @@ export class GameStateService {
     this.setLogEntries([]);
     this.setUnreadChat(0);
     this.setLastError(null);
+    this.setChatSlowUntil(0);
     this.socket.connect(session.token);
     return session;
   }

@@ -53,7 +53,13 @@ export function ChatPanel(props: ChatPanelProps) {
   let dragging = false;
 
   const talkingAllowed = () => props.talkingAllowed !== false;
-  const canSend = () => talkingAllowed() && chatDraft().trim() !== '';
+  const slowSecondsLeft = () => {
+    const until = game.chatSlowUntil();
+    if (until <= 0) return 0;
+    return Math.max(0, Math.ceil((until - now()) / 1000));
+  };
+  const canSend = () =>
+    talkingAllowed() && slowSecondsLeft() === 0 && chatDraft().trim() !== '';
   const expanded = () => height() > CHAT_MIN + 16;
 
   const clampHeight = (next: number) => {
@@ -158,6 +164,7 @@ export function ChatPanel(props: ChatPanelProps) {
     if (!talkingAllowed() || !canSend()) return;
     game.sendChat(chatDraft());
     setChatDraft('');
+    setNow(Date.now());
   }
 
   function onResizePointerDown(event: PointerEvent): void {
@@ -398,9 +405,13 @@ export function ChatPanel(props: ChatPanelProps) {
             dir={i18n.dir()}
             value={chatDraft()}
             placeholder={
-              talkingAllowed()
-                ? formatMessage('game.chatPlaceholder')
-                : formatMessage('game.chatSilentPlaceholder')
+              !talkingAllowed()
+                ? formatMessage('game.chatSilentPlaceholder')
+                : slowSecondsLeft() > 0
+                  ? formatMessage('game.chatSlowPlaceholder', {
+                      seconds: slowSecondsLeft(),
+                    })
+                  : formatMessage('game.chatPlaceholder')
             }
             maxlength={500}
             disabled={!talkingAllowed()}
@@ -424,11 +435,28 @@ export function ChatPanel(props: ChatPanelProps) {
           <button
             type="button"
             class={styles.send}
-            aria-label={formatMessage('game.send')}
+            aria-label={
+              slowSecondsLeft() > 0
+                ? formatMessage('game.chatSlowWait', {
+                    seconds: slowSecondsLeft(),
+                  })
+                : formatMessage('game.send')
+            }
             disabled={!canSend()}
             onClick={sendChat}
           >
-            <Icon name="send" size={20} />
+            <Show
+              when={slowSecondsLeft() === 0}
+              fallback={
+                <span class={styles.slowCount}>
+                  {formatMessage('game.chatSlowCount', {
+                    seconds: slowSecondsLeft(),
+                  })}
+                </span>
+              }
+            >
+              <Icon name="send" size={20} />
+            </Show>
           </button>
         </div>
       </Show>

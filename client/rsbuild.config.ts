@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import http from 'node:http';
+import https from 'node:https';
 import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -89,6 +91,27 @@ function devHttpsOptions(): { key: Buffer; cert: Buffer } {
   fs.writeFileSync(hostsPath, stamp);
   return { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) };
 }
+
+function disableRequestTimeouts(server: http.Server | https.Server): void {
+  // Node 18+ still treats an upgraded WebSocket as an unfinished HTTP request
+  // and 408s it (~60s headersTimeout, 5min requestTimeout) through the proxy.
+  server.headersTimeout = 0;
+  server.requestTimeout = 0;
+  server.timeout = 0;
+}
+
+function wrapCreateServer<Factory extends typeof http.createServer | typeof https.createServer>(
+  create: Factory,
+): Factory {
+  return ((...args: unknown[]) => {
+    const server = (create as (...createArgs: unknown[]) => http.Server)(...args);
+    disableRequestTimeouts(server);
+    return server;
+  }) as Factory;
+}
+
+http.createServer = wrapCreateServer(http.createServer.bind(http));
+https.createServer = wrapCreateServer(https.createServer.bind(https));
 
 function appVersion(): string {
   const fromEnv = process.env.APP_VERSION?.trim();
@@ -199,6 +222,11 @@ export default defineConfig({
       index: './src/index.tsx',
     },
   },
+  // Saving a file must not live-reload every phone on the LAN (`pnpm dev:https`).
+  dev: {
+    hmr: process.env.DEV_HTTPS !== '1',
+    liveReload: process.env.DEV_HTTPS !== '1',
+  },
   server: {
     port: 3000,
     // Phone on the same Wi-Fi can open https://<lan-ip>:3000 (`pnpm dev:https`).
@@ -209,8 +237,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3001',
       '/ws': {
-        target: 'ws://localhost:3001',
+        target: 'http://localhost:3001',
         ws: true,
+        timeout: 0,
+        proxyTimeout: 0,
       },
     },
   },
