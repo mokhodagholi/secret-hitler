@@ -1,0 +1,68 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.label {
+  @include display(0.78rem, 0.12em);
+  color: $text-dim;
+}
+
+.box {
+  @include card;
+  display: flex;
+  align-items: stretch;
+  padding: 12px 14px;
+
+  &:focus-within {
+    border-color: rgba($gold, 0.7);
+  }
+}
+
+.invalid {
+  border-color: rgba($red-bright, 0.7);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 8.5rem;
+  resize: none;
+  background: none;
+  border: none;
+  outline: none;
+  color: $cream;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.7;
+
+  &::placeholder {
+    color: rgba($text-dim, 0.6);
+  }
+}
+
+.error {
+  font-size: 0.8rem;
+  color: $red-bright;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 1.15em;
+}
+
+.count {
+  margin-inline-start: auto;
+  color: $text-dim;
+  font-size: 0.8rem;
+  direction: ltr;
+  unicode-bidi: isolate;
+}

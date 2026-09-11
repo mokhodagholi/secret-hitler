@@ -13,6 +13,7 @@ import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 import { UpdateModal } from './components/UpdateModal/UpdateModal';
 import { WhatsNewModal } from './components/WhatsNewModal/WhatsNewModal';
 import { ChangelogScreen } from './screens/ChangelogScreen/ChangelogScreen';
+import { SupportScreen } from './screens/SupportScreen/SupportScreen';
 import { criticalBootUrls } from './services/prefetch';
 import { waitForOnline } from './services/online';
 
@@ -56,6 +57,9 @@ function Router() {
       </Match>
       <Match when={nav.screen() === 'changelog'}>
         <ChangelogScreen />
+      </Match>
+      <Match when={nav.screen() === 'support'}>
+        <SupportScreen />
       </Match>
       <Match when={nav.screen() === 'play'}>
         <RoomsScreen initialTab="create" />

@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import {
+  acknowledgedVersion,
   bumpVersion,
   compareVersions,
   fetchRemoteChangelog,
@@ -10,6 +11,7 @@ import {
   writeSeenVersion,
 } from './changelog';
 import { CHANGELOG_RELEASES } from './releases';
+import { APP_PACKAGE_VERSION } from '../services/update';
 
 describe('bumpVersion', () => {
   it('Should roll major, minor, and patch independently', () => {
@@ -40,14 +42,29 @@ describe('releasesSince', () => {
   });
 });
 
+describe('acknowledgedVersion', () => {
+  it('Should prefer the archive when it is ahead of the running package', () => {
+    const releases = parseChangelog({
+      releases: [
+        { version: '0.6.0', bump: 'minor', date: '2026-09-11', changes: [{ kind: 'feat', fa: 'شش', en: 'six' }] },
+      ],
+    });
+    expect(acknowledgedVersion('0.5.0', releases)).toBe('0.6.0');
+    expect(acknowledgedVersion('0.6.0', releases)).toBe('0.6.0');
+    expect(acknowledgedVersion('0.7.0', releases)).toBe('0.7.0');
+    expect(acknowledgedVersion('0.5.0', [])).toBe('0.5.0');
+  });
+});
+
 describe('parseChangelog', () => {
   it('Should drop malformed releases instead of throwing', () => {
     expect(parseChangelog(null)).toEqual([]);
     expect(parseChangelog({ releases: [{ version: '1.0.0' }] })).toEqual([]);
   });
 
-  it('Should ship no notes until the first player-facing change', () => {
+  it('Should ship an empty archive until the first player-facing release', () => {
     expect(CHANGELOG_RELEASES).toEqual([]);
+    expect(APP_PACKAGE_VERSION).toBe('0.0.1');
   });
 });
 

@@ -1,5 +1,6 @@
 import { Show } from 'solid-js';
 import { Icon, type IconName } from '../Icon/Icon';
+import { nativeFieldAttrs } from '../nativeField';
 import styles from './TextInput.module.scss';
 
 export interface TextInputProps {
@@ -32,6 +33,7 @@ export function TextInput(props: TextInputProps) {
           maxlength={props.maxLength ?? 40}
           disabled={props.disabled}
           readOnly={props.disabled}
+          {...nativeFieldAttrs({ password: props.type === 'password' })}
           onInput={(event) => props.onInput(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') props.onSubmit?.();

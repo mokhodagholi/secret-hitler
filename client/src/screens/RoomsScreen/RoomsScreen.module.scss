@@ -12,9 +12,11 @@ $edge: rgba(110, 65, 35, 0.6);
 
 .scene {
   position: relative;
-  height: calc(100% + 42px);
-  margin: -18px -16px -24px;
-  padding-bottom: 18px;
+  height: calc(100% + var(--screen-pad-top) + var(--screen-pad-bottom));
+  margin: calc(-1 * var(--screen-pad-top)) calc(-1 * var(--screen-pad-x))
+    calc(-1 * var(--screen-pad-bottom));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -93,7 +95,6 @@ $edge: rgba(110, 65, 35, 0.6);
     inset 0 0 36px rgba(90, 50, 20, 0.14),
     0 14px 28px rgba(0, 0, 0, 0.5);
   @include scroll-wood;
-  --scroll-track: #d9bf8a;
 }
 
 .board::before {
@@ -126,7 +127,7 @@ $edge: rgba(110, 65, 35, 0.6);
   padding: 11px 12px;
   border-radius: 6px;
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 16px;
   color: $paper-ink;
   background: linear-gradient(180deg, #efe3c6, #e3d3ad);
   border: 1px solid rgba(110, 65, 35, 0.5);

@@ -51,6 +51,20 @@ export function releasesSince(
   return releases.filter((release) => compareVersions(release.version, seen) > 0);
 }
 
+/**
+ * Version to store when the player dismisses the briefing. The archive can
+ * hot-reload ahead of a stale `APP_PACKAGE_VERSION` on localhost; marking the
+ * newer of the two is what actually closes the card.
+ */
+export function acknowledgedVersion(
+  current: string,
+  releases: readonly ChangelogRelease[],
+): string {
+  const newest = releases[0]?.version;
+  if (newest == null) return current;
+  return compareVersions(newest, current) > 0 ? newest : current;
+}
+
 export function parseChangelog(raw: unknown): ChangelogRelease[] {
   if (raw == null || typeof raw !== 'object') return [];
   const releases = (raw as { releases?: unknown }).releases;

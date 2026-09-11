@@ -50,6 +50,7 @@ export class BaleService {
     if (!webApp) return;
 
     webApp.ready();
+    webApp.expand();
     webApp.BackButton.onClick(() => nav.requestBack());
     this.syncBackButton(nav.canGoBack());
 

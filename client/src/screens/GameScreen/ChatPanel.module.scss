@@ -101,8 +101,8 @@
   @include pressable;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: none;
   color: $cream;
@@ -265,7 +265,7 @@
   border: none;
   color: $cream;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 16px;
   line-height: 1.45;
   outline: none;
   resize: none;
@@ -281,9 +281,9 @@
   @include pressable;
   display: grid;
   place-items: center;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 36px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
   margin: 0 0 2px;
   padding: 0;
   border: none;

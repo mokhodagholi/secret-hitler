@@ -15,20 +15,28 @@
 }
 
 // Fixed-height viewport column; content scrolls inside when it overflows.
+// Bleed screens (home, rooms, player cards) cancel these via the --screen-pad-* tokens.
 .content {
+  --screen-pad-top: calc(18px + env(safe-area-inset-top, 0px));
+  --screen-pad-x: 16px;
+  --screen-pad-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 18px 16px 24px;
+  padding: var(--screen-pad-top) var(--screen-pad-x) var(--screen-pad-bottom);
 }
 
 // Clear the fixed bottom navigation on screens that have one.
 .withNav {
-  padding-bottom: $nav-height + 40px;
+  --screen-pad-bottom: calc(#{$nav-height + 40px} + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--screen-pad-bottom);
 }
 
 // Full-bleed column for screens that own the viewport (the table).
 .fill {
+  --screen-pad-top: 0px;
+  --screen-pad-x: 0px;
+  --screen-pad-bottom: 0px;
   padding: 0;
   overflow: hidden;
   display: flex;

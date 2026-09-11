@@ -18,6 +18,7 @@ import type { ProfileStore } from '../profiles/ProfileStore';
 import { hashPassword, verifyPassword } from './password';
 import { validateBaleInitData } from '../bale/initData';
 import { handleBaleWebhook, type BaleRuntime } from '../bale/webhook';
+import { formatSupportLetter, isSupportTopic } from '../bale/support';
 
 export interface RouteDeps {
   repo: RoomRepository;
@@ -37,7 +38,10 @@ export interface RouteDeps {
 const CREATE_LIMIT = 5;
 const JOIN_LIMIT = 10;
 const PROFILE_LIMIT = 20;
+const SUPPORT_LIMIT = 3;
 const LIMIT_WINDOW_MS = 60_000;
+const SUPPORT_DESCRIPTION_MAX = 2000;
+const SUPPORT_DESCRIPTION_MIN = 3;
 
 const CLIENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -51,6 +55,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
   const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
   const profileLimiter = new RateLimiter(PROFILE_LIMIT, LIMIT_WINDOW_MS);
+  const supportLimiter = new RateLimiter(SUPPORT_LIMIT, LIMIT_WINDOW_MS);
 
   app.post('/api/auth/bale', async (req, reply) => {
     if (!bale) {
@@ -68,6 +73,59 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       baleUserId: String(user.id),
     });
     return { id: user.id, firstName: user.firstName, avatar };
+  });
+
+  app.post('/api/support', async (req, reply) => {
+    if (!bale) {
+      return reply.code(503).send({ error: 'Bale bot is not configured', code: 'BALE_DISABLED' });
+    }
+    if (bale.supportChatId == null) {
+      return reply
+        .code(503)
+        .send({ error: 'Support desk is not configured', code: 'SUPPORT_DISABLED' });
+    }
+    if (!supportLimiter.allow(req.ip)) {
+      return reply
+        .code(429)
+        .send({ error: 'Too many letters. Try again shortly.', code: 'RATE_LIMITED' });
+    }
+
+    const body = (req.body ?? {}) as {
+      topic?: unknown;
+      description?: unknown;
+      clientId?: unknown;
+      initData?: unknown;
+    };
+    const description =
+      typeof body.description === 'string' ? body.description.trim() : '';
+    if (!isSupportTopic(body.topic) || description.length < SUPPORT_DESCRIPTION_MIN) {
+      return reply.code(400).send({ error: 'topic and description are required' });
+    }
+
+    const baleUser =
+      typeof body.initData === 'string'
+        ? validateBaleInitData(body.initData, bale.botToken)
+        : null;
+    const clientId = isClientId(body.clientId) ? body.clientId : null;
+    const senderId = baleUser ? String(baleUser.id) : clientId;
+    if (!senderId) {
+      return reply.code(400).send({ error: 'sender id is required' });
+    }
+
+    const text = formatSupportLetter({
+      topic: body.topic,
+      description: description.slice(0, SUPPORT_DESCRIPTION_MAX),
+      senderId,
+    });
+
+    try {
+      await bale.bot.sendMessage({ chat_id: bale.supportChatId, text });
+    } catch (error) {
+      req.log.error(error, 'Failed to send support letter');
+      return reply.code(502).send({ error: 'Failed to deliver the letter' });
+    }
+
+    return { ok: true };
   });
 
   app.put('/api/profile', async (req, reply) => {

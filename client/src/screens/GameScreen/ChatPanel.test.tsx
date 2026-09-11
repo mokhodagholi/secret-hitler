@@ -52,6 +52,18 @@ describe('ChatPanel', () => {
     expect(screen.getByText('sadf')).toBeTruthy();
   });
 
+  it('Should keep the composer from inviting browser suggest', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    const field = screen.getByPlaceholderText(en.game.chatPlaceholder);
+    expect(field.getAttribute('autocomplete')).toBe('off');
+    expect(field.getAttribute('autocorrect')).toBe('off');
+    expect(field.getAttribute('spellcheck')).toBe('false');
+    expect(field.getAttribute('enterkeyhint')).toBe('send');
+  });
+
   it('Should keep the send action disabled until the player types', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);

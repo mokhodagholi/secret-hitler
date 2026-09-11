@@ -10,6 +10,9 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  // Innermost node wins; drag handles still set `none`.
+  touch-action: manipulation;
+  overscroll-behavior: contain;
   @include themed-scroll;
 }
 
@@ -21,12 +24,31 @@ body,
   background: #1a1208;
 }
 
+html {
+  // App chrome, not a document — see client/docs/native-feel.md.
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 body {
   color: $cream;
   font-family: $font-body;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   -webkit-touch-callout: none;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgba($gold, 0.65);
+  outline-offset: 3px;
 }
 
 img,
@@ -43,6 +65,12 @@ textarea {
   user-select: text;
   -webkit-user-select: text;
   -webkit-touch-callout: default;
+  caret-color: $gold;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
 }
 
 button {

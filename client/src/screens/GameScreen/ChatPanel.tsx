@@ -10,6 +10,7 @@ import { useApp } from '../../services/AppContext';
 import { playerLabel } from '../../i18n/perspective';
 import { avatarImage } from '../../assets/avatars';
 import { Icon } from '../../components/Icon/Icon';
+import { nativeFieldAttrs } from '../../components/nativeField';
 import styles from './ChatPanel.module.scss';
 
 /** Handle + chrome only — feed and composer hide at this height. */
@@ -305,6 +306,7 @@ export function ChatPanel(props: ChatPanelProps) {
             maxlength={500}
             disabled={!talkingAllowed()}
             aria-disabled={!talkingAllowed()}
+            {...nativeFieldAttrs({ enterKeyHint: 'send' })}
             ref={(element) => {
               inputEl = element;
               queueMicrotask(autosizeInput);

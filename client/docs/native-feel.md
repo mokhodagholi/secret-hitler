@@ -30,17 +30,32 @@ Default language is **fa**, inside **Bale**. Design for a thumb on a
 Already true:
 
 - Body does not scroll (`overflow: hidden`); the shell is `100dvh` × 430px.
-- `-webkit-touch-callout: none` on `body`.
-- Images / SVG / video: no drag, no select, no callout. Fields restore
-  selection.
-- `viewport-fit=cover`. Safe-area padding on splash, waiting-room, chat —
-  not yet on `Screen` / `BottomNav`.
-- `pressable` on shared buttons. `type="button"` everywhere.
+- `user-select: none` on `html` (fields restore it). No tap flash, no
+  pull-to-refresh, no double-tap zoom, no iOS text-size inflate.
+- `-webkit-touch-callout: none` on `body`. Right-click / long-press save is
+  blocked except on fields (`index.tsx`).
+- Images / SVG / video: no drag, no select, no callout.
+- Fields (`TextInput`, Rooms `Field`, `TextArea`, chat composer) ship
+  `nativeFieldAttrs` — no suggest, no spellcheck. Passwords use
+  `new-password`. Composer / letter use `enterkeyhint="send"`. Field type is
+  16px so iOS does not zoom the shell.
+- `viewport-fit=cover`, `format-detection=telephone=no`, navy `theme-color`.
+- Safe-area on `Screen` padding (`--screen-pad-*`). Bleed screens (home,
+  rooms, player cards) cancel those tokens and apply the inset on their own
+  chrome. Table, splash, waiting-room, chat keep their own.
+- `pressable` on shared buttons. `type="button"` everywhere. Back control
+  and chat tools are 44×44.
 - Bale `BackButton` via [`BaleService`](../src/services/BaleService.ts).
-  `ready()` is called; `expand()` is not.
+  `ready()` and `expand()` both run on boot.
 - Themed scrollbars, screen-enter motion, no full page loads.
+- Waiting-room invite is a tap-to-copy share link, not a highlightable code.
 
-Not true yet — do these when you touch the shell or a field. Ranked.
+Still open — do not invent the API:
+
+- Composer vs. keyboard (`visualViewport`); keep the table still.
+- Closing confirmation while a game is live.
+- Haptics on vote / enact / execute.
+- WebApp header / background color, if `miniapp.js` actually exposes setters.
 
 ## Law
 
@@ -59,9 +74,9 @@ unselectable unless we add a real long-press menu later.
 
 ### Fields do not autocomplete
 
-Every `input` / `textarea` (today: [`TextInput`](../src/components/TextInput/TextInput.tsx),
-Rooms `Field`, chat composer) ships these, in the component, not at the
-call site:
+Every `input` / `textarea` ships these via
+[`nativeFieldAttrs`](../src/components/nativeField.ts), in the component, not
+at the call site:
 
 | Attr | Value | Why |
 |---|---|---|
@@ -103,9 +118,7 @@ else.
 ### The keyboard does not zoom the shell
 
 iOS zooms any field whose computed font-size is under **16px**.
-`0.95rem` on `TextInput` is under — that is why the whole navy column
-jumps when you type a room name. Floor field type at 16px. The label can
-stay small.
+Field type is 16px. The label can stay small.
 
 After dismiss, do not leave the page scrolled up. The table shell should
 keep `svh` / `dvh` stable; pad the **composer** with
@@ -173,31 +186,3 @@ Images stay undraggable. Cards and seats should `preventDefault` on
 | `type="search"` / native `<select>` | Our fields and pickers |
 | Safe-area copied into every screen | `Screen` + `BottomNav` (table/splash excepted) |
 | Pinch-zoom the board | `touch-action: manipulation` on the shell |
-
-## Suggested next (not wired)
-
-In the order I would land them. Cheap CSS first; Bale APIs when you are
-already in `BaleService`.
-
-1. **Global select / tap / overscroll / text-size-adjust** in `global.scss`.
-   Highest "this is a website" tell, one file.
-2. **Dumb fields** — the attr table on `TextInput`, Rooms `Field`, chat
-   `<textarea>`. `enterkeyhint` included.
-3. **16px input floor** so iOS stops zooming the shell.
-4. **`format-detection` + `theme-color`** in `index.html`.
-5. **`:focus-visible`** instead of leftover `:focus` outlines.
-6. **Safe-area on `Screen` / `BottomNav`**, delete the one-offs that duplicate
-   them.
-7. **`webApp.expand()`** next to `ready()`.
-8. **Tap-to-copy** for the join code (and toast), never a text highlight.
-9. **Composer vs. keyboard** — keep the table still; lift only the chat bar.
-10. **Closing confirmation** for a live game (Bale/Telegram-style), so a
-    swipe does not resign the table.
-11. **Haptics** on the three violent beats: vote, policy, execute. Optional
-    light impact on primary buttons.
-12. **Header/background color** on the WebApp, if the loaded `miniapp.js`
-    actually has the setters — probe before typing a fantasy API.
-
-Do not chase: pinch-zoom lock via `user-scalable=no`, hiding the themed
-scrollbar (the [scroll](./scroll.md) mixin is the look), or selectable chat
-transcripts. Those are either hostile or a different product.

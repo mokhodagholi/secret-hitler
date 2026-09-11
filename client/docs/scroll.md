@@ -12,11 +12,10 @@ Set the `--scroll-*` tokens on the surface that owns the scroll, with a mixin:
 
 | Surface | Mixin | Where |
 |---|---|---|
-| Navy / blue shell, cards, briefing | `scroll-navy` | navy track, gold-to-brown thumb |
-| Wood / paper (chat, rooms board) | `scroll-wood` | wood track, same gold-to-brown thumb |
+| Navy / blue shell, cards, briefing | `scroll-navy` | gold-to-brown thumb, no track fill |
+| Wood / paper (chat, rooms board) | `scroll-wood` | same gold-to-brown thumb, no track fill |
 
-A cream paper board may override `--scroll-track` so the gutter matches the page,
-the way Rooms does.
+The gutter is always clear. Only the thumb is painted.
 
 ## Adding a scrolling pane
 

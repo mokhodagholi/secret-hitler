@@ -6,7 +6,8 @@
   flex: 1;
   min-height: 0;
   height: 100%;
-  padding: 14px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 14px
+    calc(12px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   overflow: hidden;

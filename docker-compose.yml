@@ -37,6 +37,7 @@ services:
       BALE_WEBHOOK_URL: ${BALE_WEBHOOK_URL:-https://mrfantastic.ir/api/bale/webhook}
       BALE_WEBHOOK_SECRET: ${BALE_WEBHOOK_SECRET:-}
       BALE_BOT_USERNAME: ${BALE_BOT_USERNAME:-@secret_hitler_bot}
+      BALE_SUPPORT_CHAT_ID: ${BALE_SUPPORT_CHAT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy

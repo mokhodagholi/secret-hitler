@@ -6,10 +6,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  // Cancel the Screen content padding so the splash is full-bleed and fills the
-  // shell exactly — one view, no scroll.
-  height: calc(100% + 42px);
-  margin: -18px -16px -24px;
+  // Cancel Screen padding via the shell tokens so this splash stays full-bleed.
+  height: calc(100% + var(--screen-pad-top) + var(--screen-pad-bottom));
+  margin: calc(-1 * var(--screen-pad-top)) calc(-1 * var(--screen-pad-x))
+    calc(-1 * var(--screen-pad-bottom));
   background: linear-gradient(180deg, #0c0907 0%, #0a0705 42%, #120b05 100%);
 }
 
@@ -75,7 +75,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 8px 12px 0;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 0;
   flex-shrink: 0;
 }
 
@@ -397,7 +397,7 @@
 .ctaWrap {
   position: absolute;
   left: 50%;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   width: calc(100% - 48px);
   max-width: 360px;

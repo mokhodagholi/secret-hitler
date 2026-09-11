@@ -2,12 +2,17 @@ import { createSignal, onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import { CHANGELOG_RELEASES } from '../../changelog/releases';
 import {
+  acknowledgedVersion,
   readSeenVersion,
   releasesSince,
   rememberCurrentIfUnseen,
   writeSeenVersion,
 } from '../../changelog/changelog';
-import { APP_PACKAGE_VERSION, isUpdatePromptVisible } from '../../services/update';
+import {
+  APP_PACKAGE_VERSION,
+  isUpdatePreview,
+  isUpdatePromptVisible,
+} from '../../services/update';
 import { ChangelogDialog } from '../ChangelogDialog/ChangelogDialog';
 
 /**
@@ -29,7 +34,8 @@ export function WhatsNewModal() {
     if (last == null) return [];
     return releasesSince(CHANGELOG_RELEASES, last);
   };
-  const open = () => isUpdatePromptVisible(notes().length > 0, nav.screen());
+  const open = () =>
+    !isUpdatePreview() && isUpdatePromptVisible(notes().length > 0, nav.screen());
 
   return (
     <ChangelogDialog
@@ -40,8 +46,9 @@ export function WhatsNewModal() {
       language={i18n.lang()}
       formatMessage={formatMessage}
       onAction={() => {
-        writeSeenVersion(APP_PACKAGE_VERSION);
-        setSeen(APP_PACKAGE_VERSION);
+        const seenVersion = acknowledgedVersion(APP_PACKAGE_VERSION, CHANGELOG_RELEASES);
+        writeSeenVersion(seenVersion);
+        setSeen(seenVersion);
       }}
     />
   );

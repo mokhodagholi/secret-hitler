@@ -14,7 +14,11 @@
   position: absolute;
   inset-inline-start: 0;
   top: 6px;
-  padding: 8px;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
   color: $gold;
   @include pressable;
 

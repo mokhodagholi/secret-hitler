@@ -16,6 +16,7 @@ import { RoomApiError } from '../../services/GameStateService';
 import { ERROR_MESSAGE_KEYS, type MessageKey } from '../../i18n';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
+import { nativeFieldAttrs } from '../../components/nativeField';
 import styles from './RoomsScreen.module.scss';
 
 type RoomsTab = 'create' | 'join';
@@ -99,6 +100,10 @@ function Field(props: {
         maxlength={40}
         disabled={props.disabled}
         readOnly={props.disabled}
+        {...nativeFieldAttrs({
+          password: props.type === 'password',
+          enterKeyHint: 'go',
+        })}
         onInput={(event) => props.onInput(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') props.onSubmit?.();

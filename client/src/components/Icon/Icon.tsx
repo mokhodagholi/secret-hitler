@@ -19,6 +19,7 @@ export type IconName =
   | 'refresh'
   | 'trash'
   | 'chevronRight'
+  | 'chevronDown'
   | 'arrowLeft'
   | 'star'
   | 'capitol'
@@ -146,6 +147,7 @@ const glyphs: Record<IconName, () => JSX.Element> = {
     </>
   ),
   chevronRight: () => <path d="m9 18 6-6-6-6" />,
+  chevronDown: () => <path d="m6 9 6 6 6-6" />,
   arrowLeft: () => (
     <>
       <path d="M19 12H5" />

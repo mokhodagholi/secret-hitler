@@ -78,6 +78,12 @@ export function SettingsScreen() {
         value={formatMessage('settings.version', { package: APP_PACKAGE_VERSION })}
         onClick={() => nav.navigate('changelog')}
       />
+      <SettingRow
+        kind="link"
+        icon="envelope"
+        label={formatMessage('settings.support')}
+        onClick={() => nav.navigate('support')}
+      />
     </Screen>
   );
 }

@@ -8,7 +8,7 @@ import type { BaleSeatIndex } from './BaleSeatIndex';
 /** Minimal Bale send surface so tests can stub the client. */
 export interface BaleMessenger {
   sendMessage(params: {
-    chat_id: number;
+    chat_id: number | string;
     text: string;
     reply_markup?: BotReply['reply_markup'];
   }): Promise<unknown>;
@@ -24,6 +24,8 @@ export interface BaleRuntime {
   seats: BaleSeatIndex;
   /** When set, incoming webhook posts must present this secret. */
   webhookSecret?: string;
+  /** Group the bot posts support letters to. */
+  supportChatId?: number | string;
 }
 
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';

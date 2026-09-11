@@ -5,8 +5,10 @@
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  margin: -18px -16px -24px;
-  padding: 10px 16px 28px;
+  margin: calc(-1 * var(--screen-pad-top)) calc(-1 * var(--screen-pad-x))
+    calc(-1 * var(--screen-pad-bottom));
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px
+    calc(28px + env(safe-area-inset-bottom, 0px));
   background:
     linear-gradient(
       180deg,
