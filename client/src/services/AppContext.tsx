@@ -98,6 +98,7 @@ export function AppProvider(
         raviWho: services.settings.settings.raviWho,
         music: services.settings.settings.music,
         raviVoice: services.settings.settings.raviVoice,
+        soundEffects: services.settings.settings.soundEffects,
       }),
     );
     const wait = nextMusicCheckMs(scene);

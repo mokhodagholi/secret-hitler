@@ -14,7 +14,7 @@ export interface SplashScreenProps {
 
 /**
  * First-open gate: the lectern painting, a quote, and a numbered gold bar
- * while the foyer set (SFX + menu bed) lands in cache.
+ * while the home stage (hero, desk, boards, menu bed) lands in cache.
  */
 export function SplashScreen(props: SplashScreenProps) {
   const { i18n, prefetch } = useApp();

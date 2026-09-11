@@ -1,9 +1,22 @@
 import splashArt from '../assets/splash/hitler-splash.webp';
+import heroImage from '../assets/home/hero.webp';
+import deskImage from '../assets/home/desk.png';
+import liberalBoard from '../assets/boards/liberal.png';
+import fascistBoard from '../assets/boards/fascist.png';
+import awaitingBg from '../assets/lobby/awaiting-bg.png';
+import patternPaper from '../assets/ui/pattern.webp';
+import { PAPER_FRAME, PORTRAITS, avatarImage } from '../assets/avatars';
 import {
   CARD_BACK,
   NIGHT_VEIL,
+  OFFICE_PLACARD,
+  PARTY_FACE,
+  POLICY_FACE,
+  POWER_SEAL,
   RAVI,
   ROLE_FACE,
+  VETO_SEAL,
+  VOTE_FACE,
 } from '../assets/cards';
 import { EFFECT_URLS } from '../assets/sounds/effects/clips';
 import { MUSIC_URLS } from '../assets/sounds/music/clips';
@@ -13,13 +26,23 @@ import {
 } from '../assets/sounds/ravi/clips';
 import { Phase } from '@secret-hitler/shared';
 import { createSignal } from 'solid-js';
+import type { ScreenName } from './NavigationService';
 import { nextTrackForScene, type MusicScene } from './music';
 
 type RaviLineId = keyof (typeof RAVI_CLIPS)['daniel'];
 
+const IMAGE_URL = /\.(?:webp|png|jpe?g|gif|svg)(?:\?|$)/i;
+
 export interface PrefetchProgress {
   done: number;
   total: number;
+}
+
+export interface BootPrefetchOptions {
+  music: boolean;
+  soundEffects: boolean;
+  screen?: ScreenName;
+  avatar?: number;
 }
 
 export interface NextStepOptions {
@@ -27,25 +50,29 @@ export interface NextStepOptions {
   raviWho: RaviWho;
   music: boolean;
   raviVoice: boolean;
+  soundEffects: boolean;
 }
 
-/** Splash painting + SFX + foyer bed — enough to tap Play. */
-export function criticalBootUrls(options: {
-  music: boolean;
-  soundEffects: boolean;
-}): string[] {
-  const urls = [splashArt];
-  if (options.soundEffects) urls.push(...Object.values(EFFECT_URLS));
-  if (options.music) urls.push(MUSIC_URLS['menu-theme']);
-  return urls;
+/** Splash painting + the home stage — splash must not lift until these land. */
+export function criticalBootUrls(options: BootPrefetchOptions): string[] {
+  const urls = [splashArt, ...homeVisualUrls(options.avatar ?? 0)];
+  if (options.soundEffects) urls.push(EFFECT_URLS['swap-page']);
+  if (options.music) {
+    urls.push(MUSIC_URLS['menu-theme']);
+    if (isPlayFoyer(options.screen)) urls.push(MUSIC_URLS['play-theme']);
+  }
+  return unique(urls);
 }
 
 /** Files the next room will need — never the whole catalog. */
 export function urlsForNextStep(options: NextStepOptions): string[] {
-  const urls: string[] = [];
+  const urls: string[] = [...visualsForNextScreen(options.scene.screen)];
   if (options.music) {
     const next = nextTrackForScene(options.scene);
     if (next) urls.push(MUSIC_URLS[next]);
+  }
+  if (options.soundEffects && options.scene.screen !== 'game') {
+    urls.push(...Object.values(EFFECT_URLS));
   }
   if (options.raviVoice) {
     for (const id of nextRaviIds(options.scene)) {
@@ -53,16 +80,83 @@ export function urlsForNextStep(options: NextStepOptions): string[] {
       if (src) urls.push(src);
     }
   }
-  if (options.scene.screen === 'waiting-room') {
-    urls.push(CARD_BACK, NIGHT_VEIL, RAVI.idle, RAVI.speaking, ...Object.values(ROLE_FACE));
+  return unique(urls);
+}
+
+function homeVisualUrls(avatar: number): string[] {
+  return [heroImage, deskImage, liberalBoard, fascistBoard, avatarImage(avatar)];
+}
+
+function playerCardUrls(): string[] {
+  return [patternPaper, ...PORTRAITS.map((portrait) => portrait.src)];
+}
+
+function waitingRoomVisualUrls(): string[] {
+  return [awaitingBg, PAPER_FRAME, ...PORTRAITS.map((portrait) => portrait.src)];
+}
+
+function gameTableUrls(): string[] {
+  return [
+    liberalBoard,
+    fascistBoard,
+    CARD_BACK,
+    NIGHT_VEIL,
+    RAVI.idle,
+    RAVI.speaking,
+    VETO_SEAL,
+    ...Object.values(ROLE_FACE),
+    ...Object.values(POLICY_FACE),
+    ...Object.values(VOTE_FACE),
+    ...Object.values(PARTY_FACE),
+    ...Object.values(OFFICE_PLACARD),
+    ...Object.values(POWER_SEAL),
+  ];
+}
+
+function visualsForNextScreen(screen: ScreenName): string[] {
+  switch (screen) {
+    case 'home':
+      return playerCardUrls();
+    case 'play':
+    case 'create-room':
+    case 'join-game':
+      return waitingRoomVisualUrls();
+    case 'waiting-room':
+      return gameTableUrls();
+    default:
+      return [];
   }
-  return urls;
+}
+
+function isPlayFoyer(screen: ScreenName | undefined): boolean {
+  return screen === 'play' || screen === 'create-room' || screen === 'join-game';
+}
+
+function unique(urls: readonly string[]): string[] {
+  return [...new Set(urls)];
+}
+
+function loadImage(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      if (typeof img.decode === 'function') {
+        void img.decode().then(() => resolve(), () => resolve());
+        return;
+      }
+      resolve();
+    };
+    img.onerror = () => reject(new Error(`prefetch image ${url}`));
+    img.src = url;
+  });
 }
 
 /** Warm a list of URLs so the next beat is already on disk (and in the SW). */
 export class PrefetchService {
   private readonly loaded = new Set<string>();
   private readonly inflight = new Map<string, Promise<void>>();
+  private booted = false;
+  private pending: string[] = [];
 
   private readonly progressSignal = createSignal<PrefetchProgress>({
     done: 0,
@@ -73,21 +167,30 @@ export class PrefetchService {
 
   /** Fetch the boot set and report progress. Failures still count as done. */
   async boot(urls: readonly string[]): Promise<void> {
-    const unique = [...new Set(urls)];
-    this.setProgress({ done: 0, total: unique.length });
-    if (unique.length === 0) return;
-    let done = 0;
-    await Promise.all(
-      unique.map(async (url) => {
-        await this.load(url, 1);
-        done += 1;
-        this.setProgress({ done, total: unique.length });
-      }),
-    );
+    const uniqueUrls = unique(urls);
+    this.setProgress({ done: 0, total: uniqueUrls.length });
+    if (uniqueUrls.length > 0) {
+      let done = 0;
+      await Promise.all(
+        uniqueUrls.map(async (url) => {
+          await this.load(url, 1);
+          done += 1;
+          this.setProgress({ done, total: uniqueUrls.length });
+        }),
+      );
+    }
+    this.booted = true;
+    const queued = this.pending;
+    this.pending = [];
+    if (queued.length > 0) this.prefetch(queued);
   }
 
-  /** Fire-and-forget warm for the next scene. */
+  /** Fire-and-forget warm for the next scene. Held until boot finishes. */
   prefetch(urls: readonly string[]): void {
+    if (!this.booted) {
+      this.pending.push(...urls);
+      return;
+    }
     void Promise.all(urls.map((url) => this.load(url, 0)));
   }
 
@@ -109,9 +212,13 @@ export class PrefetchService {
 
   private async fetchWithRetry(url: string, retries: number): Promise<void> {
     try {
+      if (IMAGE_URL.test(url) && typeof Image !== 'undefined') {
+        await loadImage(url);
+        return;
+      }
       const response = await fetch(url);
-      if (response.ok) return;
-      throw new Error(`prefetch ${response.status}`);
+      if (!response.ok) throw new Error(`prefetch ${response.status}`);
+      await response.blob();
     } catch (error) {
       if (retries > 0) return this.fetchWithRetry(url, retries - 1);
       throw error;

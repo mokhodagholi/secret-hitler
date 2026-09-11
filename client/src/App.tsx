@@ -72,13 +72,16 @@ function Router() {
 
 function BootGate(props: ParentProps<{ skip?: boolean }>) {
   const skip = props.skip || process.env.NODE_ENV === 'test';
-  const { prefetch, settings } = useApp();
+  const { prefetch, settings, nav } = useApp();
   const [booting, setBooting] = createSignal(!skip);
   const [offline, setOffline] = createSignal(false);
   let startBoot = () => {};
 
   onMount(() => {
-    if (skip) return;
+    if (skip) {
+      void prefetch.boot([]);
+      return;
+    }
     let cancelled = false;
     let finished = false;
     let running = false;
@@ -107,6 +110,8 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
         const urls = criticalBootUrls({
           music: settings.settings.music,
           soundEffects: settings.settings.soundEffects,
+          screen: nav.screen(),
+          avatar: settings.settings.avatar,
         });
         await prefetch.boot(urls).catch(() => undefined);
         if (cancelled || finished) return;

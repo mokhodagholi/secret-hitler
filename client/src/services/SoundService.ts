@@ -96,13 +96,7 @@ export class SoundService {
   private music: HTMLAudioElement | null = null;
   private musicTrack: MusicTrack | null = null;
 
-  constructor(private readonly settings: SettingsService) {
-    if (canPlayAudio) {
-      for (const effect of Object.keys(EFFECTS) as SoundEffect[]) {
-        this.sampleFor(effect).load();
-      }
-    }
-  }
+  constructor(private readonly settings: SettingsService) {}
 
   /** Fire a one-shot effect. No-op while Sound Effects are off. */
   play(effect: SoundEffect): void {
