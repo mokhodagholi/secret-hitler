@@ -16,6 +16,7 @@ import { AnimationService } from './AnimationService';
 import { RaviService } from './RaviService';
 import { BaleService } from './BaleService';
 import { PrefetchService, urlsForNextStep } from './prefetch';
+import { FeatureFlagService } from './FeatureFlagService';
 import { nextMusicCheckMs, trackForScene } from './music';
 
 export interface AppServices {
@@ -29,6 +30,7 @@ export interface AppServices {
   ravi: RaviService;
   bale: BaleService;
   prefetch: PrefetchService;
+  flags: FeatureFlagService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -52,7 +54,12 @@ export function AppProvider(
     ravi: overrides.ravi ?? new RaviService(settings, i18n),
     bale: overrides.bale ?? new BaleService(),
     prefetch: overrides.prefetch ?? new PrefetchService(),
+    flags: overrides.flags ?? new FeatureFlagService(),
   };
+
+  if (!overrides.flags) {
+    void services.flags.load();
+  }
 
   if (!overrides.bale) {
     void services.bale.boot(settings, services.nav).then(() => {

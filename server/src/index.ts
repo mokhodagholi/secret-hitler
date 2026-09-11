@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { parseFeatureFlags } from '@secret-hitler/shared';
 import { buildServer } from './app';
 import { DrizzleGameHistoryStore } from './history/DrizzleGameHistoryStore';
 import { DrizzleProfileStore } from './profiles/DrizzleProfileStore';
@@ -81,6 +82,7 @@ async function main() {
     live,
     publicUrl,
     bale,
+    flags: parseFeatureFlags(process.env),
   });
 
   app.log.info('Game history and live-room persistence enabled.');

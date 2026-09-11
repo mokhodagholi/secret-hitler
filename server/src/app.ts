@@ -2,7 +2,11 @@ import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { WebSocketServer } from 'ws';
-import { SHARED_VERSION } from '@secret-hitler/shared';
+import {
+  DEFAULT_FLAGS,
+  SHARED_VERSION,
+  type FeatureFlags,
+} from '@secret-hitler/shared';
 import { RoomRepository } from './rooms/RoomRepository';
 import { TokenStore } from './rooms/TokenStore';
 import { SocketHandler } from './ws/SocketHandler';
@@ -43,6 +47,11 @@ export interface ServerOptions {
   publicUrl?: string;
   /** Present when BALE_BOT_TOKEN is configured. */
   bale?: BaleRuntime;
+  /**
+   * Server-owned feature flags. Production passes parseFeatureFlags(process.env).
+   * Tests inject so suites do not depend on the ambient environment.
+   */
+  flags?: FeatureFlags;
 }
 
 export interface BuiltServer {
@@ -70,6 +79,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   const history = options.history ?? new InMemoryGameHistoryStore();
   const profiles = options.profiles ?? new InMemoryProfileStore();
   const recorder = new GameResultRecorder(history);
+  const flags = options.flags ?? DEFAULT_FLAGS;
 
   if (options.live) {
     const restored = await restoreLiveRooms({
@@ -94,6 +104,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     profiles,
     publicUrl: options.publicUrl,
     bale,
+    flags,
   });
 
   await app.ready();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@rstest/core';
 import type {
   CreateRoomResponse,
+  FlagsResponse,
   JoinRoomResponse,
   RoomSummary,
 } from '@secret-hitler/shared';
@@ -173,5 +174,21 @@ describe('profile HTTP endpoints', () => {
       `/api/profile?clientId=${clientId}`,
     );
     expect(status).toBe(404);
+  });
+});
+
+describe('GET /api/flags', () => {
+  it('Should return catalog defaults when no flags are injected', async () => {
+    const { app } = await buildServer();
+    const { status, body } = await httpJson<FlagsResponse>(app, 'GET', '/api/flags');
+    expect(status).toBe(200);
+    expect(body).toEqual({ flags: { voice: false } });
+  });
+
+  it('Should return injected flags as-is', async () => {
+    const { app } = await buildServer({ flags: { voice: true } });
+    const { status, body } = await httpJson<FlagsResponse>(app, 'GET', '/api/flags');
+    expect(status).toBe(200);
+    expect(body).toEqual({ flags: { voice: true } });
   });
 });

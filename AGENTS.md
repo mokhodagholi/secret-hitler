@@ -40,6 +40,7 @@ the Bale HTTP client the server embeds. Voice/mediasoup is not implemented.
 | Screen / route | `client/src/App.tsx` + `client/src/screens/<Name>/` |
 | Game table UI | `client/src/screens/GameScreen/` |
 | Client services | `client/src/services/` (reached via `AppContext`) |
+| Feature flags | `shared/src/flags.ts` + `docs/feature-flags.md` |
 | Copy / i18n | `client/src/i18n/locales/fa.ts` **and** `en.ts` + `docs/persian.md` |
 | Sound | `client/docs/audio.md` + `client/src/services/SoundService.ts` |
 | Animation | `client/docs/animations.md` + `client/src/animations/registry.ts` |

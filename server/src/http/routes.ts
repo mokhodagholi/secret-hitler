@@ -2,12 +2,13 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
+  FeatureFlags,
   JoinRoomRequest,
   JoinRoomResponse,
   ProfileResponse,
   SaveProfileRequest,
 } from '@secret-hitler/shared';
-import { normalizeAvatar } from '@secret-hitler/shared';
+import { normalizeAvatar, toFlagsResponse } from '@secret-hitler/shared';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
@@ -32,6 +33,7 @@ export interface RouteDeps {
   profiles: ProfileStore;
   publicUrl?: string;
   bale?: BaleRuntime;
+  flags: FeatureFlags;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -51,11 +53,14 @@ function isClientId(value: unknown): value is string {
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, profiles, publicUrl, bale } = deps;
+  const { repo, tokens, sockets, recorder, history, profiles, publicUrl, bale, flags } =
+    deps;
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
   const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
   const profileLimiter = new RateLimiter(PROFILE_LIMIT, LIMIT_WINDOW_MS);
   const supportLimiter = new RateLimiter(SUPPORT_LIMIT, LIMIT_WINDOW_MS);
+
+  app.get('/api/flags', async () => toFlagsResponse(flags));
 
   app.post('/api/auth/bale', async (req, reply) => {
     if (!bale) {

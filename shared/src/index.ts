@@ -3,6 +3,14 @@ export const SHARED_VERSION = '0.0.1';
 // Types
 export * from './types/GameState';
 export * from './types/events';
+export {
+  DEFAULT_FLAGS,
+  FLAG_NAMES,
+  parseFeatureFlags,
+  parseFlagsResponse,
+  toFlagsResponse,
+} from './flags';
+export type { FeatureFlags, FlagName, FlagsResponse } from './flags';
 export { AVATAR_COUNT, normalizeAvatar } from './avatars';
 
 // Domain model

@@ -17,6 +17,7 @@ import { SoundService } from '../src/services/SoundService';
 import { RaviService } from '../src/services/RaviService';
 import { BaleService } from '../src/services/BaleService';
 import { PrefetchService } from '../src/services/prefetch';
+import { FeatureFlagService } from '../src/services/FeatureFlagService';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -112,6 +113,7 @@ export function buildHarness(
     ravi: new RaviService(settings, i18n),
     bale: new BaleService(),
     prefetch: new PrefetchService(),
+    flags: new FeatureFlagService(),
   };
   return {
     services,
