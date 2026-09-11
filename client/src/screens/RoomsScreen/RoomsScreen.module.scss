@@ -4,7 +4,6 @@
 $wood-dark: #1d1410;
 $wood: #3a281d;
 $brass: #b38a56;
-$brass-soft: #e2bf82;
 $paper-ink: #2a1c10;
 $red: #7a241b;
 $red-dark: #561610;
@@ -174,45 +173,6 @@ $edge: rgba(110, 65, 35, 0.6);
   font-size: 0.84rem;
   font-weight: 600;
   text-align: center;
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 2px 0;
-}
-
-.stepperControl {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stepButton {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  font-size: 1.4rem;
-  font-weight: 700;
-  line-height: 1;
-  color: #1a1009;
-  background: linear-gradient(180deg, $brass-soft, $brass);
-  border: 1px solid $edge;
-  box-shadow: inset 0 1px rgba(255, 245, 215, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
-  @include pressable;
-
-  &:disabled {
-    opacity: 0.4;
-  }
-}
-
-.stepValue {
-  min-width: 44px;
-  text-align: center;
-  @include display(1.2rem, 0.04em);
-  color: $paper-ink;
 }
 
 .join {

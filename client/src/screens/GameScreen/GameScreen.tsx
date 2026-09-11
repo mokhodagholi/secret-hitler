@@ -28,6 +28,7 @@ import { CEREMONY_MS, NightOverlay } from './NightOverlay';
 import { RoleInspectOverlay } from './RoleInspectOverlay';
 import { ChancellorReveal } from './ChancellorReveal';
 import { InvestigateOverlay } from './InvestigateOverlay';
+import { PeekOverlay } from './PeekOverlay';
 import { YouDiedOverlay } from './YouDiedOverlay';
 import { RaviNarrator } from './RaviNarrator';
 import { splitTableRows, tableSeatOrder } from './tableSeats';
@@ -972,14 +973,23 @@ export function GameScreen() {
               />
             </Show>
 
-            <Show when={tableOverlay() === 'power'}>
+            <Show when={tableOverlay() === 'power' && state().activePower === 'policyPeek'}>
+              <PeekOverlay
+                policies={state().you.peek}
+                formatMessage={formatMessage}
+                onContinue={() => {
+                  if (iAmPresident()) usePower('');
+                }}
+              />
+            </Show>
+
+            <Show when={tableOverlay() === 'power' && state().activePower !== 'policyPeek'}>
               <div class={styles.powerDock}>
                 <PowerPanel
                   formatMessage={formatMessage}
                   power={state().activePower!}
                   isPresident={iAmPresident()}
                   presidentName={playerName(state().board.president)}
-                  peek={state().you.peek}
                   investigation={state().you.investigation}
                   onContinue={() => usePower('')}
                 />

@@ -60,6 +60,15 @@ describe('GameEngine — lobby', () => {
     expect(engine.startGame(host.id)).toMatchObject({ code: 'NOT_ENOUGH_PLAYERS' });
   });
 
+  it('Should start at the official minimum while empty seats remain', () => {
+    const engine = new GameEngine(makeRoom({ minPlayers: 5, maxPlayers: 10 }));
+    const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);
+    players.forEach((player) => engine.setReady(player.id, true));
+    expect(engine.startGame(players[0].id)).toBeNull();
+    expect(engine.room.phase).toBe(Phase.Nomination);
+    expect(engine.room.players).toHaveLength(5);
+  });
+
   it('Should refuse to start while any connected player is unready', () => {
     const engine = new GameEngine(makeRoom());
     const [host, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);

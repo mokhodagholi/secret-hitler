@@ -1,10 +1,11 @@
-import { Show, onCleanup, onMount } from 'solid-js';
+import { Show, type JSX, onCleanup, onMount } from 'solid-js';
 import { Button } from '../Button/Button';
 import styles from './ConfirmDialog.module.scss';
 
 export interface ConfirmDialogProps {
   open: boolean;
   message: string;
+  children?: JSX.Element;
   confirmLabel?: string;
   /** Omit for a single-button notice (e.g. "the host left"). */
   cancelLabel?: string;
@@ -25,13 +26,16 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         onConfirm={props.onConfirm}
         onCancel={props.onCancel}
         autoCloseMs={props.autoCloseMs}
-      />
+      >
+        {props.children}
+      </Notice>
     </Show>
   );
 }
 
 function Notice(props: {
   message: string;
+  children?: JSX.Element;
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm: () => void;
@@ -57,6 +61,7 @@ function Notice(props: {
     >
       <div class={styles.dialog} role="alertdialog" aria-modal="true">
         <p class={styles.message}>{props.message}</p>
+        {props.children}
         <Show when={!timed() && props.confirmLabel}>
           <div class={styles.buttons}>
             <Show when={props.cancelLabel}>

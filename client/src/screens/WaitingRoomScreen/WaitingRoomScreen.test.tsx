@@ -81,12 +81,37 @@ describe('WaitingRoomScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
     expect(
-      screen.getByText(/Every player must be ready before the game can start/i),
+      screen.getByText(/These players are not ready yet/i),
     ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Kick Ben' })).toBeTruthy();
     expect(harness.socket.lastSent('game:start')).toBeUndefined();
   });
 
-  it('Should enable the host start button once the room is ready', () => {
+  it('Should let the host kick an unready player from the start prompt', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true, ready: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: false }),
+          makePlayer({ id: 'cal', name: 'Cal', seat: 2, ready: true }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kick Ben' }));
+    expect(screen.getByText(/Kick Ben from the room/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Kick' }));
+    expect(harness.socket.lastSent('player:kick')).toEqual({
+      type: 'player:kick',
+      playerId: 'ben',
+    });
+  });
+
+  it('Should ask the host to confirm before starting', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
@@ -103,6 +128,34 @@ describe('WaitingRoomScreen', () => {
     const start = screen.getByRole('button', { name: 'Start Game' }) as HTMLButtonElement;
     expect(start.disabled).toBe(false);
     fireEvent.click(start);
+    expect(harness.socket.lastSent('game:start')).toBeUndefined();
+    expect(screen.getByText(/Start the game with 3 players/i)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Start Game' })[1]);
+    expect(harness.socket.lastSent('game:start')).toEqual({ type: 'game:start' });
+  });
+
+  it('Should let the host start at the official minimum before the table is full', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        minPlayers: 5,
+        maxPlayers: 10,
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true, ready: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: true }),
+          makePlayer({ id: 'cal', name: 'Cal', seat: 2, ready: true }),
+          makePlayer({ id: 'dia', name: 'Dia', seat: 3, ready: true }),
+          makePlayer({ id: 'eli', name: 'Eli', seat: 4, ready: true }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    expect(harness.socket.lastSent('game:start')).toBeUndefined();
+    expect(screen.getByText(/Start the game with 5 players/i)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Start Game' })[1]);
     expect(harness.socket.lastSent('game:start')).toEqual({ type: 'game:start' });
   });
 

@@ -25,6 +25,7 @@ import lawDraw from './daniel/law.draw.mp3';
 import lawFascist from './daniel/law.fascist.mp3';
 import lawLiberal from './daniel/law.liberal.mp3';
 import lawPass from './daniel/law.pass.mp3';
+import lawPassYou from './daniel/law.passYou.mp3';
 import lawPresidentChoosing from './daniel/law.presidentChoosing.mp3';
 import lawVetoAgreed from './daniel/law.vetoAgreed.mp3';
 import lawVetoOffered from './daniel/law.vetoOffered.mp3';
@@ -99,6 +100,7 @@ const DANIEL = {
   'law.fascist': lawFascist,
   'law.liberal': lawLiberal,
   'law.pass': lawPass,
+  'law.passYou': lawPassYou,
   'law.presidentChoosing': lawPresidentChoosing,
   'law.vetoAgreed': lawVetoAgreed,
   'law.vetoOffered': lawVetoOffered,

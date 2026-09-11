@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@rstest/core';
-import { fireEvent, screen } from '@solidjs/testing-library';
+import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
+import type { CreateRoomRequest } from '@secret-hitler/shared';
 import { RoomsScreen } from './RoomsScreen';
 import { BaleService } from '../../services/BaleService';
+import { RoomApiError } from '../../services/GameStateService';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
 
@@ -44,5 +46,27 @@ describe('RoomsScreen', () => {
     expect(screen.getByRole('heading', { name: en.play.title })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Go back' })).toBeNull();
     expect(screen.queryByRole('button', { name: en.common.back })).toBeNull();
+  });
+
+  it('Should create a room without asking how many will sit', async () => {
+    const harness = buildHarness();
+    harness.services.settings.set('profileName', 'Ana');
+    const requests: CreateRoomRequest[] = [];
+    harness.services.game.createRoom = async (request) => {
+      requests.push(request);
+      throw new RoomApiError('NETWORK', 'stop');
+    };
+    renderWithApp(() => <RoomsScreen initialTab="create" />, harness);
+
+    expect(screen.queryByRole('button', { name: '+' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '−' })).toBeNull();
+
+    fireEvent.input(screen.getByLabelText(en.createRoom.roomName), {
+      target: { value: 'Friday Night' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.createRoom.submit }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].options?.maxPlayers).toBeUndefined();
   });
 });

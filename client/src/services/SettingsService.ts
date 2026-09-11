@@ -1,5 +1,4 @@
 import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
-import { MAX_PLAYERS, MIN_PLAYERS } from '@secret-hitler/shared';
 import { DEFAULT_LANGUAGE, type Language } from '../i18n';
 import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 
@@ -10,7 +9,6 @@ export interface SettingsState {
   profileId: string;
   /** Index into the illustrated player-card portraits. */
   avatar: number;
-  playerCount: number;
   timerEnabled: boolean;
   confirmActions: boolean;
   theme: 'classic-blue';
@@ -31,7 +29,6 @@ const DEFAULTS: SettingsState = {
   profileName: '',
   profileId: '',
   avatar: 0,
-  playerCount: 7,
   timerEnabled: false,
   confirmActions: true,
   theme: 'classic-blue',
@@ -59,14 +56,6 @@ export class SettingsService {
   set<K extends keyof SettingsState>(key: K, value: SettingsState[K]): void {
     this.update(key, value);
     this.persist();
-  }
-
-  cyclePlayerCount(): void {
-    const next =
-      this.settings.playerCount >= MAX_PLAYERS
-        ? MIN_PLAYERS
-        : this.settings.playerCount + 1;
-    this.set('playerCount', next);
   }
 
   toggleTimer(): void {

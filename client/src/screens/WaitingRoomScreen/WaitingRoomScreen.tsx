@@ -35,9 +35,7 @@ export function WaitingRoomScreen() {
 
   const [copied, setCopied] = createSignal(false);
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
-  const [startBlock, setStartBlock] = createSignal<
-    'needPlayers' | 'notReady' | null
-  >(null);
+  const [startOpen, setStartOpen] = createSignal(false);
   const [kickTarget, setKickTarget] = createSignal<{
     id: string;
     name: string;
@@ -124,29 +122,45 @@ export function WaitingRoomScreen() {
     const state = view();
     if (!state) return;
     const connected = state.players.filter((player) => player.connected);
-    if (connected.length < state.minPlayers) {
+    if (
+      connected.length < state.minPlayers ||
+      !connected.every((player) => player.ready)
+    ) {
       sound.play('ui-error');
-      setStartBlock('needPlayers');
-      return;
     }
-    if (!connected.every((player) => player.ready)) {
-      sound.play('ui-error');
-      setStartBlock('notReady');
-      return;
-    }
+    setStartOpen(true);
+  }
+
+  function confirmStart(): void {
+    setStartOpen(false);
     game.startGame();
   }
 
-  const startConnectedCount = () => {
+  const startConnected = () => {
     const state = view();
-    if (!state) return 0;
-    return state.players.filter((player) => player.connected).length;
+    if (!state) return [];
+    return state.players.filter((player) => player.connected);
   };
+
+  const startConnectedCount = () => startConnected().length;
 
   const startNeedCount = () => {
     const state = view();
     if (!state) return 0;
     return Math.max(0, state.minPlayers - startConnectedCount());
+  };
+
+  const unreadyPlayers = () =>
+    startConnected().filter((player) => !player.ready);
+
+  const startGate = (): 'needPlayers' | 'notReady' | 'confirm' | null => {
+    if (!startOpen()) return null;
+    const state = view();
+    if (!state) return null;
+    const connected = startConnected();
+    if (connected.length < state.minPlayers) return 'needPlayers';
+    if (unreadyPlayers().length > 0) return 'notReady';
+    return 'confirm';
   };
 
   return (
@@ -224,18 +238,71 @@ export function WaitingRoomScreen() {
               />
 
               <ConfirmDialog
-                open={startBlock() != null}
-                message={
-                  startBlock() === 'needPlayers'
-                    ? formatMessage('waiting.startNeedPlayers', {
-                        current: startConnectedCount(),
-                        count: startNeedCount(),
-                      })
-                    : formatMessage('waiting.startNotReady')
-                }
+                open={startGate() === 'needPlayers'}
+                message={formatMessage('waiting.startNeedPlayers', {
+                  current: startConnectedCount(),
+                  count: startNeedCount(),
+                })}
                 confirmLabel={formatMessage('common.ok')}
-                onConfirm={() => setStartBlock(null)}
+                onConfirm={() => setStartOpen(false)}
+                onCancel={() => setStartOpen(false)}
               />
+
+              <ConfirmDialog
+                open={startGate() === 'confirm'}
+                message={formatMessage('waiting.startConfirm', {
+                  count: startConnectedCount(),
+                })}
+                confirmLabel={formatMessage('waiting.startGame')}
+                cancelLabel={formatMessage('common.cancel')}
+                onConfirm={confirmStart}
+                onCancel={() => setStartOpen(false)}
+              />
+
+              <ConfirmDialog
+                open={startGate() === 'notReady'}
+                message={formatMessage('waiting.startNotReady')}
+                confirmLabel={formatMessage('common.ok')}
+                onConfirm={() => setStartOpen(false)}
+                onCancel={() => setStartOpen(false)}
+              >
+                <div class={styles.unreadyList}>
+                  <For each={unreadyPlayers()}>
+                    {(player) => (
+                      <div class={styles.unreadyRow}>
+                        <div class={styles.unreadyPortrait}>
+                          <PlayerSlot
+                            player={{
+                              name: player.name,
+                              avatar: player.avatar,
+                              seat: player.seat,
+                              ready: player.ready,
+                              connected: player.connected,
+                            }}
+                            awaitingLabel={formatMessage(
+                              'waiting.waitingForPlayers',
+                            )}
+                            seatLabel={formatMessage('waiting.seatLabel', {
+                              n: player.seat + 1,
+                            })}
+                            compact
+                          />
+                        </div>
+                        <Button
+                          variant="danger"
+                          onClick={() =>
+                            setKickTarget({ id: player.id, name: player.name })
+                          }
+                        >
+                          {formatMessage('waiting.kickNamed', {
+                            name: player.name,
+                          })}
+                        </Button>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </ConfirmDialog>
 
               <ConfirmDialog
                 open={kickTarget() != null}

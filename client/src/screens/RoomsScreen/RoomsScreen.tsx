@@ -5,12 +5,7 @@ import {
   createResource,
   createSignal,
 } from 'solid-js';
-import {
-  MAX_PLAYERS,
-  MIN_PLAYERS,
-  Phase,
-  type RoomSummary,
-} from '@secret-hitler/shared';
+import { Phase, type RoomSummary } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { RoomApiError } from '../../services/GameStateService';
 import { ERROR_MESSAGE_KEYS, type MessageKey } from '../../i18n';
@@ -116,7 +111,6 @@ function CreateRoomPanel() {
 
   const [roomName, setRoomName] = createSignal('');
   const [password, setPassword] = createSignal('');
-  const [playerCount, setPlayerCount] = createSignal(settings.settings.playerCount);
   const baleName = () => bale.user()?.firstName;
   const profileMissing = () =>
     baleName() == null && settings.settings.profileName.trim().length === 0;
@@ -129,17 +123,11 @@ function CreateRoomPanel() {
   const canSubmit = () =>
     roomName().trim().length > 0 && resolvedName().length > 0 && !submitting();
 
-  const stepPlayers = (delta: number) =>
-    setPlayerCount((current) =>
-      Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, current + delta)),
-    );
-
   async function submit(): Promise<void> {
     if (!canSubmit()) return;
     setSubmitting(true);
     setErrorKey(null);
     settings.set('profileName', resolvedName());
-    settings.set('playerCount', playerCount());
     try {
       await game.createRoom({
         name: roomName().trim(),
@@ -148,7 +136,6 @@ function CreateRoomPanel() {
         avatar: settings.settings.avatar,
         initData: bale.initData(),
         options: {
-          maxPlayers: playerCount(),
           timerEnabled: true,
         },
       });
@@ -187,33 +174,6 @@ function CreateRoomPanel() {
           onSubmit={submit}
         />
       </Show>
-
-      <div class={styles.stepper}>
-        <span class={styles.fieldLabel}>{formatMessage('createRoom.players')}</span>
-        <div class={styles.stepperControl}>
-          <button
-            type="button"
-            class={styles.stepButton}
-            disabled={playerCount() <= MIN_PLAYERS}
-            aria-label="−"
-            onClick={() => stepPlayers(-1)}
-          >
-            −
-          </button>
-          <span class={styles.stepValue}>
-            {formatMessage('createRoom.playersValue', { count: playerCount() })}
-          </span>
-          <button
-            type="button"
-            class={styles.stepButton}
-            disabled={playerCount() >= MAX_PLAYERS}
-            aria-label="+"
-            onClick={() => stepPlayers(1)}
-          >
-            +
-          </button>
-        </div>
-      </div>
 
       <Show when={errorKey()}>
         <p class={styles.error}>{formatMessage(errorKey()!)}</p>

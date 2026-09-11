@@ -119,6 +119,11 @@
     cursor: default;
     transform: none;
   }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .cardArt {
@@ -128,19 +133,17 @@
   display: block;
   background: transparent;
   mix-blend-mode: lighten;
+  filter: grayscale(0.25) brightness(0.88);
+  opacity: 0.78;
   transition: filter 0.2s ease, opacity 0.2s ease;
 }
 
-.ja:hover:not(:disabled),
-.ja.selected {
-  background: rgba(127, 208, 138, 0.28);
-  box-shadow: 0 0 0 2px rgba(127, 208, 138, 0.9), 0 0 18px rgba(127, 208, 138, 0.5);
-}
-
-.nein:hover:not(:disabled),
-.nein.selected {
-  background: rgba($red-bright, 0.28);
-  box-shadow: 0 0 0 2px rgba($red-bright, 0.9), 0 0 18px rgba($red-bright, 0.5);
+.ja:hover:not(:disabled) .cardArt,
+.nein:hover:not(:disabled) .cardArt,
+.selected .cardArt {
+  mix-blend-mode: normal;
+  filter: none;
+  opacity: 1;
 }
 
 .dimmed {

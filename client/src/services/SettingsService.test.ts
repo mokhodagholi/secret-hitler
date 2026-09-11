@@ -1,5 +1,4 @@
 import { describe, expect, it } from '@rstest/core';
-import { MAX_PLAYERS, MIN_PLAYERS } from '@secret-hitler/shared';
 import { SettingsService } from './SettingsService';
 
 describe('SettingsService', () => {
@@ -26,13 +25,6 @@ describe('SettingsService', () => {
     expect(new SettingsService().settings.profileId).toBe(settings.settings.profileId);
   });
 
-  it('Should cycle the player count and wrap past the maximum', () => {
-    const settings = new SettingsService();
-    settings.set('playerCount', MAX_PLAYERS);
-    settings.cyclePlayerCount();
-    expect(settings.settings.playerCount).toBe(MIN_PLAYERS);
-  });
-
   it('Should ignore a stored narrator that is not in the catalog', () => {
     localStorage.setItem(
       'sh:settings',
@@ -52,6 +44,6 @@ describe('SettingsService', () => {
   it('Should fall back to defaults when stored JSON is corrupt', () => {
     localStorage.setItem('sh:settings', '{ not valid json');
     const settings = new SettingsService();
-    expect(settings.settings.playerCount).toBe(7);
+    expect(settings.settings.music).toBe(true);
   });
 });

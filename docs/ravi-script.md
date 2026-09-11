@@ -331,6 +331,12 @@ word already means “or”, so «یا یا نِین» is noise.
 - **FA:** دو تا قانون می‌ره دست صدراعظم.
 - **EN:** Two policies pass to the Chancellor.
 
+### `law.passYou`
+- **When:** You are the Chancellor; the two remaining laws are coming to you.
+- **FA:** دو تا قانون می‌ره دستتون.
+- **EN:** Two policies pass to you.
+- **Tone:** `[whispering]`
+
 ### `law.chancellorChoosing`
 - **When:** Chancellor is looking.
 - **FA:** صدراعظم یکی رو تصویب می‌کنه.
@@ -404,16 +410,17 @@ only on the President’s device, after the card face is up.
 
 ### `power.investigatedLiberal`
 - **When:** President’s device, after the membership card shows Liberal.
-- **FA:** لیبراله‌.
-- **EN:** Liberal.
+  Never on the investigated seat — that seat hears `power.investigatedYou`.
+- **FA:** کارتش لیبراله‌.
+- **EN:** Their card is Liberal.
 - **Tone:** `[whispering]` — same grain as `power.investigatedYou`.
 - **Audio:** same as FA.
 
 ### `power.investigatedFascist`
 - **When:** President’s device, after the membership card shows Fascist
-  (Hitler’s card included).
-- **FA:** فاشیسته.
-- **EN:** Fascist.
+  (Hitler’s card included). Never on the investigated seat.
+- **FA:** کارتش فاشیسته‌.
+- **EN:** Their card is Fascist.
 - **Tone:** `[whispering]` — same grain as `power.investigatedYou`.
 - **Audio:** same as FA.
 
@@ -540,6 +547,7 @@ table is the **spoken** line.
 | `private.discard` | `[whispering]` | یه قانون رو بسوزونید. *(President only)* |
 | `law.burned` | `[calm]` | یه قانون سوخت. |
 | `law.pass` | `[calm]` | دو تا قانون می‌ره دست صدراعظم. |
+| `law.passYou` | `[whispering]` | دو تا قانون می‌ره دستتون. *(Chancellor only)* |
 | `law.chancellorChoosing` | `[calm]` | صدراعظم یکی رو تصویب می‌کنه. |
 | `law.liberal` | `[calm]` | یه قانون لیبرالی تصویب شد. |
 | `law.fascist` | `[grave]` | یه قانون فاشیستی تصویب شد. |
@@ -550,8 +558,8 @@ table is the **spoken** line.
 | `power.investigate` | `[calm]` | رئیس‌جمهور باید کارت یکی رو چک کنه. |
 | `power.investigated` | `[calm]` | کارت چک شد. |
 | `power.investigatedYou` | `[whispering]` | کارت شما چک شد. |
-| `power.investigatedLiberal` | `[whispering]` | لیبراله‌. |
-| `power.investigatedFascist` | `[whispering]` | فاشیسته. |
+| `power.investigatedLiberal` | `[whispering]` | کارتش لیبراله‌. |
+| `power.investigatedFascist` | `[whispering]` | کارتش فاشیسته‌. |
 | `power.peek` | `[calm]` | رئیس‌جمهور سه تا قانون بالای دسته رو می‌بینه. |
 | `power.peekDone` | `[calm]` | قانون‌ها برگشتن روی دسته. |
 | `power.specialElection` | `[announcing]` | رئیس‌جمهور، رئیس بعدی رو خودش انتخاب می‌کنه. |

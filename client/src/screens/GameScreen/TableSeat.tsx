@@ -115,9 +115,9 @@ export function TableSeat(props: TableSeatProps) {
             />
           )}
         </Show>
-        <span class={styles.name} dir="auto">
-          {playerLabel(props.isYou, props.player.name, formatMessage)}
-        </span>
+      </span>
+      <span class={styles.name} dir="auto">
+        {playerLabel(props.isYou, props.player.name, formatMessage)}
       </span>
     </button>
   );

@@ -345,7 +345,7 @@ function nextRaviIds(scene: MusicScene): RaviLineId[] {
         'vote.hitlerChancellor',
       ];
     case Phase.PresidentLegislative:
-      return ['law.draw', 'law.presidentChoosing', 'law.burned', 'law.pass'];
+      return ['law.draw', 'law.presidentChoosing', 'law.burned', 'law.pass', 'law.passYou'];
     case Phase.ChancellorLegislative:
       return [
         'law.chancellorChoosing',

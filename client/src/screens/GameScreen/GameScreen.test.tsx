@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@rstest/core';
+import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { GameScreen } from './GameScreen';
@@ -31,6 +31,10 @@ function votingView() {
     you: { id: 'you', role: 'liberal', vote: null, policies: [], peek: [], investigation: null },
   });
 }
+
+afterEach(() => {
+  rs.restoreAllMocks();
+});
 
 describe('GameScreen — voting', () => {
   it('Should send a Ja vote when the player picks it', () => {
@@ -123,6 +127,18 @@ describe('GameScreen — voting', () => {
     });
   });
 
+  it('Should play a ballot effect when the player votes', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ja!' }));
+
+    expect(play).toHaveBeenCalledWith('ballot-tap');
+    expect(play).toHaveBeenCalledWith('ballot-slide');
+  });
+
   it('Should throw a face-down ballot when someone else votes', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -139,6 +155,23 @@ describe('GameScreen — voting', () => {
       expect(document.querySelector('[data-ballot="cal"]')).toBeTruthy();
     });
     expect(document.querySelector('[data-ballot="you"]')).toBeNull();
+  });
+
+  it('Should play a ballot effect when someone else votes', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState(view);
+    play.mockClear();
+    harness.pushState({
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cal' ? { ...player, hasVoted: true } : player,
+      ),
+    });
+
+    expect(play).toHaveBeenCalledWith('ballot-slide');
   });
 
   it('Should stack already-cast ballots when joining a vote late', async () => {

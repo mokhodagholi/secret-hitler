@@ -52,6 +52,17 @@ describe('ChatPanel', () => {
     expect(screen.getByText('sadf')).toBeTruthy();
   });
 
+  it('Should keep a long chat line in the feed, not clip it', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+    const line =
+      'this is a long table message that used to vanish after three lines of chat';
+    emitChat(harness, line);
+
+    expect(screen.getByText(line)).toBeTruthy();
+  });
+
   it('Should keep the composer from inviting browser suggest', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);

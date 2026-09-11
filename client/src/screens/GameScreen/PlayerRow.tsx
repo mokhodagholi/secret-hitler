@@ -10,7 +10,7 @@ export interface PlayerRowProps {
   player: PublicPlayer;
   isYou: boolean;
   nominatable: boolean;
-  /** President / Chancellor letters — hidden until the opening night ends. */
+  /** President / Chancellor office — hidden until the opening night ends. */
   showOffice?: boolean;
   onNominate: () => void;
   formatMessage: FormatMessage;
@@ -18,7 +18,7 @@ export interface PlayerRowProps {
 
 /**
  * One row in the sidebar player list: avatar, name, President/Chancellor
- * badges, and the role or investigated party — only when the server revealed
+ * office, and the role or investigated party — only when the server revealed
  * it to this viewer (own role, fellow fascists, game over, or Investigate).
  */
 export function PlayerRow(props: PlayerRowProps) {
@@ -64,46 +64,59 @@ export function PlayerRow(props: PlayerRowProps) {
         <span class={styles.playerName}>
           {playerLabel(props.isYou, props.player.name, formatMessage)}
         </span>
-        <Show when={props.player.role}>
-          <span
-            classList={{
-              [styles.playerRole]: true,
-              [styles.roleLiberal]: props.player.role === 'liberal',
-              [styles.roleFascist]: props.player.role !== 'liberal',
-            }}
-          >
-            {formatMessage(`role.${props.player.role!}`)}
-          </span>
-        </Show>
-        <Show when={!props.player.role && props.player.party}>
-          {(party) => (
+        <span class={styles.playerMeta}>
+          <Show when={props.showOffice !== false}>
+            <span class={styles.playerSeat}>
+              {formatMessage('game.seatNumber', { n: props.player.seat + 1 })}
+            </span>
+          </Show>
+          <Show when={props.player.role}>
             <span
               classList={{
                 [styles.playerRole]: true,
-                [styles.roleLiberal]: party() === 'liberal',
-                [styles.roleFascist]: party() === 'fascist',
+                [styles.roleLiberal]: props.player.role === 'liberal',
+                [styles.roleFascist]: props.player.role !== 'liberal',
               }}
-              data-party={party()}
             >
-              {formatMessage(`game.${party()}`)}
+              {formatMessage(`role.${props.player.role!}`)}
             </span>
-          )}
-        </Show>
+          </Show>
+          <Show when={!props.player.role && props.player.party}>
+            {(party) => (
+              <span
+                classList={{
+                  [styles.playerRole]: true,
+                  [styles.roleLiberal]: party() === 'liberal',
+                  [styles.roleFascist]: party() === 'fascist',
+                }}
+                data-party={party()}
+              >
+                {formatMessage(`game.${party()}`)}
+              </span>
+            )}
+          </Show>
+        </span>
       </span>
       <Show when={props.showOffice !== false && props.player.isPresident}>
         <span
-          class={styles.playerBadge}
+          classList={{
+            [styles.playerBadge]: true,
+            [styles.playerBadgePresident]: true,
+          }}
           ref={(element) => void animation.play(element, 'badge-pop')}
         >
-          {formatMessage('game.president').slice(0, 1)}
+          {formatMessage('game.president')}
         </span>
       </Show>
       <Show when={props.showOffice !== false && props.player.isChancellor}>
         <span
-          class={styles.playerBadge}
+          classList={{
+            [styles.playerBadge]: true,
+            [styles.playerBadgeChancellor]: true,
+          }}
           ref={(element) => void animation.play(element, 'badge-pop')}
         >
-          {formatMessage('game.chancellor').slice(0, 1)}
+          {formatMessage('game.chancellor')}
         </span>
       </Show>
     </button>

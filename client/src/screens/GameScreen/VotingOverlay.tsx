@@ -91,6 +91,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
     const scatter = scatterFor(id, seen.size - 1);
     setPile((current) => [...current, { id, ...scatter, instant: !fly }]);
     if (!fly) return;
+    sound.play('ballot-slide');
     void launchBallot(id, scatter);
   }
 
@@ -100,7 +101,6 @@ export function VotingOverlay(props: VotingOverlayProps) {
   ): Promise<void> {
     await waitFrames(2);
     if (closed) return;
-    sound.play('ballot-slide');
     await flyBallot(animation, ballotEls[id], seatEl(id), scatter);
   }
 

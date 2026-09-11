@@ -62,6 +62,7 @@ const LINE_SFX: Partial<Record<RaviLineId, SoundEffect>> = {
   'tracker.advance': 'tracker-tick',
   'law.draw': 'policy-draw',
   'law.pass': 'policy-pass',
+  'law.passYou': 'policy-pass',
   'law.burned': 'policy-burn',
   'law.vetoOffered': 'veto-offer',
   'law.vetoAgreed': 'veto-agree',
@@ -163,6 +164,8 @@ export function RaviNarrator(props: {
         }
         if (entry.code === 'nominated') {
           line = raviNominatedLine(entry.params, myName, state.you.id);
+        } else if (entry.code === 'presidentPasses') {
+          if (state.board.chancellor === state.you.id) line = 'law.passYou';
         } else if (
           entry.code === 'executed' &&
           namedIsYou(entry.params?.name, myName)
