@@ -32,7 +32,9 @@ export type IconName =
   | 'share'
   | 'close'
   | 'hand'
-  | 'smile';
+  | 'smile'
+  | 'mic'
+  | 'micOff';
 
 const glyphs: Record<IconName, () => JSX.Element> = {
   book: () => (
@@ -228,6 +230,23 @@ const glyphs: Record<IconName, () => JSX.Element> = {
       <circle cx="12" cy="12" r="9" />
       <path d="M8 14s1.5 2 4 2 4-2 4-2" />
       <path d="M9 9h.01M15 9h.01" />
+    </>
+  ),
+  mic: () => (
+    <>
+      <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" x2="12" y1="19" y2="22" />
+    </>
+  ),
+  micOff: () => (
+    <>
+      <line x1="2" x2="22" y1="2" y2="22" />
+      <path d="M18.89 13.23A7 7 0 0 0 19 12v-2" />
+      <path d="M5 10v2a7 7 0 0 0 12 5" />
+      <path d="M15 9.34V6a3 3 0 0 0-5.68-1.33" />
+      <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+      <line x1="12" x2="12" y1="19" y2="22" />
     </>
   ),
 };

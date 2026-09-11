@@ -1,3 +1,4 @@
+import { Show } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import { APP_PACKAGE_VERSION } from '../../services/update';
 import { RAVI_CLIPS } from '../../assets/sounds/ravi/clips';
@@ -9,7 +10,7 @@ import { SettingRow } from '../../components/SettingRow/SettingRow';
 import { TextInput } from '../../components/TextInput/TextInput';
 
 export function SettingsScreen() {
-  const { settings, i18n, bale, nav } = useApp();
+  const { settings, i18n, bale, nav, flags } = useApp();
   const state = settings.settings;
   const { formatMessage } = i18n;
   const fromBale = () => bale.user() != null;
@@ -67,6 +68,15 @@ export function SettingsScreen() {
         checked={state.raviVoice}
         onChange={(value) => settings.set('raviVoice', value)}
       />
+      <Show when={flags.enabled('voice')}>
+        <SettingRow
+          kind="toggle"
+          icon="mic"
+          label={formatMessage('settings.tableVoice')}
+          checked={state.voiceEnabled}
+          onChange={(value) => settings.set('voiceEnabled', value)}
+        />
+      </Show>
       <SettingRow
         kind="value"
         icon="masks"

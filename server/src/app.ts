@@ -20,6 +20,7 @@ import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import type { BaleRuntime } from './bale/webhook';
 import type { LiveRoomStore } from './rooms/LiveRoomStore';
 import { restoreLiveRooms } from './rooms/restoreLiveRooms';
+import type { VoiceHub } from './voice/VoiceHub';
 
 const WS_PATH = '/ws';
 
@@ -52,6 +53,8 @@ export interface ServerOptions {
    * Tests inject so suites do not depend on the ambient environment.
    */
   flags?: FeatureFlags;
+  /** Present when FEATURE_VOICE is on. Tests inject a memory hub. */
+  voice?: VoiceHub | null;
 }
 
 export interface BuiltServer {
@@ -75,11 +78,19 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
 
   const repo = new RoomRepository(options.minPlayers);
   const tokens = new TokenStore();
-  const sockets = new SocketHandler(repo, tokens, seats, options.live ?? null);
+  const flags = options.flags ?? DEFAULT_FLAGS;
+  const sockets = new SocketHandler(
+    repo,
+    tokens,
+    seats,
+    options.live ?? null,
+    bale ?? null,
+    flags,
+    options.voice ?? null,
+  );
   const history = options.history ?? new InMemoryGameHistoryStore();
   const profiles = options.profiles ?? new InMemoryProfileStore();
   const recorder = new GameResultRecorder(history);
-  const flags = options.flags ?? DEFAULT_FLAGS;
 
   if (options.live) {
     const restored = await restoreLiveRooms({

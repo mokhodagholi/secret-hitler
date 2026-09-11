@@ -193,4 +193,20 @@ describe('WebSocket gameplay', () => {
     const limited = await hostWs.waitFor('error');
     expect(limited.code).toBe('RATE_LIMITED');
   });
+
+  it('Should reject voice messages when the voice flag is off', async () => {
+    server = await listenServer();
+    const created = (
+      await httpJson<CreateRoomResponse>(server.app, 'POST', '/api/rooms', {
+        name: 'Bunker',
+        hostName: 'Ana',
+      })
+    ).body;
+
+    const ws = await connect();
+    await ws.auth(created.token);
+    ws.send({ type: 'voice:join' });
+    const refused = await ws.waitFor('error');
+    expect(refused.code).toBe('INVALID_ACTION');
+  });
 });

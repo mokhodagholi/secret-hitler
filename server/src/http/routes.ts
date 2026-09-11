@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
@@ -8,7 +8,7 @@ import type {
   ProfileResponse,
   SaveProfileRequest,
 } from '@secret-hitler/shared';
-import { normalizeAvatar, toFlagsResponse } from '@secret-hitler/shared';
+import { normalizeAvatar, toFlagsResponse, DEFAULT_BALE_BOT_USERNAME, miniAppStartLink } from '@secret-hitler/shared';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
@@ -18,7 +18,7 @@ import type { GameHistoryStore } from '../history/GameHistoryStore';
 import type { ProfileStore } from '../profiles/ProfileStore';
 import { hashPassword, verifyPassword } from './password';
 import { validateBaleInitData } from '../bale/initData';
-import { handleBaleWebhook, type BaleRuntime } from '../bale/webhook';
+import { handleBaleWebhook, registerBaleBodyParser, type BaleRuntime } from '../bale/webhook';
 import { formatSupportLetter, isSupportTopic } from '../bale/support';
 
 export interface RouteDeps {
@@ -53,8 +53,9 @@ function isClientId(value: unknown): value is string {
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, profiles, publicUrl, bale, flags } =
+  const { repo, tokens, sockets, recorder, history, profiles, bale, flags } =
     deps;
+  registerBaleBodyParser(app);
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
   const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
   const profileLimiter = new RateLimiter(PROFILE_LIMIT, LIMIT_WINDOW_MS);
@@ -214,7 +215,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     const res: CreateRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
-      shareLink: shareLink(req, entry.room.code, publicUrl),
+      shareLink: inviteLink(entry.room.code, bale?.botUsername),
       token,
       playerId: host.id,
     };
@@ -284,11 +285,6 @@ function bindBaleSeat(
   bale.seats.occupy(user.id, { roomId, code, playerId, roomName });
 }
 
-function shareLink(req: FastifyRequest, code: string, publicUrl?: string): string {
-  if (publicUrl) {
-    return `${publicUrl.replace(/\/$/, '')}/join/${code}`;
-  }
-  const proto = (req.headers['x-forwarded-proto'] as string) ?? 'http';
-  const host = req.headers.host ?? 'localhost:3001';
-  return `${proto}://${host}/join/${code}`;
+function inviteLink(code: string, botUsername?: string): string {
+  return miniAppStartLink(botUsername || DEFAULT_BALE_BOT_USERNAME, code);
 }

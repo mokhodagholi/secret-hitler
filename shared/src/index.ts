@@ -37,6 +37,7 @@ export type { GamePhase, PhaseHost } from './engine/phases/GamePhase';
 export { MessageRouter } from './net/MessageRouter';
 export type { Tagged, MessageHandler } from './net/MessageRouter';
 export { parseClientMessage } from './net/clientMessages';
+export { DEFAULT_BALE_BOT_USERNAME, miniAppStartLink } from './net/miniAppLink';
 
 // Utilities
 export { TypedEmitter } from './util/TypedEmitter';

@@ -72,6 +72,8 @@ export class Room {
   specialElectionResumeAfterId: string | null = null;
   /** The Chancellor has proposed a veto this legislative session. */
   vetoRequested = false;
+  /** Open table vote to remove a player, else null. Game clocks freeze while set. */
+  kickVote: KickVoteState | null = null;
 
   constructor(args: {
     id: string;
@@ -159,6 +161,7 @@ export class Room {
       hasVoted: this.votes.has(p.id),
       role: this.roleVisibleTo(viewer, p),
       party: this.partyVisibleTo(viewer.id, p.id),
+      selfMuted: false,
     };
   }
 
@@ -205,6 +208,7 @@ export class Room {
         this.nominationEndsAt > 0
           ? { startedAt: this.nominationStartedAt, endsAt: this.nominationEndsAt }
           : null,
+      kickVote: this.kickVoteViewFor(viewerId),
       ineligibleChancellors:
         this.phase === Phase.Nomination ? this.ineligibleChancellorIds() : [],
       activePower: this.activePower,
@@ -288,6 +292,16 @@ export class Room {
       investigations: this.investigations.map((entry) => ({ ...entry })),
       specialElectionResumeAfterId: this.specialElectionResumeAfterId,
       vetoRequested: this.vetoRequested,
+      kickVote: this.kickVote
+        ? {
+            requesterId: this.kickVote.requesterId,
+            targetId: this.kickVote.targetId,
+            votes: [...this.kickVote.votes.entries()],
+            startedAt: this.kickVote.startedAt,
+            endsAt: this.kickVote.endsAt,
+            needed: this.kickVote.needed,
+          }
+        : null,
     };
   }
 
@@ -332,7 +346,36 @@ export class Room {
     room.investigations = snapshot.investigations.map((entry) => ({ ...entry }));
     room.specialElectionResumeAfterId = snapshot.specialElectionResumeAfterId;
     room.vetoRequested = snapshot.vetoRequested;
+    room.kickVote = snapshot.kickVote
+      ? {
+          requesterId: snapshot.kickVote.requesterId,
+          targetId: snapshot.kickVote.targetId,
+          votes: new Map(snapshot.kickVote.votes),
+          startedAt: snapshot.kickVote.startedAt,
+          endsAt: snapshot.kickVote.endsAt,
+          needed: snapshot.kickVote.needed,
+        }
+      : null;
     return room;
+  }
+
+  private kickVoteViewFor(viewerId: string): GameStateView['kickVote'] {
+    const vote = this.kickVote;
+    if (!vote) return null;
+    const votedIds = [...vote.votes.keys()];
+    return {
+      requesterId: vote.requesterId,
+      targetId: vote.targetId,
+      startedAt: vote.startedAt,
+      endsAt: vote.endsAt,
+      votedCount: votedIds.length,
+      voterCount: this.players.filter(
+        (player) => player.isAlive && player.id !== vote.targetId,
+      ).length,
+      needed: vote.needed,
+      yourVote: vote.votes.has(viewerId) ? vote.votes.get(viewerId)! : null,
+      votedIds,
+    };
   }
 }
 
@@ -372,4 +415,23 @@ export interface RoomSnapshot {
   investigations: { investigatorId: string; targetId: string; party: Faction }[];
   specialElectionResumeAfterId: string | null;
   vetoRequested: boolean;
+  /** Absent on rooms snapshotted before table kick votes existed. */
+  kickVote?: {
+    requesterId: string;
+    targetId: string;
+    votes: [string, boolean][];
+    startedAt: number;
+    endsAt: number;
+    needed: number;
+  } | null;
+}
+
+/** Authoritative kick-vote record kept on the room. */
+export interface KickVoteState {
+  requesterId: string;
+  targetId: string;
+  votes: Map<string, boolean>;
+  startedAt: number;
+  endsAt: number;
+  needed: number;
 }

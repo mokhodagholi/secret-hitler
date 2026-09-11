@@ -1,4 +1,4 @@
-import { Phase, type RoomSummary } from '@secret-hitler/shared';
+import { Phase, miniAppStartLink, type RoomSummary } from '@secret-hitler/shared';
 import type { BaleSeat } from './BaleSeatIndex';
 
 export interface BotCommandContext {
@@ -22,23 +22,40 @@ export interface BotReply {
 
 const ROOM_CODE = /^[A-Za-z0-9]{6}$/;
 
+/** Slash is optional so a typed `start` still matches — Bale's menu often omits `/`. */
+const KNOWN_COMMANDS = new Set([
+  'start',
+  'help',
+  'find_game',
+  'findgame',
+  'games',
+  'game',
+  'join',
+  'invite',
+]);
+
 /**
- * Opens the mini-app: `https://ble.ir/bot_name?startapp=` plus an optional
- * payload (room code for invites, anything else later).
+ * Bale `ble.ir` mini-app link. Telegram `t.me` would be swapped in here later.
  */
 export function baleStartLink(botUsername: string, startApp = ''): string {
-  const nick = botUsername.replace(/^@/, '');
-  return `https://ble.ir/${nick}?startapp=${startApp}`;
+  return miniAppStartLink(botUsername, startApp);
 }
 
-/** Normalize `/find-game@bot args` → `{ command: 'find_game', arg }`. */
+/** Bale always parses Markdown; unmatched `_` in a URL or `/find_game` makes sendMessage fail. */
+export function playMarkdownLink(botUsername: string, code?: string): string {
+  return `[بازی کن](${baleStartLink(botUsername, code)})`;
+}
+
+/** Normalize `/find-game@bot args` or a bare known command → `{ command: 'find_game', arg }`. */
 export function parseBotCommand(text: string): { command: string; arg: string } | null {
-  const trimmed = text.trim();
-  const match = /^\/([A-Za-z0-9_-]+)(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]+))?$/.exec(trimmed);
+  const trimmed = text.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim();
+  const match = /^(\/)?([A-Za-z0-9_-]+)(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]+))?$/.exec(trimmed);
   if (!match) return null;
+  const command = match[2].toLowerCase().replace(/-/g, '_');
+  if (!match[1] && !KNOWN_COMMANDS.has(command)) return null;
   return {
-    command: match[1].toLowerCase().replace(/-/g, '_'),
-    arg: match[2]?.trim() ?? '',
+    command,
+    arg: match[3]?.trim() ?? '',
   };
 }
 
@@ -74,12 +91,12 @@ function startReply(botUsername: string): BotReply {
       '',
       'برای شروع، دکمهٔ پایین رو بزن. اگه لینک دعوت داری، همون رو باز کن تا مستقیم بری سر میز.',
       '',
-      '/find_game — اتاق باز پیدا کن',
+      '/find-game — اتاق باز پیدا کن',
       '/games — بازی‌های در جریان',
       '/join CODE — با کد اتاق بیا تو',
       '/invite — لینک دعوت دوستات',
       '',
-      baleStartLink(botUsername),
+      playMarkdownLink(botUsername),
     ].join('\n'),
     reply_markup: playKeyboard(botUsername),
   };
@@ -89,7 +106,7 @@ function findGameReply(ctx: BotCommandContext): BotReply {
   const open = ctx.lobbies.filter((room) => room.playerCount < room.maxPlayers);
   if (open.length === 0) {
     return {
-      text: ['الان اتاق بازی نیست. یکی بساز:', baleStartLink(ctx.botUsername)].join('\n'),
+      text: ['الان اتاق بازی نیست. یکی بساز:', playMarkdownLink(ctx.botUsername)].join('\n'),
       reply_markup: playKeyboard(ctx.botUsername),
     };
   }
@@ -102,7 +119,7 @@ function findGameReply(ctx: BotCommandContext): BotReply {
 function gamesReply(ctx: BotCommandContext): BotReply {
   if (ctx.games.length === 0) {
     return {
-      text: ['الان هیچ بازی‌ای در جریان نیست. یکی بساز:', baleStartLink(ctx.botUsername)].join('\n'),
+      text: ['الان هیچ بازی‌ای در جریان نیست. یکی بساز:', playMarkdownLink(ctx.botUsername)].join('\n'),
       reply_markup: playKeyboard(ctx.botUsername),
     };
   }
@@ -137,9 +154,8 @@ function joinReply(ctx: BotCommandContext, arg: string): BotReply {
     return { text: `اتاق ${room.name} (${code}) پره.` };
   }
   const lock = room.hasPassword ? '\nاین اتاق رمز داره؛ تو بازی ازت می‌پرسه.' : '';
-  const link = baleStartLink(ctx.botUsername, code);
   return {
-    text: `ورود به ${room.name} — کد ${code}${lock}\n${link}`,
+    text: `ورود به ${room.name} — کد ${code}${lock}\n${playMarkdownLink(ctx.botUsername, code)}`,
     reply_markup: playKeyboard(ctx.botUsername, code),
   };
 }
@@ -156,7 +172,7 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   const name = room?.name ?? ctx.seated?.roomName ?? code;
   const link = baleStartLink(ctx.botUsername, code);
   return {
-    text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}\n${link}`,
+    text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}\n[ورود به اتاق](${link})`,
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
     },

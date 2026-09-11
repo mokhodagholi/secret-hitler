@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@secret-hitler/shared": "workspace:*",
-    "solid-js": "^1.8.22"
+    "solid-js": "^1.8.22",
+    "mediasoup-client": "^3.11.1"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.1.0",

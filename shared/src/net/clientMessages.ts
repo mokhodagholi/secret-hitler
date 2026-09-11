@@ -1,4 +1,9 @@
-import type { ClientMessage, GameCommand } from '../types/events';
+import type {
+  ClientMessage,
+  GameCommand,
+  VoiceJson,
+  VoiceTransportDirection,
+} from '../types/events';
 
 // Runtime guards for the WS wire format. The server must never trust a cast —
 // one malformed frame reaching the engine would throw inside the `ws` message
@@ -55,16 +60,67 @@ export function parseClientMessage(raw: string): ClientMessage | null {
         ? { type: 'command', command: message.command }
         : null;
     case 'player:kick':
+    case 'kick:request':
       return typeof message.playerId === 'string'
-        ? { type: 'player:kick', playerId: message.playerId }
+        ? { type: message.type, playerId: message.playerId }
+        : null;
+    case 'kick:vote':
+      return typeof message.agree === 'boolean'
+        ? { type: 'kick:vote', agree: message.agree }
         : null;
     case 'player:ready':
     case 'player:unready':
     case 'game:start':
     case 'room:leave':
     case 'ping':
+    case 'voice:join':
+    case 'voice:leave':
       return { type: message.type };
+    case 'voice:createTransport':
+      return isVoiceDirection(message.direction)
+        ? { type: 'voice:createTransport', direction: message.direction }
+        : null;
+    case 'voice:connectTransport':
+      return typeof message.transportId === 'string' && isVoiceJson(message.dtlsParameters)
+        ? {
+            type: 'voice:connectTransport',
+            transportId: message.transportId,
+            dtlsParameters: message.dtlsParameters,
+          }
+        : null;
+    case 'voice:produce':
+      return typeof message.transportId === 'string' && isVoiceJson(message.rtpParameters)
+        ? {
+            type: 'voice:produce',
+            transportId: message.transportId,
+            rtpParameters: message.rtpParameters,
+          }
+        : null;
+    case 'voice:consume':
+      return typeof message.producerId === 'string' && isVoiceJson(message.rtpCapabilities)
+        ? {
+            type: 'voice:consume',
+            producerId: message.producerId,
+            rtpCapabilities: message.rtpCapabilities,
+          }
+        : null;
+    case 'voice:mute':
+      return typeof message.muted === 'boolean'
+        ? { type: 'voice:mute', muted: message.muted }
+        : null;
+    case 'voice:speaking':
+      return typeof message.speaking === 'boolean'
+        ? { type: 'voice:speaking', speaking: message.speaking }
+        : null;
     default:
       return null;
   }
+}
+
+function isVoiceDirection(value: unknown): value is VoiceTransportDirection {
+  return value === 'send' || value === 'recv';
+}
+
+function isVoiceJson(value: unknown): value is VoiceJson {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

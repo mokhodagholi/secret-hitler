@@ -16,7 +16,8 @@
     "drizzle-orm": "^0.45.2",
     "fastify": "^4.28.1",
     "pg": "^8.21.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "mediasoup": "^3.15.8"
   },
   "devDependencies": {
     "@rstest/core": "^0.10.4",

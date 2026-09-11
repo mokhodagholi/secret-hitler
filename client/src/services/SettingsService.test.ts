@@ -2,6 +2,11 @@ import { describe, expect, it } from '@rstest/core';
 import { SettingsService } from './SettingsService';
 
 describe('SettingsService', () => {
+  it('Should hear the table by default', () => {
+    const settings = new SettingsService();
+    expect(settings.settings.voiceEnabled).toBe(true);
+  });
+
   it('Should persist a changed setting to localStorage', () => {
     const settings = new SettingsService();
     settings.set('music', false);

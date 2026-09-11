@@ -1,10 +1,12 @@
 import {
   DISCUSSION_DURATION_MS,
+  KICK_VOTE_DURATION_MS,
   LEGISLATIVE_DURATION_MS,
   NOMINATION_DURATION_MS,
   Phase,
   VOTE_DURATION_MS,
   isOpeningNight,
+  kickVoteYesNeeded,
   type ChatMessage,
   type ExecutivePower,
   type Faction,
@@ -47,6 +49,16 @@ export interface EngineEvents extends Record<string, unknown> {
   legislativeTimerChanged: { endsAt: number | null };
   /** Nomination window opened (endsAt set) or closed (null); server (un)schedules. */
   nominationTimerChanged: { endsAt: number | null };
+  /** Table kick-vote window opened or closed; server (un)schedules. */
+  kickVoteTimerChanged: { endsAt: number | null };
+  /** The table finished a kick vote — server may eject and notify Bale. */
+  kickVoteResolved: {
+    requesterId: string;
+    targetId: string;
+    yesCount: number;
+    needed: number;
+    kicked: boolean;
+  };
 }
 
 /**
@@ -57,6 +69,8 @@ export interface EngineEvents extends Record<string, unknown> {
 export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost {
   private readonly phases: Partial<Record<Phase, GamePhase>>;
   private currentPhase: GamePhase;
+  /** True while applying a successful table kick so vacate does not cancel it. */
+  private settlingKickVote = false;
 
   constructor(readonly room: Room) {
     super();
@@ -161,7 +175,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!player || player.connected === connected) return;
     player.connected = connected;
     this.log(connected ? 'reconnected' : 'disconnected', { name: player.name });
-    this.currentPhase.presenceChanged?.();
+    if (!this.room.kickVote) this.currentPhase.presenceChanged?.();
     this.changed();
   }
 
@@ -222,6 +236,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.investigation = null;
     room.specialElectionResumeAfterId = null;
     room.vetoRequested = false;
+    room.kickVote = null;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     this.transitionTo(Phase.Nomination);
 
@@ -252,6 +267,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Delegate an in-game {@link GameCommand} to the current phase. */
   handleCommand(playerId: string, command: GameCommand): EngineError | null {
+    if (this.room.kickVote) {
+      return err('INVALID_ACTION', 'A kick vote is in progress.');
+    }
     return this.currentPhase.handle(playerId, command);
   }
 
@@ -394,6 +412,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       this.changed();
       return;
     }
+    if (this.room.kickVote && !this.settlingKickVote) {
+      this.onVacatedDuringKickVote(player.id);
+    }
     if (heldPresident || heldChancellor) {
       this.log(heldPresident ? 'presidentVacated' : 'chancellorVacated', {
         name: player.name,
@@ -401,8 +422,20 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       this.abortCurrentRound();
       return;
     }
-    this.currentPhase.presenceChanged?.();
+    if (!this.room.kickVote) this.currentPhase.presenceChanged?.();
     this.changed();
+  }
+
+  /** A seat emptied while a kick vote is open: cancel if it was the target. */
+  private onVacatedDuringKickVote(playerId: string): void {
+    const vote = this.room.kickVote;
+    if (!vote) return;
+    if (vote.targetId === playerId) {
+      this.finishKickVote(false);
+      return;
+    }
+    vote.votes.delete(playerId);
+    this.maybeResolveKickVote();
   }
 
   /** Drop an unfinished government and pass the presidency on. */
@@ -461,6 +494,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Server calls this when the discussion window elapses. */
   resolveDiscussionTimeout(): void {
+    if (this.room.kickVote) return;
     this.endDiscussion();
   }
 
@@ -481,6 +515,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Server calls this when the vote window elapses. */
   resolveVoteTimeout(): void {
+    if (this.room.kickVote) return;
     this.currentPhase.timeout?.();
   }
 
@@ -502,6 +537,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Server calls this when a legislator's choice window elapses. */
   resolveLegislativeTimeout(): void {
+    if (this.room.kickVote) return;
     this.currentPhase.timeout?.();
   }
 
@@ -522,7 +558,216 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Server calls this when the President's nomination window elapses. */
   resolveNominationTimeout(): void {
+    if (this.room.kickVote) return;
     this.currentPhase.timeout?.();
+  }
+
+  // --- Table kick vote ----------------------------------------------------------
+
+  /**
+   * A living player asks the table to remove another living player. Game
+   * clocks freeze until the vote is settled.
+   */
+  requestKick(requesterId: string, targetId: string): EngineError | null {
+    const room = this.room;
+    if (room.phase === Phase.Lobby || room.phase === Phase.GameOver) {
+      return err('INVALID_ACTION', 'There is no game in progress.');
+    }
+    if (this.inOpeningNight()) {
+      return err('INVALID_ACTION', 'Wait until night is over.');
+    }
+    if (room.kickVote) {
+      return err('INVALID_ACTION', 'A kick vote is already in progress.');
+    }
+    if (requesterId === targetId) {
+      return err('INVALID_ACTION', 'You cannot kick yourself.');
+    }
+    const requester = room.findPlayer(requesterId);
+    const target = room.findPlayer(targetId);
+    if (!requester?.isAlive) {
+      return err('INVALID_ACTION', 'You cannot request a kick.');
+    }
+    if (!target?.isAlive) {
+      return err('INVALID_ACTION', 'That player is not in the game.');
+    }
+    const living = room.players.filter((player) => player.isAlive);
+    if (living.length < 3) {
+      return err('INVALID_ACTION', 'Not enough players to vote a kick.');
+    }
+
+    const startedAt = Date.now();
+    room.kickVote = {
+      requesterId,
+      targetId,
+      votes: new Map([[requesterId, true]]),
+      startedAt,
+      endsAt: startedAt + KICK_VOTE_DURATION_MS,
+      needed: kickVoteYesNeeded(living.length),
+    };
+    this.pauseDeadlineTimers();
+    this.emit('kickVoteTimerChanged', { endsAt: room.kickVote.endsAt });
+    this.log('kickVoteStarted', {
+      name: requester.name,
+      target: target.name,
+      requesterId,
+      targetId,
+    });
+    if (this.maybeResolveKickVote()) return null;
+    this.changed();
+    return null;
+  }
+
+  /** Cast Ja (remove) or Nein (keep) on the open table kick vote. */
+  voteKick(playerId: string, agree: boolean): EngineError | null {
+    const vote = this.room.kickVote;
+    if (!vote) {
+      return err('INVALID_ACTION', 'There is no kick vote in progress.');
+    }
+    if (playerId === vote.targetId) {
+      return err('INVALID_ACTION', 'You cannot vote on your own kick.');
+    }
+    const player = this.room.findPlayer(playerId);
+    if (!player?.isAlive) {
+      return err('INVALID_ACTION', 'You cannot vote on this kick.');
+    }
+    if (vote.votes.has(playerId)) {
+      return err('INVALID_ACTION', 'You have already voted.');
+    }
+    vote.votes.set(playerId, agree);
+    if (this.maybeResolveKickVote()) return null;
+    this.changed();
+    return null;
+  }
+
+  /** Server calls this when the kick-vote window elapses. */
+  resolveKickVoteTimeout(): void {
+    if (!this.room.kickVote) return;
+    this.finishKickVote(this.kickVoteYesCount() >= this.room.kickVote.needed);
+  }
+
+  private kickVoteYesCount(): number {
+    const vote = this.room.kickVote;
+    if (!vote) return 0;
+    return [...vote.votes.values()].filter((agree) => agree).length;
+  }
+
+  private kickVoteRemainingVoters(): number {
+    const vote = this.room.kickVote;
+    if (!vote) return 0;
+    return this.room.players.filter(
+      (player) =>
+        player.isAlive &&
+        player.id !== vote.targetId &&
+        !vote.votes.has(player.id),
+    ).length;
+  }
+
+  /** Resolve if the table has decided; returns true when the vote closed. */
+  private maybeResolveKickVote(): boolean {
+    const vote = this.room.kickVote;
+    if (!vote) return false;
+    const yes = this.kickVoteYesCount();
+    if (yes >= vote.needed) {
+      this.finishKickVote(true);
+      return true;
+    }
+    if (yes + this.kickVoteRemainingVoters() < vote.needed) {
+      this.finishKickVote(false);
+      return true;
+    }
+    if (this.kickVoteRemainingVoters() === 0) {
+      this.finishKickVote(false);
+      return true;
+    }
+    return false;
+  }
+
+  private finishKickVote(kicked: boolean): void {
+    const vote = this.room.kickVote;
+    if (!vote) return;
+    const target = this.room.findPlayer(vote.targetId);
+    const requester = this.room.findPlayer(vote.requesterId);
+    const yesCount = this.kickVoteYesCount();
+    const needed = vote.needed;
+    const heldOffice =
+      kicked &&
+      target != null &&
+      (this.room.presidentId === target.id || this.room.chancellorId === target.id);
+    const pausedAt = vote.startedAt;
+
+    this.log(kicked ? 'kickVotePassed' : 'kickVoteFailed', {
+      name: target?.name ?? requester?.name ?? '',
+      requester: requester?.name ?? '',
+      requesterId: vote.requesterId,
+      targetId: vote.targetId,
+      yes: yesCount,
+      needed,
+    });
+
+    this.room.kickVote = null;
+    this.emit('kickVoteTimerChanged', { endsAt: null });
+
+    if (kicked && target) {
+      this.settlingKickVote = true;
+      if (!heldOffice) this.resumeDeadlineTimers(pausedAt);
+      this.vacateInGame(target, 'kicked');
+      this.settlingKickVote = false;
+    } else {
+      this.resumeDeadlineTimers(pausedAt);
+      this.changed();
+    }
+    this.emit('kickVoteResolved', {
+      requesterId: vote.requesterId,
+      targetId: vote.targetId,
+      yesCount,
+      needed,
+      kicked,
+    });
+  }
+
+  /** Unschedule running phase clocks without clearing their remaining time. */
+  private pauseDeadlineTimers(): void {
+    this.emit('discussionTimerChanged', { endsAt: null });
+    this.emit('voteTimerChanged', { endsAt: null });
+    this.emit('legislativeTimerChanged', { endsAt: null });
+    this.emit('nominationTimerChanged', { endsAt: null });
+  }
+
+  /** Slide frozen deadlines forward by the pause so remaining time is intact. */
+  private resumeDeadlineTimers(pausedAt: number): void {
+    const pauseMs = Math.max(0, Date.now() - pausedAt);
+    const shift = (
+      startedAt: number,
+      endsAt: number,
+    ): { startedAt: number; endsAt: number } => ({
+      startedAt: startedAt > 0 ? startedAt + pauseMs : 0,
+      endsAt: endsAt > 0 ? endsAt + pauseMs : 0,
+    });
+    const room = this.room;
+    if (room.discussionEndsAt > 0) {
+      const next = shift(room.discussionStartedAt, room.discussionEndsAt);
+      room.discussionStartedAt = next.startedAt;
+      room.discussionEndsAt = next.endsAt;
+      this.emit('discussionTimerChanged', { endsAt: room.discussionEndsAt });
+    }
+    if (room.voteEndsAt > 0) {
+      const next = shift(room.voteStartedAt, room.voteEndsAt);
+      room.voteStartedAt = next.startedAt;
+      room.voteEndsAt = next.endsAt;
+      this.emit('voteTimerChanged', { endsAt: room.voteEndsAt });
+    }
+    if (room.legislativeEndsAt > 0) {
+      const next = shift(room.legislativeStartedAt, room.legislativeEndsAt);
+      room.legislativeStartedAt = next.startedAt;
+      room.legislativeEndsAt = next.endsAt;
+      this.emit('legislativeTimerChanged', { endsAt: room.legislativeEndsAt });
+    }
+    if (room.nominationEndsAt > 0) {
+      const next = shift(room.nominationStartedAt, room.nominationEndsAt);
+      room.nominationStartedAt = next.startedAt;
+      room.nominationEndsAt = next.endsAt;
+      this.emit('nominationTimerChanged', { endsAt: room.nominationEndsAt });
+    }
   }
 
   // --- Host migration ----------------------------------------------------------

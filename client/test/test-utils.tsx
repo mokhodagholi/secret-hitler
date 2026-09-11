@@ -3,6 +3,7 @@ import { render } from '@solidjs/testing-library';
 import {
   Phase,
   type ClientMessage,
+  type FeatureFlags,
   type GameStateView,
   type PublicPlayer,
   type ServerMessage,
@@ -18,6 +19,7 @@ import { RaviService } from '../src/services/RaviService';
 import { BaleService } from '../src/services/BaleService';
 import { PrefetchService } from '../src/services/prefetch';
 import { FeatureFlagService } from '../src/services/FeatureFlagService';
+import { VoiceService } from '../src/services/VoiceService';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -92,7 +94,7 @@ const SESSION: RoomSession = {
  * in-room screens require. Language defaults to English for readable assertions.
  */
 export function buildHarness(
-  options: { seated?: boolean; initialPath?: string } = {},
+  options: { seated?: boolean; initialPath?: string; flags?: FeatureFlags } = {},
 ): Harness {
   if (options.seated) {
     sessionStorage.setItem('sh:session', JSON.stringify(SESSION));
@@ -102,6 +104,7 @@ export function buildHarness(
   const socket = new FakeSocket();
   const game = new GameStateService(socket as unknown as WebSocketService);
   const i18n = new I18nService(() => settings.settings.language);
+  const flags = new FeatureFlagService(options.flags);
   const services: AppServices = {
     nav: new NavigationService(options.initialPath ?? '/'),
     settings,
@@ -113,7 +116,12 @@ export function buildHarness(
     ravi: new RaviService(settings, i18n),
     bale: new BaleService(),
     prefetch: new PrefetchService(),
-    flags: new FeatureFlagService(),
+    flags,
+    voice: new VoiceService(
+      socket as unknown as WebSocketService,
+      flags,
+      settings,
+    ),
   };
   return {
     services,
@@ -144,6 +152,7 @@ export function makePlayer(overrides: Partial<PublicPlayer> = {}): PublicPlayer 
     hasVoted: false,
     role: null,
     party: null,
+    selfMuted: false,
     ...overrides,
   };
 }
@@ -182,6 +191,7 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     activePower: null,
     vetoUnlocked: false,
     vetoRequested: false,
+    kickVote: null,
     you: {
       id: 'you',
       role: null,
@@ -192,4 +202,15 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     },
     ...overrides,
   };
+}
+
+/** jsdom has no microphone. Call before rendering when the voice flag is on. */
+export function stubDeniedMicrophone(): void {
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: {
+      getUserMedia: () =>
+        Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+    },
+  });
 }

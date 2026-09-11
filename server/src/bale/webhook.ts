@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { Update } from 'bale-bot' with { 'resolution-mode': 'import' };
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { Chat, Update } from 'bale-bot' with { 'resolution-mode': 'import' };
 import type { RoomRepository } from '../rooms/RoomRepository';
 import { BALE_BOT_COMMANDS, handleBotText, type BotReply } from './commands';
 import type { BaleSeatIndex } from './BaleSeatIndex';
@@ -56,12 +56,48 @@ function providedWebhookSecret(req: FastifyRequest): string {
 }
 
 function isUpdate(body: unknown): body is Update {
-  return (
-    !!body &&
-    typeof body === 'object' &&
-    'update_id' in body &&
-    typeof (body as { update_id: unknown }).update_id === 'number'
-  );
+  if (!body || typeof body !== 'object') return false;
+  const updateId = (body as { update_id?: unknown }).update_id;
+  return typeof updateId === 'number' || (typeof updateId === 'string' && /^-?\d+$/.test(updateId));
+}
+
+function asUpdate(body: unknown): unknown {
+  if (typeof body === 'string') {
+    try {
+      return JSON.parse(body) as unknown;
+    } catch {
+      return body;
+    }
+  }
+  return body;
+}
+
+/** Bale docs say `private`; some payloads omit type or use `pv`. */
+function isDirectMessage(chat: Chat | undefined): chat is Chat {
+  if (!chat) return false;
+  const type = chat.type?.toLowerCase();
+  if (type === 'group' || type === 'channel' || type === 'supergroup') return false;
+  if (type === 'private' || type === 'pv') return true;
+  return !chat.title;
+}
+
+/**
+ * Bale sometimes POSTs JSON as text/plain or with no Content-Type. Fastify
+ * would otherwise 415 before the webhook handler runs.
+ */
+export function registerBaleBodyParser(app: FastifyInstance): void {
+  app.addContentTypeParser('*', { parseAs: 'string' }, (_request, body, done) => {
+    try {
+      const raw = String(body).trim();
+      if (!raw) {
+        done(null, null);
+        return;
+      }
+      done(null, JSON.parse(raw));
+    } catch (error) {
+      done(error as Error, undefined);
+    }
+  });
 }
 
 export async function handleBaleWebhook(
@@ -76,19 +112,20 @@ export async function handleBaleWebhook(
   if (!webhookSecretMatches(providedWebhookSecret(req), bale.webhookSecret)) {
     return reply.code(401).send({ error: 'Unauthorized' });
   }
-  if (!isUpdate(req.body)) {
+  const body = asUpdate(req.body);
+  if (!isUpdate(body)) {
     return reply.code(400).send({ error: 'Invalid update' });
   }
 
-  const message = req.body.message;
+  const message = body.message;
   const text = message?.text?.trim();
   const chat = message?.chat;
-  if (!text || !chat || chat.type !== 'private') {
+  if (!message || !text || !isDirectMessage(chat)) {
     return reply.code(200).send({ ok: true });
   }
 
-  const fromId = message.from?.id;
-  if (fromId == null) {
+  const fromId = Number(message.from?.id);
+  if (!Number.isFinite(fromId)) {
     return reply.code(200).send({ ok: true });
   }
 
@@ -109,7 +146,15 @@ export async function handleBaleWebhook(
     });
   } catch (error) {
     req.log.error(error, 'Failed to send Bale bot reply');
-    return reply.code(500).send({ error: 'Failed to send reply' });
+    if (!response.reply_markup) {
+      return reply.code(500).send({ error: 'Failed to send reply' });
+    }
+    try {
+      await bale.bot.sendMessage({ chat_id: chat.id, text: response.text });
+    } catch (retryError) {
+      req.log.error(retryError, 'Failed to send Bale bot reply without markup');
+      return reply.code(500).send({ error: 'Failed to send reply' });
+    }
   }
 
   return reply.code(200).send({ ok: true });

@@ -35,6 +35,15 @@ describe('parseBotCommand', () => {
       arg: 'ABC123',
     });
   });
+
+  it('Should treat a typed start without a slash as /start', () => {
+    expect(parseBotCommand('start')).toEqual({ command: 'start', arg: '' });
+    expect(parseBotCommand('Start')).toEqual({ command: 'start', arg: '' });
+  });
+
+  it('Should not treat a bare room code as a command', () => {
+    expect(parseBotCommand('ABC123')).toBeNull();
+  });
 });
 
 describe('baleStartLink', () => {
@@ -54,8 +63,17 @@ describe('handleBotText', () => {
     const reply = ctx({ text: '/start' });
     expect(reply.text).toContain('راز هیتلر');
     expect(reply.text).not.toContain('هیتلر مخفی');
+    expect(reply.text).not.toContain('/find_game');
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
     expect(reply.text).toContain('https://ble.ir/secret_hitler_bot?startapp=');
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
+      'https://ble.ir/secret_hitler_bot?startapp=',
+    );
+  });
+
+  it('Should greet a typed start the same as /start', () => {
+    const reply = ctx({ text: 'start' });
+    expect(reply.text).toContain('راز هیتلر');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );

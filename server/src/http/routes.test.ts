@@ -29,7 +29,10 @@ describe('room HTTP endpoints', () => {
     expect(body.token).toBeTruthy();
     expect(body.playerId).toBeTruthy();
     expect(body.code).toMatch(/^[A-Z0-9]{6}$/);
-    expect(body.shareLink).toContain(`/join/${body.code}`);
+    expect(body.shareLink).toBe(
+      `https://ble.ir/secret_hitler_bot?startapp=${body.code}`,
+    );
+    expect(body.shareLink).not.toContain('/join/');
   });
 
   it('Should reject room creation without a name or host name', async () => {

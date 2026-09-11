@@ -34,7 +34,7 @@ export interface ChatPanelProps {
  * and keeps people/settings in its chrome so the scene never leaves play.
  */
 export function ChatPanel(props: ChatPanelProps) {
-  const { game, i18n } = useApp();
+  const { game, i18n, flags, voice } = useApp();
   const { formatMessage } = i18n;
 
   const [chatDraft, setChatDraft] = createSignal('');
@@ -119,7 +119,9 @@ export function ChatPanel(props: ChatPanelProps) {
 
   const discussionSecondsLeft = () => {
     const endsAt = game.discussionDeadline()?.endsAt;
-    return endsAt != null ? Math.max(0, Math.ceil((endsAt - now()) / 1000)) : null;
+    if (endsAt == null) return null;
+    const clock = game.view()?.kickVote?.startedAt ?? now();
+    return Math.max(0, Math.ceil((endsAt - clock) / 1000));
   };
 
   const timestamp = (at: number) =>
@@ -226,6 +228,22 @@ export function ChatPanel(props: ChatPanelProps) {
         </div>
 
         <div class={styles.tools}>
+          <Show when={flags.enabled('voice')}>
+            <button
+              type="button"
+              classList={{
+                [styles.tool]: true,
+                [styles.toolMuted]: voice.selfMuted(),
+              }}
+              aria-label={formatMessage(
+                voice.selfMuted() ? 'game.unmuteSelf' : 'game.muteSelf',
+              )}
+              aria-pressed={!voice.selfMuted()}
+              onClick={() => voice.toggleSelfMute()}
+            >
+              <Icon name={voice.selfMuted() ? 'micOff' : 'mic'} size={20} />
+            </button>
+          </Show>
           <button
             type="button"
             class={styles.tool}

@@ -30,3 +30,26 @@ export function formatSupportLetter(params: {
     '\n',
   );
 }
+
+/** Group notice after a table kick vote — requester, target, and the tally. */
+export function formatKickVoteLetter(params: {
+  requesterId: string;
+  targetId: string;
+  yesCount: number;
+  needed: number;
+  kicked: boolean;
+  roomCode?: string;
+}): string {
+  const lines = [
+    'اخراج از میز',
+    '',
+    `درخواست‌کننده: ${params.requesterId}`,
+    `هدف: ${params.targetId}`,
+    `رأی موافق: ${params.yesCount} از ${params.needed}`,
+    `نتیجه: ${params.kicked ? 'اخراج شد' : 'اخراج نشد'}`,
+  ];
+  if (params.roomCode) {
+    lines.splice(2, 0, `اتاق: ${params.roomCode}`, '');
+  }
+  return lines.join('\n');
+}

@@ -12,7 +12,7 @@ roadmaps). Skip it unless the user asks. This file is the map.
 pnpm monorepo: a real-time Secret Hitler game. The **shared** package is the
 pure engine (no I/O). The **server** (Fastify + `ws` + Postgres) is the source
 of truth. The **client** is Solid.js (signals, not React). **bale-bot** is
-the Bale HTTP client the server embeds. Voice/mediasoup is not implemented.
+the Bale HTTP client the server embeds. Table voice (mediasoup) ships dark behind `flags.voice`.
 
 ## Packages
 
@@ -41,6 +41,7 @@ the Bale HTTP client the server embeds. Voice/mediasoup is not implemented.
 | Game table UI | `client/src/screens/GameScreen/` |
 | Client services | `client/src/services/` (reached via `AppContext`) |
 | Feature flags | `shared/src/flags.ts` + `docs/feature-flags.md` |
+| Table voice | `client/docs/voice.md` + `client/src/services/VoiceService.ts` + `server/src/voice/` |
 | Copy / i18n | `client/src/i18n/locales/fa.ts` **and** `en.ts` + `docs/persian.md` |
 | Sound | `client/docs/audio.md` + `client/src/services/SoundService.ts` |
 | Animation | `client/docs/animations.md` + `client/src/animations/registry.ts` |

@@ -234,6 +234,81 @@ Do not invent extra tags per line. If it is not in this table, it is
 
 ---
 
+## Table kick vote
+
+Nameless audio. Subtitles interpolate `{name}` (requester on the request,
+the accused on the result) and `{target}`. Daniel only.
+
+### `kick.asked`
+- **When:** A kick vote opens. Other seats — not the requester, not the accused.
+- **FA subtitle:** {name} درخواست اخراج {target} رو داده.
+- **FA audio:** یه نفر درخواست اخراج داد.
+- **EN subtitle:** {name} asked to kick {target}.
+- **EN audio:** Someone asked for a kick.
+- **Tone:** `[announcing]`
+
+### `kick.askedYou`
+- **When:** You asked the table to remove someone.
+- **FA subtitle:** شما درخواست اخراج {target} رو دادید.
+- **FA audio:** شما درخواست اخراج دادید.
+- **EN subtitle:** You asked to kick {target}.
+- **EN audio:** You asked for a kick.
+- **Tone:** `[calm]`
+
+### `kick.askedOnYou`
+- **When:** The vote is about removing you.
+- **FA subtitle:** {name} درخواست اخراج شما رو داده.
+- **FA audio:** درخواست اخراج شما اومده.
+- **EN subtitle:** {name} asked to kick you.
+- **EN audio:** Someone asked to kick you.
+- **Tone:** `[firm]`
+
+### `kick.passed`
+- **When:** Enough yes votes. Other seats.
+- **FA subtitle:** تعداد رأی کافی بود. {name} اخراج شد.
+- **FA audio:** تعداد رأی کافی بود. اخراج شد.
+- **EN subtitle:** Enough votes. {name} is out.
+- **EN audio:** Enough votes. They're out.
+- **Tone:** `[disappointed]`
+
+### `kick.passedYou`
+- **When:** You asked, and there were enough votes.
+- **FA subtitle:** تعداد رأی کافی بود. {name} اخراج شد.
+- **FA audio:** تعداد رأی کافی بود. اخراج شد.
+- **EN subtitle:** Enough votes. {name} is out.
+- **EN audio:** Enough votes. They're out.
+- **Tone:** `[firm]`
+
+### `kick.passedOnYou`
+- **When:** Enough votes to remove you.
+- **FA:** تعداد رأی کافی بود. متأسفیم، شما اخراج می‌شید.
+- **EN:** Enough votes. Sorry — you're out.
+- **Tone:** `[grave]`
+
+### `kick.failed`
+- **When:** Not enough yes votes. Other seats.
+- **FA:** تعداد رأی کافی نبود.
+- **EN:** Not enough votes.
+- **Tone:** `[calm]`
+
+### `kick.failedYou`
+- **When:** You asked, and there were not enough votes.
+- **FA:** تعداد رأی کافی نبود.
+- **EN:** Not enough votes.
+- **Tone:** `[disappointed]`
+
+### `kick.failedOnYou`
+- **When:** Not enough votes to remove you.
+- **FA:** تعداد رأی کافی نبود. شما می‌مونید.
+- **EN:** Not enough votes. You're staying.
+- **Tone:** `[calm]`
+
+Do not also speak `player.left` for the same kick — `kick.passed*` already
+says they left. An office-holder still gets `office.presidentLeft` /
+`office.chancellorLeft` after that if they held a seat.
+
+---
+
 ## Vote
 
 Ja / Nein stay on the cards. Ravi does not say «یا» — in Persian that
@@ -540,6 +615,15 @@ table is the **spoken** line.
 | `office.chancellorLeft` | `[disappointed]` | صدراعظم از بازی رفت. |
 | `office.roundOver` | `[firm]` | این دور تموم شد. |
 | `player.left` | `[disappointed]` | یکی از بازیکن‌ها از بازی رفت. |
+| `kick.asked` | `[announcing]` | یه نفر درخواست اخراج داد. |
+| `kick.askedYou` | `[calm]` | شما درخواست اخراج دادید. |
+| `kick.askedOnYou` | `[firm]` | درخواست اخراج شما اومده. |
+| `kick.passed` | `[disappointed]` | تعداد رأی کافی بود. اخراج شد. |
+| `kick.passedYou` | `[firm]` | تعداد رأی کافی بود. اخراج شد. |
+| `kick.passedOnYou` | `[grave]` | تعداد رأی کافی بود. متأسفیم، شما اخراج می‌شید. |
+| `kick.failed` | `[calm]` | تعداد رأی کافی نبود. |
+| `kick.failedYou` | `[disappointed]` | تعداد رأی کافی نبود. |
+| `kick.failedOnYou` | `[calm]` | تعداد رأی کافی نبود. شما می‌مونید. |
 | `vote.start` | `[calm]` | رأی‌گیری آغاز شد. |
 | `vote.collecting` | `[calm]` | رای‌ها داره جمع می‌شه. |
 | `vote.count` | `[announcing]` | رأی ها شمرده شد. |

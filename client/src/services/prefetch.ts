@@ -327,9 +327,21 @@ function nextRaviIds(scene: MusicScene): RaviLineId[] {
     ];
   }
   if (scene.screen !== 'game' || !scene.view) return [];
+  if (scene.view.kickVote) {
+    return [
+      'kick.passed',
+      'kick.passedYou',
+      'kick.passedOnYou',
+      'kick.failed',
+      'kick.failedYou',
+      'kick.failedOnYou',
+    ];
+  }
+  const kickAsk: RaviLineId[] = ['kick.asked', 'kick.askedYou', 'kick.askedOnYou'];
   switch (scene.view.phase) {
     case Phase.Nomination:
       return [
+        ...kickAsk,
         'nominate.start',
         'nominate.named',
         'nominate.namedYou',
@@ -338,6 +350,7 @@ function nextRaviIds(scene: MusicScene): RaviLineId[] {
       ];
     case Phase.Voting:
       return [
+        ...kickAsk,
         'vote.collecting',
         'vote.count',
         'vote.passed',
@@ -345,19 +358,33 @@ function nextRaviIds(scene: MusicScene): RaviLineId[] {
         'vote.hitlerChancellor',
       ];
     case Phase.PresidentLegislative:
-      return ['law.draw', 'law.presidentChoosing', 'law.burned', 'law.pass', 'law.passYou'];
+      return [
+        ...kickAsk,
+        'law.draw',
+        'law.presidentChoosing',
+        'law.burned',
+        'law.pass',
+        'law.passYou',
+      ];
     case Phase.ChancellorLegislative:
       return [
+        ...kickAsk,
         'law.chancellorChoosing',
         'law.liberal',
         'law.fascist',
         'law.vetoOffered',
       ];
     case Phase.SpecialPower:
-      return ['power.investigate', 'power.peek', 'power.execution', 'power.specialElection'];
+      return [
+        ...kickAsk,
+        'power.investigate',
+        'power.peek',
+        'power.execution',
+        'power.specialElection',
+      ];
     case Phase.GameOver:
       return ['game.reveal', 'game.liberalsWin.policies', 'game.fascistsWin.policies'];
     default:
-      return [];
+      return kickAsk;
   }
 }

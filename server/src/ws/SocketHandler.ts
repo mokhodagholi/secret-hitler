@@ -1,12 +1,15 @@
 import type { WebSocket } from 'ws';
 import {
+  DEFAULT_FLAGS,
   HOST_MIGRATION_GRACE_MS,
   LIVE_ROOM_RECONNECT_GRACE_MS,
   MessageRouter,
   parseClientMessage,
   type ClientMessage,
   type EngineError,
+  type FeatureFlags,
   type GameEngine,
+  type GameStateView,
   type ServerErrorCode,
   type ServerMessage,
 } from '@secret-hitler/shared';
@@ -16,6 +19,9 @@ import type { RoomEntry, RoomRepository } from '../rooms/RoomRepository';
 import type { TokenStore } from '../rooms/TokenStore';
 import type { BaleSeatIndex } from '../bale/BaleSeatIndex';
 import type { LiveRoomStore } from '../rooms/LiveRoomStore';
+import type { VoiceHub } from '../voice/VoiceHub';
+import type { BaleRuntime } from '../bale/webhook';
+import { formatKickVoteLetter } from '../bale/support';
 
 /** Resolved per-message context for an authenticated socket. */
 interface GameContext {
@@ -47,6 +53,8 @@ export class SocketHandler {
   private readonly legislativeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room nomination-window deadline timers. */
   private readonly nominationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room table kick-vote deadline timers. */
+  private readonly kickVoteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room pending host-migration timers (disconnect grace period). */
   private readonly hostGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Rooms that just came back from disk — do not wipe them while empty. */
@@ -61,6 +69,9 @@ export class SocketHandler {
     private readonly tokens: TokenStore,
     private readonly seats: BaleSeatIndex | null = null,
     private readonly live: LiveRoomStore | null = null,
+    private readonly bale: BaleRuntime | null = null,
+    private readonly flags: FeatureFlags = DEFAULT_FLAGS,
+    private readonly voice: VoiceHub | null = null,
   ) {
     this.router = this.buildRouter();
   }
@@ -72,6 +83,10 @@ export class SocketHandler {
       .on('player:unready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, false))
       .on('game:start', (_m, ctx) => this.fail(ctx, ctx.engine.startGame(ctx.playerId)))
       .on('player:kick', (m, ctx) => this.kickPlayer(ctx, m.playerId))
+      .on('kick:request', (m, ctx) =>
+        this.fail(ctx, ctx.engine.requestKick(ctx.playerId, m.playerId)),
+      )
+      .on('kick:vote', (m, ctx) => this.fail(ctx, ctx.engine.voteKick(ctx.playerId, m.agree)))
       .on('chat:message', (m, ctx) => {
         if (!this.chatLimiter.allow(ctx.playerId)) {
           this.sendError(ctx.ws, 'RATE_LIMITED', 'You are sending messages too quickly.');
@@ -83,7 +98,19 @@ export class SocketHandler {
         this.fail(ctx, ctx.engine.handleCommand(ctx.playerId, m.command)),
       )
       .on('room:leave', (_m, ctx) => this.leaveRoom(ctx))
-      .on('ping', (_m, ctx) => this.sendTo(ctx.ws, { type: 'pong' }));
+      .on('ping', (_m, ctx) => this.sendTo(ctx.ws, { type: 'pong' }))
+      .on('voice:join', (_m, ctx) => this.runVoice(ctx, () => this.voiceJoin(ctx)))
+      .on('voice:leave', (_m, ctx) => this.runVoice(ctx, () => this.voiceLeave(ctx)))
+      .on('voice:createTransport', (m, ctx) =>
+        this.runVoice(ctx, () => this.voiceCreateTransport(ctx, m.direction)),
+      )
+      .on('voice:connectTransport', (m, ctx) =>
+        this.runVoice(ctx, () => this.voiceConnectTransport(ctx, m)),
+      )
+      .on('voice:produce', (m, ctx) => this.runVoice(ctx, () => this.voiceProduce(ctx, m)))
+      .on('voice:consume', (m, ctx) => this.runVoice(ctx, () => this.voiceConsume(ctx, m)))
+      .on('voice:mute', (m, ctx) => this.runVoice(ctx, () => this.voiceMute(ctx, m.muted)))
+      .on('voice:speaking', (m, ctx) => this.runVoice(ctx, () => this.voiceSpeaking(ctx, m.speaking)));
   }
 
   /** Wire an engine's events to the connection layer. Call once per room. */
@@ -91,11 +118,12 @@ export class SocketHandler {
     const { engine, room } = entry;
 
     engine.on('stateChanged', () => {
+      this.syncVoiceSeats(room.id);
       for (const player of room.players) {
         if (this.connections.isConnected(player.id)) {
           this.connections.send(player.id, {
             type: 'state',
-            state: room.viewFor(player.id),
+            state: this.viewerState(room.id, player.id),
           });
         }
       }
@@ -146,6 +174,18 @@ export class SocketHandler {
       }, Math.max(0, endsAt - Date.now()));
       this.nominationTimers.set(room.id, timer);
     });
+    engine.on('kickVoteTimerChanged', ({ endsAt }) => {
+      this.stopKickVoteTimer(room.id);
+      if (endsAt == null) return;
+      const timer = setTimeout(() => {
+        this.repo.get(room.id)?.engine.resolveKickVoteTimeout();
+      }, Math.max(0, endsAt - Date.now()));
+      this.kickVoteTimers.set(room.id, timer);
+    });
+    engine.on('kickVoteResolved', (result) => {
+      this.postKickVoteNotice(room.id, result);
+      if (result.kicked) this.ejectPlayer(result.targetId);
+    });
   }
 
   /**
@@ -188,6 +228,12 @@ export class SocketHandler {
 
   private restoreDeadlines(entry: RoomEntry): void {
     const { room } = entry;
+    if (room.kickVote) {
+      this.armTimer(this.kickVoteTimers, room.id, room.kickVote.endsAt, () => {
+        this.repo.get(room.id)?.engine.resolveKickVoteTimeout();
+      });
+      return;
+    }
     this.armTimer(this.discussionTimers, room.id, room.discussionEndsAt, () => {
       this.repo.get(room.id)?.engine.resolveDiscussionTimeout();
     });
@@ -268,6 +314,14 @@ export class SocketHandler {
     }
   }
 
+  private stopKickVoteTimer(roomId: string): void {
+    const timer = this.kickVoteTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.kickVoteTimers.delete(roomId);
+    }
+  }
+
   /** Attach handlers to a freshly upgraded socket. */
   handleConnection(ws: WebSocket): void {
     ws.on('message', (data) => this.onMessage(ws, data.toString()));
@@ -312,6 +366,173 @@ export class SocketHandler {
     if (error) this.sendError(context.ws, error.code, error.message);
   }
 
+  private voiceReady(): boolean {
+    return this.flags.voice && this.voice != null;
+  }
+
+  private runVoice(context: GameContext, work: () => void | Promise<void>): void {
+    if (!this.voiceReady()) {
+      this.sendError(context.ws, 'INVALID_ACTION', 'Voice is not enabled.');
+      return;
+    }
+    void Promise.resolve(work()).catch((error) => {
+      console.error('Voice action failed', error);
+      this.sendError(context.ws, 'INVALID_ACTION', 'Voice action failed.');
+    });
+  }
+
+  private viewerState(roomId: string, playerId: string): GameStateView {
+    const room = this.repo.get(roomId)?.room;
+    if (!room) {
+      throw new Error('room is missing');
+    }
+    const state = room.viewFor(playerId);
+    return this.voice ? this.voice.decorateView(state) : state;
+  }
+
+  private syncVoiceSeats(roomId: string): void {
+    if (!this.voice) return;
+    const room = this.repo.get(roomId)?.room;
+    if (!room) return;
+    for (const player of room.players) {
+      void this.voice.applySeat(player.id, player.isAlive && player.connected);
+    }
+  }
+
+  private async voiceJoin(context: GameContext): Promise<void> {
+    const roomId = context.entry.room.id;
+    await this.voice!.prepareRoom(roomId);
+    const caps = this.voice!.capabilities();
+    this.sendTo(context.ws, {
+      type: 'voice:capabilities',
+      rtpCapabilities: caps.rtpCapabilities,
+      iceServers: caps.iceServers,
+    });
+    for (const peer of this.voice!.peers(roomId)) {
+      if (peer.playerId === context.playerId) continue;
+      this.sendTo(context.ws, {
+        type: 'voice:peer',
+        playerId: peer.playerId,
+        producerId: peer.producerId,
+        muted: peer.muted,
+      });
+    }
+  }
+
+  private async voiceLeave(context: GameContext): Promise<void> {
+    const producerId = await this.voice!.removePlayer(context.playerId);
+    if (producerId == null) return;
+    this.broadcast(context.entry.room.id, {
+      type: 'voice:peer',
+      playerId: context.playerId,
+      producerId: null,
+      muted: true,
+    });
+  }
+
+  private async voiceConnectTransport(
+    context: GameContext,
+    message: Extract<ClientMessage, { type: 'voice:connectTransport' }>,
+  ): Promise<void> {
+    await this.voice!.connectTransport(
+      context.playerId,
+      message.transportId,
+      message.dtlsParameters,
+    );
+    this.sendTo(context.ws, { type: 'voice:transportConnected', id: message.transportId });
+  }
+
+  private async voiceCreateTransport(
+    context: GameContext,
+    direction: 'send' | 'recv',
+  ): Promise<void> {
+    const offer = await this.voice!.createTransport(
+      context.entry.room.id,
+      context.playerId,
+      direction,
+    );
+    this.sendTo(context.ws, {
+      type: 'voice:transportCreated',
+      id: offer.id,
+      direction,
+      iceParameters: offer.iceParameters,
+      iceCandidates: offer.iceCandidates,
+      dtlsParameters: offer.dtlsParameters,
+    });
+  }
+
+  private async voiceProduce(
+    context: GameContext,
+    message: Extract<ClientMessage, { type: 'voice:produce' }>,
+  ): Promise<void> {
+    const player = context.entry.room.findPlayer(context.playerId);
+    if (!player?.isAlive || !player.connected) {
+      this.sendError(context.ws, 'INVALID_ACTION', 'Dead or disconnected seats cannot speak.');
+      return;
+    }
+    const produced = await this.voice!.produce(
+      context.playerId,
+      message.transportId,
+      message.rtpParameters,
+    );
+    this.broadcast(context.entry.room.id, {
+      type: 'voice:peer',
+      playerId: context.playerId,
+      producerId: produced.producerId,
+      muted: produced.paused,
+    });
+  }
+
+  private async voiceConsume(
+    context: GameContext,
+    message: Extract<ClientMessage, { type: 'voice:consume' }>,
+  ): Promise<void> {
+    const consumed = await this.voice!.consume(
+      context.playerId,
+      message.producerId,
+      message.rtpCapabilities,
+    );
+    const owner =
+      this.voice!.peers(context.entry.room.id).find(
+        (peer) => peer.producerId === consumed.producerId,
+      )?.playerId ?? '';
+    this.sendTo(context.ws, {
+      type: 'voice:consumed',
+      id: consumed.id,
+      producerId: consumed.producerId,
+      playerId: owner,
+      kind: 'audio',
+      rtpParameters: consumed.rtpParameters,
+      paused: consumed.paused,
+    });
+  }
+
+  private async voiceMute(context: GameContext, muted: boolean): Promise<void> {
+    const player = context.entry.room.findPlayer(context.playerId);
+    if (!muted && (!player?.isAlive || !player.connected)) {
+      this.sendError(context.ws, 'INVALID_ACTION', 'Dead or disconnected seats cannot speak.');
+      return;
+    }
+    const ok = await this.voice!.setMuted(context.playerId, muted);
+    if (!ok) return;
+    this.broadcast(context.entry.room.id, {
+      type: 'voice:peer',
+      playerId: context.playerId,
+      producerId:
+        this.voice!.peers(context.entry.room.id).find((peer) => peer.playerId === context.playerId)
+          ?.producerId ?? null,
+      muted,
+    });
+  }
+
+  private voiceSpeaking(context: GameContext, speaking: boolean): void {
+    this.broadcast(context.entry.room.id, {
+      type: 'voice:speaking',
+      playerId: context.playerId,
+      speaking,
+    });
+  }
+
   /** Host removes a lobby guest and closes their seat. */
   private kickPlayer(context: GameContext, targetId: string): void {
     const error = context.engine.kickPlayer(context.playerId, targetId);
@@ -319,12 +540,44 @@ export class SocketHandler {
       this.fail(context, error);
       return;
     }
+    this.ejectPlayer(targetId);
+  }
+
+  /** Close the seat: the kicked client gets a notice, then the token is gone. */
+  private ejectPlayer(targetId: string): void {
+    void this.voice?.removePlayer(targetId);
     this.connections.sendAndClose(targetId, {
       type: 'room:closed',
       reason: 'KICKED',
     });
     this.tokens.revokePlayer(targetId);
     this.seats?.releasePlayer(targetId);
+  }
+
+  private postKickVoteNotice(
+    roomId: string,
+    result: {
+      requesterId: string;
+      targetId: string;
+      yesCount: number;
+      needed: number;
+      kicked: boolean;
+    },
+  ): void {
+    const chatId = this.bale?.supportChatId;
+    if (chatId == null || !this.bale) return;
+    const roomCode = this.repo.get(roomId)?.room.code;
+    const text = formatKickVoteLetter({
+      requesterId: String(this.seats?.baleUserIdFor(result.requesterId) ?? result.requesterId),
+      targetId: String(this.seats?.baleUserIdFor(result.targetId) ?? result.targetId),
+      yesCount: result.yesCount,
+      needed: result.needed,
+      kicked: result.kicked,
+      roomCode,
+    });
+    void this.bale.bot.sendMessage({ chat_id: chatId, text }).catch((error) => {
+      console.error('Failed to post kick vote to Bale', error);
+    });
   }
 
   /** Host leave destroys the room; a guest just vacates their seat. */
@@ -334,6 +587,7 @@ export class SocketHandler {
       this.broadcast(entry.room.id, { type: 'room:closed', reason: 'HOST_LEFT' });
       this.destroyRoom(entry);
     } else {
+      void this.voice?.removePlayer(playerId);
       engine.removePlayer(playerId);
       this.tokens.revokePlayer(playerId);
       this.seats?.releasePlayer(playerId);
@@ -355,11 +609,13 @@ export class SocketHandler {
     this.stopVoteTimer(roomId);
     this.stopLegislativeTimer(roomId);
     this.stopNominationTimer(roomId);
+    this.stopKickVoteTimer(roomId);
     this.cancelHostGrace(roomId);
     this.clearReconnectGrace(roomId);
     this.tokens.revokeRoom(roomId);
     this.seats?.releaseRoom(roomId);
     this.repo.remove(roomId);
+    void this.voice?.removeRoom(roomId);
     if (this.live) {
       void this.enqueuePersist(roomId, () => this.live!.remove(roomId));
     }
@@ -386,7 +642,7 @@ export class SocketHandler {
     entry.engine.setConnected(player.id, true);
 
     this.sendTo(ws, { type: 'authed', playerId: player.id });
-    this.sendTo(ws, { type: 'state', state: entry.room.viewFor(player.id) });
+    this.sendTo(ws, { type: 'state', state: this.viewerState(entry.room.id, player.id) });
     if (player.role) this.sendTo(ws, { type: 'private', role: player.role });
   }
 
@@ -400,6 +656,7 @@ export class SocketHandler {
     const entry = this.repo.get(roomId);
     if (!entry) return;
     entry.engine.setConnected(playerId, false);
+    void this.voice?.applySeat(playerId, false);
     // A dropped host keeps the seat for a grace period before migration.
     if (playerId === entry.room.hostId) this.scheduleHostGrace(roomId);
   }

@@ -17,6 +17,7 @@ import { RaviService } from './RaviService';
 import { BaleService } from './BaleService';
 import { PrefetchService, urlsForNextStep } from './prefetch';
 import { FeatureFlagService } from './FeatureFlagService';
+import { VoiceService } from './VoiceService';
 import { nextMusicCheckMs, trackForScene } from './music';
 
 export interface AppServices {
@@ -31,6 +32,7 @@ export interface AppServices {
   bale: BaleService;
   prefetch: PrefetchService;
   flags: FeatureFlagService;
+  voice: VoiceService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -43,6 +45,7 @@ export function AppProvider(
   const settings = overrides.settings ?? new SettingsService();
   const socket = overrides.socket ?? new WebSocketService();
   const i18n = overrides.i18n ?? new I18nService(() => settings.settings.language);
+  const flags = overrides.flags ?? new FeatureFlagService();
   const services: AppServices = {
     nav: overrides.nav ?? new NavigationService(),
     settings,
@@ -54,7 +57,8 @@ export function AppProvider(
     ravi: overrides.ravi ?? new RaviService(settings, i18n),
     bale: overrides.bale ?? new BaleService(),
     prefetch: overrides.prefetch ?? new PrefetchService(),
-    flags: overrides.flags ?? new FeatureFlagService(),
+    flags,
+    voice: overrides.voice ?? new VoiceService(socket, flags, settings),
   };
 
   if (!overrides.flags) {
@@ -92,6 +96,11 @@ export function AppProvider(
   // Stop or resume the background loop when the Music setting is toggled.
   createEffect(() =>
     services.sound.setMusicEnabled(services.settings.settings.music),
+  );
+
+  createEffect(() => services.voice.sync(services.game.view()));
+  createEffect(() =>
+    services.voice.setListenEnabled(services.settings.settings.voiceEnabled),
   );
 
   // One looping bed per room. Chat / menu / players keep whatever is playing.

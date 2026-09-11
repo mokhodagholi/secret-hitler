@@ -17,6 +17,11 @@ export class BaleSeatIndex {
     this.byPlayer.set(seat.playerId, baleUserId);
   }
 
+  /** Bale user id seated at this player, if they joined through the mini-app. */
+  baleUserIdFor(playerId: string): number | undefined {
+    return this.byPlayer.get(playerId);
+  }
+
   get(baleUserId: number): BaleSeat | undefined {
     return this.byBaleUser.get(baleUserId);
   }

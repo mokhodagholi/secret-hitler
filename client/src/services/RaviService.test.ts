@@ -64,6 +64,24 @@ describe('RaviService', () => {
     expect(ravi.line()).toBe('Ana chose you as Chancellor.');
   });
 
+  it('Should interpolate kick-vote names into the subtitle', async () => {
+    const ravi = makeRavi(false);
+    await ravi.speak('kick.asked', { name: 'Ana', target: 'Cal' });
+    expect(ravi.line()).toBe('Ana asked to kick Cal.');
+    await ravi.speak('kick.askedYou', { target: 'Cal' });
+    expect(ravi.line()).toBe('You asked to kick Cal.');
+    await ravi.speak('kick.askedOnYou', { name: 'Ana' });
+    expect(ravi.line()).toBe('Ana asked to kick you.');
+    await ravi.speak('kick.passedYou', { name: 'Cal' });
+    expect(ravi.line()).toBe('Enough votes. Cal is out.');
+    await ravi.speak('kick.passedOnYou');
+    expect(ravi.line()).toBe("Enough votes. Sorry — you're out.");
+    await ravi.speak('kick.failedYou');
+    expect(ravi.line()).toBe('Not enough votes.');
+    await ravi.speak('kick.failedOnYou');
+    expect(ravi.line()).toBe("Not enough votes. You're staying.");
+  });
+
   it('Should subtitle an office-holder leaving the table', async () => {
     const ravi = makeRavi(false);
     await ravi.speak('office.presidentLeft', { name: 'Ana' });

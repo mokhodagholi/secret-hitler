@@ -35,6 +35,20 @@ describe('SettingsScreen', () => {
     expect(harness.services.nav.screen()).toBe('support');
   });
 
+  it('Should keep table voice off the page until the flag is on', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <SettingsScreen />, harness);
+
+    expect(screen.queryByText(en.settings.tableVoice)).toBeNull();
+  });
+
+  it('Should show table voice when the flag is on', () => {
+    const harness = buildHarness({ flags: { voice: true } });
+    renderWithApp(() => <SettingsScreen />, harness);
+
+    expect(screen.getByText(en.settings.tableVoice)).toBeTruthy();
+  });
+
   it('Should show the package version on the changelog row', () => {
     const harness = buildHarness();
     renderWithApp(() => <SettingsScreen />, harness);

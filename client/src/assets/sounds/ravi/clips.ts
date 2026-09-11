@@ -19,6 +19,15 @@ import discussStart from './daniel/discuss.start.mp3';
 import gameFascistsWinPolicies from './daniel/game.fascistsWin.policies.mp3';
 import gameLiberalsWinPolicies from './daniel/game.liberalsWin.policies.mp3';
 import gameReveal from './daniel/game.reveal.mp3';
+import kickAsked from './daniel/kick.asked.mp3';
+import kickAskedOnYou from './daniel/kick.askedOnYou.mp3';
+import kickAskedYou from './daniel/kick.askedYou.mp3';
+import kickFailed from './daniel/kick.failed.mp3';
+import kickFailedOnYou from './daniel/kick.failedOnYou.mp3';
+import kickFailedYou from './daniel/kick.failedYou.mp3';
+import kickPassed from './daniel/kick.passed.mp3';
+import kickPassedOnYou from './daniel/kick.passedOnYou.mp3';
+import kickPassedYou from './daniel/kick.passedYou.mp3';
 import lawBurned from './daniel/law.burned.mp3';
 import lawChancellorChoosing from './daniel/law.chancellorChoosing.mp3';
 import lawDraw from './daniel/law.draw.mp3';
@@ -94,6 +103,15 @@ const DANIEL = {
   'game.fascistsWin.policies': gameFascistsWinPolicies,
   'game.liberalsWin.policies': gameLiberalsWinPolicies,
   'game.reveal': gameReveal,
+  'kick.asked': kickAsked,
+  'kick.askedOnYou': kickAskedOnYou,
+  'kick.askedYou': kickAskedYou,
+  'kick.failed': kickFailed,
+  'kick.failedOnYou': kickFailedOnYou,
+  'kick.failedYou': kickFailedYou,
+  'kick.passed': kickPassed,
+  'kick.passedOnYou': kickPassedOnYou,
+  'kick.passedYou': kickPassedYou,
   'law.burned': lawBurned,
   'law.chancellorChoosing': lawChancellorChoosing,
   'law.draw': lawDraw,

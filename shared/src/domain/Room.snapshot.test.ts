@@ -10,6 +10,14 @@ describe('Room snapshot', () => {
     room.votes.set(players[0].id, 'ja');
     room.votes.set(players[1].id, 'nein');
     room.drawnPolicies = ['liberal', 'fascist'];
+    room.kickVote = {
+      requesterId: players[0].id,
+      targetId: players[1].id,
+      votes: new Map([[players[0].id, true]]),
+      startedAt: 10,
+      endsAt: 40,
+      needed: 2,
+    };
     const peek = room.deck.peekTop(3);
     room.peekedPolicies = peek;
 
@@ -28,6 +36,9 @@ describe('Room snapshot', () => {
     expect(restored.votes.get(players[0].id)).toBe('ja');
     expect(restored.votes.get(players[1].id)).toBe('nein');
     expect(restored.drawnPolicies).toEqual(['liberal', 'fascist']);
+    expect(restored.kickVote?.targetId).toBe(players[1].id);
+    expect(restored.kickVote?.votes.get(players[0].id)).toBe(true);
+    expect(restored.kickVote?.needed).toBe(2);
     expect(restored.peekedPolicies).toEqual(peek);
     expect(restored.deck.drawCount).toBe(room.deck.drawCount);
     expect(restored.deck.discardCount).toBe(room.deck.discardCount);

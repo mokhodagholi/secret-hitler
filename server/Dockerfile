@@ -5,6 +5,7 @@ ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
 ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
 RUN npm install -g pnpm@11.25.0
+RUN apk add --no-cache python3 make g++ linux-headers
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/
@@ -31,6 +32,7 @@ ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
 ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
 RUN npm install -g pnpm@11.25.0
+RUN apk add --no-cache python3 make g++ linux-headers
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY shared/package.json ./shared/

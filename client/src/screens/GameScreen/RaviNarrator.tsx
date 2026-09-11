@@ -5,7 +5,7 @@ import type { RaviLineId } from '../../services/RaviService';
 import type { SoundEffect } from '../../services/SoundService';
 import type { MessageValues } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
-import { namedIsYou, raviNominatedLine } from '../../i18n/perspective';
+import { namedIsYou, raviKickVoteLine, raviNominatedLine } from '../../i18n/perspective';
 import { discussOpenLine } from './discussOpen';
 
 const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
@@ -27,6 +27,9 @@ const LOG_LINE: Partial<Record<LogCode, RaviLineId>> = {
   chaos: 'chaos.start',
   left: 'player.left',
   kicked: 'player.left',
+  kickVoteStarted: 'kick.asked',
+  kickVotePassed: 'kick.passed',
+  kickVoteFailed: 'kick.failed',
   presidentVacated: 'office.presidentLeft',
   chancellorVacated: 'office.chancellorLeft',
 };
@@ -52,6 +55,9 @@ const LINE_SFX: Partial<Record<RaviLineId, SoundEffect>> = {
   'office.presidentLeft': 'player-leave',
   'office.chancellorLeft': 'player-leave',
   'player.left': 'player-leave',
+  'kick.passed': 'player-leave',
+  'kick.passedYou': 'player-leave',
+  'kick.passedOnYou': 'player-leave',
   'game.liberalsWin.policies': 'win-liberal',
   'game.fascistsWin.policies': 'win-fascist',
   'game.reveal': 'role-cascade',
@@ -163,8 +169,21 @@ export function RaviNarrator(props: {
           // Office-holder lines already say they left.
           continue;
         }
+        if (
+          entry.code === 'kicked' &&
+          fresh.some((other) => other.code === 'kickVotePassed')
+        ) {
+          // kick.passed* already says the table voted them out.
+          continue;
+        }
         if (entry.code === 'nominated') {
           line = raviNominatedLine(entry.params, myName, state.you.id);
+        } else if (
+          entry.code === 'kickVoteStarted' ||
+          entry.code === 'kickVotePassed' ||
+          entry.code === 'kickVoteFailed'
+        ) {
+          line = raviKickVoteLine(entry.code, entry.params, myName, state.you.id);
         } else if (entry.code === 'presidentDraws') {
           if (state.board.president === state.you.id) line = 'law.drawYou';
         } else if (entry.code === 'presidentPasses') {
@@ -188,6 +207,8 @@ export function RaviNarrator(props: {
           params: {
             ...entry.params,
             name: named(entry.params?.name),
+            target: named(entry.params?.target),
+            requester: named(entry.params?.requester),
             president: named(entry.params?.president),
             chancellor: named(entry.params?.chancellor),
           },

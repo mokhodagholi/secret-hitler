@@ -4,6 +4,8 @@ import type { FormatMessage } from '../../i18n';
 import { playerLabel } from '../../i18n/perspective';
 import { avatarImage } from '../../assets/avatars';
 import { PARTY_FACE } from '../../assets/cards';
+import { useApp } from '../../services/AppContext';
+import { Icon } from '../../components/Icon/Icon';
 import styles from './TableSeat.module.scss';
 
 export interface TableSeatProps {
@@ -14,6 +16,8 @@ export interface TableSeatProps {
   selectable: boolean;
   /** Previous-government lock: clickable so we can explain why not. */
   termLocked: boolean;
+  /** Tap to ask the table to remove this player. */
+  reportable?: boolean;
   /** Seat numbers and office ribbons — hidden until the opening night ends. */
   showPublicMarks?: boolean;
   bubble?: string;
@@ -28,8 +32,20 @@ export interface TableSeatProps {
  */
 export function TableSeat(props: TableSeatProps) {
   const { formatMessage } = props;
+  const { flags, voice } = useApp();
 
   const showPublicMarks = () => props.showPublicMarks !== false;
+
+  const voiceOn = () => flags.enabled('voice');
+  const tableMuted = () =>
+    voiceOn() && (props.isYou ? voice.selfMuted() : props.player.selfMuted);
+  const locallyMuted = () =>
+    voiceOn() && !props.isYou && voice.isRemoteMuted(props.player.id);
+  const speaking = () =>
+    voiceOn() &&
+    voice.isSpeaking(props.player.id) &&
+    !tableMuted() &&
+    !locallyMuted();
 
   const office = () => {
     if (!showPublicMarks()) return null;
@@ -40,7 +56,8 @@ export function TableSeat(props: TableSeatProps) {
         : null;
   };
 
-  const interactive = () => props.selectable || props.termLocked;
+  const interactive = () =>
+    props.selectable || props.termLocked || props.reportable === true;
 
   return (
     <button
@@ -51,8 +68,12 @@ export function TableSeat(props: TableSeatProps) {
         [styles.offline]: !props.player.connected,
         [styles.you]: props.isYou,
         [styles.selectable]: props.selectable,
+        [styles.reportable]: props.reportable === true && !props.selectable,
         [styles.termLocked]: props.termLocked,
         [styles.voted]: props.player.hasVoted,
+        [styles.speaking]: speaking(),
+        [styles.tableMuted]: tableMuted(),
+        [styles.locallyMuted]: locallyMuted(),
       }}
       aria-label={playerLabel(props.isYou, props.player.name, formatMessage)}
       data-seat-id={props.player.id}
@@ -77,7 +98,9 @@ export function TableSeat(props: TableSeatProps) {
               [styles.officeChancellor]: kind() === 'chancellor',
             }}
           >
-            {formatMessage(`game.${kind()}`)}
+            {formatMessage(
+              kind() === 'president' ? 'game.president' : 'game.chancellor',
+            )}
           </span>
         )}
       </Show>
@@ -110,10 +133,17 @@ export function TableSeat(props: TableSeatProps) {
             <img
               class={styles.party}
               src={PARTY_FACE[party()]}
-              alt={formatMessage(`game.${party()}`)}
+              alt={formatMessage(
+                party() === 'liberal' ? 'game.liberal' : 'game.fascist',
+              )}
               data-party={party()}
             />
           )}
+        </Show>
+        <Show when={tableMuted() || locallyMuted()}>
+          <span class={styles.micBadge} aria-hidden="true">
+            <Icon name="micOff" size={12} />
+          </span>
         </Show>
       </span>
       <span class={styles.name} dir="auto">

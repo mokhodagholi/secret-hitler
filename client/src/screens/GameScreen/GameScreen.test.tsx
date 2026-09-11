@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, rs } from '@rstest/core';
-import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
+import { fireEvent, screen, waitFor, within } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { GameScreen } from './GameScreen';
 import { LOOK_AT_MS, LOOK_MS, CEREMONY_MS } from './NightOverlay';
 import { en } from '../../i18n/locales/en';
-import { buildHarness, makePlayer, makeView, renderWithApp } from '../../../test/test-utils';
+import { buildHarness, makePlayer, makeView, renderWithApp, stubDeniedMicrophone } from '../../../test/test-utils';
 
 // Sourced from the catalog so the assertion follows the i18n text, not a literal.
 const SECONDS_PATTERN = new RegExp(`^${en.game.secondsLeft.replace('{seconds}', '\\d+')}$`);
@@ -457,7 +457,7 @@ describe('GameScreen — nomination', () => {
     expect(harness.socket.lastSent('command')).toBeUndefined();
   });
 
-  it('Should not let the President pick seats until nomination is open', () => {
+  it('Should not nominate until the nomination window is open', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -471,10 +471,11 @@ describe('GameScreen — nomination', () => {
     });
 
     const cal = screen.getByRole('button', { name: /Cal/ });
-    expect(cal.getAttribute('aria-disabled')).toBe('true');
+    expect(cal.getAttribute('aria-disabled')).toBe('false');
     fireEvent.click(cal);
-    expect(screen.queryByText(en.game.nominateIneligible)).toBeNull();
+    expect(screen.getByText(/Ask the table to remove/)).toBeTruthy();
     expect(harness.socket.lastSent('command')).toBeUndefined();
+    expect(harness.socket.lastSent('kick:request')).toBeUndefined();
   });
 
   it('Should keep the nomination modal closed during discussion', () => {
@@ -907,6 +908,7 @@ describe('GameScreen — in-game menu', () => {
     expect(screen.getByRole('button', { name: en.gameMenu.effects })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.ravi })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.viewRules })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.gameMenu.tableVoice })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
   });
 
@@ -937,6 +939,39 @@ describe('GameScreen — in-game menu', () => {
     harness.services.nav.requestBack();
     expect(screen.getByText(en.leaveDialog.message)).toBeTruthy();
     expect(harness.services.nav.screen()).toBe('game');
+  });
+
+  it('Should hide the microphone until the voice flag is on', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(screen.queryByRole('button', { name: en.game.unmuteSelf })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.game.muteSelf })).toBeNull();
+  });
+
+  it('Should show the microphone and a local mute for other seats when voice is on', () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    expect(screen.getByRole('button', { name: en.game.unmuteSelf })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
+    expect(screen.getByRole('button', { name: en.gameMenu.tableVoice })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
+
+    openPlayers();
+    const muteCal = screen.getByRole('button', {
+      name: en.game.mutePlayer.replace('{name}', 'Cal'),
+    });
+    fireEvent.click(muteCal);
+    expect(harness.services.voice.isRemoteMuted('cal')).toBe(true);
+    expect(harness.socket.lastSent('voice:mute')).toBeUndefined();
+    expect(
+      screen.queryByRole('button', { name: en.game.mutePlayer.replace('{name}', 'You') }),
+    ).toBeNull();
   });
 });
 
@@ -1039,6 +1074,50 @@ describe('GameScreen — vote timer', () => {
     });
 
     expect(screen.getByText(SECONDS_PATTERN)).toBeTruthy();
+  });
+});
+
+describe('GameScreen — table kick vote', () => {
+  it('Should ask to confirm before requesting a kick', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.getByText(/Ask the table to remove/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.kickVote.request }));
+    expect(harness.socket.lastSent('kick:request')).toEqual({
+      type: 'kick:request',
+      playerId: 'cal',
+    });
+  });
+
+  it('Should send a kick ballot from the table overlay', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const now = Date.now();
+    harness.pushState({
+      ...votingView(),
+      kickVote: {
+        requesterId: 'pres',
+        targetId: 'cal',
+        startedAt: now,
+        endsAt: now + 30_000,
+        votedCount: 1,
+        voterCount: 2,
+        needed: 2,
+        yourVote: null,
+        votedIds: ['pres'],
+      },
+    });
+
+    expect(screen.getByText(en.game.kickVote.title)).toBeTruthy();
+    const dialog = screen.getByRole('dialog', { name: en.game.kickVote.title });
+    fireEvent.click(within(dialog).getByRole('button', { name: en.game.voteJa }));
+    expect(harness.socket.lastSent('kick:vote')).toEqual({
+      type: 'kick:vote',
+      agree: true,
+    });
   });
 });
 

@@ -29,3 +29,6 @@ fetches that once at boot. Callers use `flags.enabled('voice')`. A failed or
 malformed response keeps the defaults (everything off). Tests inject a
 preloaded service (or `{ flags: { voice: true } }` on `buildServer`) and
 do not set `process.env`.
+
+When `voice` is off, the client hides every mic control and the server rejects
+`voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).

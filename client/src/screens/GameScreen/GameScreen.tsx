@@ -21,6 +21,7 @@ import { PlayersModal } from './PlayersModal';
 import { GameMenu } from './GameMenu';
 import { LegislativeModal } from './LegislativeModal';
 import { VotingOverlay } from './VotingOverlay';
+import { KickVoteOverlay } from './KickVoteOverlay';
 import { PowerPanel } from './PowerPanel';
 import { GameOverOverlay } from './GameOverOverlay';
 import { PolicyRevealOverlay } from './PolicyRevealOverlay';
@@ -46,11 +47,13 @@ export function GameScreen() {
 
   const view = game.view;
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
+  const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [playersOpen, setPlayersOpen] = createSignal(false);
   const [chatHeight, setChatHeight] = createSignal(280);
   const [inspectingRole, setInspectingRole] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
+  const clockMs = () => view()?.kickVote?.startedAt ?? now();
   const [drawHold, setDrawHold] = createSignal(0);
   const vetoDrag = useDialogDrag();
   let seenDrawCount = -1;
@@ -293,11 +296,11 @@ export function GameScreen() {
       state.voteDeadline?.endsAt,
       state.legislativeDeadline?.endsAt,
     ].filter((value): value is number => value != null && value > 0);
-    if (endsAt.length === 0) {
+    if (endsAt.length === 0 || state.kickVote) {
       lastClockSecond = -1;
       return;
     }
-    const seconds = Math.max(0, Math.ceil((Math.min(...endsAt) - now()) / 1000));
+    const seconds = Math.max(0, Math.ceil((Math.min(...endsAt) - clockMs()) / 1000));
     if (seconds <= 0 || seconds > 10) {
       lastClockSecond = -1;
       return;
@@ -341,6 +344,7 @@ export function GameScreen() {
     const state = view();
     return (
       inNomination() &&
+      !state?.kickVote &&
       iAmPresident() &&
       player.isAlive &&
       player.connected &&
@@ -373,7 +377,7 @@ export function GameScreen() {
 
   const canPowerTarget = (player: PublicPlayer) => {
     const state = view();
-    if (!state || state.phase !== Phase.SpecialPower || !iAmPresident()) {
+    if (!state || state.kickVote || state.phase !== Phase.SpecialPower || !iAmPresident()) {
       return false;
     }
     if (!player.isAlive || player.id === state.you.id) return false;
@@ -401,6 +405,15 @@ export function GameScreen() {
   const seatSelectable = (player: PublicPlayer) =>
     canNominate(player) || canPowerTarget(player);
 
+  const canReport = (player: PublicPlayer) => {
+    const state = view();
+    const you = game.you();
+    if (!state || !you?.isAlive) return false;
+    if (state.phase === Phase.Lobby || state.phase === Phase.GameOver) return false;
+    if (state.kickVote || ceremonyOpen()) return false;
+    return player.isAlive && player.id !== state.you.id;
+  };
+
   function nominate(player: PublicPlayer): void {
     game.sendCommand({ kind: 'nominateChancellor', targetId: player.id });
     setPlayersOpen(false);
@@ -411,11 +424,11 @@ export function GameScreen() {
   const votedCount = () => voters().filter((player) => player.hasVoted).length;
   const voteSecondsLeft = () => {
     const deadline = view()?.voteDeadline;
-    return deadline ? Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000)) : 0;
+    return deadline ? Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000)) : 0;
   };
 
   const secondsUntil = (endsAt: number) =>
-    Math.max(0, Math.ceil((endsAt - now()) / 1000));
+    Math.max(0, Math.ceil((endsAt - clockMs()) / 1000));
 
   function castVote(vote: 'ja' | 'nein'): void {
     game.sendCommand({ kind: 'castVote', vote });
@@ -442,7 +455,7 @@ export function GameScreen() {
     const deadline = view()?.legislativeDeadline;
     if (!deadline) return 0;
     if (now() < deadline.startedAt) return 0;
-    return Math.max(0, Math.ceil((deadline.endsAt - now()) / 1000));
+    return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
   };
 
   function chooseLegislative(index: number): void {
@@ -563,6 +576,11 @@ export function GameScreen() {
   function helpMessage(): string {
     const state = view();
     if (!state) return formatMessage('game.help.elect');
+    if (state.kickVote) {
+      return formatMessage('game.kickVote.help', {
+        name: isolateBidi(playerName(state.kickVote.targetId)),
+      });
+    }
     if (state.phase === Phase.GameOver && state.winner) {
       return formatMessage(
         state.winner === 'liberal'
@@ -650,7 +668,9 @@ export function GameScreen() {
         variant: 'prominent',
         message: formatMessage('game.nominateAbsent'),
       });
+      return;
     }
+    if (canReport(player)) setReporting(player);
   }
 
   function leaveRoom(): void {
@@ -705,6 +725,7 @@ export function GameScreen() {
                         isYou={player.id === state().you.id}
                         isNext={player.id === nextPresidentId()}
                         selectable={seatSelectable(player)}
+                        reportable={canReport(player) && !seatSelectable(player)}
                         termLocked={
                           termLocked(player) ||
                           awayFromTable(player) ||
@@ -745,12 +766,46 @@ export function GameScreen() {
               />
             </Show>
 
+            <Show when={state().kickVote}>
+              {(vote) => (
+                <KickVoteOverlay
+                  formatMessage={formatMessage}
+                  prompt={formatMessage(
+                    vote().targetId === state().you.id
+                      ? 'game.kickVote.promptYou'
+                      : vote().requesterId === state().you.id
+                        ? 'game.kickVote.promptYours'
+                        : 'game.kickVote.prompt',
+                    {
+                      requester: isolateBidi(playerName(vote().requesterId)),
+                      target: isolateBidi(playerName(vote().targetId)),
+                    },
+                  )}
+                  canVote={
+                    !!game.you()?.isAlive &&
+                    vote().targetId !== state().you.id &&
+                    vote().yourVote == null
+                  }
+                  yourVote={vote().yourVote}
+                  votedCount={vote().votedCount}
+                  totalVoters={vote().voterCount}
+                  secondsLeft={Math.max(
+                    0,
+                    Math.ceil((vote().endsAt - now()) / 1000),
+                  )}
+                  startedAt={vote().startedAt}
+                  endsAt={vote().endsAt}
+                  onVote={(agree) => game.voteKick(agree)}
+                />
+              )}
+            </Show>
+
             </div>
 
             <ChatPanel
               talkingAllowed={!ceremonyOpen()}
               actionLabel={
-                ceremonyOpen() || !iAmPresident()
+                ceremonyOpen() || !iAmPresident() || state().kickVote
                   ? undefined
                   : game.inDiscussion()
                     ? formatMessage('game.startNomination')
@@ -760,6 +815,7 @@ export function GameScreen() {
               }
               onAction={
                 !ceremonyOpen() &&
+                !state().kickVote &&
                 iAmPresident() &&
                 (game.inDiscussion() || inNomination())
                   ? sendEndTurn
@@ -772,7 +828,7 @@ export function GameScreen() {
 
             <RaviNarrator
               ceremonyOpen={ceremonyOpen()}
-              now={now()}
+              now={clockMs()}
               chancellorReveal={chancellorReveal()}
             />
 
@@ -966,9 +1022,12 @@ export function GameScreen() {
               players={state().players}
               youId={state().you.id}
               formatMessage={formatMessage}
-              canNominate={() => false}
+              canNominate={(player) => canReport(player)}
               showOffice={!ceremonyOpen()}
-              onNominate={() => {}}
+              onNominate={(player) => {
+                setPlayersOpen(false);
+                setReporting(player);
+              }}
               onClose={() => setPlayersOpen(false)}
             />
 
@@ -990,6 +1049,21 @@ export function GameScreen() {
                 onLeave={leaveRoom}
               />
             </Show>
+
+            <ConfirmDialog
+              open={reporting() != null}
+              message={formatMessage('game.kickVote.confirm', {
+                name: isolateBidi(reporting()?.name ?? ''),
+              })}
+              confirmLabel={formatMessage('game.kickVote.request')}
+              cancelLabel={formatMessage('common.cancel')}
+              onConfirm={() => {
+                const target = reporting();
+                setReporting(null);
+                if (target) game.requestKick(target.id);
+              }}
+              onCancel={() => setReporting(null)}
+            />
 
             <ConfirmDialog
               open={tableOverlay() === 'leave'}

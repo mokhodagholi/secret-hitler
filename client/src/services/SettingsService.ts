@@ -17,6 +17,8 @@ export interface SettingsState {
   soundEffects: boolean;
   /** Spoken Ravi lines. Subtitles still run when this is off. */
   raviVoice: boolean;
+  /** Hear other players at the table. Hidden unless the voice flag is on. */
+  voiceEnabled: boolean;
   /** Which recorded host speaks the lines. */
   raviWho: RaviWho;
   /** Collapse every animation to an instant state change. */
@@ -36,6 +38,7 @@ const DEFAULTS: SettingsState = {
   music: true,
   soundEffects: true,
   raviVoice: true,
+  voiceEnabled: true,
   raviWho: 'daniel',
   reduceMotion: false,
 };

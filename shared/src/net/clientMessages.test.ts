@@ -20,9 +20,30 @@ describe('parseClientMessage', () => {
       parseClientMessage('{"type":"player:kick","playerId":"p1"}'),
     ).toEqual({ type: 'player:kick', playerId: 'p1' });
     expect(parseClientMessage('{"type":"player:kick"}')).toBeNull();
+    expect(
+      parseClientMessage('{"type":"kick:request","playerId":"p1"}'),
+    ).toEqual({ type: 'kick:request', playerId: 'p1' });
+    expect(parseClientMessage('{"type":"kick:request"}')).toBeNull();
+    expect(parseClientMessage('{"type":"kick:vote","agree":true}')).toEqual({
+      type: 'kick:vote',
+      agree: true,
+    });
+    expect(parseClientMessage('{"type":"kick:vote","agree":"yes"}')).toBeNull();
     for (const type of ['player:ready', 'player:unready', 'game:start', 'room:leave', 'ping']) {
       expect(parseClientMessage(JSON.stringify({ type }))).toEqual({ type });
     }
+    expect(parseClientMessage('{"type":"voice:join"}')).toEqual({ type: 'voice:join' });
+    expect(parseClientMessage('{"type":"voice:leave"}')).toEqual({ type: 'voice:leave' });
+    expect(
+      parseClientMessage('{"type":"voice:createTransport","direction":"send"}'),
+    ).toEqual({ type: 'voice:createTransport', direction: 'send' });
+    expect(
+      parseClientMessage(
+        '{"type":"voice:mute","muted":true,"extra":1}',
+      ),
+    ).toEqual({ type: 'voice:mute', muted: true });
+    expect(parseClientMessage('{"type":"voice:createTransport","direction":"both"}')).toBeNull();
+    expect(parseClientMessage('{"type":"voice:produce","transportId":"t"}')).toBeNull();
   });
 
   it('Should reject frames that are not JSON objects', () => {

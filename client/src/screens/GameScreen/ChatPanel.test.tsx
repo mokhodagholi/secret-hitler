@@ -8,6 +8,7 @@ import {
   makePlayer,
   makeView,
   renderWithApp,
+  stubDeniedMicrophone,
 } from '../../../test/test-utils';
 
 function seatedView() {
@@ -219,5 +220,29 @@ describe('ChatPanel', () => {
     fireEvent.dblClick(screen.getByRole('separator'));
     expect(screen.queryByPlaceholderText(en.game.chatPlaceholder)).toBeNull();
     expect(screen.queryByText(en.game.chat)).toBeNull();
+  });
+
+  it('Should keep the microphone off the chrome while the voice flag is off', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    expect(screen.queryByRole('button', { name: en.game.unmuteSelf })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.game.muteSelf })).toBeNull();
+  });
+
+  it('Should toggle table mute from the chat chrome when the voice flag is on', () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+
+    const mic = screen.getByRole('button', { name: en.game.unmuteSelf });
+    fireEvent.click(mic);
+    expect(harness.socket.lastSent('voice:mute')).toEqual({
+      type: 'voice:mute',
+      muted: false,
+    });
+    expect(screen.getByRole('button', { name: en.game.muteSelf })).toBeTruthy();
   });
 });

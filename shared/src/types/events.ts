@@ -41,9 +41,44 @@ export type ClientMessage =
   | { type: 'command'; command: GameCommand }
   /** Host removes a guest. Lobby: seat gone. In-game: marked dead. */
   | { type: 'player:kick'; playerId: string }
+  /** A living player asks the table to remove another living player. */
+  | { type: 'kick:request'; playerId: string }
+  /** Ja/Nein on an open table kick vote (`agree` = remove them). */
+  | { type: 'kick:vote'; agree: boolean }
   /** Explicit leave — host: destroys the room; guest: vacates the seat. */
   | { type: 'room:leave' }
-  | { type: 'ping' };
+  | { type: 'ping' }
+  | { type: 'voice:join' }
+  | { type: 'voice:leave' }
+  | { type: 'voice:createTransport'; direction: VoiceTransportDirection }
+  | {
+      type: 'voice:connectTransport';
+      transportId: string;
+      dtlsParameters: VoiceJson;
+    }
+  | {
+      type: 'voice:produce';
+      transportId: string;
+      rtpParameters: VoiceJson;
+    }
+  | {
+      type: 'voice:consume';
+      producerId: string;
+      rtpCapabilities: VoiceJson;
+    }
+  | { type: 'voice:mute'; muted: boolean }
+  | { type: 'voice:speaking'; speaking: boolean };
+
+/** Opaque WebRTC blob (rtp/dtls parameters) — rebuilt only at the envelope. */
+export type VoiceJson = Record<string, unknown>;
+
+export type VoiceTransportDirection = 'send' | 'recv';
+
+export interface IceServer {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Server -> Client
@@ -75,7 +110,37 @@ export type ServerMessage =
   /** The room was destroyed — everyone is kicked (e.g. the host left). */
   | { type: 'room:closed'; reason: RoomClosedReason }
   | { type: 'error'; code: ServerErrorCode; message: string }
-  | { type: 'pong' };
+  | { type: 'pong' }
+  | {
+      type: 'voice:capabilities';
+      rtpCapabilities: VoiceJson;
+      iceServers: IceServer[];
+    }
+  | {
+      type: 'voice:transportCreated';
+      id: string;
+      direction: VoiceTransportDirection;
+      iceParameters: VoiceJson;
+      iceCandidates: VoiceJson[];
+      dtlsParameters: VoiceJson;
+    }
+  | { type: 'voice:transportConnected'; id: string }
+  | {
+      type: 'voice:consumed';
+      id: string;
+      producerId: string;
+      playerId: string;
+      kind: 'audio';
+      rtpParameters: VoiceJson;
+      paused: boolean;
+    }
+  | {
+      type: 'voice:peer';
+      playerId: string;
+      producerId: string | null;
+      muted: boolean;
+    }
+  | { type: 'voice:speaking'; playerId: string; speaking: boolean };
 
 // ---------------------------------------------------------------------------
 // HTTP DTOs

@@ -79,6 +79,8 @@ export interface PublicPlayer {
    * Fascist.
    */
   party: Faction | null;
+  /** Their mic is off for the whole table (self-mute). */
+  selfMuted: boolean;
 }
 
 /** Policy board / election state surfaced to all clients. */
@@ -131,7 +133,10 @@ export type LogCode =
   | 'executed'
   | 'hitlerExecuted'
   | 'presidentVacated'
-  | 'chancellorVacated';
+  | 'chancellorVacated'
+  | 'kickVoteStarted'
+  | 'kickVotePassed'
+  | 'kickVoteFailed';
 
 export interface LogEntry {
   id: string;
@@ -139,6 +144,19 @@ export interface LogEntry {
   /** Player names / counts substituted into the localized template. */
   params?: Record<string, string | number>;
   at: number;
+}
+
+/** Public snapshot of an in-progress vote to remove a player. */
+export interface KickVoteView {
+  requesterId: string;
+  targetId: string;
+  startedAt: number;
+  endsAt: number;
+  votedCount: number;
+  voterCount: number;
+  needed: number;
+  yourVote: boolean | null;
+  votedIds: string[];
 }
 
 /** Per-viewer snapshot broadcast on every state change. */
@@ -162,6 +180,8 @@ export interface GameStateView {
   legislativeDeadline: { startedAt: number; endsAt: number } | null;
   /** Active nomination window (epoch ms) while the President nominates, else null. */
   nominationDeadline: { startedAt: number; endsAt: number } | null;
+  /** Open table vote to remove a player. Game clocks are frozen while set. */
+  kickVote: KickVoteView | null;
   /** Player ids that may not be nominated as Chancellor (term limits). */
   ineligibleChancellors: string[];
   /** The power the President must use during the SpecialPower phase, else null. */
@@ -214,6 +234,13 @@ export const LEGISLATIVE_DEAL_MS = 100 + 3 * LEGISLATIVE_TRAVEL_CARD_MS;
 export const LEGISLATIVE_PASS_MS = 100 + 2 * LEGISLATIVE_TRAVEL_CARD_MS;
 /** How long the President has to nominate before the election fails. */
 export const NOMINATION_DURATION_MS = 25_000;
+/** How long a table kick vote stays open before it is counted as-is. */
+export const KICK_VOTE_DURATION_MS = 30_000;
+
+/** Yes votes needed to remove a player — half the living table, rounded up. */
+export function kickVoteYesNeeded(livingCount: number): number {
+  return Math.ceil(livingCount / 2);
+}
 /** How long a disconnected host keeps the host seat before migration, in ms. */
 export const HOST_MIGRATION_GRACE_MS = 30_000;
 

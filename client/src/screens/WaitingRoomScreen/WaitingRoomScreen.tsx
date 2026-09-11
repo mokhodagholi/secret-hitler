@@ -7,7 +7,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { MAX_PLAYERS, Phase, type GameStateView } from '@secret-hitler/shared';
+import { MAX_PLAYERS, Phase, miniAppStartLink, DEFAULT_BALE_BOT_USERNAME, type GameStateView } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import {
   CONNECTION_STATUS_KEYS,
@@ -44,9 +44,7 @@ export function WaitingRoomScreen() {
   let tipEl: HTMLParagraphElement | undefined;
 
   const view = game.view;
-  // Always the origin that's actually serving this page — PUBLIC_URL on the
-  // server is the production nginx host, which is wrong while developing locally.
-  const shareLink = () => `${location.origin}/join/${view()?.code ?? ''}`;
+  const shareLink = () => miniAppStartLink(DEFAULT_BALE_BOT_USERNAME, view()?.code ?? '');
   const amReady = () => game.you()?.ready ?? false;
 
   // Session dropped (left room / token expired) → back to the play menu.

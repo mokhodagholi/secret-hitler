@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
-import { formatSupportLetter, parseSupportChatId } from './support';
+import { formatKickVoteLetter, formatSupportLetter, parseSupportChatId } from './support';
 
 describe('formatSupportLetter', () => {
   it('Should put topic, sender id, and description in the letter', () => {
@@ -10,6 +10,32 @@ describe('formatSupportLetter', () => {
         senderId: '42',
       }),
     ).toBe('پیشنهاد\n\nفرستنده: 42\n\nadd a veto hint');
+  });
+});
+
+describe('formatKickVoteLetter', () => {
+  it('Should name both users, the tally, and whether they were removed', () => {
+    expect(
+      formatKickVoteLetter({
+        requesterId: '11',
+        targetId: '22',
+        yesCount: 3,
+        needed: 3,
+        kicked: true,
+        roomCode: 'ABC123',
+      }),
+    ).toBe(
+      [
+        'اخراج از میز',
+        '',
+        'اتاق: ABC123',
+        '',
+        'درخواست‌کننده: 11',
+        'هدف: 22',
+        'رأی موافق: 3 از 3',
+        'نتیجه: اخراج شد',
+      ].join('\n'),
+    );
   });
 });
 

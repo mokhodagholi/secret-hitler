@@ -49,6 +49,106 @@ describe('Bale webhook', () => {
     expect(JSON.stringify(sent[0])).not.toContain('mrfantastic');
   });
 
+  it('Should reply when the user types start without a slash', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: 'test-token',
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: 'start',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toContain('راز هیتلر');
+  });
+
+  it('Should still reply when Bale posts JSON as text/plain', async () => {
+    const sent: Array<{ text: string }> = [];
+    const { app } = await buildServer({
+      bale: {
+        bot: {
+          sendMessage: async (params) => {
+            sent.push(params);
+            return {};
+          },
+        },
+        botToken: 'test-token',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/bale/webhook',
+      headers: { 'content-type': 'text/plain' },
+      payload: JSON.stringify({
+        update_id: 1,
+        message: {
+          message_id: 1,
+          date: 0,
+          text: '/start',
+          from: { id: 9, is_bot: false, first_name: 'Ana' },
+          chat: { id: 9, type: 'private' },
+        },
+      }),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('Should send the greeting without buttons if the keyboard is rejected', async () => {
+    const sent: Array<{ text: string; reply_markup?: unknown }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        if (params.reply_markup) throw new Error('bad markup');
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: 'test-token',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/start',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+    expect(status).toBe(200);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].reply_markup).toBeUndefined();
+  });
+
   it('Should reject webhook posts that omit the configured secret', async () => {
     const { app } = await buildServer({
       bale: {

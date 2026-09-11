@@ -219,6 +219,14 @@ export class GameStateService {
     this.socket.send({ type: 'player:kick', playerId });
   }
 
+  requestKick(playerId: string): void {
+    this.socket.send({ type: 'kick:request', playerId });
+  }
+
+  voteKick(agree: boolean): void {
+    this.socket.send({ type: 'kick:vote', agree });
+  }
+
   startGame(): void {
     this.socket.send({ type: 'game:start' });
   }
