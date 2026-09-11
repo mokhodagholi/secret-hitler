@@ -1,4 +1,5 @@
 import { createStore, type SetStoreFunction, type Store } from 'solid-js/store';
+import { makeId } from '@secret-hitler/shared';
 import { DEFAULT_LANGUAGE, type Language } from '../i18n';
 import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 
@@ -88,7 +89,7 @@ export class SettingsService {
 
   private static withProfileId(state: SettingsState): SettingsState {
     if (PROFILE_ID.test(state.profileId)) return state;
-    const next = { ...state, profileId: crypto.randomUUID() };
+    const next = { ...state, profileId: makeId() };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
