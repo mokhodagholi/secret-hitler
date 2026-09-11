@@ -4,6 +4,7 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "dev": "pnpm --filter @secret-hitler/shared build && pnpm --parallel --filter @secret-hitler/client --filter @secret-hitler/server --filter @secret-hitler/shared dev",
+    "dev:https": "pnpm --filter @secret-hitler/shared build && DEV_HTTPS=1 pnpm --parallel --filter @secret-hitler/client --filter @secret-hitler/server --filter @secret-hitler/shared dev",
     "dev:server": "pnpm --filter server dev",
     "dev:client": "pnpm --filter client dev",
     "build:shared": "pnpm --filter shared build",

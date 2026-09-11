@@ -25,7 +25,7 @@ Every useful reply is some mix of:
 
 The bot never pastes the public website (`mrfantastic.ir`, localhost, …).
 Production invites are Bale deep links. Localhost copies
-`http://localhost:3000/join/CODE` from the waiting-room share button — that
+`https://localhost:3000/join/CODE` from the waiting-room share button — that
 path is the browser, not this chat bot.
 
 ## How a message becomes a reply

@@ -10,6 +10,7 @@ ssl/*.pem
 ssl/*.key
 ssl/*.crt
 !ssl/.gitkeep
+client/.dev-certs/
 __pycache__/
 *.pyc
 scripts/.venv-ravi

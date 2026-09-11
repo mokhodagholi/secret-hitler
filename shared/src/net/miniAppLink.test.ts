@@ -45,6 +45,13 @@ describe('roomInviteLink', () => {
     expect(
       roomInviteLink({
         code: 'ABC123',
+        origin: 'https://192.168.1.5:3000',
+        hostname: '192.168.1.5',
+      }),
+    ).toBe('https://192.168.1.5:3000/join/ABC123');
+    expect(
+      roomInviteLink({
+        code: 'ABC123',
         origin: 'https://mrfantastic.ir',
         hostname: 'mrfantastic.ir',
       }),

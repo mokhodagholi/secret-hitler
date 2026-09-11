@@ -97,6 +97,7 @@ Open the doc; do not invent a parallel rule.
 ```bash
 pnpm install
 pnpm dev            # shared watch + client + server
+pnpm dev:https       # same stack with a self-signed cert (phone on LAN)
 pnpm test            # build shared, then every package
 pnpm --filter shared test
 pnpm --filter server test

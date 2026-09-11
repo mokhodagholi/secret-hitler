@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +10,85 @@ import { pluginSolid } from '@rsbuild/plugin-solid';
 import { generateSW } from 'workbox-build';
 
 const configDir = path.dirname(fileURLToPath(import.meta.url));
+
+function lanIpv4Addresses(): string[] {
+  let interfaces: ReturnType<typeof os.networkInterfaces>;
+  try {
+    interfaces = os.networkInterfaces();
+  } catch {
+    return [];
+  }
+  const addresses: string[] = [];
+  for (const interfaceAddresses of Object.values(interfaces)) {
+    for (const entry of interfaceAddresses ?? []) {
+      if (entry.family === 'IPv4' && !entry.internal) {
+        addresses.push(entry.address);
+      }
+    }
+  }
+  return addresses;
+}
+
+/** Phone browsers refuse HTTP on a LAN IP (not a secure context; some force HTTPS). */
+function devHttpsOptions(): { key: Buffer; cert: Buffer } {
+  const certDir = path.join(configDir, '.dev-certs');
+  const keyPath = path.join(certDir, 'key.pem');
+  const certPath = path.join(certDir, 'cert.pem');
+  const hostsPath = path.join(certDir, 'hosts.txt');
+  const configPath = path.join(certDir, 'openssl.cnf');
+  const lanAddresses = lanIpv4Addresses();
+  const hosts = ['localhost', '127.0.0.1', '::1', ...lanAddresses];
+  const stamp = `${hosts.join('\n')}\n`;
+
+  if (
+    fs.existsSync(keyPath) &&
+    fs.existsSync(certPath) &&
+    fs.existsSync(hostsPath) &&
+    fs.readFileSync(hostsPath, 'utf8') === stamp
+  ) {
+    return { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) };
+  }
+
+  fs.mkdirSync(certDir, { recursive: true });
+
+  const altLines = [
+    'DNS.1 = localhost',
+    'IP.1 = 127.0.0.1',
+    'IP.2 = ::1',
+    ...lanAddresses.map((address, index) => `IP.${index + 3} = ${address}`),
+  ];
+  fs.writeFileSync(
+    configPath,
+    [
+      '[req]',
+      'distinguished_name = dn',
+      'x509_extensions = v3',
+      'prompt = no',
+      '[dn]',
+      'CN = localhost',
+      '[v3]',
+      'subjectAltName = @alt',
+      'basicConstraints = CA:false',
+      'keyUsage = digitalSignature, keyEncipherment',
+      'extendedKeyUsage = serverAuth',
+      '[alt]',
+      ...altLines,
+      '',
+    ].join('\n'),
+  );
+  execSync(
+    [
+      'openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 825',
+      `-config ${JSON.stringify(configPath)}`,
+      '-extensions v3',
+      `-keyout ${JSON.stringify(keyPath)}`,
+      `-out ${JSON.stringify(certPath)}`,
+    ].join(' '),
+    { stdio: 'pipe' },
+  );
+  fs.writeFileSync(hostsPath, stamp);
+  return { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) };
+}
 
 function appVersion(): string {
   const fromEnv = process.env.APP_VERSION?.trim();
@@ -121,10 +201,11 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    // Phone on the same Wi-Fi can open http://<lan-ip>:3000.
+    // Phone on the same Wi-Fi can open https://<lan-ip>:3000 (`pnpm dev:https`).
     host: '0.0.0.0',
     // /join/CODE share links must serve the app shell, not 404.
     historyApiFallback: true,
+    ...(process.env.DEV_HTTPS === '1' ? { https: devHttpsOptions() } : {}),
     proxy: {
       '/api': 'http://localhost:3001',
       '/ws': {

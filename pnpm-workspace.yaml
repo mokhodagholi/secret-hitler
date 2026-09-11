@@ -21,4 +21,4 @@ allowBuilds:
   esbuild: true
   core-js: true
   '@parcel/watcher': true
-  mediasoup: set this to true or false
+  mediasoup: true
