@@ -36,7 +36,6 @@ export class BaleService {
     if (!webApp) return;
 
     webApp.ready();
-    webApp.expand();
     webApp.BackButton.onClick(() => nav.back());
     webApp.BackButton.show();
 
