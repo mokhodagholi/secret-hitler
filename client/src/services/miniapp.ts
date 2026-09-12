@@ -162,7 +162,6 @@ export class TelegramMiniApp extends HostMiniApp {
       () => (typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined),
       (webApp) => {
         webApp.ready();
-        webApp.expand();
         webApp.disableVerticalSwipes?.();
         webApp.setHeaderColor?.(SHELL_COLOR);
         webApp.setBackgroundColor?.(SHELL_COLOR);

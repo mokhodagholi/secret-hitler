@@ -199,17 +199,17 @@ that. Both hosts inject the same query flag.
 |---|---|---|---|
 | `ready()` | Yes | Yes | no-op |
 | `BackButton` | Yes | Yes | in-app header only |
-| `expand()` | Do **not** call (Bale stays a compact sheet — [`native-feel.md`](../client/docs/native-feel.md)) | Call. Telegram should go full height. | — |
+| `expand()` | Do **not** call (compact sheet — [`native-feel.md`](../client/docs/native-feel.md)) | Do **not** call | — |
 | Closing confirmation while a game is live | Still open | `enableClosingConfirmation` | — |
 | Header / background color | If `miniapp.js` grows setters | `setHeaderColor` / `setBackgroundColor` to the navy shell | `theme-color` |
 | Haptics on vote / enact | Still open | `HapticFeedback` when we want it | — |
 | Disable vertical swipes | n/a | `disableVerticalSwipes` so a table swipe does not dismiss the WebView | — |
 
 V1 of Telegram is **parity with Bale** (ready, back, startapp join,
-name lock, initData on create/join/support/profile). Fullscreen,
-closing confirmation, haptics, header color are the native-feel
-follow-ups already listed as open — implement them on the Telegram
-class, no-op on Bale until that API exists.
+name lock, initData on create/join/support/profile). Closing
+confirmation, haptics, header color are the native-feel follow-ups
+already listed as open — implement them on the Telegram class, no-op
+on Bale until that API exists. Do not call `expand()`.
 
 ## Server
 

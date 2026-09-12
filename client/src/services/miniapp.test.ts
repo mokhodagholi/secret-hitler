@@ -53,7 +53,7 @@ describe('TelegramMiniApp', () => {
     delete window.Telegram;
   });
 
-  it('Should expand the Telegram shell on boot', async () => {
+  it('Should not expand the Telegram shell on boot', async () => {
     const expanded: boolean[] = [];
     window.Telegram = {
       WebApp: fakeTelegramWebApp({
@@ -63,6 +63,6 @@ describe('TelegramMiniApp', () => {
       }),
     };
     await new TelegramMiniApp().boot(new SettingsService(), new NavigationService('/'));
-    expect(expanded).toEqual([true]);
+    expect(expanded).toEqual([]);
   });
 });

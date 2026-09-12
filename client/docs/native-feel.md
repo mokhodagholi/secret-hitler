@@ -47,9 +47,9 @@ Already true:
 - `pressable` on shared buttons. `type="button"` everywhere. Back control
   and chat tools are 44×44.
 - Bale `BackButton` via [`miniapp.ts`](../src/services/miniapp.ts).
-  `ready()` runs on boot. Do not call `expand()` on Bale — it stays a compact
-  sheet, not a full-height WebView. Telegram **does** `expand()`, and may
-  disable vertical swipes so a table swipe does not dismiss the WebView.
+  `ready()` runs on boot. Do not call `expand()` — Bale and Telegram both
+  stay a compact sheet, not a full-height WebView. Telegram may disable
+  vertical swipes so a table swipe does not dismiss the WebView.
 - Themed scrollbars, screen-enter motion, no full page loads.
 - Waiting-room invite is a tap-to-copy share link, not a highlightable code.
 
@@ -153,9 +153,10 @@ per screen unless that screen owns the viewport (the table, splash).
 
 Bale, in `BaleMiniApp.boot` / Telegram in `TelegramMiniApp.boot`:
 
-- Bale: do not call `webApp.expand()`. Compact sheet is the intended open.
-- Telegram: call `expand()`, and `disableVerticalSwipes` so a table swipe
-  does not dismiss the WebView.
+- Do not call `webApp.expand()`. Compact sheet is the intended open on
+  both Bale and Telegram.
+- Telegram: `disableVerticalSwipes` so a table swipe does not dismiss
+  the WebView.
 - Header / background color to `$navy-950` if the SDK exposes it, so the
   messenger chrome matches the table.
 - Closing confirmation **while a game is live**, if the SDK exposes it —
