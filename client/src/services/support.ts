@@ -48,7 +48,7 @@ export async function submitSupport(params: {
 
   if (response.ok) return;
   if (response.status === 429) throw new SupportError('RATE_LIMITED');
-  if (response.status === 503) throw new SupportError('UNAVAILABLE');
+  if (response.status === 502 || response.status === 503) throw new SupportError('UNAVAILABLE');
   if (response.status === 400) throw new SupportError('INVALID');
   throw new SupportError('NETWORK');
 }

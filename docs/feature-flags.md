@@ -10,6 +10,7 @@ for the flags themselves.
 | Flag | Env | Default |
 |---|---|---|
 | `voice` | `FEATURE_VOICE` | off |
+| `publicTable` | `FEATURE_PUBLIC_TABLE` | off |
 
 Adding a flag: one name in `FLAG_NAMES`, one default in `DEFAULT_FLAGS`, one
 `FEATURE_<NAME>` key in [`.env.example`](../.env.example). Unknown `FEATURE_*`
@@ -36,3 +37,6 @@ off). Tests inject a preloaded service (or `{ flags: { voice: true } }` on
 
 When `voice` is off, the client hides every mic control and the server rejects
 `voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).
+
+When `publicTable` is off, the server does not create the evergreen Join lobby.
+AFK kicks in every lobby still run. See [`public-table.md`](./public-table.md).

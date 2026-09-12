@@ -246,29 +246,24 @@
   z-index: 3;
 }
 
-// Fascist board (bottom): its image canvas has extra transparent top/bottom
-// padding, so crop to a wide box to drop the dead height while keeping its width.
+// Fascist board (bottom) and liberal (top) sit on the desk, tilted back.
 .board {
   width: 98%;
   max-width: 450px;
-  // Cap at ~2:1 — past this, cover starts clipping the board art itself, not
-  // just the transparent padding.
-  aspect-ratio: 2 / 1;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   transform: rotateX(50deg);
   transform-origin: center bottom;
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55));
 }
 
-// The liberal board (top): shorter crop, tilts harder, sits just above fascist.
 .board:first-child {
   width: 76%;
-  aspect-ratio: 2.3 / 1;
-  transform: translateY(100px) rotateX(58deg);
+  transform: translateY(88px) rotateX(58deg);
 }
 
 .board:last-child {
-  transform: translateY(15px) rotateX(58deg);
+  transform: translateY(12px) rotateX(58deg);
   width: 96%;
 }
 

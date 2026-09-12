@@ -1,9 +1,7 @@
 @use '../../styles/vars' as *;
 
-// Both tracks share one box so they read as a matched pair. Extra padding
-// on the fascist PNG is cropped; leftover table height stays empty, not
-// stretched into the boards.
-$track-ratio: 2.32;
+// Leave a seat row in the table, then split the rest across the two tracks.
+$track-ratio: 2.18;
 $stack-gap: 8px;
 
 .board {
@@ -24,22 +22,16 @@ $stack-gap: 8px;
 
 .track {
   position: relative;
-  // Leave a seat row in the table container, then split the rest across tracks.
   width: min(100%, calc((100cqh - 96px) / 2 * #{$track-ratio}));
   max-width: 100%;
-  aspect-ratio: #{$track-ratio};
   height: auto;
   overflow: hidden;
   flex: 0 1 auto;
 }
 
 .art {
-  position: absolute;
-  inset: 0;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+  height: auto;
   display: block;
   pointer-events: none;
   user-select: none;
@@ -48,10 +40,10 @@ $stack-gap: 8px;
 
 .slots {
   position: absolute;
-  left: 13%;
-  right: 13%;
-  top: 24%;
-  height: 55%;
+  left: 16.5%;
+  right: 16.5%;
+  top: 27%;
+  height: 53%;
   display: flex;
   align-items: stretch;
   justify-content: space-between;

@@ -15,10 +15,14 @@ import { VoiceHub } from './voice/VoiceHub';
 
 // Load the repo-root .env for dev. Anchored to this file (not cwd) so it works
 // the same under `tsx` and the built `dist/`. Production may inject env directly.
-try {
-  process.loadEnvFile(resolve(__dirname, '../../.env'));
-} catch {
-  // No .env file — rely on the ambient environment.
+// `.env.example` fills keys a local `.env` omitted — Node does not overwrite.
+const envDir = resolve(__dirname, '../..');
+for (const name of ['.env', '.env.example']) {
+  try {
+    process.loadEnvFile(resolve(envDir, name));
+  } catch {
+    // Missing file — the other one, or the ambient environment, may still apply.
+  }
 }
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -44,14 +48,62 @@ async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
     console.warn('BALE_WEBHOOK_SECRET is empty; anyone can POST /api/bale/webhook');
   }
 
+  const supportChatId = parseSupportChatId(process.env.BALE_SUPPORT_CHAT_ID);
+  if (botToken && supportChatId == null) {
+    console.warn('BALE_SUPPORT_CHAT_ID is empty; support letters cannot be delivered');
+  }
+
   return {
+    kind: 'bale',
     bot,
     botToken,
     publicUrl,
     botUsername,
     seats: new BaleSeatIndex(),
     webhookSecret,
-    supportChatId: parseSupportChatId(process.env.BALE_SUPPORT_CHAT_ID),
+    supportChatId,
+  };
+}
+
+async function createTelegramRuntime(): Promise<BaleRuntime | undefined> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  if (!botToken) return undefined;
+
+  const { BaleBot } = await import('bale-bot');
+  const bot = new BaleBot({ token: botToken, baseUrl: 'https://api.telegram.org' });
+  const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL?.trim();
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || undefined;
+  const botUsername = process.env.TELEGRAM_BOT_USERNAME?.trim() || '@secret_hitler_bot';
+  const webAppShortName = process.env.TELEGRAM_WEBAPP_SHORT_NAME?.trim() || 'game';
+  const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
+
+  if (webhookUrl) {
+    await bot.setWebhook({
+      url: webhookListenUrl(webhookUrl, webhookSecret),
+      secret_token: webhookSecret,
+    });
+  }
+  await registerBaleCommands(bot);
+
+  if (!webhookSecret) {
+    console.warn('TELEGRAM_WEBHOOK_SECRET is empty; anyone can POST /api/telegram/webhook');
+  }
+
+  const supportChatId = parseSupportChatId(process.env.TELEGRAM_SUPPORT_CHAT_ID);
+  if (supportChatId == null) {
+    console.warn('TELEGRAM_SUPPORT_CHAT_ID is empty; Telegram support letters cannot be delivered');
+  }
+
+  return {
+    kind: 'telegram',
+    bot,
+    botToken,
+    publicUrl,
+    botUsername,
+    webAppShortName,
+    seats: new BaleSeatIndex(),
+    webhookSecret,
+    supportChatId,
   };
 }
 
@@ -73,6 +125,7 @@ async function main() {
   const live = new DrizzleLiveRoomStore(connection);
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
+  const telegram = await createTelegramRuntime();
 
   let flags = parseFeatureFlags(process.env);
   let voice = null;
@@ -103,6 +156,7 @@ async function main() {
     live,
     publicUrl,
     bale,
+    telegram,
     flags,
     voice,
   });
@@ -111,6 +165,9 @@ async function main() {
   app.log.info('Game history and live-room persistence enabled.');
   if (bale) {
     app.log.info('Bale bot webhook ready.');
+  }
+  if (telegram) {
+    app.log.info('Telegram bot webhook ready.');
   }
   await app.listen({ port: PORT, host: '0.0.0.0' });
   app.log.info(`WebSocket endpoint ready at ws://localhost:${PORT}/ws`);

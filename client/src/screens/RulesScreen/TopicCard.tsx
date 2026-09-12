@@ -1,11 +1,12 @@
 import { Icon, type IconName } from '../../components/Icon/Icon';
+import type { BubbleOrigin, TopicHue } from './topics';
 import styles from './RulesScreen.module.scss';
 
 export interface TopicCardProps {
   icon: IconName;
   title: string;
-  tease: string;
-  tone: 'liberal' | 'fascist' | 'neutral' | 'gold';
+  hue: TopicHue;
+  bubbleOrigin: BubbleOrigin;
   onOpen: () => void;
 }
 
@@ -14,15 +15,23 @@ export function TopicCard(props: TopicCardProps) {
   return (
     <button
       type="button"
-      class={styles.topic}
+      classList={{
+        [styles.topic]: true,
+        [styles[props.hue]]: true,
+        [styles[props.bubbleOrigin]]: true,
+      }}
       aria-label={props.title}
       onClick={() => props.onOpen()}
     >
-      <span classList={{ [styles.topicIcon]: true, [styles[props.tone]]: true }}>
-        <Icon name={props.icon} size={26} />
+      <span class={styles.topicFace}>
+        <span class={styles.topicBubbles} aria-hidden="true">
+          <span class={styles.bubble} />
+        </span>
+        <span class={styles.topicIcon}>
+          <Icon name={props.icon} size={28} class={styles.topicGlyph} />
+        </span>
+        <span class={styles.topicTitle}>{props.title}</span>
       </span>
-      <span class={styles.topicTitle}>{props.title}</span>
-      <span class={styles.topicTease}>{props.tease}</span>
     </button>
   );
 }

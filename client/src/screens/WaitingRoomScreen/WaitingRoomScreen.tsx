@@ -7,7 +7,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { MAX_PLAYERS, Phase, roomInviteLink, type GameStateView } from '@secret-hitler/shared';
+import { Phase, kickVoteYesNeeded, type GameStateView, type PublicPlayer } from '@secret-hitler/shared';
 import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
 import {
@@ -15,23 +15,35 @@ import {
   ERROR_MESSAGE_KEYS,
   type MessageKey,
 } from '../../i18n';
+import { isolateBidi } from '../../i18n/utils';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
+import { KickVoteOverlay } from '../GameScreen/KickVoteOverlay';
+import { PlayerActionsMenu } from '../GameScreen/PlayerActionsMenu';
 import { PlayerSlot } from './PlayerSlot';
+import { seatLayoutForBox } from './slotSize';
 import styles from './WaitingRoomScreen.module.scss';
 
-const TIP_KEYS: MessageKey[] = ['tip.watch', 'tip.numbers', 'tip.hitler'];
+const TIP_KEYS: MessageKey[] = [
+  'tip.chaos',
+  'tip.hitlerOffice',
+  'tip.claims',
+  'tip.inspect',
+  'tip.night',
+  'tip.trustedFace',
+  'tip.whoTheyCover',
+];
 const TIP_ROTATION_MS = 5000;
 
 /**
- * Lobby for a joined room. Paper profile cards sit in a row over the
+ * Lobby for a joined room. Paper profile cards fill the seats area over the
  * briefing-desk art; a rotating tip and the room controls sit at the bottom.
  * Navigates to the game board as soon as the server leaves the lobby phase.
  */
 export function WaitingRoomScreen() {
-  const { nav, game, socket, i18n, animation, sound, prefetch } = useApp();
+  const { nav, game, socket, i18n, animation, sound, prefetch, miniApp } = useApp();
   const { formatMessage } = i18n;
 
   const [copied, setCopied] = createSignal(false);
@@ -41,17 +53,19 @@ export function WaitingRoomScreen() {
     id: string;
     name: string;
   } | null>(null);
+  const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
+  const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
+  const [nowMs, setNowMs] = createSignal(Date.now());
   const [tipIndex, setTipIndex] = createSignal(0);
   let tipEl: HTMLParagraphElement | undefined;
 
   const view = game.view;
   const shareLink = () =>
-    roomInviteLink({
-      code: view()?.code ?? '',
-      origin: location.origin,
-      hostname: location.hostname,
-    });
+    game.currentSession()?.shareLink ??
+    miniApp.inviteLink(view()?.code ?? '', location.origin, location.hostname);
   const amReady = () => game.you()?.ready ?? false;
+  const amWantStart = () => game.you()?.wantsStart ?? false;
+  const isPublicTable = () => view()?.kind === 'public';
 
   // Session dropped (left room / token expired) → back to the play menu.
   createEffect(() => {
@@ -169,6 +183,64 @@ export function WaitingRoomScreen() {
     return 'confirm';
   };
 
+  const startConnectedPlayers = () => startConnected();
+  const startNeed = () => kickVoteYesNeeded(Math.max(1, startConnectedCount()));
+  const startHave = () =>
+    startConnectedPlayers().filter((player) => player.wantsStart).length;
+  const startCooldownUntil = () => view()?.you.wantStartCooldownUntil ?? null;
+  const startCooldownSeconds = () => {
+    const until = startCooldownUntil();
+    if (until == null) return 0;
+    return Math.max(0, Math.ceil((until - nowMs()) / 1000));
+  };
+  const publicStartCooling = () =>
+    !amWantStart() &&
+    view()?.startChoice == null &&
+    startCooldownSeconds() > 0;
+  const startHintText = () => {
+    if (publicStartCooling()) {
+      return startCooldownSeconds() >= 60
+        ? ('waiting.startCooldownMinutes' as const)
+        : ('waiting.startCooldownSeconds' as const);
+    }
+    if (startHave() > 0) return 'waiting.startHintProgress' as const;
+    return 'waiting.startHint' as const;
+  };
+
+  function tapPublicStart(): void {
+    if (publicStartCooling()) return;
+    game.setWantStart(!amWantStart());
+  }
+
+  createEffect(() => {
+    const cooling = startCooldownUntil() != null && startCooldownUntil()! > Date.now();
+    if (!view()?.startChoice && !cooling && !view()?.kickVote) return;
+    setNowMs(Date.now());
+    const timer = setInterval(() => setNowMs(Date.now()), 250);
+    onCleanup(() => clearInterval(timer));
+  });
+
+  const startChoiceSeconds = () => {
+    const choice = view()?.startChoice;
+    if (!choice) return 0;
+    return Math.max(0, Math.ceil((choice.endsAt - nowMs()) / 1000));
+  };
+
+  const playerName = (playerId: string) =>
+    view()?.players.find((player) => player.id === playerId)?.name ?? '';
+  const playerSeat = (playerId: string) => {
+    const seat = view()?.players.find((player) => player.id === playerId)?.seat;
+    return seat != null ? seat + 1 : 0;
+  };
+
+  const canReportLobby = (player: PublicPlayer, state: GameStateView) => {
+    if (state.kind !== 'public') return false;
+    if (!state.you.canRequestKick) return false;
+    if (state.kickVote || state.startChoice) return false;
+    if (player.id === state.you.id) return false;
+    return state.players.filter((sitter) => sitter.connected).length >= 3;
+  };
+
   return (
     <Screen fill>
       <div class={styles.scene}>
@@ -213,27 +285,60 @@ export function WaitingRoomScreen() {
                   </Button>
 
                   <Show
-                    when={game.isHost()}
+                    when={isPublicTable()}
                     fallback={
-                      <Button
-                        variant={amReady() ? 'outline' : 'gold'}
-                        onClick={() => game.setReady(!amReady())}
+                      <Show
+                        when={game.isHost()}
+                        fallback={
+                          <Button
+                            variant={amReady() ? 'outline' : 'gold'}
+                            onClick={() => game.setReady(!amReady())}
+                          >
+                            {formatMessage(
+                              amReady() ? 'waiting.notReadyYet' : 'waiting.imReady',
+                            )}
+                          </Button>
+                        }
                       >
-                        {formatMessage(
-                          amReady() ? 'waiting.notReadyYet' : 'waiting.imReady',
-                        )}
-                      </Button>
+                        <Button onClick={tryStart}>
+                          {formatMessage('waiting.startGame')}
+                        </Button>
+                      </Show>
                     }
                   >
-                    <Button onClick={tryStart}>
-                      {formatMessage('waiting.startGame')}
-                    </Button>
+                    <Show when={!(view()?.startChoice && !amWantStart())}>
+                      <Button
+                        variant={amWantStart() ? 'outline' : 'gold'}
+                        disabled={
+                          view()?.kickVote != null ||
+                          (view()?.startChoice != null && amWantStart()) ||
+                          publicStartCooling()
+                        }
+                        onClick={tapPublicStart}
+                      >
+                        {formatMessage(
+                          amWantStart() ? 'waiting.retractStart' : 'waiting.wantStart',
+                        )}
+                      </Button>
+                    </Show>
                   </Show>
-
-                  <Button variant="danger" onClick={() => setConfirmingLeave(true)}>
-                    {formatMessage('waiting.leaveRoom')}
-                  </Button>
                 </div>
+
+                <Show when={isPublicTable()}>
+                  <p class={styles.startHint}>
+                    {formatMessage(startHintText(), {
+                      have: startHave(),
+                      need: startNeed(),
+                      minutes: Math.ceil(startCooldownSeconds() / 60),
+                      seconds: startCooldownSeconds(),
+                    })}
+                  </p>
+                  <Show when={view()?.startChoice && amWantStart()}>
+                    <p class={styles.startHint}>
+                      {formatMessage('waiting.startChoiceWaiting')}
+                    </p>
+                  </Show>
+                </Show>
               </footer>
 
               <ConfirmDialog
@@ -246,6 +351,21 @@ export function WaitingRoomScreen() {
                 onConfirm={leaveRoom}
                 onCancel={() => setConfirmingLeave(false)}
               />
+
+              <ConfirmDialog
+                open={
+                  isPublicTable() &&
+                  view()?.startChoice != null &&
+                  !amWantStart()
+                }
+                message={formatMessage('waiting.startChoiceHoldout')}
+                confirmLabel={formatMessage('waiting.wantStart')}
+                onConfirm={() => game.setWantStart(true)}
+              >
+                {formatMessage('waiting.startChoiceClock', {
+                  seconds: startChoiceSeconds(),
+                })}
+              </ConfirmDialog>
 
               <ConfirmDialog
                 open={startGate() === 'needPlayers'}
@@ -287,6 +407,7 @@ export function WaitingRoomScreen() {
                               avatar: player.avatar,
                               seat: player.seat,
                               ready: player.ready,
+                              wantsStart: player.wantsStart,
                               connected: player.connected,
                             }}
                             awaitingLabel={formatMessage(
@@ -329,6 +450,75 @@ export function WaitingRoomScreen() {
                 }}
                 onCancel={() => setKickTarget(null)}
               />
+
+              <Show when={playerMenu()}>
+                {(target) => (
+                  <PlayerActionsMenu
+                    player={target()}
+                    canReport={canReportLobby(target(), state())}
+                    canMute={false}
+                    muted={false}
+                    formatMessage={formatMessage}
+                    onReport={() => {
+                      const player = target();
+                      setPlayerMenu(null);
+                      setReporting(player);
+                    }}
+                    onMute={() => setPlayerMenu(null)}
+                    onClose={() => setPlayerMenu(null)}
+                  />
+                )}
+              </Show>
+
+              <ConfirmDialog
+                open={reporting() != null}
+                message={formatMessage('game.kickVote.confirm', {
+                  name: isolateBidi(reporting()?.name ?? ''),
+                })}
+                confirmLabel={formatMessage('game.kickVote.request')}
+                cancelLabel={formatMessage('common.cancel')}
+                onConfirm={() => {
+                  const target = reporting();
+                  setReporting(null);
+                  if (target) game.requestKick(target.id);
+                }}
+                onCancel={() => setReporting(null)}
+              />
+
+              <Show when={state().kickVote}>
+                {(vote) => (
+                  <KickVoteOverlay
+                    formatMessage={formatMessage}
+                    prompt={formatMessage(
+                      vote().targetId === state().you.id
+                        ? 'game.kickVote.promptYou'
+                        : vote().requesterId === state().you.id
+                          ? 'game.kickVote.promptYours'
+                          : 'game.kickVote.prompt',
+                      {
+                        requester: isolateBidi(playerName(vote().requesterId)),
+                        target: isolateBidi(playerName(vote().targetId)),
+                        requesterSeat: playerSeat(vote().requesterId),
+                        targetSeat: playerSeat(vote().targetId),
+                      },
+                    )}
+                    canVote={
+                      vote().targetId !== state().you.id &&
+                      vote().yourVote == null
+                    }
+                    yourVote={vote().yourVote}
+                    votedCount={vote().votedCount}
+                    totalVoters={vote().voterCount}
+                    secondsLeft={Math.max(
+                      0,
+                      Math.ceil((vote().endsAt - nowMs()) / 1000),
+                    )}
+                    startedAt={vote().startedAt}
+                    endsAt={vote().endsAt}
+                    onVote={(agree) => game.voteKick(agree)}
+                  />
+                )}
+              </Show>
             </>
           )}
         </Show>
@@ -345,15 +535,56 @@ export function WaitingRoomScreen() {
     const awaiting = createMemo(() =>
       Math.max(0, props.state.maxPlayers - seated().length),
     );
-    const compact = () => props.state.maxPlayers === MAX_PLAYERS;
+    const [slotPx, setSlotPx] = createSignal(96);
+    const [columnGapPx, setColumnGapPx] = createSignal(10);
+    const [rowGapPx, setRowGapPx] = createSignal(10);
+    let seatsEl: HTMLDivElement | undefined;
+
+    const measure = () => {
+      if (!seatsEl) return;
+      if (seatsEl.clientWidth < 8 || seatsEl.clientHeight < 8) return;
+      const firstSeat = seatsEl.querySelector('[role="listitem"]') as HTMLElement | null;
+      const captionPx =
+        firstSeat != null && slotPx() > 0
+          ? Math.max(12, firstSeat.clientHeight - slotPx())
+          : undefined;
+      const layout = seatLayoutForBox({
+        width: seatsEl.clientWidth,
+        height: seatsEl.clientHeight,
+        count: props.state.maxPlayers,
+        captionPx,
+      });
+      setSlotPx(layout.slotPx);
+      setColumnGapPx(layout.columnGapPx);
+      setRowGapPx(layout.rowGapPx);
+    };
+
+    onMount(() => {
+      if (!seatsEl) return;
+      measure();
+      if (typeof ResizeObserver === 'undefined') return;
+      const observer = new ResizeObserver(measure);
+      observer.observe(seatsEl);
+      onCleanup(() => observer.disconnect());
+    });
+
+    createEffect(() => {
+      props.state.maxPlayers;
+      measure();
+    });
 
     return (
       <div
-        classList={{
-          [styles.seats]: true,
-          [styles.seatsPacked]: compact(),
+        ref={(element) => {
+          seatsEl = element;
         }}
+        class={styles.seats}
         role="list"
+        style={{
+          '--slot-size': `${slotPx()}px`,
+          'column-gap': `${columnGapPx()}px`,
+          'row-gap': `${rowGapPx()}px`,
+        }}
       >
         <For each={seated()}>
           {(player) => (
@@ -362,7 +593,8 @@ export function WaitingRoomScreen() {
                 name: player.name,
                 avatar: player.avatar,
                 seat: player.seat,
-                ready: player.ready,
+                ready: props.state.kind === 'public' ? true : player.ready,
+                wantsStart: player.wantsStart,
                 connected: player.connected,
               }}
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
@@ -371,14 +603,18 @@ export function WaitingRoomScreen() {
               })}
               isYou={player.id === props.state.you.id}
               youLabel={formatMessage('game.you')}
-              compact={compact()}
               onSelect={
-                game.isHost() && player.id !== props.state.you.id
+                canReportLobby(player, props.state)
                   ? () => {
                       sound.play('player-ready');
-                      setKickTarget({ id: player.id, name: player.name });
+                      setPlayerMenu(player);
                     }
-                  : undefined
+                  : game.isHost() && player.id !== props.state.you.id
+                    ? () => {
+                        sound.play('player-ready');
+                        setKickTarget({ id: player.id, name: player.name });
+                      }
+                    : undefined
               }
             />
           )}
@@ -387,7 +623,6 @@ export function WaitingRoomScreen() {
           {() => (
             <PlayerSlot
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
-              compact={compact()}
             />
           )}
         </For>

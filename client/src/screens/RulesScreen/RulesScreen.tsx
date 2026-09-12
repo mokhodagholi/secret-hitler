@@ -16,15 +16,14 @@ export function RulesScreen() {
       <div class={styles.page}>
         <ScreenHeader title={formatMessage('rules.title')} />
         <div class={styles.body}>
-          <p class={styles.pick}>{formatMessage('rules.pick')}</p>
           <div class={styles.topicGrid}>
             <For each={TOPICS}>
               {(topic) => (
                 <TopicCard
                   icon={topic.icon}
-                  tone={topic.tone}
+                  hue={topic.hue}
+                  bubbleOrigin={topic.bubbleOrigin}
                   title={formatMessage(topic.titleKey)}
-                  tease={formatMessage(topic.teaseKey)}
                   onOpen={() => nav.navigate(screenForTopic(topic.id))}
                 />
               )}

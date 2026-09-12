@@ -236,6 +236,10 @@ export class GameStateService {
     this.socket.send({ type: 'game:start' });
   }
 
+  setWantStart(want: boolean): void {
+    this.socket.send({ type: want ? 'player:wantStart' : 'player:retractStart' });
+  }
+
   sendChat(text: string): void {
     const body = text.trim();
     if (!body) return;

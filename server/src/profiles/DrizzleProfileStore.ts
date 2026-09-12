@@ -28,6 +28,7 @@ export class DrizzleProfileStore implements ProfileStore {
         .set({
           avatar,
           baleUserId: identity.baleUserId ?? existing.baleUserId,
+          telegramUserId: identity.telegramUserId ?? existing.telegramUserId,
           updatedAt: new Date(),
         })
         .where(eq(profiles.id, existing.id));
@@ -37,6 +38,7 @@ export class DrizzleProfileStore implements ProfileStore {
     await this.db.insert(profiles).values({
       clientId: identity.clientId,
       baleUserId: identity.baleUserId,
+      telegramUserId: identity.telegramUserId,
       avatar,
     });
     return avatar;
@@ -52,6 +54,14 @@ export class DrizzleProfileStore implements ProfileStore {
   }
 
   private async find(identity: ProfileIdentity) {
+    if (identity.telegramUserId) {
+      const [byTelegram] = await this.db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.telegramUserId, identity.telegramUserId))
+        .limit(1);
+      if (byTelegram) return byTelegram;
+    }
     if (identity.baleUserId) {
       const [byBale] = await this.db
         .select()

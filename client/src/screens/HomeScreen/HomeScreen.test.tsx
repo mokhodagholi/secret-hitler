@@ -11,13 +11,14 @@ import { en } from '../../i18n/locales/en';
 import { buildHarness, makeView, renderWithApp } from '../../../test/test-utils';
 
 describe('HomeScreen', () => {
-  it('Should send the player to the play menu when they press Play', () => {
+  it('Should send the player to Join when they press Find Game', () => {
     const harness = buildHarness();
+    harness.services.game.listRooms = async () => [];
     renderWithApp(
       () => (
         <Show
           when={harness.services.nav.screen() === 'home'}
-          fallback={<RoomsScreen initialTab="create" />}
+          fallback={<RoomsScreen initialTab="join" />}
         >
           <HomeScreen />
         </Show>
@@ -26,8 +27,8 @@ describe('HomeScreen', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Find Game' }));
-    expect(harness.services.nav.screen()).toBe('play');
-    expect(screen.getByRole('tab', { name: 'Create Room' })).toBeTruthy();
+    expect(harness.services.nav.screen()).toBe('join-game');
+    expect(screen.getByRole('tab', { name: 'Join Room' })).toBeTruthy();
   });
 
   it('Should hide the title and keep currency off the home screen', () => {
@@ -73,9 +74,9 @@ describe('HomeScreen', () => {
       harness,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rules' }));
+    fireEvent.click(screen.getByRole('button', { name: en.nav.rules }));
     expect(harness.services.nav.screen()).toBe('rules');
-    expect(screen.getByRole('heading', { name: 'Rules' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: en.rules.title })).toBeTruthy();
   });
 
   it('Should keep the home poster to Find Game, rules, and settings', () => {
@@ -84,7 +85,7 @@ describe('HomeScreen', () => {
 
     expect(screen.getByRole('button', { name: 'Find Game' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Rules' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
     expect(screen.getAllByRole('button')).toHaveLength(3);
   });
 
@@ -125,7 +126,7 @@ describe('HomeScreen', () => {
     harness.pushState(makeView());
 
     fireEvent.click(screen.getByRole('button', { name: 'Find Game' }));
-    expect(harness.services.nav.screen()).toBe('play');
+    expect(harness.services.nav.screen()).toBe('join-game');
     expect(screen.getByRole('tab', { name: 'Create Room' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: en.rooms.joinTab })).toBeTruthy();
   });

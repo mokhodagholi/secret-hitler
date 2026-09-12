@@ -10,10 +10,14 @@ import { SettingRow } from '../../components/SettingRow/SettingRow';
 import { TextInput } from '../../components/TextInput/TextInput';
 
 export function SettingsScreen() {
-  const { settings, i18n, bale, nav, flags } = useApp();
+  const { settings, i18n, miniApp, nav, flags } = useApp();
   const state = settings.settings;
   const { formatMessage } = i18n;
-  const fromBale = () => bale.user() != null;
+  const fromHost = () => miniApp.user() != null;
+  const nameFromHostKey =
+    miniApp.platform === 'telegram'
+      ? 'settings.profileNameFromTelegram'
+      : 'settings.profileNameFromBale';
   const cardName = () => {
     const portrait = PORTRAITS[Math.abs(state.avatar) % PORTRAITS.length];
     return i18n.lang() === 'fa' ? portrait.persian : portrait.latin;
@@ -27,15 +31,15 @@ export function SettingsScreen() {
       <TextInput
         label={formatMessage('settings.profileName')}
         placeholder={
-          fromBale()
-            ? formatMessage('settings.profileNameFromBale')
+          fromHost()
+            ? formatMessage(nameFromHostKey)
             : formatMessage('settings.profileNamePlaceholder')
         }
         icon="people"
-        value={fromBale() ? (bale.user()?.firstName ?? state.profileName) : state.profileName}
-        disabled={fromBale()}
+        value={fromHost() ? (miniApp.user()?.firstName ?? state.profileName) : state.profileName}
+        disabled={fromHost()}
         onInput={(value) => {
-          if (!fromBale()) settings.set('profileName', value);
+          if (!fromHost()) settings.set('profileName', value);
         }}
       />
       <SettingRow

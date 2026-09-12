@@ -11,7 +11,7 @@ import styles from './PlayerCardsScreen.module.scss';
  * server is updated once when leaving so the same face is used in the next room.
  */
 export function PlayerCardsScreen() {
-  const { settings, i18n, game, bale } = useApp();
+  const { settings, i18n, game, miniApp } = useApp();
   const { formatMessage } = i18n;
   const initialAvatar = settings.settings.avatar;
   let persisted = false;
@@ -24,7 +24,7 @@ export function PlayerCardsScreen() {
     void game.saveProfile({
       avatar,
       clientId: settings.settings.profileId,
-      initData: bale.initData(),
+      initData: miniApp.initData(),
     });
   };
 

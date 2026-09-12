@@ -41,6 +41,11 @@ services:
       BALE_WEBHOOK_SECRET: ${BALE_WEBHOOK_SECRET:-}
       BALE_BOT_USERNAME: ${BALE_BOT_USERNAME:-@secret_hitler_bot}
       BALE_SUPPORT_CHAT_ID: ${BALE_SUPPORT_CHAT_ID:-}
+      TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-https://mrfantastic.ir/api/telegram/webhook}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-@secret_hitler_bot}
+      TELEGRAM_WEBAPP_SHORT_NAME: ${TELEGRAM_WEBAPP_SHORT_NAME:-game}
+      TELEGRAM_SUPPORT_CHAT_ID: ${TELEGRAM_SUPPORT_CHAT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy

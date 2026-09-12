@@ -9,7 +9,9 @@
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, $navy-850 0%, $navy-900 45%, $navy-950 100%);
+  background:
+    radial-gradient(ellipse 90% 42% at 50% -8%, rgba($gold, 0.16), transparent 58%),
+    linear-gradient(180deg, #2a160c 0%, #1a1208 42%, #120c08 100%);
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
   overflow: hidden;
   @include scroll-navy;
@@ -25,13 +27,14 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--screen-pad-top) var(--screen-pad-x) var(--screen-pad-bottom);
+  padding: var(--screen-pad-top) var(--screen-pad-x)
+    calc(var(--screen-pad-bottom) + var(--keyboard-inset, 0px));
 }
 
 // Clear the fixed bottom navigation on screens that have one.
 .withNav {
   --screen-pad-bottom: calc(#{$nav-height + 40px} + env(safe-area-inset-bottom, 0px));
-  padding-bottom: var(--screen-pad-bottom);
+  padding-bottom: calc(var(--screen-pad-bottom) + var(--keyboard-inset, 0px));
 }
 
 // Full-bleed column for screens that own the viewport (the table).

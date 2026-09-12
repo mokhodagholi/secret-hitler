@@ -6,8 +6,8 @@ grey tap flash are bugs.
 
 If a player can tell they are in a browser, the shell failed.
 
-Default language is **fa**, inside **Bale**. Design for a thumb on a
-430px column. Desktop is a letterboxed phone, not a second layout.
+Default language is **fa**, inside **Bale** or **Telegram**. Design for a thumb
+on a 430px column. Desktop is a letterboxed phone, not a second layout.
 
 ## Principles
 
@@ -46,18 +46,18 @@ Already true:
   use `Screen fill` and own the viewport.
 - `pressable` on shared buttons. `type="button"` everywhere. Back control
   and chat tools are 44×44.
-- Bale `BackButton` via [`BaleService`](../src/services/BaleService.ts).
-  `ready()` runs on boot. Do not call `expand()` — Bale stays a compact
-  sheet, not a full-height WebView.
+- Bale `BackButton` via [`miniapp.ts`](../src/services/miniapp.ts).
+  `ready()` runs on boot. Do not call `expand()` on Bale — it stays a compact
+  sheet, not a full-height WebView. Telegram **does** `expand()`, and may
+  disable vertical swipes so a table swipe does not dismiss the WebView.
 - Themed scrollbars, screen-enter motion, no full page loads.
 - Waiting-room invite is a tap-to-copy share link, not a highlightable code.
 
 Still open — do not invent the API:
 
-- Composer vs. keyboard (`visualViewport`); keep the table still.
 - Closing confirmation while a game is live.
 - Haptics on vote / enact / execute.
-- WebApp header / background color, if `miniapp.js` actually exposes setters.
+- Bale header / background color, if `miniapp.js` actually exposes setters.
 
 ## Law
 
@@ -123,9 +123,10 @@ iOS zooms any field whose computed font-size is under **16px**.
 Field type is 16px. The label can stay small.
 
 After dismiss, do not leave the page scrolled up. The table shell should
-keep `svh` / `dvh` stable; pad the **composer** with
-`visualViewport` (or `env(keyboard-inset)`) instead of shrinking the whole
-screen.
+keep `svh` / `dvh` stable. [`KeyboardService`](../src/services/KeyboardService.ts)
+reads `visualViewport`, writes `--keyboard-inset`, and docks
+`[data-keyboard-form]` (create/join, support, chat composer) so the action
+sits on the keyboard. The document does not scroll. Do not shrink `dvh`.
 
 `enterkeyhint="send"` on chat. Enter already sends (Shift+Enter for a
 newline) — the key cap should say so.
@@ -150,14 +151,16 @@ Safe-area belongs on the **shell**, once: `Screen` padding and `BottomNav`
 `bottom`. Do not keep inventing `calc(... + env(safe-area-inset-bottom))`
 per screen unless that screen owns the viewport (the table, splash).
 
-Bale, in `BaleService.boot`:
+Bale, in `BaleMiniApp.boot` / Telegram in `TelegramMiniApp.boot`:
 
-- Do not call `webApp.expand()`. Compact sheet is the intended open.
+- Bale: do not call `webApp.expand()`. Compact sheet is the intended open.
+- Telegram: call `expand()`, and `disableVerticalSwipes` so a table swipe
+  does not dismiss the WebView.
 - Header / background color to `$navy-950` if the SDK exposes it, so the
   messenger chrome matches the table.
 - Closing confirmation **while a game is live**, if the SDK exposes it —
   a swipe-down that kills the room is the least native thing in this app.
-- Haptic on Ja/Nein, enact, execute — one tick, through `BaleService`, not
+- Haptic on Ja/Nein, enact, execute — one tick, through `MiniApp`, not
   from the overlay. No-op outside the mini-app.
 
 ### Hit targets and chrome

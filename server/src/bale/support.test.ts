@@ -11,6 +11,23 @@ describe('formatSupportLetter', () => {
       }),
     ).toBe('پیشنهاد\n\nفرستنده: 42\n\nadd a veto hint');
   });
+
+  it('Should escape Markdown so Bale does not reject the letter', () => {
+    expect(
+      formatSupportLetter({
+        topic: 'help',
+        description: 'fix /find_game and this_underscore',
+        senderId: '42',
+      }),
+    ).toContain('find\\_game');
+    expect(
+      formatSupportLetter({
+        topic: 'help',
+        description: 'fix /find_game and this_underscore',
+        senderId: '42',
+      }),
+    ).toContain('this\\_underscore');
+  });
 });
 
 describe('formatKickVoteLetter', () => {

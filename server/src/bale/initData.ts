@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import type { MessengerKind } from '@secret-hitler/shared';
 
 /** Max age of mini-app initData before we treat it as stale (24h). */
 export const INIT_DATA_MAX_AGE_SEC = 86_400;
@@ -9,9 +10,16 @@ export interface BaleWebAppUser {
   username?: string;
 }
 
+export interface MessengerIdentity {
+  kind: MessengerKind;
+  user: BaleWebAppUser;
+}
+
 /**
- * HMAC-validate Bale `WebApp.initData` (url-encoded key=value pairs).
+ * HMAC-validate mini-app `WebApp.initData` (url-encoded key=value pairs).
+ * Same algorithm on Bale and Telegram.
  * @see https://docs.bale.ai/miniapp
+ * @see https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
  */
 export function validateBaleInitData(
   initData: string,
@@ -63,4 +71,19 @@ export function validateBaleInitData(
   } catch {
     return null;
   }
+}
+
+/** Try each configured bot token; HMAC matches at most one. */
+export function identifyInitData(
+  initData: string | undefined,
+  messengers: Array<{ kind?: MessengerKind; botToken: string }>,
+  nowSec?: number,
+): MessengerIdentity | null {
+  if (!initData) return null;
+  for (const messenger of messengers) {
+    const user = validateBaleInitData(initData, messenger.botToken, nowSec);
+    if (!user) continue;
+    return { kind: messenger.kind ?? 'bale', user };
+  }
+  return null;
 }

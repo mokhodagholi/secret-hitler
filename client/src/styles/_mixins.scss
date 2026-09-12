@@ -16,6 +16,13 @@
   border-radius: $radius;
 }
 
+// Ink plaque on the brown shell — darker than the desk, not navy, not wood.
+@mixin card-ink {
+  background: linear-gradient(180deg, #1a1610, #100c0a);
+  border: 1px solid rgba($gold, 0.26);
+  border-radius: $radius;
+}
+
 @mixin pressable {
   transition: transform 0.12s ease, opacity 0.12s ease;
 

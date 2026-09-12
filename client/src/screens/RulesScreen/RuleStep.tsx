@@ -6,22 +6,35 @@ import styles from './RulesScreen.module.scss';
 export interface RuleStepProps {
   /** Omitted for unordered reference lists (powers), shown for round steps. */
   number?: number;
-  icon: IconName;
+  icon?: IconName;
   title: string;
   body: string;
 }
 
-/** One rule entry: icon badge (optionally numbered), gold heading, description. */
+/** One rule entry: optional icon or number badge, gold heading, description. */
 export function RuleStep(props: RuleStepProps) {
   const { formatMessage } = useApp().i18n;
   return (
     <li class={styles.step}>
       <span class={styles.badge}>
-        <Icon name={props.icon} size={22} />
-        <Show when={props.number !== undefined}>
-          <span class={styles.num}>
-            {formatMessage('rules.stepNumber', { number: props.number ?? 0 })}
-          </span>
+        <Show
+          when={props.icon}
+          fallback={
+            <span class={styles.stepIndex}>
+              {formatMessage('rules.stepNumber', { number: props.number ?? 0 })}
+            </span>
+          }
+        >
+          {(icon) => (
+            <>
+              <Icon name={icon()} size={22} />
+              <Show when={props.number !== undefined}>
+                <span class={styles.num}>
+                  {formatMessage('rules.stepNumber', { number: props.number ?? 0 })}
+                </span>
+              </Show>
+            </>
+          )}
         </Show>
       </span>
       <div>

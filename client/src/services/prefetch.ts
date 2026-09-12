@@ -9,12 +9,11 @@ import { PAPER_FRAME, PORTRAITS, avatarImage } from '../assets/avatars';
 import {
   CARD_BACK,
   NIGHT_VEIL,
-  OFFICE_PLACARD,
   PARTY_FACE,
   POLICY_FACE,
   POWER_SEAL,
   RAVI,
-  ROLE_FACE,
+  ROLE_FACES,
   VETO_SEAL,
   VOTE_BACK,
   VOTE_FACE,
@@ -130,11 +129,10 @@ function gameTableUrls(): string[] {
     RAVI.idle,
     RAVI.speaking,
     VETO_SEAL,
-    ...Object.values(ROLE_FACE),
+    ...Object.values(ROLE_FACES).flat(),
     ...Object.values(POLICY_FACE),
     ...Object.values(VOTE_FACE),
     ...Object.values(PARTY_FACE),
-    ...Object.values(OFFICE_PLACARD),
     ...Object.values(POWER_SEAL),
   ];
 }

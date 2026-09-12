@@ -37,6 +37,8 @@ export type ClientMessage =
   | { type: 'auth'; token: string }
   | { type: 'player:ready' }
   | { type: 'player:unready' }
+  | { type: 'player:wantStart' }
+  | { type: 'player:retractStart' }
   | { type: 'game:start' }
   | { type: 'chat:message'; text: string }
   | { type: 'command'; command: GameCommand }
@@ -96,9 +98,10 @@ export type ServerErrorCode =
   | 'NOT_ENOUGH_PLAYERS'
   | 'PLAYERS_NOT_READY'
   | 'RATE_LIMITED'
-  | 'INVALID_ACTION';
+  | 'INVALID_ACTION'
+  | 'BANNED';
 
-export type RoomClosedReason = 'HOST_LEFT' | 'KICKED';
+export type RoomClosedReason = 'HOST_LEFT' | 'KICKED' | 'AFK';
 
 export type ServerMessage =
   /** Sent once after a successful auth handshake. */
@@ -160,8 +163,8 @@ export interface CreateRoomRequest {
     timerEnabled?: boolean;
     confirmActions?: boolean;
   };
-  /** Raw Bale `WebApp.initData` so the bot can /invite this player's room. */
-  initData?: string;
+      /** Raw mini-app `WebApp.initData` so the bot can /invite this player's room. */
+      initData?: string;
 }
 
 export interface CreateRoomResponse {
@@ -177,11 +180,13 @@ export interface JoinRoomRequest {
   password?: string;
   /** Illustrated player-card index; omitted seats use a seat-based default. */
   avatar?: number;
-  /** Raw Bale `WebApp.initData` so the bot can /invite this player's room. */
+  /** Browser profile id — used to keep a kicked player off this table. */
+  clientId?: string;
+  /** Raw mini-app `WebApp.initData` so the bot can /invite this player's room. */
   initData?: string;
 }
 
-/** Persist the chosen player card for this browser (and Bale user, when signed in). */
+/** Persist the chosen player card for this browser (and messenger user, when signed in). */
 export interface SaveProfileRequest {
   avatar: number;
   clientId: string;
@@ -195,6 +200,7 @@ export interface ProfileResponse {
 export interface JoinRoomResponse {
   roomId: string;
   code: string;
+  shareLink: string;
   token: string;
   playerId: string;
 }

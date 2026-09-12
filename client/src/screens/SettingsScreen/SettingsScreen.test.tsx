@@ -65,6 +65,15 @@ describe('SettingsScreen', () => {
     expect(screen.getByText(en.settings.raviWho).closest('[role="button"]')).toBeNull();
   });
 
+  it('Should flip a toggle when the row is pressed, not only the switch', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <SettingsScreen />, harness);
+
+    expect(harness.services.settings.settings.music).toBe(true);
+    fireEvent.click(screen.getByText(en.settings.music));
+    expect(harness.services.settings.settings.music).toBe(false);
+  });
+
   it('Should keep the profile name field from inviting browser suggest', () => {
     const harness = buildHarness();
     renderWithApp(() => <SettingsScreen />, harness);

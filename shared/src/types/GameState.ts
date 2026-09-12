@@ -2,6 +2,9 @@
 // this module is bundled into the browser, so it must never import `ws`,
 // `node:*`, or anything server-only.
 
+/** Messenger that signed mini-app login. Numeric user ids are namespaced by this. */
+export type MessengerKind = 'bale' | 'telegram';
+
 export type Role = 'liberal' | 'fascist' | 'hitler';
 
 export type Faction = 'liberal' | 'fascist';
@@ -42,10 +45,24 @@ export interface RoomOptions {
   timerEnabled: boolean;
   confirmActions: boolean;
   /**
-   * Bale group this table was opened from (`/create`). Members of that
-   * chat skip the password; everyone else still types it.
+   * Group this table was opened from (`/create`). Members of that chat
+   * skip the password; everyone else still types it. Scoped to
+   * {@link originPlatform} so a Telegram user is not a Bale group member.
    */
   originChatId?: number;
+  /** Which bot owns {@link originChatId}. Omitted on restored Bale rooms means Bale. */
+  originPlatform?: MessengerKind;
+  /** Group `/create` post — rewritten when the host leaves. */
+  originMessageId?: number;
+  /** Evergreen Join lobby — no host, vote-to-start. Absent means hosted. */
+  kind?: 'public';
+}
+
+/** Stored name for the evergreen lobby; UIs localize via `kind`. */
+export const PUBLIC_TABLE_NAME = 'میز عمومی';
+
+export function isPublicTable(options: Pick<RoomOptions, 'kind'>): boolean {
+  return options.kind === 'public';
 }
 
 /** Internal, authoritative player record kept on the server. */
@@ -57,6 +74,17 @@ export interface Player {
   isHost: boolean;
   connected: boolean;
   ready: boolean;
+  /** Public-table Start tap. Hosted rooms leave this false. */
+  wantsStart: boolean;
+  /** Last public Start tap; next collecting tap waits {@link WANT_START_COOLDOWN_MS}. */
+  wantStartAt: number | null;
+  /** Lobby clock for the 5-minute idle kick; null while engaged or offline. */
+  unreadySince: number | null;
+  /**
+   * Stable sit identity (`bale:`, `telegram:`, or `client:`) used to keep a
+   * kicked player off this room. Never shown to other sitters.
+   */
+  joinKey: string | null;
   isAlive: boolean;
   /** Secret role — never broadcast to other players. */
   role: Role | null;
@@ -71,6 +99,7 @@ export interface PublicPlayer {
   isHost: boolean;
   connected: boolean;
   ready: boolean;
+  wantsStart: boolean;
   isAlive: boolean;
   isPresident: boolean;
   isChancellor: boolean;
@@ -173,6 +202,10 @@ export interface GameStateView {
   hostId: string;
   minPlayers: number;
   maxPlayers: number;
+  /** Evergreen Join lobby when `public`. */
+  kind: 'public' | 'hosted';
+  /** Public-table must-choose window, else null. */
+  startChoice: { startedAt: number; endsAt: number } | null;
   players: PublicPlayer[];
   board: BoardState;
   /** Winning faction once the game is over, else null. */
@@ -208,6 +241,8 @@ export interface GameStateView {
     investigation: { name: string; party: Faction } | null;
     /** False after this viewer asked the table to remove someone, until that kick passes. */
     canRequestKick: boolean;
+    /** Epoch ms when this viewer may tap Start again; null when no cooldown. */
+    wantStartCooldownUntil: number | null;
   };
 }
 
@@ -220,6 +255,8 @@ export interface RoomSummary {
   maxPlayers: number;
   hasPassword: boolean;
   phase: Phase;
+  /** Set on the evergreen Join lobby so lists can pin it. */
+  kind?: 'public';
 }
 
 /** Standard minimum for real games; dev servers may lower the effective value. */
@@ -243,6 +280,12 @@ export const LEGISLATIVE_PASS_MS = 100 + 2 * LEGISLATIVE_TRAVEL_CARD_MS;
 export const NOMINATION_DURATION_MS = 25_000;
 /** How long a table kick vote stays open before it is counted as-is. */
 export const KICK_VOTE_DURATION_MS = 30_000;
+/** Public-table holdouts must tap Start before this, or they are kicked. */
+export const START_CHOICE_DURATION_MS = 20_000;
+/** After a collecting Start tap, that seat cannot tap Start again until this elapses. */
+export const WANT_START_COOLDOWN_MS = 3 * 60_000;
+/** Lobby: connected and idle this long (non-host) → kicked as away. */
+export const LOBBY_AFK_MS = 5 * 60_000;
 /** Pause between a player's table-chat messages — one line, then wait. */
 export const CHAT_SLOWMODE_MS = 7_000;
 

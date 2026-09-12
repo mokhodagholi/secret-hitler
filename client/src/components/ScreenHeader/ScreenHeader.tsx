@@ -14,7 +14,7 @@ export interface ScreenHeaderProps {
 
 /** Inner-screen header: back button, small logo, screen title, optional right action. */
 export function ScreenHeader(props: ScreenHeaderProps) {
-  const { nav, i18n, bale } = useApp();
+  const { nav, i18n, miniApp } = useApp();
 
   createEffect(() => {
     const override = props.onBack;
@@ -27,7 +27,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     <header
       classList={{ [styles.header]: true, [styles.warm]: props.tone === 'warm' }}
     >
-      <Show when={!bale.usesNativeBack()}>
+      <Show when={!miniApp.usesNativeBack()}>
         <button
           type="button"
           class={styles.back}

@@ -2,6 +2,7 @@
 export interface ProfileIdentity {
   clientId?: string;
   baleUserId?: string;
+  telegramUserId?: string;
 }
 
 /**

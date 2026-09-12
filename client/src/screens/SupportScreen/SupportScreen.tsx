@@ -12,6 +12,7 @@ import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { Dropdown } from '../../components/Dropdown/Dropdown';
 import { TextArea } from '../../components/TextArea/TextArea';
 import { Button } from '../../components/Button/Button';
+import { KeyboardForm } from '../../components/KeyboardForm/KeyboardForm';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import type { MessageKey } from '../../i18n';
 import styles from './SupportScreen.module.scss';
@@ -34,7 +35,7 @@ const NETWORK_ERROR_KEYS: Record<
 };
 
 export function SupportScreen() {
-  const { i18n, settings, bale, nav } = useApp();
+  const { i18n, settings, miniApp, nav } = useApp();
   const { formatMessage } = i18n;
 
   const [topic, setTopic] = createSignal<SupportTopic | null>(null);
@@ -78,7 +79,7 @@ export function SupportScreen() {
         topic: chosen,
         description: description(),
         clientId: settings.settings.profileId,
-        initData: bale.initData(),
+        initData: miniApp.initData(),
       });
       setSent(true);
     } catch (error) {
@@ -106,35 +107,37 @@ export function SupportScreen() {
   return (
     <Screen>
       <ScreenHeader title={formatMessage('support.title')} />
-      <p class={styles.intro}>{formatMessage('support.intro')}</p>
-      <Dropdown
-        label={formatMessage('support.topic')}
-        value={topic()}
-        options={options()}
-        placeholder={formatMessage('support.topicPlaceholder')}
-        error={topicErrorText()}
-        onChange={pickTopic}
-        disabled={submitting()}
-      />
-      <TextArea
-        label={formatMessage('support.description')}
-        value={description()}
-        onInput={writeDescription}
-        placeholder={formatMessage('support.descriptionPlaceholder')}
-        maxLength={SUPPORT_DESCRIPTION_MAX}
-        count={formatMessage('support.count', {
-          current: description().length,
-          limit: SUPPORT_DESCRIPTION_MAX,
-        })}
-        error={descriptionErrorText()}
-        disabled={submitting()}
-      />
-      <Show when={formError()}>
-        {(key) => <p class={styles.error}>{formatMessage(key())}</p>}
-      </Show>
-      <Button onClick={() => void send()} disabled={submitting()}>
-        {formatMessage('support.send')}
-      </Button>
+      <KeyboardForm class={styles.form}>
+        <p class={styles.intro}>{formatMessage('support.intro')}</p>
+        <Dropdown
+          label={formatMessage('support.topic')}
+          value={topic()}
+          options={options()}
+          placeholder={formatMessage('support.topicPlaceholder')}
+          error={topicErrorText()}
+          onChange={pickTopic}
+          disabled={submitting()}
+        />
+        <TextArea
+          label={formatMessage('support.description')}
+          value={description()}
+          onInput={writeDescription}
+          placeholder={formatMessage('support.descriptionPlaceholder')}
+          maxLength={SUPPORT_DESCRIPTION_MAX}
+          count={formatMessage('support.count', {
+            current: description().length,
+            limit: SUPPORT_DESCRIPTION_MAX,
+          })}
+          error={descriptionErrorText()}
+          disabled={submitting()}
+        />
+        <Show when={formError()}>
+          {(key) => <p class={styles.error}>{formatMessage(key())}</p>}
+        </Show>
+        <Button onClick={() => void send()} disabled={submitting()}>
+          {formatMessage('support.send')}
+        </Button>
+      </KeyboardForm>
       <ConfirmDialog
         open={sent()}
         message={formatMessage('support.thanks')}

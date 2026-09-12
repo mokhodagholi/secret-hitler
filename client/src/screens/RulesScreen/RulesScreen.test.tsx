@@ -32,25 +32,57 @@ describe('RulesScreen', () => {
     renderWithApp(() => <RulesRoutes />, harness);
 
     expect(screen.getByRole('button', { name: fa.rules.overview })).toBeTruthy();
+    expect(screen.getByRole('button', { name: fa.rules.kit.title })).toBeTruthy();
+    expect(screen.getByRole('button', { name: fa.rules.laws.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.setup })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.roundTitle })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.failTitle })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.winningTitle })).toBeTruthy();
-    expect(screen.queryByText(/راز هیتلر یه بازی نقش/)).toBeNull();
+    expect(screen.queryByText(fa.rules.whatIsThis.lead)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: fa.rules.overview }));
-    expect(harness.services.nav.screen()).toBe('rules-overview');
+    expect(harness.services.nav.screen()).toBe('rules-what-is-this');
     expect(screen.getByRole('heading', { name: fa.rules.overview })).toBeTruthy();
-    expect(screen.getByText(/راز هیتلر یه بازی نقش/)).toBeTruthy();
+    expect(screen.getByText(fa.rules.whatIsThis.lead)).toBeTruthy();
+    expect(screen.getByText(fa.rules.whatIsThis.liberalTeam)).toBeTruthy();
+    expect(screen.queryByText(fa.rules.kit.policy.title)).toBeNull();
+  });
+
+  it('Should show the real table pieces on the kit lesson', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.rules.kit.title }));
+    expect(harness.services.nav.screen()).toBe('rules-contents');
+    expect(screen.getByRole('heading', { name: en.rules.kit.title })).toBeTruthy();
+    expect(screen.getByText(en.rules.kit.vote.body)).toBeTruthy();
+    expect(screen.getByText(en.rules.kit.boards.body)).toBeTruthy();
+    expect(screen.getByText(en.game.president)).toBeTruthy();
+    expect(screen.getByText(en.game.chancellor)).toBeTruthy();
+    expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
+    expect(screen.queryByText('Components')).toBeNull();
+  });
+
+  it('Should teach how laws are drawn, burned, and reshuffled', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.rules.laws.title }));
+    expect(harness.services.nav.screen()).toBe('rules-laws');
+    expect(screen.getByText(en.rules.laws.what)).toBeTruthy();
+    expect(screen.getByText(en.rules.laws.draw)).toBeTruthy();
+    expect(screen.getByText(en.rules.laws.empty)).toBeTruthy();
+    expect(screen.getByText(en.rules.laws.win)).toBeTruthy();
   });
 
   it('Should keep the hub to topic cards until one is opened', () => {
     const harness = buildHarness();
     renderWithApp(() => <RulesScreen />, harness);
 
-    expect(screen.getByText(en.rules.pick)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.rules.overview })).toBeTruthy();
-    expect(screen.queryByText(en.rules.overviewBody)).toBeNull();
+    expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
     expect(screen.queryByText(en.rules.setupBody)).toBeNull();
     expect(screen.queryByText(en.rules.failBody)).toBeNull();
   });
@@ -61,11 +93,11 @@ describe('RulesScreen', () => {
     renderWithApp(() => <RulesRoutes />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: en.rules.failTitle }));
-    expect(harness.services.nav.screen()).toBe('rules-fail');
+    expect(harness.services.nav.screen()).toBe('rules-failed-government');
     expect(screen.getByRole('heading', { name: en.rules.failTitle })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: en.rules.title })).toBeNull();
     expect(screen.getByText(en.rules.failBody)).toBeTruthy();
-    expect(screen.queryByText(en.rules.overviewBody)).toBeNull();
+    expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
     expect(screen.queryByRole('button', { name: en.rules.setup })).toBeNull();
   });
 
@@ -75,12 +107,12 @@ describe('RulesScreen', () => {
     renderWithApp(() => <RulesRoutes />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: en.rules.overview }));
-    expect(screen.getByText(en.rules.overviewBody)).toBeTruthy();
+    expect(screen.getByText(en.rules.whatIsThis.lead)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
     expect(harness.services.nav.screen()).toBe('rules');
     expect(screen.getByRole('button', { name: en.rules.overview })).toBeTruthy();
-    expect(screen.queryByText(en.rules.overviewBody)).toBeNull();
+    expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
   });
 
   it('Should replace the lesson when walking to the next topic so back still hits the hub', () => {
@@ -90,9 +122,9 @@ describe('RulesScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.rules.overview }));
     fireEvent.click(screen.getByRole('button', { name: en.common.next }));
-    expect(harness.services.nav.screen()).toBe('rules-setup');
-    expect(screen.getByText(en.rules.setupBody)).toBeTruthy();
-    expect(screen.queryByText(en.rules.overviewBody)).toBeNull();
+    expect(harness.services.nav.screen()).toBe('rules-contents');
+    expect(screen.getByText(en.rules.kit.policy.title)).toBeTruthy();
+    expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
     expect(harness.services.nav.screen()).toBe('rules');
@@ -114,10 +146,50 @@ describe('RulesScreen', () => {
     renderWithApp(() => <RulesRoutes />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: fa.rules.roundTitle }));
-    expect(screen.getByText('۱')).toBeTruthy();
-    expect(screen.getByText('۲')).toBeTruthy();
-    expect(screen.getByText('۳')).toBeTruthy();
-    expect(screen.getByText('۴')).toBeTruthy();
+    expect(screen.getAllByText('۱').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('۲').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('۳').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('۴').length).toBeGreaterThan(0);
     expect(screen.queryByText('1')).toBeNull();
+  });
+
+  it('Should show a coloured mix for each table size on setup', () => {
+    const harness = buildHarness();
+    harness.services.settings.set('language', 'fa');
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: fa.rules.setup }));
+    expect(screen.getByText(fa.rules.setupMix.players.replace('{count}', '۵'))).toBeTruthy();
+    expect(screen.getAllByText(fa.rules.setupMix.nightSmall).length).toBe(2);
+    expect(screen.getAllByText(fa.rules.setupMix.nightLarge).length).toBe(4);
+  });
+
+  it('Should show the election tracker on a failed government', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.rules.failTitle }));
+    expect(screen.getByText(en.rules.failTracker.first)).toBeTruthy();
+    expect(screen.getByText(en.rules.failTracker.chaos)).toBeTruthy();
+    expect(screen.getByText('1')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText(en.rules.failBody)).toBeTruthy();
+  });
+
+  it('Should teach winning with table scenarios, not just the two clocks', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.rules.winningTitle }));
+    expect(screen.getByText(/Those are the clocks/)).toBeTruthy();
+    expect(screen.getByText(en.rules.winning.liberals)).toBeTruthy();
+    expect(screen.getByText(en.rules.winning.hitlerChancellor.title)).toBeTruthy();
+    expect(screen.getByText(en.rules.winning.execution.body)).toBeTruthy();
+    expect(screen.getByText(en.rules.winning.trustedHitler.title)).toBeTruthy();
+    expect(screen.getByText(en.rules.winning.chaos.title)).toBeTruthy();
+    expect(screen.getByText(en.rules.rememberBody)).toBeTruthy();
   });
 });

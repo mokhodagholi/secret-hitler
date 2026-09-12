@@ -16,6 +16,7 @@ export const ERROR_MESSAGE_KEYS: Record<ServerErrorCode | 'NETWORK', MessageKey>
   PLAYERS_NOT_READY: 'error.PLAYERS_NOT_READY',
   RATE_LIMITED: 'error.RATE_LIMITED',
   INVALID_ACTION: 'error.INVALID_ACTION',
+  BANNED: 'error.BANNED',
   NETWORK: 'error.NETWORK',
 };
 

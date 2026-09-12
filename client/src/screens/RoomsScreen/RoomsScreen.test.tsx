@@ -26,6 +26,7 @@ describe('RoomsScreen', () => {
     const name = screen.getByLabelText(en.createRoom.roomName);
     expect(name.getAttribute('autocomplete')).toBe('off');
     expect(name.getAttribute('enterkeyhint')).toBe('go');
+    expect(name.closest('[data-keyboard-form]')).toBeTruthy();
 
     const password = screen.getByLabelText(en.createRoom.password);
     expect(password.getAttribute('autocomplete')).toBe('new-password');
@@ -45,7 +46,7 @@ describe('RoomsScreen', () => {
 
   it('Should hide the in-app back arrow when Bale owns the back chrome', () => {
     const harness = buildHarness();
-    harness.services.bale = new NativeBackBale();
+    harness.services.miniApp = new NativeBackBale();
     renderWithApp(() => <RoomsScreen />, harness);
 
     expect(screen.getByRole('heading', { name: en.play.title })).toBeTruthy();
@@ -160,6 +161,35 @@ describe('RoomsScreen', () => {
     expect(harness.services.nav.screen()).toBe('play');
     expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
     expect(screen.getByRole('tab', { name: en.rooms.joinTab })).toBeTruthy();
+  });
+
+  it('Should pin the public table first on Join', async () => {
+    const harness = buildHarness();
+    harness.services.game.listRooms = async () => [
+      {
+        id: 'hosted',
+        code: 'ABC123',
+        name: 'Friday',
+        playerCount: 2,
+        maxPlayers: 10,
+        hasPassword: false,
+        phase: Phase.Lobby,
+      },
+      {
+        id: 'public',
+        code: 'PUB001',
+        name: 'Untitled',
+        playerCount: 0,
+        maxPlayers: 10,
+        hasPassword: false,
+        phase: Phase.Lobby,
+        kind: 'public',
+      },
+    ];
+    renderWithApp(() => <RoomsScreen initialTab="join" />, harness);
+    await waitFor(() => expect(screen.getByText(en.rooms.publicName)).toBeTruthy());
+    const names = screen.getAllByText(/Public table|Friday/).map((node) => node.textContent);
+    expect(names[0]).toContain(en.rooms.publicName);
   });
 
   it('Should seat Find Game in the chosen lobby, not the previous table', async () => {

@@ -2,22 +2,16 @@ import styles from './Toggle.module.scss';
 
 export interface ToggleProps {
   checked: boolean;
-  onChange: (value: boolean) => void;
-  label?: string;
 }
 
-/** Pill switch used by the on/off settings rows. */
+/** Visual pill. The setting row is the control that flips it. */
 export function Toggle(props: ToggleProps) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={props.checked}
-      aria-label={props.label}
+    <span
       classList={{ [styles.track]: true, [styles.on]: props.checked }}
-      onClick={() => props.onChange(!props.checked)}
+      aria-hidden="true"
     >
       <span class={styles.thumb} />
-    </button>
+    </span>
   );
 }

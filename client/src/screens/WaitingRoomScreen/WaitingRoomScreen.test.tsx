@@ -223,21 +223,9 @@ describe('WaitingRoomScreen', () => {
     expect(guest.querySelector('[dir="ltr"]')?.getAttribute('dir')).toBe('ltr');
   });
 
-  it('Should pack lobby portraits only when the room holds ten', () => {
+  it('Should keep an empty seat for every open place in the room', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);
-    harness.pushState(
-      makeView({
-        hostId: 'you',
-        maxPlayers: 10,
-        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
-      }),
-    );
-    expect(screen.getByRole('list').className).toMatch(/seatsPacked/);
-    expect(screen.getByRole('listitem', { name: 'You' }).className).toMatch(
-      /compact/,
-    );
-
     harness.pushState(
       makeView({
         hostId: 'you',
@@ -245,10 +233,12 @@ describe('WaitingRoomScreen', () => {
         players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
       }),
     );
-    expect(screen.getByRole('list').className).not.toMatch(/seatsPacked/);
-    expect(screen.getByRole('listitem', { name: 'You' }).className).not.toMatch(
-      /compact/,
-    );
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(7);
+    expect(screen.getByRole('listitem', { name: 'You' })).toBeTruthy();
+    expect(
+      screen.getAllByRole('listitem', { name: en.waiting.waitingForPlayers }),
+    ).toHaveLength(6);
   });
 
   it('Should ask before leaving the room when the shared back action fires', () => {
@@ -261,6 +251,9 @@ describe('WaitingRoomScreen', () => {
         players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
       }),
     );
+
+    expect(screen.getByText(en.tip.chaos)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.leaveDialog.confirm })).toBeNull();
 
     harness.services.nav.requestBack();
     expect(screen.getByText(en.leaveDialog.hostMessage)).toBeTruthy();
@@ -284,5 +277,162 @@ describe('WaitingRoomScreen', () => {
       makeView({ hostId: 'you', phase: Phase.Nomination, roomId: 'other-room' }),
     );
     expect(harness.services.nav.screen()).not.toBe('game');
+  });
+
+  it('Should show Start without Ready on the public table', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        kind: 'public',
+        hostId: '',
+        you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, ready: false }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: false }),
+        ],
+      }),
+    );
+
+    expect(screen.queryByRole('button', { name: "I'm Ready" })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy();
+    expect(screen.getByText(en.waiting.startHint)).toBeTruthy();
+  });
+
+  it('Should send want-start when a public sitter taps Start', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        kind: 'public',
+        hostId: '',
+        you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, ready: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: true }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    expect(harness.socket.lastSent('player:wantStart')).toEqual({
+      type: 'player:wantStart',
+    });
+  });
+
+  it('Should disable Start while the public cooldown is running', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        kind: 'public',
+        hostId: '',
+        you: {
+          id: 'you',
+          role: null,
+          vote: null,
+          policies: [],
+          peek: [],
+          investigation: null,
+          wantStartCooldownUntil: Date.now() + 180_000,
+        },
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0 })],
+      }),
+    );
+
+    const start = screen.getByRole('button', { name: 'Start' });
+    expect((start as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/You can tap Start again in 3 minutes/)).toBeTruthy();
+  });
+
+  it('Should force holdouts to tap Start when half the table already has', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        kind: 'public',
+        hostId: '',
+        startChoice: { startedAt: 1, endsAt: Date.now() + 20_000 },
+        you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
+        players: [
+          makePlayer({ id: 'ben', name: 'Ben', seat: 0, ready: true, wantsStart: true }),
+          makePlayer({ id: 'you', name: 'You', seat: 1, ready: true, wantsStart: false }),
+        ],
+      }),
+    );
+
+    expect(screen.getByText(en.waiting.startChoiceHoldout)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    expect(harness.socket.lastSent('player:wantStart')).toEqual({
+      type: 'player:wantStart',
+    });
+  });
+
+  it('Should open a kick vote from a public-table seat', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        kind: 'public',
+        hostId: '',
+        you: {
+          id: 'you',
+          role: null,
+          vote: null,
+          policies: [],
+          peek: [],
+          investigation: null,
+          canRequestKick: true,
+        },
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0 }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1 }),
+          makePlayer({ id: 'cal', name: 'Cal', seat: 2 }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('listitem', { name: 'Ben' }));
+    fireEvent.click(screen.getByRole('button', { name: en.game.playerMenu.report }));
+    fireEvent.click(screen.getByRole('button', { name: en.game.kickVote.request }));
+    expect(harness.socket.lastSent('kick:request')).toEqual({
+      type: 'kick:request',
+      playerId: 'ben',
+    });
+  });
+
+  it('Should show the kick-vote overlay in the public waiting room', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        kind: 'public',
+        hostId: '',
+        you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0 }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1 }),
+          makePlayer({ id: 'cal', name: 'Cal', seat: 2 }),
+        ],
+        kickVote: {
+          requesterId: 'cal',
+          targetId: 'ben',
+          startedAt: 1,
+          endsAt: Date.now() + 30_000,
+          votedCount: 1,
+          voterCount: 2,
+          needed: 2,
+          yourVote: null,
+          votedIds: ['cal'],
+        },
+      }),
+    );
+
+    expect(screen.getByRole('dialog', { name: en.game.kickVote.title })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.voteJa }));
+    expect(harness.socket.lastSent('kick:vote')).toEqual({
+      type: 'kick:vote',
+      agree: true,
+    });
   });
 });

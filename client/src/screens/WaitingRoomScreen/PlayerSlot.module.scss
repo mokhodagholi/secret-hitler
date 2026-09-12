@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 120px;
+  width: var(--slot-size, 136px);
   padding: 0;
   background: none;
   border: none;
@@ -26,7 +26,7 @@
 
   .badge,
   .name {
-    font-size: 0.64rem;
+    font-size: 0.7rem;
   }
 }
 
@@ -78,6 +78,18 @@
     drop-shadow(0 0 7px rgba(232, 90, 60, 0.8));
 }
 
+.paperWantsStart {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 0 3px #d4a017)
+    drop-shadow(0 0 8px rgba(212, 160, 23, 0.85));
+}
+
+.paperYou.paperWantsStart {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 0 3px #4fd0e8)
+    drop-shadow(0 0 8px rgba(212, 160, 23, 0.85));
+}
+
 .paperFrame {
   position: absolute;
   inset: 0;
@@ -116,7 +128,7 @@
 .badge {
   flex-shrink: 0;
   color: $gold-bright;
-  font-size: 0.82rem;
+  font-size: clamp(0.62rem, calc(var(--slot-size, 136px) * 0.12), 0.82rem);
   font-weight: 800;
   line-height: 1.2;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
@@ -125,7 +137,7 @@
 .name {
   min-width: 0;
   color: $cream;
-  font-size: 0.82rem;
+  font-size: clamp(0.62rem, calc(var(--slot-size, 136px) * 0.12), 0.82rem);
   font-weight: 800;
   line-height: 1.2;
   overflow: hidden;

@@ -15,21 +15,43 @@ type ControlProps =
 
 export type SettingRowProps = BaseProps & ControlProps;
 
+function isInteractive(props: SettingRowProps): boolean {
+  return (
+    props.kind === 'toggle' ||
+    props.kind === 'link' ||
+    (props.kind === 'value' && props.onClick != null)
+  );
+}
+
+function activate(props: SettingRowProps) {
+  if (props.kind === 'toggle') props.onChange(!props.checked);
+  else props.onClick?.();
+}
+
 /**
- * One card row on the Settings screen. Renders a gold icon, label, and a
- * trailing control that is either a toggle, a value (chevron only when the
- * row can cycle or open), or a chevron.
+ * One card row on the Settings screen. The whole row is the tap target —
+ * not only the trailing switch or chevron.
  */
 export function SettingRow(props: SettingRowProps) {
-  const interactive = () =>
-    props.kind === 'link' || (props.kind === 'value' && props.onClick != null);
+  const interactive = () => isInteractive(props);
   return (
     <div
       classList={{ [styles.row]: true, [styles.tappable]: interactive() }}
-      role={interactive() ? 'button' : undefined}
+      role={
+        props.kind === 'toggle' ? 'switch' : interactive() ? 'button' : undefined
+      }
+      aria-checked={props.kind === 'toggle' ? props.checked : undefined}
+      aria-label={interactive() ? props.label : undefined}
       tabindex={interactive() ? 0 : undefined}
       onClick={() => {
-        if (props.kind === 'value' || props.kind === 'link') props.onClick?.();
+        if (interactive()) activate(props);
+      }}
+      onKeyDown={(event) => {
+        if (!interactive()) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activate(props);
+        }
       }}
     >
       <span class={styles.icon}>
@@ -44,13 +66,7 @@ export function SettingRow(props: SettingRowProps) {
 function renderControl(props: SettingRowProps): JSX.Element {
   switch (props.kind) {
     case 'toggle':
-      return (
-        <Toggle
-          checked={props.checked}
-          onChange={props.onChange}
-          label={props.label}
-        />
-      );
+      return <Toggle checked={props.checked} />;
     case 'value':
       return (
         <>

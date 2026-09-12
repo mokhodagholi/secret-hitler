@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@rstest/core';
 import {
   DEFAULT_BALE_BOT_USERNAME,
+  DEFAULT_TELEGRAM_BOT_USERNAME,
+  DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME,
   isLocalInviteHost,
   miniAppStartLink,
   roomInviteLink,
@@ -20,6 +22,24 @@ describe('miniAppStartLink', () => {
     expect(miniAppStartLink(DEFAULT_BALE_BOT_USERNAME, 'ABC123')).not.toContain(
       '/join/',
     );
+  });
+
+  it('Should open the Telegram mini-app with the BotFather short name', () => {
+    expect(
+      miniAppStartLink({
+        botUsername: DEFAULT_TELEGRAM_BOT_USERNAME,
+        startApp: 'ABC123',
+        platform: 'telegram',
+      }),
+    ).toBe(`https://t.me/secret_hitler_bot/${DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME}?startapp=ABC123`);
+    expect(
+      miniAppStartLink({
+        botUsername: '@secret_hitler_bot',
+        startApp: 'ABC123',
+        platform: 'telegram',
+        telegramShortName: 'play',
+      }),
+    ).toBe('https://t.me/secret_hitler_bot/play?startapp=ABC123');
   });
 });
 
@@ -56,5 +76,13 @@ describe('roomInviteLink', () => {
         hostname: 'mrfantastic.ir',
       }),
     ).toBe('https://ble.ir/secret_hitler_bot?startapp=ABC123');
+    expect(
+      roomInviteLink({
+        code: 'ABC123',
+        origin: 'https://mrfantastic.ir',
+        hostname: 'mrfantastic.ir',
+        platform: 'telegram',
+      }),
+    ).toBe(`https://t.me/secret_hitler_bot/${DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME}?startapp=ABC123`);
   });
 });

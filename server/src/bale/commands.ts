@@ -1,4 +1,4 @@
-import { Phase, miniAppStartLink, type RoomSummary } from '@secret-hitler/shared';
+import { Phase, miniAppStartLink, type MessengerKind, type RoomSummary } from '@secret-hitler/shared';
 import type { BaleSeat } from './BaleSeatIndex';
 
 export interface BotCommandContext {
@@ -11,6 +11,8 @@ export interface BotCommandContext {
   seated: BaleSeat | undefined;
   /** Bot @username, e.g. `@secret_hitler_bot`. */
   botUsername: string;
+  /** Mini-app deep link for this bot. Defaults to Bale `ble.ir`. */
+  startLink?: (startApp?: string) => string;
 }
 
 export interface BotReply {
@@ -36,15 +38,42 @@ const KNOWN_COMMANDS = new Set([
 ]);
 
 /**
- * Bale `ble.ir` mini-app link. Telegram `t.me` would be swapped in here later.
+ * Mini-app deep link for this bot. Defaults to Bale when `startLink` is omitted
+ * so existing command tests stay on `ble.ir`.
  */
 export function baleStartLink(botUsername: string, startApp = ''): string {
   return miniAppStartLink(botUsername, startApp);
 }
 
+export function messengerStartLink(params: {
+  botUsername: string;
+  startApp?: string;
+  platform?: MessengerKind;
+  telegramShortName?: string;
+}): string {
+  return miniAppStartLink(params);
+}
+
+function linkOf(
+  ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>,
+  startApp = '',
+): string {
+  return ctx.startLink ? ctx.startLink(startApp) : baleStartLink(ctx.botUsername, startApp);
+}
+
 /** Bale always parses Markdown; unmatched `_` in a URL or `/find_game` makes sendMessage fail. */
 export function playMarkdownLink(botUsername: string, code?: string): string {
   return `[بازی کن](${baleStartLink(botUsername, code)})`;
+}
+
+/** Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail. */
+export function escapeBaleMarkdown(text: string): string {
+  return text.replace(/([_*`\[\]])/g, '\\$1');
+}
+
+/** Slash command as Bale Markdown. `_` must be escaped or sendMessage fails. */
+export function markdownSlashCommand(name: string): string {
+  return `/${escapeBaleMarkdown(name)}`;
 }
 
 /** Normalize `/find-game@bot args` or a bare known command → `{ command: 'find_game', arg }`. */
@@ -66,41 +95,55 @@ export function playKeyboard(botUsername: string, code?: string) {
   };
 }
 
+function playKeyboardFor(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>, code?: string) {
+  return {
+    inline_keyboard: [[{ text: 'بازی کن', url: linkOf(ctx, code) }]],
+  };
+}
+
+function playMarkdownFor(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>, code?: string) {
+  return `[بازی کن](${linkOf(ctx, code)})`;
+}
+
+function roomDisplayName(room: RoomSummary): string {
+  return room.kind === 'public' ? 'میز عمومی' : room.name;
+}
+
 function formatLobby(room: RoomSummary): string {
   const lock = room.hasPassword ? ' 🔒' : '';
-  return `${room.name}${lock} — ${room.playerCount}/${room.maxPlayers} — کد ${room.code}`;
+  return `${roomDisplayName(room)}${lock} — ${room.playerCount}/${room.maxPlayers} — کد ${room.code}`;
 }
 
 function formatGame(room: RoomSummary): string {
   const status = room.phase === Phase.Lobby ? 'اتاق انتظار' : 'در حال بازی';
   const lock = room.hasPassword ? ' 🔒' : '';
-  return `${room.name}${lock} — ${status} — ${room.playerCount}/${room.maxPlayers} — کد ${room.code}`;
+  return `${roomDisplayName(room)}${lock} — ${status} — ${room.playerCount}/${room.maxPlayers} — کد ${room.code}`;
 }
 
-function roomButtons(botUsername: string, rooms: RoomSummary[]) {
+function roomButtons(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>, rooms: RoomSummary[]) {
   return {
     inline_keyboard: rooms.slice(0, 8).map((room) => [
-      { text: `ورود ${room.code}`, url: baleStartLink(botUsername, room.code) },
+      { text: `ورود ${room.code}`, url: linkOf(ctx, room.code) },
     ]),
   };
 }
 
-function startReply(botUsername: string): BotReply {
+function startReply(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>): BotReply {
   return {
     text: [
       'به راز هیتلر خوش اومدید.',
       '',
       'برای شروع، دکمهٔ پایین رو بزن. اگه لینک دعوت داری، همون رو باز کن تا مستقیم بری سر میز.',
       '',
-      '/find-game — اتاق باز پیدا کن',
+      `${markdownSlashCommand('find_game')} — اتاق باز پیدا کن`,
       '/games — بازی‌های در جریان',
       '/join CODE — با کد اتاق بیا تو',
       '/invite — لینک دعوت دوستات',
       '/create — تو گروه میز باز کن',
       '',
-      playMarkdownLink(botUsername),
+      playMarkdownFor(ctx),
     ].join('\n'),
-    reply_markup: playKeyboard(botUsername),
+    reply_markup: playKeyboardFor(ctx),
   };
 }
 
@@ -108,27 +151,27 @@ function findGameReply(ctx: BotCommandContext): BotReply {
   const open = ctx.lobbies.filter((room) => room.playerCount < room.maxPlayers);
   if (open.length === 0) {
     return {
-      text: ['الان اتاق بازی نیست. یکی بساز:', playMarkdownLink(ctx.botUsername)].join('\n'),
-      reply_markup: playKeyboard(ctx.botUsername),
+      text: ['الان اتاق بازی نیست. یکی بساز:', playMarkdownFor(ctx)].join('\n'),
+      reply_markup: playKeyboardFor(ctx),
     };
   }
   return {
     text: ['اتاق‌های باز:', '', ...open.map(formatLobby)].join('\n'),
-    reply_markup: roomButtons(ctx.botUsername, open),
+    reply_markup: roomButtons(ctx, open),
   };
 }
 
 function gamesReply(ctx: BotCommandContext): BotReply {
   if (ctx.games.length === 0) {
     return {
-      text: ['الان هیچ بازی‌ای در جریان نیست. یکی بساز:', playMarkdownLink(ctx.botUsername)].join('\n'),
-      reply_markup: playKeyboard(ctx.botUsername),
+      text: ['الان هیچ بازی‌ای در جریان نیست. یکی بساز:', playMarkdownFor(ctx)].join('\n'),
+      reply_markup: playKeyboardFor(ctx),
     };
   }
   return {
     text: ['بازی‌های در جریان:', '', ...ctx.games.map(formatGame)].join('\n'),
     reply_markup: roomButtons(
-      ctx.botUsername,
+      ctx,
       ctx.games.filter((room) => room.phase === Phase.Lobby && room.playerCount < room.maxPlayers),
     ),
   };
@@ -141,8 +184,8 @@ function joinReply(ctx: BotCommandContext, arg: string): BotReply {
       text: 'کد اتاق رو بعد از دستور بنویس، مثلاً:\n/join ABC123',
       reply_markup:
         ctx.lobbies.length > 0
-          ? roomButtons(ctx.botUsername, ctx.lobbies)
-          : playKeyboard(ctx.botUsername),
+          ? roomButtons(ctx, ctx.lobbies)
+          : playKeyboardFor(ctx),
     };
   }
   const room = ctx.games.find((item) => item.code === code);
@@ -157,8 +200,8 @@ function joinReply(ctx: BotCommandContext, arg: string): BotReply {
   }
   const lock = room.hasPassword ? '\nاین اتاق رمز داره؛ تو بازی ازت می‌پرسه.' : '';
   return {
-    text: `ورود به ${room.name} — کد ${code}${lock}\n${playMarkdownLink(ctx.botUsername, code)}`,
-    reply_markup: playKeyboard(ctx.botUsername, code),
+    text: `ورود به ${room.name} — کد ${code}${lock}\n${playMarkdownFor(ctx, code)}`,
+    reply_markup: playKeyboardFor(ctx, code),
   };
 }
 
@@ -167,12 +210,12 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   if (!ROOM_CODE.test(code)) {
     return {
       text: 'اول تو بازی یه اتاق بساز یا برو تو یکی، بعد /invite بزن.\nیا کد رو بنویس: /invite ABC123',
-      reply_markup: playKeyboard(ctx.botUsername),
+      reply_markup: playKeyboardFor(ctx),
     };
   }
   const room = ctx.games.find((item) => item.code === code);
   const name = room?.name ?? ctx.seated?.roomName ?? code;
-  const link = baleStartLink(ctx.botUsername, code);
+  const link = linkOf(ctx, code);
   return {
     text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}\n[ورود به اتاق](${link})`,
     reply_markup: {
@@ -201,8 +244,9 @@ export function createGroupPostedReply(params: {
   creatorName: string;
   code: string;
   botUsername: string;
+  startLink?: (startApp?: string) => string;
 }): BotReply {
-  const link = baleStartLink(params.botUsername, params.code);
+  const link = linkOf(params, params.code);
   return {
     text: [
       'اتاق ساخته شد.',
@@ -213,6 +257,14 @@ export function createGroupPostedReply(params: {
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
     },
+  };
+}
+
+/** Replaces the group `/create` post when the host leaves and the table dies. */
+export function createGroupClosedReply(params: { creatorName: string }): BotReply {
+  return {
+    text: ['میزبان رفت.', `میز ${params.creatorName} بسته شد.`].join('\n'),
+    reply_markup: { inline_keyboard: [] },
   };
 }
 
@@ -252,7 +304,7 @@ export function handleBotText(ctx: BotCommandContext): BotReply {
   switch (command) {
     case 'start':
       if (arg && ROOM_CODE.test(arg)) return joinReply(ctx, arg);
-      return startReply(ctx.botUsername);
+      return startReply(ctx);
     case 'find_game':
     case 'findgame':
       return findGameReply(ctx);
@@ -266,9 +318,9 @@ export function handleBotText(ctx: BotCommandContext): BotReply {
     case 'create':
       return createInPrivateReply();
     case 'help':
-      return startReply(ctx.botUsername);
+      return startReply(ctx);
     default:
-      return startReply(ctx.botUsername);
+      return startReply(ctx);
   }
 }
 

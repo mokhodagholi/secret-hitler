@@ -10,7 +10,8 @@ The catalogs are [`client/src/i18n/locales/fa.ts`](../client/src/i18n/locales/fa
 splash plaques in [`client/src/screens/SplashScreen/quotes.ts`](../client/src/screens/SplashScreen/quotes.ts),
 Ravi in [`docs/ravi-script.md`](./ravi-script.md),
 changelog `fa` in [`client/src/changelog/releases.json`](../client/src/changelog/releases.json),
-and Bale replies in [`server/src/bale/commands.ts`](../server/src/bale/commands.ts).
+and Bale replies in [`server/src/bale/commands.ts`](../server/src/bale/commands.ts)
+(same copy on Telegram).
 
 ## Write it in Persian. Do not translate.
 
@@ -34,7 +35,7 @@ One language. Four places it sits. Do not mix them in one string.
 | **میز** | Spoken Iranian Persian (گفتاری). Short. Warm. | «شما» | Game UI, rules, tips, Ravi subtitles, logs, dialogs |
 | **لوح** | Written Persian, dry, ironic, museum-plaque. Not chat. Not a textbook. | Third person (او) | Splash biography and attributed Hitler lines |
 | **اعلامیه** | Formal, friendly, of the table. | «شما» / «می‌توانید» | Changelog `fa` |
-| **بله** | Spoken, one-to-one with the bot. | «تو» | Bot replies in Bale |
+| **بله** | Spoken, one-to-one with the bot. | «تو» | Bot replies in Bale and Telegram |
 
 Settings labels, phase names, and error titles can be a bit tighter than
 table talk, but they still belong to **میز** — not to a government form.

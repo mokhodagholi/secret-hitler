@@ -20,6 +20,7 @@ import { BaleService } from '../src/services/BaleService';
 import { PrefetchService } from '../src/services/prefetch';
 import { FeatureFlagService } from '../src/services/FeatureFlagService';
 import { VoiceService } from '../src/services/VoiceService';
+import { KeyboardService } from '../src/services/KeyboardService';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -97,7 +98,7 @@ export function buildHarness(
   options: {
     seated?: boolean;
     initialPath?: string;
-    flags?: FeatureFlags;
+    flags?: Partial<FeatureFlags>;
     flagFetch?: typeof fetch;
   } = {},
 ): Harness {
@@ -120,7 +121,7 @@ export function buildHarness(
     sound: new SoundService(settings, prefetch),
     animation: new AnimationService(settings),
     ravi: new RaviService(settings, i18n, prefetch),
-    bale: new BaleService(),
+    miniApp: new BaleService(),
     prefetch,
     flags,
     voice: new VoiceService(
@@ -128,6 +129,7 @@ export function buildHarness(
       flags,
       settings,
     ),
+    keyboard: new KeyboardService(),
   };
   return {
     services,
@@ -152,6 +154,7 @@ export function makePlayer(overrides: Partial<PublicPlayer> = {}): PublicPlayer 
     isHost: false,
     connected: true,
     ready: false,
+    wantsStart: false,
     isAlive: true,
     isPresident: false,
     isChancellor: false,
@@ -177,7 +180,9 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     peek: [],
     investigation: null,
     canRequestKick: true,
+    wantStartCooldownUntil: null,
     ...overrides.you,
+    wantStartCooldownUntil: overrides.you?.wantStartCooldownUntil ?? null,
   };
   return {
     roomId: 'room-1',
@@ -187,6 +192,8 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     hostId: 'you',
     minPlayers: 3,
     maxPlayers: 10,
+    kind: 'hosted',
+    startChoice: null,
     players,
     board: {
       liberalPolicies: 0,

@@ -25,6 +25,7 @@ export type IconName =
   | 'capitol'
   | 'envelope'
   | 'cards'
+  | 'threeCards'
   | 'scroll'
   | 'skull'
   | 'door'
@@ -32,6 +33,9 @@ export type IconName =
   | 'share'
   | 'close'
   | 'hand'
+  | 'fist'
+  | 'voteFail'
+  | 'trophy'
   | 'smile'
   | 'mic'
   | 'micOff'
@@ -189,6 +193,37 @@ const glyphs: Record<IconName, () => JSX.Element> = {
     <>
       <rect x="3" y="5" width="12" height="16" rx="2" />
       <path d="M17 3h2a2 2 0 0 1 2 2v12" />
+    </>
+  ),
+  threeCards: () => (
+    <>
+      {/* Back-left sits lowest; its rim tucks under the card to the right. */}
+      <path d="M8 7.6H3A1.7 1.7 0 0 0 1.3 9.3v10.4A1.7 1.7 0 0 0 3 21.4h9" />
+      <path d="M13.2 4.8H8A1.7 1.7 0 0 0 6.3 6.5v10.4A1.7 1.7 0 0 0 8 18.6h9.2" />
+      <rect x="12.4" y="1.8" width="10.3" height="14.2" rx="1.7" fill="currentColor" />
+    </>
+  ),
+  voteFail: () => (
+    <>
+      <rect x="1.2" y="6.8" width="21.6" height="10.4" rx="2" />
+      <rect x="4" y="8.6" width="16" height="6.8" rx="1" />
+      <path d="M3.2 19.6 20.8 4.4" />
+    </>
+  ),
+  fist: () => (
+    <>
+      <path d="M7 13.6a1.45 1.45 0 0 1 2.5-1.2 1.55 1.55 0 0 1 3.05-.2 1.5 1.5 0 0 1 2.9.25 1.35 1.35 0 0 1 2.45.7V16.6A3.2 3.2 0 0 1 14.7 20.2H10.3A3.2 3.2 0 0 1 7 16.6z" />
+      <path d="M7 15.1c-2.1.25-3.6 1.6-3.6 3.4 0 1.5 1.2 2.8 3.2 3.15" />
+    </>
+  ),
+  trophy: () => (
+    <>
+      <path d="M8 4h8v6a4 4 0 0 1-8 0V4z" />
+      <path d="M8 6H5.5a3 3 0 0 0 3 4" />
+      <path d="M16 6h2.5a3 3 0 0 1-3 4" />
+      <path d="M12 14v3" />
+      <path d="M9 20h6" />
+      <path d="M10 17h4" />
     </>
   ),
   scroll: () => (

@@ -29,7 +29,15 @@ describe('parseClientMessage', () => {
       agree: true,
     });
     expect(parseClientMessage('{"type":"kick:vote","agree":"yes"}')).toBeNull();
-    for (const type of ['player:ready', 'player:unready', 'game:start', 'room:leave', 'ping']) {
+    for (const type of [
+      'player:ready',
+      'player:unready',
+      'player:wantStart',
+      'player:retractStart',
+      'game:start',
+      'room:leave',
+      'ping',
+    ]) {
       expect(parseClientMessage(JSON.stringify({ type }))).toEqual({ type });
     }
     expect(parseClientMessage('{"type":"voice:join"}')).toEqual({ type: 'voice:join' });

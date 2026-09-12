@@ -54,4 +54,18 @@ describe('submitSupport', () => {
       }),
     ).rejects.toMatchObject({ code: 'UNAVAILABLE' });
   });
+
+  it('Should map a failed delivery to UNAVAILABLE', async () => {
+    rs.spyOn(globalThis, 'fetch').mockImplementation(
+      () => Promise.resolve(new Response('{}', { status: 502 })),
+    );
+
+    await expect(
+      submitSupport({
+        topic: 'help',
+        description: 'the table froze',
+        clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      }),
+    ).rejects.toMatchObject({ code: 'UNAVAILABLE' });
+  });
 });

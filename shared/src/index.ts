@@ -37,7 +37,15 @@ export type { GamePhase, PhaseHost } from './engine/phases/GamePhase';
 export { MessageRouter } from './net/MessageRouter';
 export type { Tagged, MessageHandler } from './net/MessageRouter';
 export { parseClientMessage } from './net/clientMessages';
-export { DEFAULT_BALE_BOT_USERNAME, isLocalInviteHost, miniAppStartLink, roomInviteLink } from './net/miniAppLink';
+export {
+  DEFAULT_BALE_BOT_USERNAME,
+  DEFAULT_TELEGRAM_BOT_USERNAME,
+  DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME,
+  isLocalInviteHost,
+  miniAppStartLink,
+  roomInviteLink,
+} from './net/miniAppLink';
+export type { MiniAppStartLinkParams } from './net/miniAppLink';
 
 // Utilities
 export { TypedEmitter } from './util/TypedEmitter';

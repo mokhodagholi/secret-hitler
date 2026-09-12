@@ -1,4 +1,4 @@
-import { GameEngine, Room, RoomFactory, type RoomCreateArgs } from '@secret-hitler/shared';
+import { GameEngine, Phase, PUBLIC_TABLE_NAME, Room, RoomFactory, type RoomCreateArgs } from '@secret-hitler/shared';
 
 /**
  * Repository pattern — the single owner of the `roomId → { room, engine }`
@@ -56,16 +56,36 @@ export class RoomRepository {
   listPublic() {
     return [...this.rooms.values()]
       .map((e) => e.room.summary())
-      .filter((s) => s.phase === 'lobby');
+      .filter((s) => s.phase === 'lobby')
+      .sort(pinPublicFirst);
   }
 
   /** Every live room, including games already in progress. */
   listAll() {
-    return [...this.rooms.values()].map((e) => e.room.summary());
+    return [...this.rooms.values()].map((e) => e.room.summary()).sort(pinPublicFirst);
+  }
+
+  /**
+   * Create the evergreen Join lobby if none is waiting. Returns the new
+   * entry, or null when a lobby-phase public table already exists.
+   */
+  ensurePublicLobby(): RoomEntry | null {
+    const existing = [...this.rooms.values()].find(
+      (entry) => entry.room.options.kind === 'public' && entry.room.phase === Phase.Lobby,
+    );
+    if (existing) return null;
+    return this.create({ name: PUBLIC_TABLE_NAME, kind: 'public' });
   }
 }
 
 export interface RoomEntry {
   room: Room;
   engine: GameEngine;
+}
+
+function pinPublicFirst(
+  a: { kind?: 'public' },
+  b: { kind?: 'public' },
+): number {
+  return Number(b.kind === 'public') - Number(a.kind === 'public');
 }

@@ -12,7 +12,7 @@ export interface NavItem {
   screen: ScreenName;
 }
 
-/** Inner screens variant: Rules | Home | Settings */
+/** Inner screens variant: How to Play | Home | Settings */
 export const APP_NAV: NavItem[] = [
   { icon: 'book', labelKey: 'nav.rules', screen: 'rules' },
   { icon: 'home', labelKey: 'nav.home', screen: 'home' },

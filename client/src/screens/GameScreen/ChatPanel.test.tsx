@@ -309,7 +309,7 @@ describe('ChatPanel', () => {
     harness.socket.emit({
       type: 'authed',
       playerId: 'you',
-      flags: { voice: true },
+      flags: { ...DEFAULT_FLAGS, voice: true },
     });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: en.game.unmuteSelf })).toBeTruthy();

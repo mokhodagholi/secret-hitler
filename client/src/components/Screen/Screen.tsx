@@ -11,9 +11,8 @@ export interface ScreenProps {
 }
 
 /**
- * Page shell shared by every screen: phone-width column, navy gradient,
- * gold border frame with art-deco corner ornaments, scrollable content
- * area and an optional bottom navigation bar.
+ * Page shell shared by every screen: phone-width column, brown-gold
+ * gradient, scrollable content area and an optional bottom navigation bar.
  */
 export function Screen(props: ScreenProps) {
   const { animation } = useApp();

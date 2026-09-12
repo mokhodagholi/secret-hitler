@@ -1,12 +1,24 @@
 import { For, Match, Switch } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage, MessageKey } from '../../i18n';
-import { Icon, type IconName } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { SectionTitle } from '../../components/SectionTitle/SectionTitle';
-import { ComponentCard, type ComponentCardProps } from './ComponentCard';
+import {
+  PARTY_FACE,
+  POLICY_FACE,
+  ROLE_FACES,
+  VOTE_FACE,
+} from '../../assets/cards';
+import liberalBoard from '../../assets/boards/liberal.png';
+import fascistBoard from '../../assets/boards/fascist.png';
+import { KitPiece, type KitPieceProps } from './KitPiece';
 import { RuleStep, type RuleStepProps } from './RuleStep';
+import { SetupMix } from './SetupMix';
+import { RoundRoad } from './RoundRoad';
+import { FailTracker } from './FailTracker';
+import { WhatIsThisLesson } from './WhatIsThisLesson';
+import { LawsLesson } from './LawsLesson';
 import {
   TOPIC_ORDER,
   TOPICS,
@@ -15,34 +27,66 @@ import {
 } from './topics';
 import styles from './RulesScreen.module.scss';
 
-interface Bullet {
-  icon: IconName;
-  text: string;
-}
-
-function buildComponentCards(formatMessage: FormatMessage): ComponentCardProps[] {
+function buildKit(formatMessage: FormatMessage): KitPieceProps[] {
   return [
-    { icon: 'cards', label: formatMessage('rules.componentCards.policyTiles'), tone: 'fascist' },
-    { icon: 'people', label: formatMessage('rules.componentCards.roleCards'), tone: 'gold' },
-    { icon: 'scroll', label: formatMessage('rules.componentCards.boards'), tone: 'liberal' },
-    { icon: 'envelope', label: formatMessage('rules.componentCards.envelope'), tone: 'neutral' },
-  ];
-}
-
-function buildSetupPoints(formatMessage: FormatMessage): Bullet[] {
-  return [
-    { icon: 'masks', text: formatMessage('rules.setupPoints.small') },
-    { icon: 'people', text: formatMessage('rules.setupPoints.large') },
-    { icon: 'star', text: formatMessage('rules.setupPoints.liberals') },
+    {
+      title: formatMessage('rules.kit.policy.title'),
+      body: formatMessage('rules.kit.policy.body'),
+      images: [POLICY_FACE.liberal, POLICY_FACE.fascist],
+      kind: 'portrait',
+    },
+    {
+      title: formatMessage('rules.kit.role.title'),
+      body: formatMessage('rules.kit.role.body'),
+      images: [
+        ...ROLE_FACES.liberal,
+        ...ROLE_FACES.fascist,
+        ...ROLE_FACES.hitler,
+      ],
+      kind: 'portrait',
+    },
+    {
+      title: formatMessage('rules.kit.party.title'),
+      body: formatMessage('rules.kit.party.body'),
+      images: [PARTY_FACE.liberal, PARTY_FACE.fascist],
+      kind: 'portrait',
+    },
+    {
+      title: formatMessage('rules.kit.vote.title'),
+      body: formatMessage('rules.kit.vote.body'),
+      images: [VOTE_FACE.ja, VOTE_FACE.nein],
+      kind: 'landscape',
+    },
+    {
+      title: formatMessage('rules.kit.office.title'),
+      body: formatMessage('rules.kit.office.body'),
+      kind: 'office',
+      badges: [
+        {
+          label: formatMessage('game.president'),
+          tone: 'president',
+        },
+        {
+          label: formatMessage('game.chancellor'),
+          tone: 'chancellor',
+        },
+      ],
+    },
+    {
+      title: formatMessage('rules.kit.boards.title'),
+      body: formatMessage('rules.kit.boards.body'),
+      images: [liberalBoard, fascistBoard],
+      kind: 'board',
+    },
   ];
 }
 
 function buildRoundSteps(formatMessage: FormatMessage): RuleStepProps[] {
   return [
-    { number: 1, icon: 'crown', title: formatMessage('rules.steps.nominate.title'), body: formatMessage('rules.steps.nominate.body') },
-    { number: 2, icon: 'people', title: formatMessage('rules.steps.elect.title'), body: formatMessage('rules.steps.elect.body') },
-    { number: 3, icon: 'scroll', title: formatMessage('rules.steps.enact.title'), body: formatMessage('rules.steps.enact.body') },
-    { number: 4, icon: 'star', title: formatMessage('rules.steps.executive.title'), body: formatMessage('rules.steps.executive.body') },
+    { number: 1, title: formatMessage('rules.steps.nominate.title'), body: formatMessage('rules.steps.nominate.body') },
+    { number: 2, title: formatMessage('rules.steps.elect.title'), body: formatMessage('rules.steps.elect.body') },
+    { number: 3, title: formatMessage('rules.steps.enact.title'), body: formatMessage('rules.steps.enact.body') },
+    { number: 4, title: formatMessage('rules.steps.executive.title'), body: formatMessage('rules.steps.executive.body') },
   ];
 }
 
@@ -56,25 +100,62 @@ function buildPowers(formatMessage: FormatMessage): RuleStepProps[] {
   ];
 }
 
-function buildWinning(formatMessage: FormatMessage): Bullet[] {
+function buildWinningSides(formatMessage: FormatMessage): RuleStepProps[] {
   return [
-    { icon: 'capitol', text: formatMessage('rules.winning.liberal') },
-    { icon: 'skull', text: formatMessage('rules.winning.fascist') },
+    {
+      icon: 'capitol',
+      title: formatMessage('rules.winning.liberals'),
+      body: formatMessage('rules.winning.liberalBody'),
+    },
+    {
+      icon: 'skull',
+      title: formatMessage('rules.winning.fascists'),
+      body: formatMessage('rules.winning.fascistBody'),
+    },
   ];
 }
 
-function BulletList(props: { items: Bullet[] }) {
+function buildWinningScenarios(formatMessage: FormatMessage): RuleStepProps[] {
+  return [
+    {
+      icon: 'crown',
+      title: formatMessage('rules.winning.hitlerChancellor.title'),
+      body: formatMessage('rules.winning.hitlerChancellor.body'),
+    },
+    {
+      icon: 'fist',
+      title: formatMessage('rules.winning.execution.title'),
+      body: formatMessage('rules.winning.execution.body'),
+    },
+    {
+      icon: 'masks',
+      title: formatMessage('rules.winning.trustedHitler.title'),
+      body: formatMessage('rules.winning.trustedHitler.body'),
+    },
+    {
+      icon: 'cards',
+      title: formatMessage('rules.winning.chaos.title'),
+      body: formatMessage('rules.winning.chaos.body'),
+    },
+  ];
+}
+
+function RoundLesson(props: { formatMessage: FormatMessage }) {
+  const roundSteps = () => buildRoundSteps(props.formatMessage);
   return (
-    <ul class={styles.bullets}>
-      <For each={props.items}>
-        {(bullet) => (
-          <li class={styles.bullet}>
-            <Icon name={bullet.icon} size={18} class={styles.bulletIcon} />
-            <span>{bullet.text}</span>
-          </li>
-        )}
-      </For>
-    </ul>
+    <>
+      <RoundRoad
+        stops={roundSteps().map((step) => ({
+          number: step.number ?? 0,
+          title: step.title,
+        }))}
+      />
+      <ol class={styles.steps}>
+        <For each={roundSteps()}>
+          {(roundStep) => <RuleStep {...roundStep} />}
+        </For>
+      </ol>
+    </>
   );
 }
 
@@ -85,30 +166,28 @@ function LessonBody(props: { topicId: TopicId; formatMessage: FormatMessage }) {
 
   return (
     <Switch>
-      <Match when={props.topicId === 'overview'}>
-        <div class={styles.overview}>
-          <Icon name="capitol" size={56} class={styles.capitol} />
-          <p>{props.formatMessage('rules.overviewBody')}</p>
-        </div>
-        <SectionTitle centered>{props.formatMessage('rules.components')}</SectionTitle>
-        <div class={styles.componentGrid}>
-          <For each={buildComponentCards(props.formatMessage)}>
-            {(componentCard) => <ComponentCard {...componentCard} />}
+      <Match when={props.topicId === 'whatIsThis'}>
+        <WhatIsThisLesson formatMessage={props.formatMessage} />
+      </Match>
+      <Match when={props.topicId === 'contents'}>
+        <div class={styles.kit}>
+          <For each={buildKit(props.formatMessage)}>
+            {(piece) => <KitPiece {...piece} />}
           </For>
         </div>
       </Match>
-      <Match when={props.topicId === 'setup'}>
+      <Match when={props.topicId === 'laws'}>
+        <LawsLesson formatMessage={props.formatMessage} />
+      </Match>
+      <Match when={props.topicId === 'roles'}>
         {paragraph('rules.setupBody')}
-        <BulletList items={buildSetupPoints(props.formatMessage)} />
+        <SetupMix formatMessage={props.formatMessage} />
       </Match>
-      <Match when={props.topicId === 'round'}>
-        <ol class={styles.steps}>
-          <For each={buildRoundSteps(props.formatMessage)}>
-            {(roundStep) => <RuleStep {...roundStep} />}
-          </For>
-        </ol>
+      <Match when={props.topicId === 'eachRound'}>
+        <RoundLesson formatMessage={props.formatMessage} />
       </Match>
-      <Match when={props.topicId === 'fail'}>
+      <Match when={props.topicId === 'failedGovernment'}>
+        <FailTracker formatMessage={props.formatMessage} />
         {paragraph('rules.failBody')}
       </Match>
       <Match when={props.topicId === 'powers'}>
@@ -119,8 +198,19 @@ function LessonBody(props: { topicId: TopicId; formatMessage: FormatMessage }) {
           </For>
         </ul>
       </Match>
-      <Match when={props.topicId === 'winning'}>
-        <BulletList items={buildWinning(props.formatMessage)} />
+      <Match when={props.topicId === 'howToWin'}>
+        {paragraph('rules.winning.lead')}
+        <ul class={styles.steps}>
+          <For each={buildWinningSides(props.formatMessage)}>
+            {(side) => <RuleStep {...side} />}
+          </For>
+        </ul>
+        <SectionTitle centered>{props.formatMessage('rules.winning.scenarios')}</SectionTitle>
+        <ul class={styles.steps}>
+          <For each={buildWinningScenarios(props.formatMessage)}>
+            {(scenario) => <RuleStep {...scenario} />}
+          </For>
+        </ul>
         <SectionTitle centered>{props.formatMessage('rules.remember')}</SectionTitle>
         <p class={styles.remember}>
           {props.formatMessage('rules.rememberBody')}
@@ -157,30 +247,30 @@ export function RulesLessonScreen(props: RulesLessonScreenProps) {
         <ScreenHeader title={formatMessage(topic().titleKey)} />
         <div class={styles.body}>
           <LessonBody topicId={props.topicId} formatMessage={formatMessage} />
-          <div class={styles.pager}>
-            <button
-              type="button"
-              class={styles.pagerBtn}
-              disabled={index() <= 0}
-              onClick={() => goRelative(-1)}
-            >
-              {formatMessage('common.previous')}
-            </button>
-            <span class={styles.pagerProgress}>
-              {formatMessage('rules.progress', {
-                current: index() + 1,
-                total: TOPIC_ORDER.length,
-              })}
-            </span>
-            <button
-              type="button"
-              class={styles.pagerBtn}
-              disabled={index() >= TOPIC_ORDER.length - 1}
-              onClick={() => goRelative(1)}
-            >
-              {formatMessage('common.next')}
-            </button>
-          </div>
+        </div>
+        <div class={styles.pager}>
+          <button
+            type="button"
+            class={styles.pagerBtn}
+            disabled={index() <= 0}
+            onClick={() => goRelative(-1)}
+          >
+            {formatMessage('common.previous')}
+          </button>
+          <span class={styles.pagerProgress}>
+            {formatMessage('rules.progress', {
+              current: index() + 1,
+              total: TOPIC_ORDER.length,
+            })}
+          </span>
+          <button
+            type="button"
+            class={styles.pagerBtn}
+            disabled={index() >= TOPIC_ORDER.length - 1}
+            onClick={() => goRelative(1)}
+          >
+            {formatMessage('common.next')}
+          </button>
         </div>
       </div>
     </Screen>

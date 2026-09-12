@@ -28,19 +28,27 @@ describe('parseFeatureFlags', () => {
   it('Should ignore unknown FEATURE_* keys', () => {
     expect(
       parseFeatureFlags({ FEATURE_VOICE: 'true', FEATURE_SECRET: 'true' }),
-    ).toEqual({ voice: true });
+    ).toEqual({ ...DEFAULT_FLAGS, voice: true });
+  });
+
+  it('Should read camelCase flags from SNAKE_CASE env keys', () => {
+    expect(parseFeatureFlags({ FEATURE_PUBLIC_TABLE: 'true' }).publicTable).toBe(true);
+    expect(parseFeatureFlags({ FEATURE_PUBLICTABLE: 'true' }).publicTable).toBe(false);
   });
 });
 
 describe('toFlagsResponse / parseFlagsResponse', () => {
   it('Should emit only catalog keys', () => {
-    expect(toFlagsResponse({ voice: true })).toEqual({ flags: { voice: true } });
+    expect(toFlagsResponse({ ...DEFAULT_FLAGS, voice: true })).toEqual({
+      flags: { ...DEFAULT_FLAGS, voice: true },
+    });
   });
 
   it('Should rebuild known booleans and drop extras', () => {
-    expect(parseFlagsResponse({ flags: { voice: true, extra: true } })).toEqual(
-      { voice: true },
-    );
+    expect(parseFlagsResponse({ flags: { voice: true, extra: true } })).toEqual({
+      ...DEFAULT_FLAGS,
+      voice: true,
+    });
     expect(parseFlagsResponse({ flags: {} })).toEqual(DEFAULT_FLAGS);
   });
 

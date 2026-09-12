@@ -2,10 +2,14 @@ import {
   DISCUSSION_DURATION_MS,
   KICK_VOTE_DURATION_MS,
   LEGISLATIVE_DURATION_MS,
+  LOBBY_AFK_MS,
   NOMINATION_DURATION_MS,
   Phase,
+  START_CHOICE_DURATION_MS,
+  WANT_START_COOLDOWN_MS,
   VOTE_DURATION_MS,
   isOpeningNight,
+  isPublicTable,
   kickVoteYesNeeded,
   type ChatMessage,
   type ExecutivePower,
@@ -51,6 +55,12 @@ export interface EngineEvents extends Record<string, unknown> {
   nominationTimerChanged: { endsAt: number | null };
   /** Table kick-vote window opened or closed; server (un)schedules. */
   kickVoteTimerChanged: { endsAt: number | null };
+  /** Public-table must-choose window opened or closed; server (un)schedules. */
+  startChoiceTimerChanged: { endsAt: number | null };
+  /** Lobby AFK clock for one seat; dueAt null cancels. */
+  lobbyAfkTimerChanged: { playerId: string; dueAt: number | null };
+  /** Lobby seats the socket layer must close (AFK / start-choice silence). */
+  lobbyPlayersEjected: { playerIds: string[]; reason: 'AFK' };
   /** The table finished a kick vote — server may eject and notify Bale. */
   kickVoteResolved: {
     requesterId: string;
@@ -71,6 +81,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   private currentPhase: GamePhase;
   /** True while applying a successful table kick so vacate does not cancel it. */
   private settlingKickVote = false;
+  /** True while kicking start-choice holdouts so lobby math runs once at the end. */
+  private settlingStartChoice = false;
 
   constructor(readonly room: Room) {
     super();
@@ -104,7 +116,12 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   // --- Lobby ---------------------------------------------------------------
 
-  addPlayer(name: string, asHost = false, avatar?: number): Player | EngineError {
+  addPlayer(
+    name: string,
+    asHost = false,
+    avatar?: number,
+    joinKey?: string | null,
+  ): Player | EngineError {
     const room = this.room;
     if (room.phase !== Phase.Lobby) {
       return err('ALREADY_STARTED', 'The game has already started.');
@@ -112,13 +129,25 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (room.isFull) {
       return err('ROOM_FULL', 'This room is full.');
     }
+    if (joinKey && room.bannedJoinKeys.has(joinKey)) {
+      return err('BANNED', 'You cannot sit at this table.');
+    }
 
-    const isHost = asHost || room.players.length === 0;
-    const player = PlayerFactory.create(name, room.players.length, isHost, avatar);
+    const publicTable = isPublicTable(room.options);
+    const isHost = publicTable ? false : asHost || room.players.length === 0;
+    const player = PlayerFactory.create(
+      name,
+      room.players.length,
+      isHost,
+      avatar,
+      joinKey,
+    );
     room.players.push(player);
     if (isHost) room.hostId = player.id;
 
     this.log('joined', { name: player.name });
+    this.armLobbyAfk(player);
+    this.maybeAdvancePublicStart();
     this.changed();
     return player;
   }
@@ -128,7 +157,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
    * lobby the seat is removed. In-game the player is marked dead so they
    * cannot be President or Chancellor; the socket layer then closes them.
    */
-  removePlayer(playerId: string): void {
+  removePlayer(playerId: string, logCode: LogCode = 'left'): void {
     const room = this.room;
     const index = room.players.findIndex((player) => player.id === playerId);
     if (index === -1) return;
@@ -142,7 +171,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.players.forEach((player, seat) => (player.seat = seat));
     if (room.hostId === removed.id) this.maybeMigrateHost();
 
-    this.log('left', { name: removed.name });
+    this.emit('lobbyAfkTimerChanged', { playerId: removed.id, dueAt: null });
+    this.log(logCode, { name: removed.name });
+    if (!this.settlingStartChoice) this.maybeAdvancePublicStart();
     this.changed();
   }
 
@@ -162,6 +193,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!target) {
       return err('INVALID_ACTION', 'That player is not in the room.');
     }
+    this.banFromTable(target);
     if (room.phase === Phase.Lobby) {
       this.removePlayer(targetId);
       return null;
@@ -175,6 +207,16 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!player || player.connected === connected) return;
     player.connected = connected;
     this.log(connected ? 'reconnected' : 'disconnected', { name: player.name });
+    if (this.room.phase === Phase.Lobby) {
+      if (connected) {
+        if (this.isLobbyIdle(player)) player.unreadySince = Date.now();
+      } else {
+        player.unreadySince = null;
+      }
+      this.armLobbyAfk(player);
+      this.maybeAdvancePublicStart();
+    }
+    if (this.room.kickVote) this.maybeResolveKickVote();
     if (!this.room.kickVote) this.currentPhase.presenceChanged?.();
     this.changed();
   }
@@ -182,8 +224,59 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   setReady(playerId: string, ready: boolean): void {
     const player = this.room.findPlayer(playerId);
     if (!player || this.room.phase !== Phase.Lobby) return;
+    if (isPublicTable(this.room.options)) return;
+    if (this.room.startChoice && !ready) return;
     player.ready = ready;
+    if (ready) {
+      player.unreadySince = null;
+    } else {
+      player.wantsStart = false;
+      player.unreadySince = Date.now();
+    }
+    this.armLobbyAfk(player);
+    this.maybeAdvancePublicStart();
     this.changed();
+  }
+
+  setWantStart(playerId: string, want: boolean): EngineError | null {
+    const room = this.room;
+    if (room.phase !== Phase.Lobby) {
+      return err('ALREADY_STARTED', 'The game has already started.');
+    }
+    if (!isPublicTable(room.options)) {
+      return err('INVALID_ACTION', 'This table starts with the host.');
+    }
+    if (room.kickVote) {
+      return err('INVALID_ACTION', 'A kick vote is already in progress.');
+    }
+    const player = room.findPlayer(playerId);
+    if (!player || !player.connected) {
+      return err('INVALID_ACTION', 'That player is not in the room.');
+    }
+    if (!want && room.startChoice) {
+      return err('INVALID_ACTION', 'Start is locked while the table decides.');
+    }
+    if (
+      want &&
+      !room.startChoice &&
+      player.wantStartAt != null &&
+      Date.now() < player.wantStartAt + WANT_START_COOLDOWN_MS
+    ) {
+      return err('INVALID_ACTION', 'Wait before tapping Start again.');
+    }
+    if (player.wantsStart === want) return null;
+    player.wantsStart = want;
+    if (want) {
+      player.wantStartAt = Date.now();
+      player.unreadySince = null;
+      this.armLobbyAfk(player);
+    } else {
+      player.unreadySince = Date.now();
+      this.armLobbyAfk(player);
+    }
+    this.maybeAdvancePublicStart();
+    this.changed();
+    return null;
   }
 
   /** True when the host may start: minimum players present and all ready. */
@@ -201,7 +294,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (room.phase !== Phase.Lobby) {
       return err('ALREADY_STARTED', 'The game has already started.');
     }
-    if (requesterId !== room.hostId) {
+    if (isPublicTable(room.options) || requesterId !== room.hostId) {
       return err('NOT_HOST', 'Only the host can start the game.');
     }
     const connected = room.players.filter((p) => p.connected);
@@ -214,37 +307,38 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!connected.every((p) => p.ready)) {
       return err('PLAYERS_NOT_READY', 'Everyone must be ready to start.');
     }
-
-    // Disconnected lobby players never received a role — drop their seats.
-    room.players = connected;
-    room.players.forEach((player, seat) => (player.seat = seat));
-
-    this.dealRoles(room.players);
-    room.deck.reset();
-    room.liberalPolicies = 0;
-    room.fascistPolicies = 0;
-    room.electionTracker = 0;
-    room.lastEnacted = [];
-    room.drawnPolicies = [];
-    room.winner = null;
-    room.lastElectedPresidentId = null;
-    room.lastElectedChancellorId = null;
-    room.activePower = null;
-    room.investigatedIds = [];
-    room.investigations = [];
-    room.peekedPolicies = [];
-    room.investigation = null;
-    room.specialElectionResumeAfterId = null;
-    room.vetoRequested = false;
-    room.kickVote = null;
-    room.spentKickRequestIds.clear();
-    room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
-    this.transitionTo(Phase.Nomination);
-
-    this.log('gameStarted');
-    this.emit('gameStarted', { room });
-    this.changed();
+    this.dealLobby(connected);
     return null;
+  }
+
+  resolveStartChoiceTimeout(): void {
+    const room = this.room;
+    if (!room.startChoice || room.phase !== Phase.Lobby) return;
+    this.clearStartChoice();
+    const holdouts = room.players.filter((player) => player.connected && !player.wantsStart);
+    const kickedIds = holdouts.map((player) => player.id);
+    this.settlingStartChoice = true;
+    for (const player of holdouts) {
+      this.removePlayer(player.id, 'kicked');
+    }
+    this.settlingStartChoice = false;
+    if (kickedIds.length > 0) {
+      this.emit('lobbyPlayersEjected', { playerIds: kickedIds, reason: 'AFK' });
+    }
+    this.maybeDealPublicTable();
+    this.changed();
+  }
+
+  resolveLobbyAfkTimeout(playerId: string): void {
+    const room = this.room;
+    if (room.phase !== Phase.Lobby || room.startChoice) return;
+    const player = room.findPlayer(playerId);
+    if (!player || !this.isLobbyIdle(player) || !player.connected) return;
+    if (player.isHost || player.id === room.hostId) return;
+    if (player.unreadySince == null) return;
+    if (Date.now() < player.unreadySince + LOBBY_AFK_MS) return;
+    this.removePlayer(playerId, 'kicked');
+    this.emit('lobbyPlayersEjected', { playerIds: [playerId], reason: 'AFK' });
   }
 
   // --- Chat / log ------------------------------------------------------------
@@ -566,15 +660,20 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   // --- Table kick vote ----------------------------------------------------------
 
   /**
-   * A living player asks the table to remove another living player. Game
-   * clocks freeze until the vote is settled.
+   * Ask the table to remove another player. In-game, clocks freeze until the
+   * vote is settled. Public lobby uses connected sitters; hosted lobby stays
+   * host-kick.
    */
   requestKick(requesterId: string, targetId: string): EngineError | null {
     const room = this.room;
-    if (room.phase === Phase.Lobby || room.phase === Phase.GameOver) {
+    const inLobby = room.phase === Phase.Lobby;
+    if (room.phase === Phase.GameOver || (inLobby && !isPublicTable(room.options))) {
       return err('INVALID_ACTION', 'There is no game in progress.');
     }
-    if (this.inOpeningNight()) {
+    if (inLobby && room.startChoice) {
+      return err('INVALID_ACTION', 'The table is deciding whether to start.');
+    }
+    if (!inLobby && this.inOpeningNight()) {
       return err('INVALID_ACTION', 'Wait until night is over.');
     }
     if (room.kickVote) {
@@ -585,17 +684,20 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     }
     const requester = room.findPlayer(requesterId);
     const target = room.findPlayer(targetId);
-    if (!requester?.isAlive) {
+    const electorate = room.kickVoteElectorate();
+    if (!requester || !electorate.some((player) => player.id === requesterId)) {
       return err('INVALID_ACTION', 'You cannot request a kick.');
     }
-    if (!target?.isAlive) {
+    if (!target) {
+      return err('INVALID_ACTION', 'That player is not in the room.');
+    }
+    if (!inLobby && !target.isAlive) {
       return err('INVALID_ACTION', 'That player is not in the game.');
     }
     if (room.spentKickRequestIds.has(requesterId)) {
       return err('INVALID_ACTION', 'You have already requested a kick.');
     }
-    const living = room.players.filter((player) => player.isAlive);
-    if (living.length < 3) {
+    if (electorate.length < 3) {
       return err('INVALID_ACTION', 'Not enough players to vote a kick.');
     }
 
@@ -607,9 +709,12 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       votes: new Map([[requesterId, true]]),
       startedAt,
       endsAt: startedAt + KICK_VOTE_DURATION_MS,
-      needed: kickVoteYesNeeded(living.length),
+      needed: kickVoteYesNeeded(electorate.length),
     };
-    this.pauseDeadlineTimers();
+    if (!inLobby) this.pauseDeadlineTimers();
+    else {
+      for (const player of room.players) this.armLobbyAfk(player);
+    }
     this.emit('kickVoteTimerChanged', { endsAt: room.kickVote.endsAt });
     this.log('kickVoteStarted', {
       name: requester.name,
@@ -632,7 +737,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       return err('INVALID_ACTION', 'You cannot vote on your own kick.');
     }
     const player = this.room.findPlayer(playerId);
-    if (!player?.isAlive) {
+    const canVote =
+      this.room.phase === Phase.Lobby ? !!player?.connected : !!player?.isAlive;
+    if (!canVote) {
       return err('INVALID_ACTION', 'You cannot vote on this kick.');
     }
     if (vote.votes.has(playerId)) {
@@ -659,12 +766,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   private kickVoteRemainingVoters(): number {
     const vote = this.room.kickVote;
     if (!vote) return 0;
-    return this.room.players.filter(
-      (player) =>
-        player.isAlive &&
-        player.id !== vote.targetId &&
-        !vote.votes.has(player.id),
-    ).length;
+    return this.room
+      .kickVoteElectorate()
+      .filter(
+        (player) => player.id !== vote.targetId && !vote.votes.has(player.id),
+      ).length;
   }
 
   /** Resolve if the table has decided; returns true when the vote closed. */
@@ -687,6 +793,10 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     return false;
   }
 
+  private banFromTable(player: Player): void {
+    if (player.joinKey) this.room.bannedJoinKeys.add(player.joinKey);
+  }
+
   private finishKickVote(kicked: boolean): void {
     const vote = this.room.kickVote;
     if (!vote) return;
@@ -694,8 +804,10 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     const requester = this.room.findPlayer(vote.requesterId);
     const yesCount = this.kickVoteYesCount();
     const needed = vote.needed;
+    const inLobby = this.room.phase === Phase.Lobby;
     const heldOffice =
       kicked &&
+      !inLobby &&
       target != null &&
       (this.room.presidentId === target.id || this.room.chancellorId === target.id);
     const pausedAt = vote.startedAt;
@@ -714,10 +826,19 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.emit('kickVoteTimerChanged', { endsAt: null });
 
     if (kicked && target) {
-      this.settlingKickVote = true;
-      if (!heldOffice) this.resumeDeadlineTimers(pausedAt);
-      this.vacateInGame(target, 'kicked');
-      this.settlingKickVote = false;
+      this.banFromTable(target);
+      if (inLobby) {
+        this.removePlayer(target.id, 'kicked');
+      } else {
+        this.settlingKickVote = true;
+        if (!heldOffice) this.resumeDeadlineTimers(pausedAt);
+        this.vacateInGame(target, 'kicked');
+        this.settlingKickVote = false;
+      }
+    } else if (inLobby) {
+      for (const player of this.room.players) this.armLobbyAfk(player);
+      this.maybeAdvancePublicStart();
+      this.changed();
     } else {
       this.resumeDeadlineTimers(pausedAt);
       this.changed();
@@ -785,6 +906,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   private maybeMigrateHost(): boolean {
+    if (isPublicTable(this.room.options) || !this.room.hostId) return false;
     const host = this.room.findPlayer(this.room.hostId);
     if (host?.connected) return false;
     const successor = this.room.players.find((p) => p.connected);
@@ -792,8 +914,123 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.room.players.forEach((p) => (p.isHost = p.id === successor.id));
     this.room.hostId = successor.id;
     successor.ready = true;
+    successor.unreadySince = null;
+    this.armLobbyAfk(successor);
     this.log('newHost', { name: successor.name });
     return true;
+  }
+
+  private isLobbyIdle(player: Player): boolean {
+    if (isPublicTable(this.room.options)) return !player.wantsStart;
+    return !player.ready;
+  }
+
+  private connectedLobby(): Player[] {
+    return this.room.players.filter((player) => player.connected);
+  }
+
+  private maybeAdvancePublicStart(): void {
+    const room = this.room;
+    if (!isPublicTable(room.options) || room.phase !== Phase.Lobby) return;
+    if (this.settlingStartChoice || room.kickVote) return;
+    const connected = this.connectedLobby();
+    if (connected.length === 0) {
+      this.clearStartChoice();
+      return;
+    }
+    const needed = kickVoteYesNeeded(connected.length);
+    const startCount = connected.filter((player) => player.wantsStart).length;
+    if (startCount >= needed && connected.every((player) => player.wantsStart)) {
+      this.clearStartChoice();
+      this.maybeDealPublicTable();
+      return;
+    }
+    if (startCount >= needed) {
+      this.openStartChoice();
+      return;
+    }
+    this.clearStartChoice();
+  }
+
+  private maybeDealPublicTable(): void {
+    const connected = this.connectedLobby();
+    if (connected.length < this.room.options.minPlayers) return;
+    if (!connected.every((player) => player.wantsStart)) return;
+    this.dealLobby(connected);
+  }
+
+  private openStartChoice(): void {
+    if (this.room.startChoice) return;
+    const now = Date.now();
+    this.room.startChoice = {
+      startedAt: now,
+      endsAt: now + START_CHOICE_DURATION_MS,
+    };
+    this.emit('startChoiceTimerChanged', { endsAt: this.room.startChoice.endsAt });
+    for (const player of this.room.players) this.armLobbyAfk(player);
+  }
+
+  private clearStartChoice(): void {
+    if (!this.room.startChoice) return;
+    this.room.startChoice = null;
+    this.emit('startChoiceTimerChanged', { endsAt: null });
+    for (const player of this.room.players) this.armLobbyAfk(player);
+  }
+
+  private armLobbyAfk(player: Player): void {
+    const paused = this.room.startChoice != null || this.room.kickVote != null;
+    const dueAt =
+      paused ||
+      this.room.phase !== Phase.Lobby ||
+      !this.isLobbyIdle(player) ||
+      player.isHost ||
+      player.id === this.room.hostId ||
+      !player.connected ||
+      player.unreadySince == null
+        ? null
+        : player.unreadySince + LOBBY_AFK_MS;
+    this.emit('lobbyAfkTimerChanged', { playerId: player.id, dueAt });
+  }
+
+  /** Shared deal path — host check already happened, or the public table is legal. */
+  private dealLobby(connected: Player[]): void {
+    const room = this.room;
+    this.clearStartChoice();
+    for (const player of connected) {
+      player.wantsStart = false;
+      player.wantStartAt = null;
+      player.unreadySince = null;
+      this.armLobbyAfk(player);
+    }
+    // Disconnected lobby players never received a role — drop their seats.
+    room.players = connected;
+    room.players.forEach((player, seat) => (player.seat = seat));
+
+    this.dealRoles(room.players);
+    room.deck.reset();
+    room.liberalPolicies = 0;
+    room.fascistPolicies = 0;
+    room.electionTracker = 0;
+    room.lastEnacted = [];
+    room.drawnPolicies = [];
+    room.winner = null;
+    room.lastElectedPresidentId = null;
+    room.lastElectedChancellorId = null;
+    room.activePower = null;
+    room.investigatedIds = [];
+    room.investigations = [];
+    room.peekedPolicies = [];
+    room.investigation = null;
+    room.specialElectionResumeAfterId = null;
+    room.vetoRequested = false;
+    room.kickVote = null;
+    room.spentKickRequestIds.clear();
+    room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
+    this.transitionTo(Phase.Nomination);
+
+    this.log('gameStarted');
+    this.emit('gameStarted', { room });
+    this.changed();
   }
 
   // --- Internals ---------------------------------------------------------

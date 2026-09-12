@@ -304,7 +304,7 @@ describe('Bale webhook — group /create', () => {
         bot: {
           sendMessage: async (params) => {
             sent.push(params);
-            return {};
+            return { message_id: params.chat_id === -401 ? 77 : 12 };
           },
         },
         botToken: 'test-token',
@@ -333,6 +333,7 @@ describe('Bale webhook — group /create', () => {
       playerCount: 1,
     });
     expect(repo.resolve(rooms[0].code)?.room.options.originChatId).toBe(-401);
+    expect(repo.resolve(rooms[0].code)?.room.options.originMessageId).toBe(77);
 
     const groupPost = sent.find((item) => item.chat_id === -401);
     expect(groupPost?.text).toContain('اتاق ساخته شد');
@@ -457,6 +458,48 @@ describe('Bale webhook — group /create', () => {
     expect(creatorRejoin.status).toBe(200);
     expect(creatorRejoin.body.playerId).toBe(hostId);
   });
+
+  it('Should edit the group post when the host leaves the table', async () => {
+    const edited: Array<{ chat_id: number | string; message_id: number; text: string }> = [];
+    const { app, repo, sockets } = await buildServer({
+      bale: {
+        bot: {
+          sendMessage: async (params) => {
+            return { message_id: params.chat_id === -404 ? 88 : 1 };
+          },
+          editMessageText: async (params) => {
+            edited.push(params);
+            return true;
+          },
+        },
+        botToken: 'test-token',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/create',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: -404, type: 'group', title: 'Friday' },
+      },
+    });
+
+    const room = repo.listAll()[0];
+    const entry = repo.resolve(room.code)!;
+    const hostId = entry.room.hostId;
+    sockets.dropSeat(entry, hostId);
+
+    expect(edited).toHaveLength(1);
+    expect(edited[0]).toMatchObject({ chat_id: -404, message_id: 88 });
+    expect(edited[0].text).toContain('میزبان رفت');
+    expect(edited[0].text).toContain('Ana');
+    expect(repo.listAll()).toHaveLength(0);
+  });
 });
 
 describe('webhookListenUrl', () => {
@@ -476,5 +519,45 @@ describe('webhookListenUrl', () => {
     expect(webhookSecretMatches('s3cret', 's3cret')).toBe(true);
     expect(webhookSecretMatches('nope', 's3cret')).toBe(false);
     expect(webhookSecretMatches('', undefined)).toBe(true);
+  });
+});
+
+describe('Telegram webhook', () => {
+  it('Should reply to /start with a t.me mini-app button, never ble.ir', async () => {
+    const sent: Array<{ text: string; reply_markup?: unknown }> = [];
+    const { app } = await buildServer({
+      telegram: {
+        kind: 'telegram',
+        bot: {
+          sendMessage: async (params) => {
+            sent.push(params);
+            return {};
+          },
+        },
+        botToken: 'telegram-token',
+        botUsername: '@secret_hitler_bot',
+        webAppShortName: 'game',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/telegram/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/start',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toHaveLength(1);
+    expect(JSON.stringify(sent[0].reply_markup)).toContain(
+      'https://t.me/secret_hitler_bot/game?startapp=',
+    );
+    expect(JSON.stringify(sent[0])).not.toContain('ble.ir');
+    expect(JSON.stringify(sent[0])).not.toContain('mrfantastic');
   });
 });

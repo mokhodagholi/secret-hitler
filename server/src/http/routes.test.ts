@@ -281,19 +281,102 @@ describe('GET /api/flags', () => {
     const { app } = await buildServer();
     const { status, body } = await httpJson<FlagsResponse>(app, 'GET', '/api/flags');
     expect(status).toBe(200);
-    expect(body).toEqual({ flags: { voice: false } });
+    expect(body).toEqual({ flags: { voice: false, publicTable: false } });
   });
 
   it('Should return injected flags as-is', async () => {
-    const { app } = await buildServer({ flags: { voice: true } });
+    const { app } = await buildServer({ flags: { voice: true, publicTable: false } });
     const { status, body } = await httpJson<FlagsResponse>(app, 'GET', '/api/flags');
     expect(status).toBe(200);
-    expect(body).toEqual({ flags: { voice: true } });
+    expect(body).toEqual({ flags: { voice: true, publicTable: false } });
   });
 
   it('Should tell browsers not to cache the flag catalog', async () => {
-    const { app } = await buildServer({ flags: { voice: true } });
+    const { app } = await buildServer({ flags: { voice: true, publicTable: false } });
     const response = await app.inject({ method: 'GET', url: '/api/flags' });
     expect(response.headers['cache-control']).toBe('no-store');
+  });
+});
+
+describe('room HTTP — Telegram + Bale together', () => {
+  const TELEGRAM_TOKEN = '999:telegram-token';
+
+  function signTelegram(userId: number, firstName: string): string {
+    const fields = {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      user: JSON.stringify({ id: userId, first_name: firstName }),
+    };
+    const params = new URLSearchParams(fields);
+    const dataCheckString = [...params.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+    const secretKey = createHmac('sha256', 'WebAppData').update(TELEGRAM_TOKEN).digest();
+    const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+    params.set('hash', hash);
+    return params.toString();
+  }
+
+  it('Should copy a t.me invite when the creator signed in through Telegram', async () => {
+    const seats = new BaleSeatIndex();
+    const { app } = await buildServer({
+      telegram: {
+        kind: 'telegram',
+        bot: { sendMessage: async () => ({}) },
+        botToken: TELEGRAM_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        webAppShortName: 'game',
+        seats,
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/rooms',
+      headers: { host: 'mrfantastic.ir' },
+      payload: {
+        name: 'Friday Night',
+        hostName: 'Ana',
+        initData: signTelegram(9, 'Ana'),
+      },
+    });
+    const body = response.json() as CreateRoomResponse;
+    expect(response.statusCode).toBe(201);
+    expect(body.shareLink).toBe(
+      `https://t.me/secret_hitler_bot/game?startapp=${body.code}`,
+    );
+    expect(seats.get(9, 'telegram')?.playerId).toBe(body.playerId);
+    expect(seats.get(9)).toBeUndefined();
+  });
+
+  it('Should seat a Bale user and a Telegram user with the same numeric id at one table', async () => {
+    const seats = new BaleSeatIndex();
+    const { app, repo } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: BALE_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats,
+      },
+      telegram: {
+        kind: 'telegram',
+        bot: { sendMessage: async () => ({}) },
+        botToken: TELEGRAM_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        webAppShortName: 'game',
+        seats,
+      },
+    });
+    const created = (await createRoom(app, { initData: signInitData(9, 'Ana') })).body;
+    const joined = await httpJson<JoinRoomResponse>(
+      app,
+      'POST',
+      `/api/rooms/${created.code}/join`,
+      { name: 'Cal', initData: signTelegram(9, 'Cal') },
+    );
+    expect(joined.status).toBe(200);
+    expect(joined.body.playerId).not.toBe(created.playerId);
+    expect(repo.resolve(created.code)?.room.players).toHaveLength(2);
+    expect(seats.get(9)?.playerId).toBe(created.playerId);
+    expect(seats.get(9, 'telegram')?.playerId).toBe(joined.body.playerId);
   });
 });

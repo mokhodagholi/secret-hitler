@@ -17,7 +17,7 @@ export interface DropdownProps<Value extends string> {
   disabled?: boolean;
 }
 
-/** Labelled navy picker — not a native `<select>`. */
+/** Labelled picker — not a native `<select>`. */
 export function Dropdown<Value extends string>(props: DropdownProps<Value>) {
   const [open, setOpen] = createSignal(false);
   let root: HTMLDivElement | undefined;

@@ -4,13 +4,16 @@ import {
   DEFAULT_FLAGS,
   HOST_MIGRATION_GRACE_MS,
   LIVE_ROOM_RECONNECT_GRACE_MS,
+  LOBBY_AFK_MS,
   MessageRouter,
+  isPublicTable,
   parseClientMessage,
   type ClientMessage,
   type EngineError,
   type FeatureFlags,
   type GameEngine,
   type GameStateView,
+  type RoomClosedReason,
   type ServerErrorCode,
   type ServerMessage,
 } from '@secret-hitler/shared';
@@ -23,6 +26,7 @@ import type { LiveRoomStore } from '../rooms/LiveRoomStore';
 import type { VoiceHub } from '../voice/VoiceHub';
 import type { BaleRuntime } from '../bale/webhook';
 import { formatKickVoteLetter } from '../bale/support';
+import { createGroupClosedReply } from '../bale/commands';
 
 /** Resolved per-message context for an authenticated socket. */
 interface GameContext {
@@ -52,6 +56,10 @@ export class SocketHandler {
   private readonly nominationTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room table kick-vote deadline timers. */
   private readonly kickVoteTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room public-table must-choose deadline timers. */
+  private readonly startChoiceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-player lobby AFK timers. */
+  private readonly lobbyAfkTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room pending host-migration timers (disconnect grace period). */
   private readonly hostGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Rooms that just came back from disk — do not wipe them while empty. */
@@ -70,8 +78,30 @@ export class SocketHandler {
     private readonly bale: BaleRuntime | null = null,
     private readonly flags: FeatureFlags = DEFAULT_FLAGS,
     private readonly voice: VoiceHub | null = null,
+    private readonly telegram: BaleRuntime | null = null,
   ) {
     this.router = this.buildRouter();
+  }
+
+  /** History attach — set after construction so the recorder can exist first. */
+  onRoomCreated: ((entry: RoomEntry) => void) | null = null;
+
+  /** Create the evergreen Join lobby when the flag is on and none is waiting. */
+  ensurePublicLobby(): void {
+    if (!this.flags.publicTable) return;
+    const created = this.repo.ensurePublicLobby();
+    if (!created) return;
+    this.registerEngine(created);
+    this.onRoomCreated?.(created);
+    void this.persistRoom(created.room.id);
+  }
+
+  /** Drop pending timers so a Fastify close does not keep the process. */
+  dispose(): void {
+    for (const roomId of this.startChoiceTimers.keys()) this.stopStartChoiceTimer(roomId);
+    for (const playerId of [...this.lobbyAfkTimers.keys()]) {
+      this.armLobbyAfk('', playerId, null);
+    }
   }
 
   /** Authenticated client messages — `auth` is handled before dispatch. */
@@ -79,6 +109,10 @@ export class SocketHandler {
     return new MessageRouter<ClientMessage, GameContext>()
       .on('player:ready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, true))
       .on('player:unready', (_m, ctx) => ctx.engine.setReady(ctx.playerId, false))
+      .on('player:wantStart', (_m, ctx) => this.fail(ctx, ctx.engine.setWantStart(ctx.playerId, true)))
+      .on('player:retractStart', (_m, ctx) =>
+        this.fail(ctx, ctx.engine.setWantStart(ctx.playerId, false)),
+      )
       .on('game:start', (_m, ctx) => this.fail(ctx, ctx.engine.startGame(ctx.playerId)))
       .on('player:kick', (m, ctx) => this.kickPlayer(ctx, m.playerId))
       .on('kick:request', (m, ctx) =>
@@ -129,7 +163,13 @@ export class SocketHandler {
         }
       }
       void this.persistRoom(room.id);
-      if (room.isEmpty && !this.reconnectGrace.has(room.id)) this.removeRoom(room.id);
+      if (
+        room.isEmpty &&
+        !this.reconnectGrace.has(room.id) &&
+        !(isPublicTable(room.options) && room.phase === 'lobby')
+      ) {
+        this.removeRoom(room.id);
+      }
     });
 
     engine.on('roleAssigned', ({ playerId }) => {
@@ -186,6 +226,23 @@ export class SocketHandler {
     engine.on('kickVoteResolved', (result) => {
       this.postKickVoteNotice(room.id, result);
       if (result.kicked) this.ejectPlayer(result.targetId);
+    });
+    engine.on('startChoiceTimerChanged', ({ endsAt }) => {
+      this.stopStartChoiceTimer(room.id);
+      if (endsAt == null) return;
+      const timer = setTimeout(() => {
+        this.repo.get(room.id)?.engine.resolveStartChoiceTimeout();
+      }, Math.max(0, endsAt - Date.now()));
+      this.startChoiceTimers.set(room.id, timer);
+    });
+    engine.on('lobbyAfkTimerChanged', ({ playerId, dueAt }) => {
+      this.armLobbyAfk(room.id, playerId, dueAt);
+    });
+    engine.on('lobbyPlayersEjected', ({ playerIds }) => {
+      for (const playerId of playerIds) this.ejectPlayer(playerId, 'AFK');
+    });
+    engine.on('gameStarted', () => {
+      if (isPublicTable(room.options)) this.ensurePublicLobby();
     });
   }
 
@@ -247,6 +304,24 @@ export class SocketHandler {
     this.armTimer(this.nominationTimers, room.id, room.nominationEndsAt, () => {
       this.repo.get(room.id)?.engine.resolveNominationTimeout();
     });
+    if (room.startChoice) {
+      this.armTimer(this.startChoiceTimers, room.id, room.startChoice.endsAt, () => {
+        this.repo.get(room.id)?.engine.resolveStartChoiceTimeout();
+      });
+    }
+    for (const player of room.players) {
+      const idle = isPublicTable(room.options) ? !player.wantsStart : !player.ready;
+      const dueAt =
+        room.startChoice ||
+        !idle ||
+        player.isHost ||
+        player.id === room.hostId ||
+        !player.connected ||
+        player.unreadySince == null
+          ? null
+          : player.unreadySince + LOBBY_AFK_MS;
+      this.armLobbyAfk(room.id, player.id, dueAt);
+    }
   }
 
   private armTimer(
@@ -321,6 +396,29 @@ export class SocketHandler {
       clearTimeout(timer);
       this.kickVoteTimers.delete(roomId);
     }
+  }
+
+  private stopStartChoiceTimer(roomId: string): void {
+    const timer = this.startChoiceTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.startChoiceTimers.delete(roomId);
+    }
+  }
+
+  private armLobbyAfk(roomId: string, playerId: string, dueAt: number | null): void {
+    const existing = this.lobbyAfkTimers.get(playerId);
+    if (existing) {
+      clearTimeout(existing);
+      this.lobbyAfkTimers.delete(playerId);
+    }
+    if (dueAt == null) return;
+    const timer = setTimeout(() => {
+      this.lobbyAfkTimers.delete(playerId);
+      this.repo.get(roomId)?.engine.resolveLobbyAfkTimeout(playerId);
+    }, Math.max(0, dueAt - Date.now()));
+    if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+    this.lobbyAfkTimers.set(playerId, timer);
   }
 
   /** Attach handlers to a freshly upgraded socket. */
@@ -554,11 +652,11 @@ export class SocketHandler {
   }
 
   /** Close the seat: the kicked client gets a notice, then the token is gone. */
-  private ejectPlayer(targetId: string): void {
+  private ejectPlayer(targetId: string, reason: RoomClosedReason = 'KICKED'): void {
     void this.voice?.removePlayer(targetId);
     this.connections.sendAndClose(targetId, {
       type: 'room:closed',
-      reason: 'KICKED',
+      reason,
     });
     this.tokens.revokePlayer(targetId);
     this.seats?.releasePlayer(targetId);
@@ -574,19 +672,26 @@ export class SocketHandler {
       kicked: boolean;
     },
   ): void {
-    const chatId = this.bale?.supportChatId;
-    if (chatId == null || !this.bale) return;
+    const identity = this.seats?.identityFor(result.requesterId);
+    const runtime =
+      identity?.platform === 'telegram'
+        ? this.telegram
+        : identity?.platform === 'bale'
+          ? this.bale
+          : this.bale ?? this.telegram;
+    const chatId = runtime?.supportChatId;
+    if (chatId == null || !runtime) return;
     const roomCode = this.repo.get(roomId)?.room.code;
     const text = formatKickVoteLetter({
-      requesterId: String(this.seats?.baleUserIdFor(result.requesterId) ?? result.requesterId),
-      targetId: String(this.seats?.baleUserIdFor(result.targetId) ?? result.targetId),
+      requesterId: String(identity?.userId ?? result.requesterId),
+      targetId: String(this.seats?.identityFor(result.targetId)?.userId ?? result.targetId),
       yesCount: result.yesCount,
       needed: result.needed,
       kicked: result.kicked,
       roomCode,
     });
-    void this.bale.bot.sendMessage({ chat_id: chatId, text }).catch((error) => {
-      console.error('Failed to post kick vote to Bale', error);
+    void runtime.bot.sendMessage({ chat_id: chatId, text }).catch((error) => {
+      console.error('Failed to post kick vote to support chat', error);
     });
   }
 
@@ -596,6 +701,7 @@ export class SocketHandler {
     if (!player) return;
     if (player.isHost) {
       this.broadcast(entry.room.id, { type: 'room:closed', reason: 'HOST_LEFT' });
+      this.noticeGroupRoomClosed(entry);
       this.destroyRoom(entry);
       return;
     }
@@ -610,6 +716,25 @@ export class SocketHandler {
     this.dropSeat(context.entry, context.playerId);
   }
 
+  /** Rewrite the group `/create` post so the join button does not linger. */
+  private noticeGroupRoomClosed(entry: RoomEntry): void {
+    const chatId = entry.room.options.originChatId;
+    const messageId = entry.room.options.originMessageId;
+    const originPlatform = entry.room.options.originPlatform ?? 'bale';
+    const runtime = originPlatform === 'telegram' ? this.telegram : this.bale;
+    const edit = runtime?.bot.editMessageText;
+    if (chatId == null || messageId == null || !edit) return;
+    const closed = createGroupClosedReply({ creatorName: entry.room.options.name });
+    void edit({
+      chat_id: chatId,
+      message_id: messageId,
+      text: closed.text,
+      reply_markup: closed.reply_markup,
+    }).catch((error) => {
+      console.error('Failed to edit group room post', error);
+    });
+  }
+
   /** Kick every remaining connection and drop the room from the repository. */
   private destroyRoom(entry: RoomEntry): void {
     for (const player of entry.room.players) {
@@ -620,11 +745,14 @@ export class SocketHandler {
 
   /** Stop the room's timers, revoke its tokens, and drop it from the repo. */
   private removeRoom(roomId: string): void {
+    const players = this.repo.get(roomId)?.room.players ?? [];
+    for (const player of players) this.armLobbyAfk(roomId, player.id, null);
     this.stopDiscussionTimer(roomId);
     this.stopVoteTimer(roomId);
     this.stopLegislativeTimer(roomId);
     this.stopNominationTimer(roomId);
     this.stopKickVoteTimer(roomId);
+    this.stopStartChoiceTimer(roomId);
     this.cancelHostGrace(roomId);
     this.clearReconnectGrace(roomId);
     this.tokens.revokeRoom(roomId);
@@ -679,6 +807,8 @@ export class SocketHandler {
   }
 
   private scheduleHostGrace(roomId: string): void {
+    const room = this.repo.get(roomId)?.room;
+    if (!room || isPublicTable(room.options) || !room.hostId) return;
     this.cancelHostGrace(roomId);
     const timer = setTimeout(() => {
       this.hostGraceTimers.delete(roomId);

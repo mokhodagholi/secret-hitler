@@ -13,6 +13,7 @@ import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { nativeFieldAttrs } from '../../components/nativeField';
+import { KeyboardForm } from '../../components/KeyboardForm/KeyboardForm';
 import styles from './RoomsScreen.module.scss';
 
 type RoomsTab = 'create' | 'join';
@@ -100,19 +101,19 @@ function Field(props: {
 }
 
 function CreateRoomPanel() {
-  const { nav, settings, game, i18n, bale } = useApp();
+  const { nav, settings, game, i18n, miniApp } = useApp();
   const { formatMessage } = i18n;
 
   const [roomName, setRoomName] = createSignal('');
   const [password, setPassword] = createSignal('');
-  const baleName = () => bale.user()?.firstName;
+  const lockedName = () => miniApp.user()?.firstName;
   const profileMissing = () =>
-    baleName() == null && settings.settings.profileName.trim().length === 0;
+    lockedName() == null && settings.settings.profileName.trim().length === 0;
   const [hostName, setHostName] = createSignal(settings.settings.profileName);
   const [submitting, setSubmitting] = createSignal(false);
   const [errorKey, setErrorKey] = createSignal<MessageKey | null>(null);
 
-  const resolvedName = () => baleName() ?? hostName().trim();
+  const resolvedName = () => lockedName() ?? hostName().trim();
 
   const canSubmit = () =>
     roomName().trim().length > 0 && resolvedName().length > 0 && !submitting();
@@ -128,7 +129,7 @@ function CreateRoomPanel() {
         password: password().trim() || undefined,
         hostName: resolvedName(),
         avatar: settings.settings.avatar,
-        initData: bale.initData(),
+        initData: miniApp.initData(),
         options: {
           timerEnabled: true,
         },
@@ -143,7 +144,7 @@ function CreateRoomPanel() {
   }
 
   return (
-    <div class={styles.form}>
+    <KeyboardForm class={styles.form}>
       <Field
         label={formatMessage('createRoom.roomName')}
         placeholder={formatMessage('createRoom.roomNamePlaceholder')}
@@ -181,12 +182,12 @@ function CreateRoomPanel() {
       >
         {formatMessage(submitting() ? 'createRoom.creating' : 'createRoom.submit')}
       </button>
-    </div>
+    </KeyboardForm>
   );
 }
 
 function JoinRoomPanel() {
-  const { nav, settings, game, i18n, bale } = useApp();
+  const { nav, settings, game, i18n, miniApp } = useApp();
   const { formatMessage } = i18n;
 
   const [invite, setInvite] = createSignal(nav.consumeJoinCode());
@@ -194,10 +195,14 @@ function JoinRoomPanel() {
     () => (invite() ? false : true),
     () => game.listRooms(),
   );
+  const listedRooms = () =>
+    [...(rooms() ?? [])].sort(
+      (left, right) => Number(right.kind === 'public') - Number(left.kind === 'public'),
+    );
   const [selectedRoomId, setSelectedRoomId] = createSignal<string | null>(null);
-  const baleName = () => bale.user()?.firstName;
+  const lockedName = () => miniApp.user()?.firstName;
   const profileMissing = () =>
-    baleName() == null && settings.settings.profileName.trim().length === 0;
+    lockedName() == null && settings.settings.profileName.trim().length === 0;
   const [playerName, setPlayerName] = createSignal(settings.settings.profileName);
   const [password, setPassword] = createSignal('');
   const [needsPassword, setNeedsPassword] = createSignal(false);
@@ -223,7 +228,7 @@ function JoinRoomPanel() {
   async function submit(room?: RoomSummary | null): Promise<void> {
     const target = room ?? selectedRoom();
     const idOrCode = invite() ?? target?.id;
-    const name = baleName() ?? playerName().trim();
+    const name = lockedName() ?? playerName().trim();
     if (!idOrCode || submitting() || name.length === 0) return;
     setSubmitting(true);
     setErrorKey(null);
@@ -233,7 +238,8 @@ function JoinRoomPanel() {
         name,
         avatar: settings.settings.avatar,
         password: password().trim() || undefined,
-        initData: bale.initData(),
+        clientId: settings.settings.profileId,
+        initData: miniApp.initData(),
       });
       nav.navigate('waiting-room');
     } catch (error) {
@@ -255,7 +261,7 @@ function JoinRoomPanel() {
   // Join by code so a share link never depends on the public list being ready.
   createEffect(() => {
     if (!invite() || autoTried() || needsPassword()) return;
-    const knownName = baleName() ?? settings.settings.profileName.trim();
+    const knownName = lockedName() ?? settings.settings.profileName.trim();
     if (!knownName) return;
     setAutoTried(true);
     void submit();
@@ -282,20 +288,27 @@ function JoinRoomPanel() {
 
             <Show
               when={(rooms() ?? []).length > 0}
-              fallback={<p class={styles.empty}>{formatMessage('joinGame.noRooms')}</p>}
+              fallback={
+                <Show when={!rooms.loading}>
+                  <p class={styles.empty}>{formatMessage('joinGame.noRooms')}</p>
+                </Show>
+              }
             >
               <ul class={styles.rows}>
-                <For each={rooms()}>
+                <For each={listedRooms()}>
                   {(room) => (
                     <li
                       classList={{
                         [styles.row]: true,
                         [styles.rowSelected]: selectedRoomId() === room.id,
                         [styles.rowUnavailable]: !joinable(room),
+                        [styles.rowPinned]: room.kind === 'public',
                       }}
                     >
                       <span class={styles.roomName}>
-                        {room.name}
+                        {room.kind === 'public'
+                          ? formatMessage('rooms.publicName')
+                          : room.name}
                         <Show when={room.hasPassword}>
                           <Icon name="masks" size={13} class={styles.lock} />
                         </Show>
@@ -326,7 +339,7 @@ function JoinRoomPanel() {
             </Show>
 
             <Show when={selectedRoom() && needsDetails(selectedRoom()!)}>
-              <div class={styles.form}>
+              <KeyboardForm class={styles.form}>
                 <Show when={profileMissing()}>
                   <Field
                     label={formatMessage('joinGame.yourName')}
@@ -352,12 +365,12 @@ function JoinRoomPanel() {
                 >
                   {formatMessage(submitting() ? 'joinGame.joining' : 'joinGame.submit')}
                 </button>
-              </div>
+              </KeyboardForm>
             </Show>
           </>
         }
       >
-        <div class={styles.form}>
+        <KeyboardForm class={styles.form}>
           <Show when={profileMissing()}>
             <Field
               label={formatMessage('joinGame.yourName')}
@@ -378,12 +391,12 @@ function JoinRoomPanel() {
           <button
             type="button"
             class={styles.primary}
-            disabled={submitting() || (baleName() ?? playerName().trim()).length === 0}
+            disabled={submitting() || (lockedName() ?? playerName().trim()).length === 0}
             onClick={() => void submit()}
           >
             {formatMessage(submitting() ? 'joinGame.joining' : 'joinGame.submit')}
           </button>
-        </div>
+        </KeyboardForm>
       </Show>
 
       <Show when={errorKey()}>

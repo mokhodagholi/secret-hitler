@@ -26,7 +26,7 @@ export const en = {
     version: 'Version {version}',
   },
   nav: {
-    rules: 'Rules',
+    rules: 'How to Play',
     settings: 'Settings',
     home: 'Home',
   },
@@ -54,40 +54,80 @@ export const en = {
     next: 'Next',
   },
   rules: {
-    title: 'Rules',
-    pick: 'Open one card. That is the lesson.',
-    teasers: {
-      overview: 'Two parties. One secret.',
-      setup: 'Who knows whom.',
-      round: 'Vote, then a law.',
-      fail: 'Three failures in a row.',
-      powers: 'Investigate, execute, veto.',
-      winning: 'Five liberal, or six fascist.',
-    },
+    title: 'How to Play',
     progress: '{current} / {total}',
     stepNumber: '{number}',
-    overview: 'Overview',
-    overviewBody:
-      'Secret Hitler is a hidden-identity game for 5–10 players set in 1930s Germany. The Liberals are the majority but know no one; the Fascists know each other, and one of them is secretly Hitler. Liberals win by enacting Liberal policies or assassinating Hitler. The Fascists scheme to enact Fascist policies — or to sweep Hitler into the chancellorship.',
-    components: 'Components',
-    componentCards: {
-      policyTiles: '17 Policy Tiles',
-      roleCards: 'Role Cards',
-      boards: 'Policy Boards',
-      envelope: 'Secret Envelopes',
+    overview: 'What is this game?',
+    whatIsThis: {
+      lead: 'Secret Hitler is a hidden-role game for five to ten people. Each player holds a role card that only they can see.',
+      teams: 'Two teams sit at the table:',
+      liberalTeam: 'Liberals',
+      fascistTeam: 'Fascists',
+      hitler: 'Hitler',
+      teamsBody:
+        'The Liberals are the majority, but they do not know each other. The Fascists are fewer and they do know each other. One of them is Hitler — at 7–10 players, Hitler does not see the other Fascists.',
+      win: 'Each team wins like this:',
+      liberalWin: '5 Liberal laws, or execute Hitler',
+      fascistWin: '6 Fascist laws, or Hitler as Chancellor after 3 Fascist laws',
+      play: 'Every round does the same three things. The winner is whoever hid their role and caught the lie.',
+      beatNominate: 'Government',
+      beatVote: 'Vote',
+      beatLaw: 'Law',
     },
-    setup: 'Setup',
+    kit: {
+      title: 'The kit',
+      policy: {
+        title: 'Policy cards',
+        body: 'Seventeen tiles: 6 Liberal, 11 Fascist. The President draws; the Chancellor enacts one.',
+      },
+      role: {
+        title: 'Role cards',
+        body: 'Liberal, Fascist, or Hitler — a few portraits of each. Only you see yours.',
+      },
+      party: {
+        title: 'Party membership',
+        body: 'This is what Investigate reveals. Hitler’s card also reads Fascist.',
+      },
+      vote: {
+        title: 'Vote cards',
+        body: 'Ja or Nein. Everyone reveals together; a tie fails the government.',
+      },
+      office: {
+        title: 'President and Chancellor',
+        body: 'A badge sits on whoever holds the office this round, so the table can see the government.',
+      },
+      boards: {
+        title: 'Policy boards',
+        body: 'Liberals win on 5. Fascists win on 6. Some Fascist spaces grant a power.',
+      },
+    },
+    laws: {
+      title: 'How the laws work',
+      what: 'There are 17 policy cards: 6 Liberal, 11 Fascist. They are shuffled into a face-down draw pile. Nobody sees the next card.',
+      liberalCount: '6 Liberal',
+      fascistCount: '11 Fascist',
+      pickTitle: 'How a government picks a law',
+      draw: 'The President draws the top 3 from the pile.',
+      burn: 'They discard 1 face down. Nobody sees what it was.',
+      enact: 'The Chancellor enacts 1 of the remaining 2 and discards the other.',
+      emptyTitle: 'If the pile runs out',
+      empty:
+        'When fewer than 3 cards remain in the draw pile, the discards are shuffled back in. The game never runs out of laws.',
+      boardTitle: 'If the board fills up',
+      win: 'You do not play all 17. Five Liberal laws on the board is a Liberal win. The sixth Fascist law is a Fascist win — the game ends there.',
+    },
+    setup: 'How roles are dealt',
     setupBody:
       'Roles are dealt face down according to the player count: there is always exactly one Hitler, with more Fascists added as the table grows. The 17 policy tiles (6 Liberal, 11 Fascist) are shuffled into the draw pile.',
-    setupPoints: {
-      small:
-        'In 5–6 player games, Hitler and the Fascists secretly learn one another.',
-      large:
-        'In 7–10 player games, the Fascists learn each other and Hitler — but Hitler never learns who the Fascists are.',
-      liberals:
-        'Liberals start the game knowing nothing — not even who the other Liberals are.',
+    setupMix: {
+      players: '{count} players',
+      liberal: 'Liberal',
+      fascist: 'Fascist',
+      hitler: 'Hitler',
+      nightSmall: 'Night: Hitler and the Fascists see each other',
+      nightLarge: 'Night: Fascists see Hitler; Hitler does not see them',
     },
-    roundTitle: 'Each Round',
+    roundTitle: 'What happens each round',
     steps: {
       nominate: {
         title: 'Nominate a Chancellor',
@@ -106,10 +146,15 @@ export const en = {
         body: 'If the enacted Fascist policy grants a power, the President must use it before the next round begins.',
       },
     },
-    failTitle: 'Failed Governments',
+    failTitle: 'If the government fails',
+    failTracker: {
+      first: 'First',
+      second: 'Second',
+      chaos: 'Chaos',
+    },
     failBody:
       'Every failed vote advances the election tracker. After three failures in a row the country falls into chaos: the top policy is enacted automatically with no power, the tracker resets, and all term limits clear.',
-    powersTitle: 'Presidential Powers',
+    powersTitle: 'Presidential powers',
     powersBody:
       'Some Fascist policies grant the President a one-time power. Which one depends on the player count and the board.',
     powers: {
@@ -134,15 +179,37 @@ export const en = {
         body: 'After 5 Fascist policies, the Chancellor may veto; if the President agrees, both tiles are discarded and the government fails.',
       },
     },
-    winningTitle: 'How to Win',
+    winningTitle: 'How to win',
     winning: {
-      liberal: 'Liberals win by enacting 5 Liberal policies, or by executing Hitler.',
-      fascist:
-        'Fascists win by enacting 6 Fascist policies, or by electing Hitler Chancellor after 3 Fascist policies.',
+      lead:
+        'Liberals win on 5 Liberal policies or by killing Hitler. Fascists win on 6 Fascist policies — or by sliding Hitler into the chancellorship once 3 Fascist policies are already down.\n\nThose are the clocks. The table actually ends on a vote and a story.',
+      liberals: 'If you are Liberal',
+      liberalBody:
+        'You outnumber them, and you know nobody. Sink shady governments. When the gun comes out, shoot Hitler — not the first person who sounded nervous.',
+      fascists: 'If you are Fascist',
+      fascistBody:
+        'You are the minority, so look Liberal. Keep Hitler clean until the table likes them. Sometimes pass a Liberal law so you do not look like the problem.',
+      scenarios: 'How games actually end',
+      hitlerChancellor: {
+        title: 'Three Fascist policies are already down',
+        body: 'From here, Hitler as Chancellor is an instant Fascist win. The quiet, reasonable player who has never been in government is the one Liberals must keep off that seat — even if chaos is one failed vote away.',
+      },
+      execution: {
+        title: 'The President has the gun',
+        body: 'Investigate only shows a party card, and Hitler’s also reads Fascist. Save the bullet for someone who both investigated Fascist and has been steering governments. Kill a Liberal and you have donated a vote to Hitler, who is still at the table.',
+      },
+      trustedHitler: {
+        title: 'The table trusts Hitler',
+        body: 'Fascists should build Hitler as a Liberal: Ja on Liberal laws, Nein on filthy governments. When three Fascist policies are down, nominate that beloved face and vote Ja together. At 7–10 players Hitler does not know you — do not out yourselves with a perfectly stacked vote.',
+      },
+      chaos: {
+        title: 'Three governments have failed',
+        body: 'The top policy enacts itself, with no power. The deck is Fascist-heavy, so chaos usually helps Fascists. Liberals will swallow a bad government to avoid it; Fascists live off that fear.',
+      },
     },
-    remember: 'Remember',
+    remember: 'What to watch',
     rememberBody:
-      'Deduction, deception, and discussion are your greatest weapons.',
+      'Listen to the story, then look at the votes. The player who always says Ja, the one who never takes office, and the one who explodes after a Fascist law — any of them might be lying.',
     trustNoOne: 'Trust no one.',
   },
   settings: {
@@ -152,6 +219,7 @@ export const en = {
     profileName: 'Player Name',
     profileNamePlaceholder: 'Shown to other players',
     profileNameFromBale: 'Taken from your Bale account',
+    profileNameFromTelegram: 'Taken from your Telegram account',
     playerCard: 'Player card',
     gameSettings: 'Game Settings',
     playerCount: 'Player Count',
@@ -210,6 +278,7 @@ export const en = {
   rooms: {
     createTab: 'Create Room',
     joinTab: 'Join Room',
+    publicName: 'Public table',
   },
   createRoom: {
     title: 'Create Room',
@@ -257,7 +326,6 @@ export const en = {
     waitingToJoin: 'Waiting for players to join…',
     needMore: 'Waiting for {count} more players to start…',
     autoStartGuestNote: 'The game starts once everyone is ready',
-    leaveRoom: 'Leave Room',
     startNeedPlayers:
       'Only {current} players are in the room. Invite {count} more to start.',
     startConfirm: 'Start the game with {count} players?',
@@ -266,12 +334,33 @@ export const en = {
     kick: 'Kick',
     kickNamed: 'Kick {name}',
     seatLabel: 'No. {n}',
+    wantStart: 'Start',
+    retractStart: 'Never mind',
+    startHint: 'At least half the table has to tap Start.',
+    startHintProgress: '{have} of {need} want to start.',
+    startNeedReady: 'Ready up first, then Start.',
+    startCooldownMinutes: 'You can tap Start again in {minutes} minutes.',
+    startCooldownSeconds: 'You can tap Start again in {seconds} seconds.',
+    startChoiceHoldout:
+      'Half the table wants to start. Tap Start, or you leave the table.',
+    startChoiceWaiting: 'Waiting on the others to decide.',
+    startChoiceClock: '{seconds} seconds left.',
   },
   tip: {
-    watch: 'Watch who talks, not just what they say. Trust is a weapon.',
-    numbers:
-      'Liberals outnumber Fascists — but the Fascists know who everyone is.',
-    hitler: "If you're Hitler, play like a Liberal until it matters.",
+    chaos:
+      'Three failed governments and the top law goes on the board by itself — no president, no chancellor.',
+    hitlerOffice:
+      'Three Fascist laws on the board: do not make Hitler chancellor. That is the loss.',
+    claims:
+      'The president sees three and burns one. If that story does not match the chancellor, one of them is lying.',
+    inspect:
+      'A president who looked at a role can tell the truth — or pin Fascist on a liberal.',
+    night:
+      'On the first night the Fascists see each other. In a large game Hitler does not.',
+    trustedFace:
+      'The Hitler in your life rarely shouts. It is usually the person everyone already trusts.',
+    whoTheyCover:
+      'You do not spot the hidden one by their speech. Watch who they cover, and who they isolate.',
   },
   game: {
     roomLabel: 'Room: {name}',
@@ -342,7 +431,7 @@ export const en = {
       unmute: 'Unmute',
     },
     leaveRoom: 'Leave Room',
-    viewRules: 'View Rules',
+    viewRules: 'How to Play',
     liberal: 'Liberal',
     fascist: 'Fascist',
     electionTracker: 'Election Tracker',
@@ -443,7 +532,7 @@ export const en = {
     ravi: 'Ravi',
     tableVoice: 'Hear table',
     roomName: 'Room',
-    viewRules: 'Rules',
+    viewRules: 'How to Play',
     quit: 'Quit',
   },
   ravi: {
@@ -637,6 +726,7 @@ export const en = {
   roomClosed: {
     hostLeft: 'The host has left the room.',
     kicked: 'You were removed from the room.',
+    afk: 'You were away, so you left the table. You can sit again.',
   },
   role: {
     liberal: 'Liberal',
@@ -676,6 +766,7 @@ export const en = {
     PLAYERS_NOT_READY: 'Everyone must be ready before the game can start.',
     RATE_LIMITED: 'Slow down — you are doing that too quickly.',
     INVALID_ACTION: 'That action is not available right now.',
+    BANNED: 'The table voted you out. You cannot sit here again.',
     NETWORK: 'Could not reach the server. Check your connection.',
   },
 };

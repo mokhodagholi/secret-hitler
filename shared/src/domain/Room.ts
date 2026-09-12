@@ -1,5 +1,6 @@
 import {
   Phase,
+  WANT_START_COOLDOWN_MS,
   type BoardState,
   type ExecutivePower,
   type Faction,
@@ -76,6 +77,10 @@ export class Room {
   kickVote: KickVoteState | null = null;
   /** Viewers who already used their one kick request; refunded if that kick passes. */
   spentKickRequestIds = new Set<string>();
+  /** Public-table must-choose window while half have tapped Start. */
+  startChoice: StartChoiceState | null = null;
+  /** Join keys voted off this room — they cannot sit here again. */
+  bannedJoinKeys = new Set<string>();
 
   constructor(args: {
     id: string;
@@ -100,8 +105,21 @@ export class Room {
     return this.players.every((p) => !p.connected);
   }
 
+  /** Remember the group post so it can be rewritten if the host leaves. */
+  bindOriginMessage(messageId: number): void {
+    this.options.originMessageId = messageId;
+  }
+
   findPlayer(id: string): Player | undefined {
     return this.players.find((p) => p.id === id);
+  }
+
+  /** Living in-game, or connected in lobby — the people who count on a kick vote. */
+  kickVoteElectorate(): Player[] {
+    if (this.phase === Phase.Lobby) {
+      return this.players.filter((player) => player.connected);
+    }
+    return this.players.filter((player) => player.isAlive);
   }
 
   private board(): BoardState {
@@ -157,6 +175,7 @@ export class Room {
       isHost: p.isHost,
       connected: p.connected,
       ready: p.ready,
+      wantsStart: p.wantsStart,
       isAlive: p.isAlive,
       isPresident: p.id === this.presidentId,
       isChancellor: p.id === this.chancellorId,
@@ -191,6 +210,10 @@ export class Room {
       hostId: this.hostId,
       minPlayers: this.options.minPlayers,
       maxPlayers: this.options.maxPlayers,
+      kind: this.options.kind === 'public' ? 'public' : 'hosted',
+      startChoice: this.startChoice
+        ? { startedAt: this.startChoice.startedAt, endsAt: this.startChoice.endsAt }
+        : null,
       players,
       board: this.board(),
       winner: this.winner,
@@ -224,6 +247,10 @@ export class Room {
         peek: viewerId === this.presidentId ? [...this.peekedPolicies] : [],
         investigation: this.investigationFor(viewerId),
         canRequestKick: !this.spentKickRequestIds.has(viewerId),
+        wantStartCooldownUntil:
+          viewer?.wantStartAt != null
+            ? viewer.wantStartAt + WANT_START_COOLDOWN_MS
+            : null,
       },
     };
   }
@@ -255,6 +282,7 @@ export class Room {
       maxPlayers: this.options.maxPlayers,
       hasPassword: this.passwordHash != null,
       phase: this.phase,
+      ...(this.options.kind === 'public' ? { kind: 'public' as const } : {}),
     };
   }
 
@@ -306,6 +334,10 @@ export class Room {
           }
         : null,
       spentKickRequestIds: [...this.spentKickRequestIds],
+      startChoice: this.startChoice
+        ? { startedAt: this.startChoice.startedAt, endsAt: this.startChoice.endsAt }
+        : null,
+      bannedJoinKeys: [...this.bannedJoinKeys],
     };
   }
 
@@ -319,7 +351,13 @@ export class Room {
       passwordHash: snapshot.passwordHash,
       deck,
     });
-    room.players = snapshot.players.map((player) => ({ ...player }));
+    room.players = snapshot.players.map((player) => ({
+      ...player,
+      wantsStart: player.wantsStart ?? false,
+      wantStartAt: player.wantStartAt ?? null,
+      unreadySince: player.unreadySince ?? null,
+      joinKey: player.joinKey ?? null,
+    }));
     room.phase = snapshot.phase;
     room.hostId = snapshot.hostId;
     room.liberalPolicies = snapshot.liberalPolicies;
@@ -361,6 +399,10 @@ export class Room {
         }
       : null;
     room.spentKickRequestIds = new Set(snapshot.spentKickRequestIds ?? []);
+    room.startChoice = snapshot.startChoice
+      ? { startedAt: snapshot.startChoice.startedAt, endsAt: snapshot.startChoice.endsAt }
+      : null;
+    room.bannedJoinKeys = new Set(snapshot.bannedJoinKeys ?? []);
     return room;
   }
 
@@ -374,8 +416,8 @@ export class Room {
       startedAt: vote.startedAt,
       endsAt: vote.endsAt,
       votedCount: votedIds.length,
-      voterCount: this.players.filter(
-        (player) => player.isAlive && player.id !== vote.targetId,
+      voterCount: this.kickVoteElectorate().filter(
+        (player) => player.id !== vote.targetId,
       ).length,
       needed: vote.needed,
       yourVote: vote.votes.has(viewerId) ? vote.votes.get(viewerId)! : null,
@@ -431,6 +473,10 @@ export interface RoomSnapshot {
   } | null;
   /** Absent on rooms snapshotted before the one-request kick limit. */
   spentKickRequestIds?: string[];
+  /** Absent on rooms snapshotted before public-table start choice. */
+  startChoice?: { startedAt: number; endsAt: number } | null;
+  /** Absent on rooms snapshotted before table bans. */
+  bannedJoinKeys?: string[];
 }
 
 /** Authoritative kick-vote record kept on the room. */
@@ -441,4 +487,9 @@ export interface KickVoteState {
   startedAt: number;
   endsAt: number;
   needed: number;
+}
+
+export interface StartChoiceState {
+  startedAt: number;
+  endsAt: number;
 }

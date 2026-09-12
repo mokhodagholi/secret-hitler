@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, handleBotText, parseBotCommand } from './commands';
+import { baleStartLink, createGroupClosedReply, handleBotText, parseBotCommand } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -59,11 +59,22 @@ describe('baleStartLink', () => {
 });
 
 describe('handleBotText', () => {
+  it('Should put Telegram startapp links on Play when startLink is injected', () => {
+    const reply = ctx({
+      startLink: (startApp = '') => `https://t.me/secret_hitler_bot/game?startapp=${startApp}`,
+    });
+    expect(JSON.stringify(reply.reply_markup)).toContain(
+      'https://t.me/secret_hitler_bot/game?startapp=',
+    );
+    expect(JSON.stringify(reply)).not.toContain('ble.ir');
+  });
+
   it('Should greet /start in natural Persian and never mention the public domain', () => {
     const reply = ctx({ text: '/start' });
     expect(reply.text).toContain('راز هیتلر');
     expect(reply.text).not.toContain('هیتلر مخفی');
-    expect(reply.text).not.toContain('/find_game');
+    expect(reply.text).toContain('/find\\_game');
+    expect(reply.text).not.toContain('/find-game');
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
     expect(reply.text).toContain('https://ble.ir/secret_hitler_bot?startapp=');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
@@ -86,6 +97,26 @@ describe('handleBotText', () => {
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
+  });
+
+  it('Should call the public table میز عمومی on /find_game', () => {
+    const publicLobby: RoomSummary = {
+      id: 'pub',
+      code: 'PUB001',
+      name: 'Untitled',
+      playerCount: 0,
+      maxPlayers: 10,
+      hasPassword: false,
+      phase: Phase.Lobby,
+      kind: 'public',
+    };
+    const reply = ctx({
+      text: '/find_game',
+      lobbies: [publicLobby, lobby],
+      games: [publicLobby, lobby],
+    });
+    expect(reply.text).toContain('میز عمومی');
+    expect(reply.text).not.toContain('Untitled');
   });
 
   it('Should join by code with a ble.ir startapp link', () => {
@@ -121,6 +152,13 @@ describe('handleBotText', () => {
     const reply = ctx({ text: '/create' });
     expect(reply.text).toContain('گروه');
     expect(reply.reply_markup).toBeUndefined();
+  });
+
+  it('Should say the host left and the table closed when rewriting a group /create post', () => {
+    const reply = createGroupClosedReply({ creatorName: 'Ana' });
+    expect(reply.text).toContain('میزبان رفت');
+    expect(reply.text).toContain('Ana');
+    expect(reply.reply_markup?.inline_keyboard).toEqual([]);
   });
 
   it('Should list in-progress games on /games', () => {

@@ -2,7 +2,7 @@ import { Index, Show, createEffect } from 'solid-js';
 import type { Role } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
-import { CARD_BACK, ROLE_FACE } from '../../assets/cards';
+import { CARD_BACK, roleFace } from '../../assets/cards';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './DeckStrip.module.scss';
 
@@ -11,6 +11,7 @@ export interface DeckStripProps {
   discardCount: number;
   electionTracker: number;
   role: Role | null;
+  playerId: string;
   onInspectRole: () => void;
   formatMessage: FormatMessage;
 }
@@ -53,7 +54,11 @@ export function DeckStrip(props: DeckStripProps) {
             aria-label={formatMessage('game.youAreRole', { role: roleName() })}
             onClick={props.onInspectRole}
           >
-            <WarmImg class={styles.roleFace} src={ROLE_FACE[role()]} alt="" />
+            <WarmImg
+              class={styles.roleFace}
+              src={roleFace(role(), props.playerId)}
+              alt=""
+            />
             <span class={styles.roleName}>{roleName()}</span>
           </button>
         )}

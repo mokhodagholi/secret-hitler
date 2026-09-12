@@ -22,7 +22,7 @@ short alias.
 | `const t = i18n.formatMessage` | `const { formatMessage } = i18n` |
 | `const fm = i18n.formatMessage` | `const { formatMessage } = i18n` |
 | `const s = settings.settings` | `const state = settings.settings` |
-| `<For each={items}>{(c) => ...}</For>` | `<For each={componentCards}>{(componentCard) => ...}</For>` |
+| `<For each={items}>{(c) => ...}</For>` | `<For each={kitPieces}>{(piece) => ...}</For>` |
 | `onChange={(v) => set(v)}` | `onChange={(value) => set(value)}` |
 | `.find((l) => l.code === ...)` | `.find((language) => language.code === ...)` |
 
@@ -34,8 +34,8 @@ const { formatMessage } = useApp().i18n;
 formatMessage('settings.players', { count: state.playerCount });
 
 // Good — descriptive loop parameters
-<For each={buildComponentCards(formatMessage)}>
-  {(componentCard) => <ComponentCard {...componentCard} />}
+<For each={buildKit(formatMessage)}>
+  {(piece) => <KitPiece {...piece} />}
 </For>
 ```
 

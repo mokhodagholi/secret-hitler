@@ -48,6 +48,8 @@ export interface ServerOptions {
   publicUrl?: string;
   /** Present when BALE_BOT_TOKEN is configured. */
   bale?: BaleRuntime;
+  /** Present when TELEGRAM_BOT_TOKEN is configured. */
+  telegram?: BaleRuntime;
   /**
    * Server-owned feature flags. Production passes parseFeatureFlags(process.env).
    * Tests inject so suites do not depend on the ambient environment.
@@ -73,8 +75,11 @@ export interface BuiltServer {
 export async function buildServer(options: ServerOptions = {}): Promise<BuiltServer> {
   const app = Fastify({ logger: options.logger ?? false, trustProxy: true });
 
-  const seats = options.bale?.seats ?? new BaleSeatIndex();
-  const bale = options.bale ? { ...options.bale, seats } : undefined;
+  const seats = options.bale?.seats ?? options.telegram?.seats ?? new BaleSeatIndex();
+  const bale = options.bale ? { ...options.bale, kind: options.bale.kind ?? 'bale', seats } : undefined;
+  const telegram = options.telegram
+    ? { ...options.telegram, kind: 'telegram' as const, seats }
+    : undefined;
 
   const repo = new RoomRepository(options.minPlayers);
   const tokens = new TokenStore();
@@ -87,10 +92,12 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     bale ?? null,
     flags,
     options.voice ?? null,
+    telegram ?? null,
   );
   const history = options.history ?? new InMemoryGameHistoryStore();
   const profiles = options.profiles ?? new InMemoryProfileStore();
   const recorder = new GameResultRecorder(history);
+  sockets.onRoomCreated = (entry) => recorder.attach(entry);
 
   if (options.live) {
     const restored = await restoreLiveRooms({
@@ -105,6 +112,12 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     }
   }
 
+  sockets.ensurePublicLobby();
+
+  app.addHook('onClose', async () => {
+    sockets.dispose();
+  });
+
   app.get('/health', async () => ({ status: 'ok', shared: SHARED_VERSION }));
   registerRoutes(app, {
     repo,
@@ -115,6 +128,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     profiles,
     publicUrl: options.publicUrl,
     bale,
+    telegram,
     flags,
   });
 

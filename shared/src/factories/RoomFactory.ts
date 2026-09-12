@@ -2,6 +2,7 @@ import {
   MAX_PLAYERS,
   MIN_PLAYERS,
   SUPPORTED_MIN_PLAYERS,
+  type MessengerKind,
   type RoomOptions,
 } from '../types/GameState';
 import { makeId, makeRoomCode } from '../util/ids';
@@ -15,8 +16,11 @@ export interface RoomCreateArgs {
   maxPlayers?: number;
   timerEnabled?: boolean;
   confirmActions?: boolean;
-  /** Bale group chat id when the table was opened with `/create`. */
+  /** Group chat id when the table was opened with `/create`. */
   originChatId?: number;
+  originPlatform?: MessengerKind;
+  /** Evergreen Join lobby — no host. */
+  kind?: 'public';
 }
 
 /** Creates {@link Room} instances with validated defaults. */
@@ -36,6 +40,8 @@ export class RoomFactory {
       timerEnabled: args.timerEnabled ?? false,
       confirmActions: args.confirmActions ?? true,
       ...(args.originChatId != null ? { originChatId: args.originChatId } : {}),
+      ...(args.originPlatform != null ? { originPlatform: args.originPlatform } : {}),
+      ...(args.kind === 'public' ? { kind: 'public' as const } : {}),
     };
     return new Room({
       id: makeId(),

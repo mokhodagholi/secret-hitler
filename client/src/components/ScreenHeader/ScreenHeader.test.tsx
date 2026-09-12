@@ -22,7 +22,7 @@ describe('ScreenHeader', () => {
 
   it('Should hide the in-app arrow when native back chrome is in use', () => {
     const harness = buildHarness();
-    harness.services.bale = new NativeBackBale();
+    harness.services.miniApp = new NativeBackBale();
     harness.services.nav.navigate('settings');
     renderWithApp(() => <ScreenHeader title="Settings" />, harness);
 
@@ -32,7 +32,7 @@ describe('ScreenHeader', () => {
 
   it('Should still intercept the shared back action when the arrow is hidden', () => {
     const harness = buildHarness();
-    harness.services.bale = new NativeBackBale();
+    harness.services.miniApp = new NativeBackBale();
     let intercepted = 0;
     renderWithApp(
       () => <ScreenHeader title="Lobby" onBack={() => (intercepted += 1)} />,

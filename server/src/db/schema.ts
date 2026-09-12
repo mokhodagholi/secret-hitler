@@ -9,6 +9,7 @@ export const profiles = pgTable('profiles', {
   id: uuid('id').defaultRandom().primaryKey(),
   clientId: text('client_id').notNull().unique(),
   baleUserId: text('bale_user_id').unique(),
+  telegramUserId: text('telegram_user_id').unique(),
   avatar: integer('avatar').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

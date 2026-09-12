@@ -14,7 +14,7 @@ export interface TextAreaProps {
   rows?: number;
 }
 
-/** Labelled navy letter field — the only caret besides name, code, and chat. */
+/** Labelled letter field — the only caret besides name, code, and chat. */
 export function TextArea(props: TextAreaProps) {
   return (
     <label class={styles.field}>

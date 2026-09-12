@@ -1,12 +1,13 @@
 import { onCleanup, onMount } from 'solid-js';
 import type { Role } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
-import { ROLE_FACE } from '../../assets/cards';
+import { roleFace } from '../../assets/cards';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './RoleInspectOverlay.module.scss';
 
 export interface RoleInspectOverlayProps {
   role: Role;
+  playerId: string;
   onClose: () => void;
 }
 
@@ -41,7 +42,7 @@ export function RoleInspectOverlay(props: RoleInspectOverlayProps) {
       >
         <WarmImg
           class={styles.art}
-          src={ROLE_FACE[props.role]}
+          src={roleFace(props.role, props.playerId)}
           alt={formatMessage(`role.${props.role}`)}
         />
         <div class={styles.caption}>

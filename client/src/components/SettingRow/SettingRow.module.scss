@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .row {
-  @include card;
+  @include card-ink;
   display: flex;
   align-items: center;
   gap: 14px;

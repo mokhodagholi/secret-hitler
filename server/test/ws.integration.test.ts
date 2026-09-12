@@ -61,7 +61,7 @@ describe('WebSocket gameplay', () => {
   });
 
   it('Should put feature flags on the auth handshake', async () => {
-    server = await listenServer(3, { flags: { voice: true } });
+    server = await listenServer(3, { flags: { voice: true, publicTable: false } });
     const created = (
       await httpJson<CreateRoomResponse>(server.app, 'POST', '/api/rooms', {
         name: 'Bunker',
@@ -72,7 +72,7 @@ describe('WebSocket gameplay', () => {
     const ws = await connect();
     ws.send({ type: 'auth', token: created.token });
     const authed = await ws.waitFor('authed');
-    expect(authed.flags).toEqual({ voice: true });
+    expect(authed.flags).toEqual({ voice: true, publicTable: false });
   });
 
   it('Should reject an invalid token and refuse unauthenticated messages', async () => {

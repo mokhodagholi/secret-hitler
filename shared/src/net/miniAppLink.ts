@@ -1,5 +1,13 @@
-/** Default bot nick for Bale invite links. Telegram `t.me` can land here later. */
+import type { MessengerKind } from '../types/GameState';
+
+/** Default bot nick for Bale invite links. */
 export const DEFAULT_BALE_BOT_USERNAME = '@secret_hitler_bot';
+
+/** Default bot nick for Telegram invite links. Override with TELEGRAM_BOT_USERNAME. */
+export const DEFAULT_TELEGRAM_BOT_USERNAME = '@secret_hitler_bot';
+
+/** BotFather Mini App short name: `t.me/{bot}/{shortName}?startapp=`. */
+export const DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME = 'game';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -34,24 +42,59 @@ export function isLocalInviteHost(host: string): boolean {
   return LOCAL_HOSTS.has(hostname) || isPrivateIpv4(hostname);
 }
 
-/**
- * Opens the mini-app inside the messenger. Chat and production invites use this,
- * never the public website. Telegram would be `https://t.me/{nick}?startapp=`.
- */
-export function miniAppStartLink(botUsername: string, startApp = ''): string {
-  const nick = botUsername.replace(/^@/, '');
-  return `https://ble.ir/${nick}?startapp=${startApp}`;
+export interface MiniAppStartLinkParams {
+  botUsername: string;
+  startApp?: string;
+  platform?: MessengerKind;
+  telegramShortName?: string;
 }
 
-/** Localhost copies a `/join/CODE` URL so the browser can open it; Bale otherwise. */
+/**
+ * Opens the mini-app inside the messenger. Chat and production invites use this,
+ * never the public website.
+ */
+export function miniAppStartLink(botUsername: string, startApp?: string): string;
+export function miniAppStartLink(params: MiniAppStartLinkParams): string;
+export function miniAppStartLink(
+  botUsernameOrParams: string | MiniAppStartLinkParams,
+  startApp = '',
+): string {
+  const params: MiniAppStartLinkParams =
+    typeof botUsernameOrParams === 'string'
+      ? { botUsername: botUsernameOrParams, startApp }
+      : botUsernameOrParams;
+  const nick = params.botUsername.replace(/^@/, '');
+  const payload = params.startApp ?? '';
+  if (params.platform === 'telegram') {
+    const shortName = (params.telegramShortName || DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME).replace(
+      /^\//,
+      '',
+    );
+    return `https://t.me/${nick}/${shortName}?startapp=${payload}`;
+  }
+  return `https://ble.ir/${nick}?startapp=${payload}`;
+}
+
+/** Localhost copies a `/join/CODE` URL so the browser can open it; otherwise this host's mini-app. */
 export function roomInviteLink(params: {
   code: string;
   origin: string;
   hostname: string;
   botUsername?: string;
+  platform?: MessengerKind;
+  telegramShortName?: string;
 }): string {
   if (isLocalInviteHost(params.hostname)) {
     return `${params.origin.replace(/\/$/, '')}/join/${params.code}`;
   }
-  return miniAppStartLink(params.botUsername || DEFAULT_BALE_BOT_USERNAME, params.code);
+  const platform = params.platform ?? 'bale';
+  const botUsername =
+    params.botUsername ||
+    (platform === 'telegram' ? DEFAULT_TELEGRAM_BOT_USERNAME : DEFAULT_BALE_BOT_USERNAME);
+  return miniAppStartLink({
+    botUsername,
+    startApp: params.code,
+    platform,
+    telegramShortName: params.telegramShortName,
+  });
 }

@@ -21,7 +21,7 @@ export function HomeScreen() {
 
   const canRejoin = () => game.inRoom() && game.view() != null;
 
-  const enterPlay = () => nav.navigate('play');
+  const enterPlay = () => nav.navigate('join-game');
 
   function rejoinMatch(): void {
     const phase = game.view()?.phase;
@@ -38,7 +38,7 @@ export function HomeScreen() {
             aria-label={formatMessage('nav.rules')}
             onClick={() => nav.navigate('rules')}
           >
-            <Icon name="scroll" size={22} />
+            <Icon name="book" size={22} />
           </button>
           <button
             type="button"

@@ -1,3 +1,5 @@
+import { escapeBaleMarkdown } from './commands';
+
 export const SUPPORT_TOPICS = ['help', 'suggestion', 'criticism'] as const;
 
 export type SupportTopic = (typeof SUPPORT_TOPICS)[number];
@@ -26,8 +28,8 @@ export function formatSupportLetter(params: {
   description: string;
   senderId: string;
 }): string {
-  return [TOPIC_LABELS[params.topic], '', `فرستنده: ${params.senderId}`, '', params.description].join(
-    '\n',
+  return escapeBaleMarkdown(
+    [TOPIC_LABELS[params.topic], '', `فرستنده: ${params.senderId}`, '', params.description].join('\n'),
   );
 }
 
@@ -51,5 +53,5 @@ export function formatKickVoteLetter(params: {
   if (params.roomCode) {
     lines.splice(2, 0, `اتاق: ${params.roomCode}`, '');
   }
-  return lines.join('\n');
+  return escapeBaleMarkdown(lines.join('\n'));
 }

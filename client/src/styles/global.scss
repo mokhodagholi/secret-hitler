@@ -4,6 +4,12 @@
 
 :root {
   @include scroll-navy;
+  --keyboard-inset: 0px;
+}
+
+[data-keyboard-form] {
+  // KeyboardService writes --keyboard-shift while a field inside is focused.
+  transform: translateY(calc(-1 * var(--keyboard-shift, 0px)));
 }
 
 * {

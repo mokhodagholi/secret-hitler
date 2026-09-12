@@ -18,10 +18,10 @@ export class FeatureFlagService {
   private inflight: Promise<void> | null = null;
 
   constructor(
-    initial: FeatureFlags = DEFAULT_FLAGS,
+    initial: Partial<FeatureFlags> = DEFAULT_FLAGS,
     fetchImpl: typeof fetch = fetch,
   ) {
-    const [flags, update] = createStore<FeatureFlags>({ ...initial });
+    const [flags, update] = createStore<FeatureFlags>({ ...DEFAULT_FLAGS, ...initial });
     this.flags = flags;
     this.update = update;
     this.fetchImpl = fetchImpl;

@@ -14,7 +14,7 @@
 }
 
 .box {
-  @include card;
+  @include card-ink;
   display: flex;
   align-items: center;
   gap: 10px;

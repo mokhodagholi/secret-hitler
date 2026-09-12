@@ -129,6 +129,17 @@ describe('GameEngine — table kick vote', () => {
     expect(engine.requestKick(ana.id, eli.id)).toBeNull();
     expect(room.kickVote?.targetId).toBe(eli.id);
   });
+
+  it('Should ban the kicked player from sitting this table again', () => {
+    const { engine, room, players } = startGame(['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);
+    const [ana, ben, cal, dia] = players;
+    ben.joinKey = 'client:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    engine.requestKick(ana.id, ben.id);
+    engine.voteKick(cal.id, true);
+    engine.voteKick(dia.id, true);
+    expect(ben.isAlive).toBe(false);
+    expect(room.bannedJoinKeys.has(ben.joinKey)).toBe(true);
+  });
 });
 
 function calId(players: { name: string; id: string }[]): string {

@@ -7,7 +7,7 @@
   min-height: 0;
   height: 100%;
   padding: calc(14px + env(safe-area-inset-top, 0px)) 14px
-    calc(12px + env(safe-area-inset-bottom, 0px));
+    calc(28px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -41,39 +41,23 @@
   );
 }
 
-// --- Top: compact portrait row -----------------------------------------------
+// --- Top: portraits fill this box; size is measured in SeatBoard -------------
 
 .seats {
   position: relative;
   z-index: 1;
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-content: flex-start;
   align-items: flex-start;
-  gap: 16px 14px;
-  margin-top: 12px;
-  padding: 4px 4px 8px;
-}
-
-// 10 seats: five across, two rows, so the last card stays above the footer.
-.seatsPacked {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  justify-items: stretch;
-  align-content: start;
-  gap: 8px 6px;
+  margin-top: 8px;
 }
 
 // --- Bottom: tip + controls --------------------------------------------------
-
-.scene:has(.seatsPacked) .tip {
-  padding: 10px 16px;
-  font-size: 1.05rem;
-}
 
 .footer {
   position: relative;
@@ -82,9 +66,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  margin-top: auto;
-  padding-top: 10px;
+  gap: 28px;
+  margin-top: 0;
+  padding-top: 4px;
+  padding-bottom: 8px;
   background: linear-gradient(
     to top,
     rgba(6, 4, 2, 0.88) 0%,
@@ -117,8 +102,8 @@
 .actions button {
   flex: 1;
   min-width: 0;
-  padding: 9px 6px;
-  font-size: 0.64rem;
+  padding: 12px 10px;
+  font-size: 0.78rem;
   letter-spacing: 0.05em;
   border-radius: $radius-sm;
 }
@@ -143,6 +128,17 @@
   padding: 8px 12px;
   text-align: center;
   cursor: pointer;
+}
+
+.startHint {
+  max-width: 92%;
+  margin: -12px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  font-weight: 600;
+  text-align: center;
+  color: $cream;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 .unreadyList {

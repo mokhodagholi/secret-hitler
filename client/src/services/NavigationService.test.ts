@@ -121,9 +121,9 @@ describe('NavigationService', () => {
   it('Should replace the current screen without stacking it', () => {
     const nav = new NavigationService('/');
     nav.navigate('rules');
-    nav.navigate('rules-overview');
-    nav.replace('rules-setup');
-    expect(nav.screen()).toBe('rules-setup');
+    nav.navigate('rules-what-is-this');
+    nav.replace('rules-roles');
+    expect(nav.screen()).toBe('rules-roles');
     nav.back();
     expect(nav.screen()).toBe('rules');
   });

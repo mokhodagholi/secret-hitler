@@ -34,7 +34,9 @@ function RoomClosedNotice() {
       message={formatMessage(
         game.roomClosedNotice() === 'KICKED'
           ? 'roomClosed.kicked'
-          : 'roomClosed.hostLeft',
+          : game.roomClosedNotice() === 'AFK'
+            ? 'roomClosed.afk'
+            : 'roomClosed.hostLeft',
       )}
       confirmLabel={formatMessage('common.ok')}
       onConfirm={() => game.clearRoomClosedNotice()}

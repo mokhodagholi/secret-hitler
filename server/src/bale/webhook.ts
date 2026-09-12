@@ -1,6 +1,11 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Chat, Update } from 'bale-bot' with { 'resolution-mode': 'import' };
+import {
+  DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME,
+  miniAppStartLink,
+  type MessengerKind,
+} from '@secret-hitler/shared';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
@@ -23,6 +28,12 @@ export interface BaleMessenger {
     chat_id: number | string;
     text: string;
     reply_markup?: BotReply['reply_markup'];
+  }): Promise<{ message_id?: number } | unknown>;
+  editMessageText?(params: {
+    chat_id: number | string;
+    message_id: number;
+    text: string;
+    reply_markup?: BotReply['reply_markup'];
   }): Promise<unknown>;
   setMyCommands?(params: { commands: { command: string; description: string }[] }): Promise<unknown>;
   setWebhook?(params: { url: string; secret_token?: string }): Promise<unknown>;
@@ -33,15 +44,36 @@ export interface BaleMessenger {
 }
 
 export interface BaleRuntime {
+  /** Omitted in older tests — treated as Bale. */
+  kind?: MessengerKind;
   bot: BaleMessenger;
   botToken: string;
   publicUrl?: string;
   botUsername: string;
+  /** Telegram Mini App short name; ignored on Bale. */
+  webAppShortName?: string;
   seats: BaleSeatIndex;
   /** When set, incoming webhook posts must present this secret. */
   webhookSecret?: string;
   /** Group the bot posts support letters to. */
   supportChatId?: number | string;
+}
+
+export type MessengerRuntime = BaleRuntime;
+
+export function messengerKindOf(runtime: Pick<BaleRuntime, 'kind'>): MessengerKind {
+  return runtime.kind ?? 'bale';
+}
+
+export function startLinkFor(runtime: BaleRuntime): (startApp?: string) => string {
+  const kind = messengerKindOf(runtime);
+  return (startApp = '') =>
+    miniAppStartLink({
+      botUsername: runtime.botUsername,
+      startApp,
+      platform: kind,
+      telegramShortName: runtime.webAppShortName || DEFAULT_TELEGRAM_WEBAPP_SHORT_NAME,
+    });
 }
 
 /** Live table hooks so `/create` in a group can open a real room. */
@@ -129,17 +161,17 @@ export function registerBaleBodyParser(app: FastifyInstance): void {
   });
 }
 
-export async function handleBaleWebhook(
+export async function handleMessengerWebhook(
   req: FastifyRequest,
   reply: FastifyReply,
   repo: RoomRepository,
-  bale: BaleRuntime | undefined,
+  messenger: BaleRuntime | undefined,
   table?: BaleTableHooks,
 ): Promise<void> {
-  if (!bale) {
-    return reply.code(503).send({ error: 'Bale bot is not configured' });
+  if (!messenger) {
+    return reply.code(503).send({ error: 'Bot is not configured' });
   }
-  if (!webhookSecretMatches(providedWebhookSecret(req), bale.webhookSecret)) {
+  if (!webhookSecretMatches(providedWebhookSecret(req), messenger.webhookSecret)) {
     return reply.code(401).send({ error: 'Unauthorized' });
   }
   const body = asUpdate(req.body);
@@ -159,9 +191,10 @@ export async function handleBaleWebhook(
     return reply.code(200).send({ ok: true });
   }
 
+  const kind = messengerKindOf(messenger);
   if (!isDirectMessage(chat)) {
     if (isGroupChat(chat) && table) {
-      await handleGroupCreate(chat, text, fromId, message.from?.first_name, repo, bale, table, req);
+      await handleGroupCreate(chat, text, fromId, message.from?.first_name, repo, messenger, table, req);
     }
     return reply.code(200).send({ ok: true });
   }
@@ -171,12 +204,15 @@ export async function handleBaleWebhook(
     fromId,
     lobbies: repo.listPublic(),
     games: repo.listAll(),
-    seated: bale.seats.get(fromId),
-    botUsername: bale.botUsername,
+    seated: messenger.seats.get(fromId, kind),
+    botUsername: messenger.botUsername,
+    startLink: startLinkFor(messenger),
   });
 
-  return sendBotReply(req, reply, bale, chat.id, response);
+  return sendBotReply(req, reply, messenger, chat.id, response);
 }
+
+export const handleBaleWebhook = handleMessengerWebhook;
 
 async function handleGroupCreate(
   chat: Chat,
@@ -189,7 +225,7 @@ async function handleGroupCreate(
   req: FastifyRequest,
 ): Promise<void> {
   if (parseBotCommand(text)?.command !== 'create') return;
-  if (!GROUP_CREATE_LIMIT.allow(`group:${chat.id}`)) {
+  if (!GROUP_CREATE_LIMIT.allow(`group:${messengerKindOf(bale)}:${chat.id}`)) {
     await sendChat(req, bale, chat.id, createRateLimitedReply());
     return;
   }
@@ -200,11 +236,18 @@ async function handleGroupCreate(
     recorder: table.recorder,
     seats: bale.seats,
     botUsername: bale.botUsername,
+    startLink: startLinkFor(bale),
+    platform: messengerKindOf(bale),
     chatId: chat.id,
     fromId,
     creatorName: firstName ?? '',
   });
-  await sendChat(req, bale, chat.id, created.reply);
+  const posted = await sendChat(req, bale, chat.id, created.reply);
+  if ('password' in created && posted?.message_id != null) {
+    const entry = repo.getByCode(created.code);
+    entry?.room.bindOriginMessage(posted.message_id);
+    if (entry) void table.sockets.persistRoom(entry.room.id);
+  }
   if (!('password' in created)) return;
 
   const dm = createPasswordDm({
@@ -232,29 +275,35 @@ async function sendBotReply(
   return reply.code(200).send({ ok: true });
 }
 
+function readMessageId(sent: unknown): number | undefined {
+  if (!sent || typeof sent !== 'object') return undefined;
+  const id = (sent as { message_id?: unknown }).message_id;
+  return typeof id === 'number' ? id : undefined;
+}
+
 /** Best-effort send; retries without the keyboard if Bale rejects markup. */
 async function sendChat(
   req: FastifyRequest,
   bale: BaleRuntime,
   chatId: number,
   response: BotReply,
-): Promise<boolean> {
+): Promise<{ message_id?: number } | null> {
   try {
-    await bale.bot.sendMessage({
+    const sent = await bale.bot.sendMessage({
       chat_id: chatId,
       text: response.text,
       reply_markup: response.reply_markup,
     });
-    return true;
+    return { message_id: readMessageId(sent) };
   } catch (error) {
-    req.log.error(error, 'Failed to send Bale bot reply');
-    if (!response.reply_markup) return false;
+    req.log.error(error, 'Failed to send bot reply');
+    if (!response.reply_markup) return null;
     try {
-      await bale.bot.sendMessage({ chat_id: chatId, text: response.text });
-      return true;
+      const sent = await bale.bot.sendMessage({ chat_id: chatId, text: response.text });
+      return { message_id: readMessageId(sent) };
     } catch (retryError) {
-      req.log.error(retryError, 'Failed to send Bale bot reply without markup');
-      return false;
+      req.log.error(retryError, 'Failed to send bot reply without markup');
+      return null;
     }
   }
 }

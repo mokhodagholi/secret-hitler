@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from '@rstest/core';
-import { validateBaleInitData } from './initData';
+import { identifyInitData, validateBaleInitData } from './initData';
 
 const TOKEN = '123456:test-token';
 
@@ -48,5 +48,28 @@ describe('validateBaleInitData', () => {
       user: JSON.stringify({ id: 1, first_name: 'Ana' }),
     });
     expect(validateBaleInitData(initData, TOKEN, 1_000_000)).toBeNull();
+  });
+});
+
+describe('identifyInitData', () => {
+  it('Should match the token that signed the payload and ignore the other', () => {
+    const authDate = String(Math.floor(Date.now() / 1000));
+    const telegramToken = '999:telegram-token';
+    const initData = sign(
+      {
+        auth_date: authDate,
+        user: JSON.stringify({ id: 7, first_name: 'Cal' }),
+      },
+      telegramToken,
+    );
+    expect(
+      identifyInitData(initData, [
+        { kind: 'bale', botToken: TOKEN },
+        { kind: 'telegram', botToken: telegramToken },
+      ]),
+    ).toEqual({
+      kind: 'telegram',
+      user: { id: 7, firstName: 'Cal', username: undefined },
+    });
   });
 });

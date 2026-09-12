@@ -56,4 +56,15 @@ describe('Room snapshot', () => {
     );
     expect(restored.spentKickRequestIds.size).toBe(0);
   });
+
+  it('Should round-trip banned sit identities', () => {
+    const { room, players } = startGame();
+    players[0].joinKey = 'client:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    room.bannedJoinKeys.add(players[0].joinKey);
+    const restored = Room.fromSnapshot(
+      JSON.parse(JSON.stringify(room.toSnapshot())),
+    );
+    expect(restored.players[0].joinKey).toBe(players[0].joinKey);
+    expect([...restored.bannedJoinKeys]).toEqual([players[0].joinKey]);
+  });
 });

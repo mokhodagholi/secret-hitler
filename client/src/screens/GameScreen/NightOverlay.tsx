@@ -11,7 +11,7 @@ import type { MessageKey } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import type { RaviLineId } from '../../services/RaviService';
 import { avatarImage } from '../../assets/avatars';
-import { CARD_BACK, NIGHT_VEIL, PARTY_FACE, ROLE_FACE } from '../../assets/cards';
+import { CARD_BACK, NIGHT_VEIL, PARTY_FACE, roleFace } from '../../assets/cards';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { flyToTarget } from './cardFlight';
 import styles from './NightOverlay.module.scss';
@@ -236,7 +236,7 @@ export function NightOverlay(props: NightOverlayProps) {
           <div class={styles.cards}>
             <WarmImg
               class={styles.roleCard}
-              src={ROLE_FACE[props.role]}
+              src={roleFace(props.role, props.youId)}
               alt={formatMessage(`role.${props.role}`)}
               ref={(element) => void animation.play(element, 'card-flip-in')}
             />

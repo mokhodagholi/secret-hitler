@@ -15,10 +15,11 @@ import { GameStateService } from './GameStateService';
 import { SoundService } from './SoundService';
 import { AnimationService } from './AnimationService';
 import { RaviService } from './RaviService';
-import { BaleService } from './BaleService';
+import { createMiniApp, type MiniApp } from './miniapp';
 import { PrefetchService, urlsForNextStep } from './prefetch';
 import { FeatureFlagService } from './FeatureFlagService';
 import { VoiceService } from './VoiceService';
+import { KeyboardService } from './KeyboardService';
 import { nextMusicCheckMs, trackForScene } from './music';
 
 export interface AppServices {
@@ -30,10 +31,11 @@ export interface AppServices {
   sound: SoundService;
   animation: AnimationService;
   ravi: RaviService;
-  bale: BaleService;
+  miniApp: MiniApp;
   prefetch: PrefetchService;
   flags: FeatureFlagService;
   voice: VoiceService;
+  keyboard: KeyboardService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -57,11 +59,15 @@ export function AppProvider(
     sound: overrides.sound ?? new SoundService(settings, prefetch),
     animation: overrides.animation ?? new AnimationService(settings),
     ravi: overrides.ravi ?? new RaviService(settings, i18n, prefetch),
-    bale: overrides.bale ?? new BaleService(),
+    miniApp: overrides.miniApp ?? createMiniApp(),
     prefetch,
     flags,
     voice: overrides.voice ?? new VoiceService(socket, flags, settings),
+    keyboard: overrides.keyboard ?? new KeyboardService(),
   };
+
+  services.keyboard.start();
+  onCleanup(() => services.keyboard.stop());
 
   // HTTPS dev can keep a stale catalog from /api/flags; the auth frame is the live switch.
   onCleanup(
@@ -72,9 +78,9 @@ export function AppProvider(
     }),
   );
 
-  if (!overrides.bale) {
-    void services.bale.boot(settings, services.nav).then(() => {
-      if (services.bale.user() != null) return;
+  if (!overrides.miniApp) {
+    void services.miniApp.boot(settings, services.nav).then(() => {
+      if (services.miniApp.user() != null) return;
       void services.game.loadProfile(settings.settings.profileId).then((avatar) => {
         if (avatar != null) settings.set('avatar', avatar);
       });
@@ -97,7 +103,7 @@ export function AppProvider(
   );
 
   createEffect(() => {
-    services.bale.syncBackButton(services.nav.canGoBack());
+    services.miniApp.syncBackButton(services.nav.canGoBack());
   });
 
   // Stop or resume the background loop when the Music setting is toggled.

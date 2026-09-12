@@ -1,76 +1,107 @@
 import type { MessageKey } from '../../i18n';
 import type { IconName } from '../../components/Icon/Icon';
 import type { ScreenName } from '../../services/NavigationService';
-import type { ComponentCardProps } from './ComponentCard';
 
 export const TOPIC_ORDER = [
-  'overview',
-  'setup',
-  'round',
-  'fail',
+  'whatIsThis',
+  'contents',
+  'laws',
+  'roles',
+  'eachRound',
+  'failedGovernment',
   'powers',
-  'winning',
+  'howToWin',
 ] as const;
 
 export type TopicId = (typeof TOPIC_ORDER)[number];
 
+/** One hue per hub card so the tiles never share a fill. */
+export type TopicHue =
+  | 'brass'
+  | 'teal'
+  | 'moss'
+  | 'crimson'
+  | 'azure'
+  | 'amber'
+  | 'violet'
+  | 'wine';
+
+/** Corner the remaining glow bubble grows from. */
+export type BubbleOrigin = 'topStart' | 'topEnd' | 'bottomStart' | 'bottomEnd';
+
 export interface TopicDef {
   id: TopicId;
   icon: IconName;
-  tone: ComponentCardProps['tone'];
+  hue: TopicHue;
+  bubbleOrigin: BubbleOrigin;
   titleKey: MessageKey;
-  teaseKey: MessageKey;
   screen: Extract<ScreenName, `rules-${string}`>;
 }
 
 export const TOPICS: readonly TopicDef[] = [
   {
-    id: 'overview',
-    icon: 'capitol',
-    tone: 'gold',
-    titleKey: 'rules.overview',
-    teaseKey: 'rules.teasers.overview',
-    screen: 'rules-overview',
-  },
-  {
-    id: 'setup',
-    icon: 'masks',
-    tone: 'fascist',
-    titleKey: 'rules.setup',
-    teaseKey: 'rules.teasers.setup',
-    screen: 'rules-setup',
-  },
-  {
-    id: 'round',
-    icon: 'crown',
-    tone: 'liberal',
-    titleKey: 'rules.roundTitle',
-    teaseKey: 'rules.teasers.round',
-    screen: 'rules-round',
-  },
-  {
-    id: 'fail',
+    id: 'whatIsThis',
     icon: 'question',
-    tone: 'neutral',
+    hue: 'brass',
+    bubbleOrigin: 'topStart',
+    titleKey: 'rules.overview',
+    screen: 'rules-what-is-this',
+  },
+  {
+    id: 'contents',
+    icon: 'cards',
+    hue: 'teal',
+    bubbleOrigin: 'topEnd',
+    titleKey: 'rules.kit.title',
+    screen: 'rules-contents',
+  },
+  {
+    id: 'laws',
+    icon: 'scroll',
+    hue: 'moss',
+    bubbleOrigin: 'bottomStart',
+    titleKey: 'rules.laws.title',
+    screen: 'rules-laws',
+  },
+  {
+    id: 'roles',
+    icon: 'threeCards',
+    hue: 'crimson',
+    bubbleOrigin: 'bottomEnd',
+    titleKey: 'rules.setup',
+    screen: 'rules-roles',
+  },
+  {
+    id: 'eachRound',
+    icon: 'refresh',
+    hue: 'azure',
+    bubbleOrigin: 'topStart',
+    titleKey: 'rules.roundTitle',
+    screen: 'rules-each-round',
+  },
+  {
+    id: 'failedGovernment',
+    icon: 'voteFail',
+    hue: 'amber',
+    bubbleOrigin: 'topEnd',
     titleKey: 'rules.failTitle',
-    teaseKey: 'rules.teasers.fail',
-    screen: 'rules-fail',
+    screen: 'rules-failed-government',
   },
   {
     id: 'powers',
-    icon: 'star',
-    tone: 'gold',
+    icon: 'fist',
+    hue: 'violet',
+    bubbleOrigin: 'bottomStart',
     titleKey: 'rules.powersTitle',
-    teaseKey: 'rules.teasers.powers',
     screen: 'rules-powers',
   },
   {
-    id: 'winning',
-    icon: 'skull',
-    tone: 'fascist',
+    id: 'howToWin',
+    icon: 'trophy',
+    hue: 'wine',
+    bubbleOrigin: 'bottomEnd',
     titleKey: 'rules.winningTitle',
-    teaseKey: 'rules.teasers.winning',
-    screen: 'rules-winning',
+    screen: 'rules-how-to-win',
   },
 ];
 

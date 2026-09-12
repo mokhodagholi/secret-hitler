@@ -1,3 +1,5 @@
+import type { MessengerKind } from '@secret-hitler/shared';
+
 export interface BaleSeat {
   roomId: string;
   code: string;
@@ -5,46 +7,59 @@ export interface BaleSeat {
   roomName: string;
 }
 
-/** Maps a Bale user id to the live mini-app room they last created or joined. */
-export class BaleSeatIndex {
-  private readonly byBaleUser = new Map<number, BaleSeat>();
-  private readonly byPlayer = new Map<string, number>();
+function userKey(platform: MessengerKind, userId: number): string {
+  return `${platform}:${userId}`;
+}
 
-  occupy(baleUserId: number, seat: BaleSeat): void {
-    this.releaseBaleUser(baleUserId);
+/** Maps a messenger user to the live mini-app room they last created or joined. */
+export class BaleSeatIndex {
+  private readonly byUser = new Map<string, BaleSeat>();
+  private readonly byPlayer = new Map<string, { platform: MessengerKind; userId: number }>();
+
+  occupy(userId: number, seat: BaleSeat, platform: MessengerKind = 'bale'): void {
+    this.releaseUser(userId, platform);
     this.releasePlayer(seat.playerId);
-    this.byBaleUser.set(baleUserId, seat);
-    this.byPlayer.set(seat.playerId, baleUserId);
+    this.byUser.set(userKey(platform, userId), seat);
+    this.byPlayer.set(seat.playerId, { platform, userId });
   }
 
-  /** Bale user id seated at this player, if they joined through the mini-app. */
+  /** Messenger user id seated at this player, if they joined through a mini-app. */
   baleUserIdFor(playerId: string): number | undefined {
+    return this.byPlayer.get(playerId)?.userId;
+  }
+
+  identityFor(playerId: string): { platform: MessengerKind; userId: number } | undefined {
     return this.byPlayer.get(playerId);
   }
 
-  get(baleUserId: number): BaleSeat | undefined {
-    return this.byBaleUser.get(baleUserId);
+  get(userId: number, platform: MessengerKind = 'bale'): BaleSeat | undefined {
+    return this.byUser.get(userKey(platform, userId));
   }
 
-  releaseBaleUser(baleUserId: number): void {
-    const seat = this.byBaleUser.get(baleUserId);
-    if (!seat) return;
-    this.byBaleUser.delete(baleUserId);
-    this.byPlayer.delete(seat.playerId);
+  releaseBaleUser(userId: number, platform: MessengerKind = 'bale'): void {
+    this.releaseUser(userId, platform);
   }
 
   releasePlayer(playerId: string): void {
-    const baleUserId = this.byPlayer.get(playerId);
-    if (baleUserId == null) return;
+    const identity = this.byPlayer.get(playerId);
+    if (!identity) return;
     this.byPlayer.delete(playerId);
-    this.byBaleUser.delete(baleUserId);
+    this.byUser.delete(userKey(identity.platform, identity.userId));
   }
 
   releaseRoom(roomId: string): void {
-    for (const [baleUserId, seat] of [...this.byBaleUser.entries()]) {
+    for (const [key, seat] of [...this.byUser.entries()]) {
       if (seat.roomId !== roomId) continue;
       this.byPlayer.delete(seat.playerId);
-      this.byBaleUser.delete(baleUserId);
+      this.byUser.delete(key);
     }
+  }
+
+  private releaseUser(userId: number, platform: MessengerKind): void {
+    const key = userKey(platform, userId);
+    const seat = this.byUser.get(key);
+    if (!seat) return;
+    this.byUser.delete(key);
+    this.byPlayer.delete(seat.playerId);
   }
 }

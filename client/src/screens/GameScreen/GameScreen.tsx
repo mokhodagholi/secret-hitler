@@ -746,6 +746,7 @@ export function GameScreen() {
               discardCount={state().board.discardPile}
               electionTracker={state().board.electionTracker}
               role={game.role() ?? state().you.role}
+              playerId={state().you.id}
               onInspectRole={() => setInspectingRole(true)}
               formatMessage={formatMessage}
             />
@@ -912,6 +913,7 @@ export function GameScreen() {
               {(role) => (
                 <RoleInspectOverlay
                   role={role()}
+                  playerId={state().you.id}
                   onClose={() => setInspectingRole(false)}
                 />
               )}

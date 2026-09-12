@@ -8,6 +8,7 @@ export interface SlotPlayer {
   avatar: number;
   seat: number;
   ready: boolean;
+  wantsStart?: boolean;
   connected: boolean;
 }
 
@@ -20,7 +21,7 @@ export interface PlayerSlotProps {
   onSelect?: () => void;
   isYou?: boolean;
   youLabel?: string;
-  /** Fill a 10-seat grid cell instead of the default 120px portrait. */
+  /** Fill the parent — the unready-kick dialog, not the lobby grid. */
   compact?: boolean;
 }
 
@@ -60,6 +61,7 @@ export function PlayerSlot(props: PlayerSlotProps) {
                 [styles.paper]: true,
                 [styles.paperReady]: player().ready,
                 [styles.paperNotReady]: !player().ready,
+                [styles.paperWantsStart]: !!player().wantsStart,
                 [styles.paperYou]: !!props.isYou,
               }}
             >

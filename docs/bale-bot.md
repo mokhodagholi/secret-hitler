@@ -5,6 +5,10 @@ and **one group command** (`/create`) that opens a table in that chat. It does
 not play Secret Hitler and does not sit at a seat. Useful replies hand the
 player a `ble.ir` mini-app link so the game itself opens inside Bale.
 
+Telegram, the shared Mini App interface, and sitting Bale / Telegram /
+browser players at the **same** table: [`mini-app.md`](./mini-app.md)
+(proposal). This file stays the Bale command spec.
+
 Replies are spoken Iranian Persian (register **بله** in
 [`persian.md`](./persian.md) — address is «تو»). Copy lives in
 [`server/src/bale/commands.ts`](../server/src/bale/commands.ts). Change the
@@ -15,8 +19,8 @@ strings there, not here.
 Every useful reply is some mix of:
 
 1. **Text** — a short Persian message. Bale always parses it as Markdown, so
-   command names in the greeting are written `/find-game` (hyphen), never
-   `/find_game`. An underscore in Markdown italicizes and the send fails.
+   command names with `_` are escaped (`/find\_game`). An unescaped underscore
+   italicizes and the send fails. Hyphens (`/find-game`) still work if typed.
 2. **A button** — almost always «بازی کن» or «ورود به اتاق», opening
    `https://ble.ir/{bot}?startapp=` or `…?startapp=CODE`.
 3. **The same URL in the text** as `[بازی کن](url)` / `[ورود به اتاق](url)`,
@@ -69,8 +73,8 @@ Accepted shapes:
 /start
 start
 Start
-/find-game
 /find_game
+/find-game
 find_game
 /join@secret_hitler_bot ABC123
 /join ABC123
@@ -133,7 +137,7 @@ Reply:
 
 برای شروع، دکمهٔ پایین رو بزن. اگه لینک دعوت داری، همون رو باز کن تا مستقیم بری سر میز.
 
-/find-game — اتاق باز پیدا کن
+/find_game — اتاق باز پیدا کن
 /games — بازی‌های در جریان
 /join CODE — با کد اتاق بیا تو
 /invite — لینک دعوت دوستات
@@ -161,7 +165,10 @@ Unknown private text (`سلام`, `/foo`, …) also returns this greeting.
 
 Same list the mini-app Join tab uses: live rooms still in **lobby**, with
 at least one empty seat. Password rooms are included (🔒). In-progress
-games are not.
+games are not. The public table
+([`public-table.md`](./public-table.md)) is always the first line when
+`FEATURE_PUBLIC_TABLE` is on, including `0/10` — the empty-state Create
+button is only for a missing table (a bug).
 
 Each line:
 
@@ -202,7 +209,9 @@ in the mini-app via `POST /api/rooms/:idOrCode/join`.
 **Type:** `/games` · `/game`
 
 Broader than `/find_game`. This is `RoomRepository.listAll()`: lobbies
-**and** games that already started.
+**and** games that already started. The public table (lobby or, after it
+deals, the match that just left it plus the replacement lobby) belongs
+here too — [`public-table.md`](./public-table.md).
 
 Each line:
 
@@ -319,6 +328,14 @@ What is created:
 - The sender is already seated as **host** (they still tap the button to open
   the mini-app; that reuses the reserved seat, it does not add a second Ana).
 - `originChatId` is this group. Join later asks Bale `getChatMember`.
+
+The posted message id is stored on the room (`originMessageId`). If the host
+leaves, the bot **edits that same post** so the join button does not linger:
+
+```
+میزبان رفت.
+میز {name} بسته شد.
+```
 
 Group reply (password is **not** in this message):
 

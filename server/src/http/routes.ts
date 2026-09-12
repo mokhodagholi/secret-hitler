@@ -1,10 +1,11 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
   FeatureFlags,
   JoinRoomRequest,
   JoinRoomResponse,
+  MessengerKind,
   ProfileResponse,
   SaveProfileRequest,
 } from '@secret-hitler/shared';
@@ -17,9 +18,14 @@ import type { GameResultRecorder } from '../history/GameResultRecorder';
 import type { GameHistoryStore } from '../history/GameHistoryStore';
 import type { ProfileStore } from '../profiles/ProfileStore';
 import { hashPassword, verifyPassword } from './password';
-import { validateBaleInitData } from '../bale/initData';
+import { identifyInitData } from '../bale/initData';
 import { baleUserInOriginChat } from '../bale/groupMember';
-import { handleBaleWebhook, registerBaleBodyParser, type BaleRuntime } from '../bale/webhook';
+import {
+  handleMessengerWebhook,
+  messengerKindOf,
+  registerBaleBodyParser,
+  type BaleRuntime,
+} from '../bale/webhook';
 import { formatSupportLetter, isSupportTopic } from '../bale/support';
 
 export interface RouteDeps {
@@ -34,6 +40,7 @@ export interface RouteDeps {
   profiles: ProfileStore;
   publicUrl?: string;
   bale?: BaleRuntime;
+  telegram?: BaleRuntime;
   flags: FeatureFlags;
 }
 
@@ -52,47 +59,87 @@ function isClientId(value: unknown): value is string {
   return typeof value === 'string' && CLIENT_ID.test(value);
 }
 
+function joinBanKey(
+  identified: ReturnType<typeof identifyInitData>,
+  clientId: unknown,
+): string | null {
+  if (identified) return `${identified.kind}:${identified.user.id}`;
+  if (isClientId(clientId)) return `client:${clientId}`;
+  return null;
+}
+
+function configuredMessengers(bale?: BaleRuntime, telegram?: BaleRuntime): BaleRuntime[] {
+  return [bale, telegram].filter((runtime): runtime is BaleRuntime => runtime != null);
+}
+
+function runtimeOf(
+  kind: MessengerKind,
+  bale?: BaleRuntime,
+  telegram?: BaleRuntime,
+): BaleRuntime | undefined {
+  return kind === 'telegram' ? telegram : bale;
+}
+
+function inviteRuntime(
+  identified: BaleRuntime | undefined,
+  bale?: BaleRuntime,
+  telegram?: BaleRuntime,
+): BaleRuntime | undefined {
+  return identified ?? bale ?? telegram;
+}
+
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, profiles, bale, flags } =
+  const { repo, tokens, sockets, recorder, history, profiles, bale, telegram, flags } =
     deps;
+  const messengers = configuredMessengers(bale, telegram);
   registerBaleBodyParser(app);
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
   const joinLimiter = new RateLimiter(JOIN_LIMIT, LIMIT_WINDOW_MS);
   const profileLimiter = new RateLimiter(PROFILE_LIMIT, LIMIT_WINDOW_MS);
   const supportLimiter = new RateLimiter(SUPPORT_LIMIT, LIMIT_WINDOW_MS);
 
-  app.get('/api/flags', async (_req, reply) => {
-    reply.header('Cache-Control', 'no-store');
-    return toFlagsResponse(flags);
-  });
-
-  app.post('/api/auth/bale', async (req, reply) => {
-    if (!bale) {
-      return reply.code(503).send({ error: 'Bale bot is not configured', code: 'BALE_DISABLED' });
+  const handleAuth = async (req: FastifyRequest, reply: FastifyReply) => {
+    if (messengers.length === 0) {
+      return reply
+        .code(503)
+        .send({ error: 'Mini-app login is not configured', code: 'MINIAPP_DISABLED' });
     }
     const initData =
       typeof (req.body as { initData?: unknown } | null)?.initData === 'string'
         ? (req.body as { initData: string }).initData
         : '';
-    const user = validateBaleInitData(initData, bale.botToken);
-    if (!user) {
-      return reply.code(401).send({ error: 'Invalid Bale login', code: 'AUTH_FAILED' });
+    const identified = identifyInitData(initData, messengers);
+    if (!identified) {
+      return reply.code(401).send({ error: 'Invalid mini-app login', code: 'AUTH_FAILED' });
     }
-    const avatar = await profiles.get({
-      baleUserId: String(user.id),
-    });
-    return { id: user.id, firstName: user.firstName, avatar };
+    const avatar = await profiles.get(
+      identified.kind === 'telegram'
+        ? { telegramUserId: String(identified.user.id) }
+        : { baleUserId: String(identified.user.id) },
+    );
+    return {
+      id: identified.user.id,
+      firstName: identified.user.firstName,
+      avatar,
+      platform: identified.kind,
+    };
+  };
+
+  app.get('/api/flags', async (_req, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return toFlagsResponse(flags);
   });
 
+  app.post('/api/auth/miniapp', handleAuth);
+  app.post('/api/auth/bale', handleAuth);
+  app.post('/api/auth/telegram', handleAuth);
+
   app.post('/api/support', async (req, reply) => {
-    if (!bale) {
-      return reply.code(503).send({ error: 'Bale bot is not configured', code: 'BALE_DISABLED' });
-    }
-    if (bale.supportChatId == null) {
+    if (messengers.length === 0) {
       return reply
         .code(503)
-        .send({ error: 'Support desk is not configured', code: 'SUPPORT_DISABLED' });
+        .send({ error: 'Mini-app login is not configured', code: 'MINIAPP_DISABLED' });
     }
     if (!supportLimiter.allow(req.ip)) {
       return reply
@@ -112,12 +159,21 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       return reply.code(400).send({ error: 'topic and description are required' });
     }
 
-    const baleUser =
-      typeof body.initData === 'string'
-        ? validateBaleInitData(body.initData, bale.botToken)
-        : null;
+    const identified = identifyInitData(
+      typeof body.initData === 'string' ? body.initData : undefined,
+      messengers,
+    );
+    const desk =
+      (identified ? runtimeOf(identified.kind, bale, telegram) : undefined) ??
+      bale ??
+      telegram;
+    if (desk?.supportChatId == null) {
+      return reply
+        .code(503)
+        .send({ error: 'Support desk is not configured', code: 'SUPPORT_DISABLED' });
+    }
     const clientId = isClientId(body.clientId) ? body.clientId : null;
-    const senderId = baleUser ? String(baleUser.id) : clientId;
+    const senderId = identified ? String(identified.user.id) : clientId;
     if (!senderId) {
       return reply.code(400).send({ error: 'sender id is required' });
     }
@@ -129,7 +185,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     });
 
     try {
-      await bale.bot.sendMessage({ chat_id: bale.supportChatId, text });
+      await desk.bot.sendMessage({ chat_id: desk.supportChatId, text });
     } catch (error) {
       req.log.error(error, 'Failed to send support letter');
       return reply.code(502).send({ error: 'Failed to deliver the letter' });
@@ -148,13 +204,14 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!isClientId(body.clientId) || typeof body.avatar !== 'number') {
       return reply.code(400).send({ error: 'avatar and clientId are required' });
     }
-    const baleUser = body.initData && bale
-      ? validateBaleInitData(body.initData, bale.botToken)
-      : null;
+    const identified = identifyInitData(body.initData, messengers);
     const avatar = await profiles.upsert(
       {
         clientId: body.clientId,
-        baleUserId: baleUser ? String(baleUser.id) : undefined,
+        baleUserId:
+          identified?.kind === 'bale' ? String(identified.user.id) : undefined,
+        telegramUserId:
+          identified?.kind === 'telegram' ? String(identified.user.id) : undefined,
       },
       normalizeAvatar(body.avatar),
     );
@@ -176,10 +233,16 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   });
 
   app.post('/api/bale/webhook', async (req, reply) => {
-    return handleBaleWebhook(req, reply, repo, bale, { sockets, recorder });
+    return handleMessengerWebhook(req, reply, repo, bale, { sockets, recorder });
   });
   app.post('/api/bale/webhook/:secret', async (req, reply) => {
-    return handleBaleWebhook(req, reply, repo, bale, { sockets, recorder });
+    return handleMessengerWebhook(req, reply, repo, bale, { sockets, recorder });
+  });
+  app.post('/api/telegram/webhook', async (req, reply) => {
+    return handleMessengerWebhook(req, reply, repo, telegram, { sockets, recorder });
+  });
+  app.post('/api/telegram/webhook/:secret', async (req, reply) => {
+    return handleMessengerWebhook(req, reply, repo, telegram, { sockets, recorder });
   });
 
   // Create a room and seat the host.
@@ -198,7 +261,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       ? hashPassword(body.password.trim())
       : null;
 
-    const previousSeat = reservedBaleSeat(bale, body.initData);
+    const identified = identifyInitData(body.initData, messengers);
+    const hostRuntime = identified
+      ? runtimeOf(identified.kind, bale, telegram)
+      : undefined;
+    const previousSeat = reservedSeat(identified, hostRuntime);
 
     const entry = repo.create({
       name: body.name,
@@ -217,12 +284,12 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: host.id });
     void sockets.persistRoom(entry.room.id);
-    vacatePreviousBaleSeat(sockets, repo, previousSeat, entry.room.id);
-    bindBaleSeat(bale, body.initData, host.id, entry.room.id, entry.room.code, entry.room.options.name);
+    vacatePreviousSeat(sockets, repo, previousSeat, entry.room.id);
+    bindMessengerSeat(hostRuntime, identified, host.id, entry.room.id, entry.room.code, entry.room.options.name);
     const res: CreateRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
-      shareLink: requestInviteLink(req, entry.room.code, bale?.botUsername),
+      shareLink: requestInviteLink(req, entry.room.code, inviteRuntime(hostRuntime, bale, telegram)),
       token,
       playerId: host.id,
     };
@@ -256,46 +323,65 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       return reply.code(404).send({ error: 'Room not found', code: 'ROOM_NOT_FOUND' });
     }
 
-    const baleUser =
-      bale && typeof body.initData === 'string'
-        ? validateBaleInitData(body.initData, bale.botToken)
-        : null;
-    const reserved = baleUser ? bale?.seats.get(baleUser.id) : undefined;
+    const identified = identifyInitData(body.initData, messengers);
+    const joinRuntime = identified
+      ? runtimeOf(identified.kind, bale, telegram)
+      : undefined;
+    const joinKey = joinBanKey(identified, body.clientId);
+    if (joinKey && entry.room.bannedJoinKeys.has(joinKey)) {
+      return reply
+        .code(403)
+        .send({ error: 'You cannot sit at this table.', code: 'BANNED' });
+    }
+    const reserved = reservedSeat(identified, joinRuntime);
     if (reserved && reserved.roomId === entry.room.id) {
       const token = tokens.issue({ roomId: entry.room.id, playerId: reserved.playerId });
       return reply.send({
         roomId: entry.room.id,
         code: entry.room.code,
+        shareLink: requestInviteLink(req, entry.room.code, inviteRuntime(joinRuntime, bale, telegram)),
         token,
         playerId: reserved.playerId,
       } satisfies JoinRoomResponse);
     }
 
     const passwordOk = verifyPassword(body.password ?? '', entry.room.passwordHash);
+    const originPlatform = entry.room.options.originPlatform ?? 'bale';
+    const originRuntime = runtimeOf(originPlatform, bale, telegram);
     const inOriginGroup =
-      baleUser != null &&
+      identified != null &&
+      identified.kind === originPlatform &&
       (await baleUserInOriginChat(
-        bale?.bot,
+        originRuntime?.bot,
         entry.room.options.originChatId,
-        baleUser.id,
+        identified.user.id,
       ));
     if (!passwordOk && !inOriginGroup) {
       return reply.code(403).send({ error: 'Wrong password', code: 'WRONG_PASSWORD' });
     }
 
-    const player = entry.engine.addPlayer(body.name, false, body.avatar);
+    const player = entry.engine.addPlayer(body.name, false, body.avatar, joinKey);
     if ('code' in player) {
-      const status = player.code === 'ROOM_FULL' ? 409 : 400;
+      const status =
+        player.code === 'ROOM_FULL' ? 409 : player.code === 'BANNED' ? 403 : 400;
       return reply.code(status).send({ error: player.message, code: player.code });
     }
 
     const token = tokens.issue({ roomId: entry.room.id, playerId: player.id });
     void sockets.persistRoom(entry.room.id);
-    vacatePreviousBaleSeat(sockets, repo, reserved, entry.room.id);
-    bindBaleSeat(bale, body.initData, player.id, entry.room.id, entry.room.code, entry.room.options.name);
+    vacatePreviousSeat(sockets, repo, reserved, entry.room.id);
+    bindMessengerSeat(
+      joinRuntime,
+      identified,
+      player.id,
+      entry.room.id,
+      entry.room.code,
+      entry.room.options.name,
+    );
     const res: JoinRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
+      shareLink: requestInviteLink(req, entry.room.code, inviteRuntime(joinRuntime, bale, telegram)),
       token,
       playerId: player.id,
     };
@@ -303,18 +389,16 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   });
 }
 
-function reservedBaleSeat(
-  bale: BaleRuntime | undefined,
-  initData: string | undefined,
+function reservedSeat(
+  identified: ReturnType<typeof identifyInitData>,
+  runtime: BaleRuntime | undefined,
 ): { roomId: string; playerId: string } | undefined {
-  if (!bale || !initData) return undefined;
-  const user = validateBaleInitData(initData, bale.botToken);
-  if (!user) return undefined;
-  return bale.seats.get(user.id);
+  if (!identified || !runtime) return undefined;
+  return runtime.seats.get(identified.user.id, identified.kind);
 }
 
-/** Find Game of a different table must drop the previous Bale seat, not keep both. */
-function vacatePreviousBaleSeat(
+/** Find Game of a different table must drop the previous messenger seat, not keep both. */
+function vacatePreviousSeat(
   sockets: SocketHandler,
   repo: RoomRepository,
   previous: { roomId: string; playerId: string } | undefined,
@@ -326,24 +410,26 @@ function vacatePreviousBaleSeat(
   sockets.dropSeat(old, previous.playerId);
 }
 
-function bindBaleSeat(
-  bale: BaleRuntime | undefined,
-  initData: string | undefined,
+function bindMessengerSeat(
+  runtime: BaleRuntime | undefined,
+  identified: ReturnType<typeof identifyInitData>,
   playerId: string,
   roomId: string,
   code: string,
   roomName: string,
 ): void {
-  if (!bale || !initData) return;
-  const user = validateBaleInitData(initData, bale.botToken);
-  if (!user) return;
-  bale.seats.occupy(user.id, { roomId, code, playerId, roomName });
+  if (!runtime || !identified) return;
+  runtime.seats.occupy(
+    identified.user.id,
+    { roomId, code, playerId, roomName },
+    identified.kind,
+  );
 }
 
 function requestInviteLink(
   req: FastifyRequest,
   code: string,
-  botUsername?: string,
+  runtime?: BaleRuntime,
 ): string {
   const host = typeof req.headers.host === 'string' ? req.headers.host : 'localhost';
   const proto = typeof req.headers['x-forwarded-proto'] === 'string'
@@ -353,6 +439,8 @@ function requestInviteLink(
     code,
     hostname: host,
     origin: `${proto}://${host}`,
-    botUsername,
+    botUsername: runtime?.botUsername,
+    platform: runtime ? messengerKindOf(runtime) : undefined,
+    telegramShortName: runtime?.webAppShortName,
   });
 }
