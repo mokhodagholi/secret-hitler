@@ -173,21 +173,25 @@ with the global renamed. Callers already used only that surface
 
 ### Detect which class to construct
 
-Load both official scripts outside loopback/LAN (Bale
-`miniapp.js`, Telegram `telegram-web-app.js`). They hang off
-different globals, so they can coexist.
+Load **one** official script when the native bridge is unambiguous
+(`BaleWebApp` → Bale `miniapp.js`, `TelegramWebviewProxy` →
+`telegram-web-app.js`). Load both only when the host is unclear
+(web / desktop). They hang off different globals, but they both
+parse `tgWebAppData`, so they must not share a native WebView.
 
 Pick one:
 
-1. `Telegram.WebApp.initData` non-empty → `TelegramMiniApp`
-2. `Bale.WebApp.initData` non-empty → `BaleMiniApp`
-3. Else Telegram global present → Telegram (empty initData still a
-   WebView)
-4. Else Bale global → Bale
+1. `BaleWebApp` native bridge is present → `BaleMiniApp` (Bale's
+   native app injects this; both SDKs parse `tgWebAppData`, so
+   Telegram `initData` is also non-empty inside Bale)
+2. `Telegram.WebApp.initData` non-empty → `TelegramMiniApp`
+3. `Bale.WebApp.initData` non-empty → `BaleMiniApp`
+4. Else localhost + Bale global → Bale (LAN mock)
 5. Else `BrowserMiniApp` (no-op chrome, no name lock)
 
 Do not trust User-Agent as the primary signal. The signed `initData`
-string is the login; the global is only which wrapper to call.
+string is the login; the native bridge is which wrapper to call when
+both SDKs saw the same hash.
 
 `start_param` / `tgWebAppStartParam` already feeds
 [`joinCodeFromStartApp`](../client/src/services/startApp.ts). Keep

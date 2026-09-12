@@ -15,6 +15,7 @@ export interface BaleWebApp {
     start_param?: string;
   };
   isMiniAppSupported?: boolean;
+  startParam?: string;
   ready: () => void;
   expand: () => void;
   BackButton: {
@@ -31,6 +32,8 @@ export interface BaleNamespace {
 declare global {
   interface Window {
     Bale?: BaleNamespace;
+    /** Injected by the Bale native WebView — not by miniapp.js. */
+    BaleWebApp?: { postEvent: (event: string, data: string) => void };
   }
 }
 

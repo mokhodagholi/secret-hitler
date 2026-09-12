@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from '@rstest/core';
-import { createMiniApp, TelegramMiniApp } from './miniapp';
+import { BaleMiniApp, createMiniApp, TelegramMiniApp } from './miniapp';
 import { NavigationService } from './NavigationService';
 import { SettingsService } from './SettingsService';
 
@@ -9,6 +9,9 @@ function fakeTelegramWebApp(
     initDataUnsafe: { start_param?: string };
     ready: () => void;
     expand: () => void;
+    disableVerticalSwipes: () => void;
+    setHeaderColor: (color: string) => void;
+    setBackgroundColor: (color: string) => void;
     BackButton: { show: () => void; hide: () => void; onClick: (callback: () => void) => void };
   }> = {},
 ) {
@@ -22,29 +25,87 @@ function fakeTelegramWebApp(
   };
 }
 
+function fakeBaleWebApp(
+  initData = '',
+  overrides: { startParam?: string } = {},
+) {
+  return {
+    initData,
+    initDataUnsafe: {},
+    ready: () => {},
+    expand: () => {},
+    BackButton: { show: () => {}, hide: () => {}, onClick: () => {} },
+    ...overrides,
+  };
+}
+
 describe('createMiniApp', () => {
   afterEach(() => {
     delete window.Bale;
     delete window.Telegram;
+    delete window.BaleWebApp;
   });
 
   it('Should pick Telegram when that WebApp has signed initData', () => {
     window.Telegram = { WebApp: fakeTelegramWebApp() };
-    window.Bale = {
-      WebApp: {
-        initData: '',
-        initDataUnsafe: {},
-        ready: () => {},
-        expand: () => {},
-        BackButton: { show: () => {}, hide: () => {}, onClick: () => {} },
-      },
-    };
+    window.Bale = { WebApp: fakeBaleWebApp() };
     expect(createMiniApp().platform).toBe('telegram');
+  });
+
+  it('Should pick Bale when the native bridge is present even if Telegram parsed the hash', () => {
+    window.BaleWebApp = { postEvent: () => {} };
+    window.Telegram = { WebApp: fakeTelegramWebApp() };
+    window.Bale = { WebApp: fakeBaleWebApp('query_id=BALE') };
+    expect(createMiniApp().platform).toBe('bale');
+  });
+
+  it('Should not call Telegram-only chrome when Bale owns the WebView', async () => {
+    const telegramOnly = { swipes: 0, header: 0, background: 0, back: 0 };
+    window.BaleWebApp = { postEvent: () => {} };
+    window.Bale = { WebApp: fakeBaleWebApp('query_id=BALE') };
+    window.Telegram = {
+      WebApp: fakeTelegramWebApp({
+        disableVerticalSwipes: () => {
+          telegramOnly.swipes += 1;
+        },
+        setHeaderColor: () => {
+          telegramOnly.header += 1;
+        },
+        setBackgroundColor: () => {
+          telegramOnly.background += 1;
+        },
+        BackButton: {
+          show: () => {
+            telegramOnly.back += 1;
+          },
+          hide: () => {},
+          onClick: () => {},
+        },
+      }),
+    };
+    await createMiniApp().boot(new SettingsService(), new NavigationService('/'));
+    expect(telegramOnly).toEqual({ swipes: 0, header: 0, background: 0, back: 0 });
   });
 
   it('Should stay a browser host when the Telegram SDK is an empty shell', () => {
     window.Telegram = { WebApp: fakeTelegramWebApp({ initData: '' }) };
     expect(createMiniApp().platform).toBe('browser');
+  });
+});
+
+describe('BaleMiniApp', () => {
+  afterEach(() => {
+    delete window.Bale;
+  });
+
+  it('Should take a Bale startParam when initDataUnsafe has no start_param', async () => {
+    window.Bale = {
+      WebApp: fakeBaleWebApp('query_id=BALE', { startParam: 'ABC123' }),
+    };
+    const nav = new NavigationService('/');
+    await new BaleMiniApp().boot(new SettingsService(), nav);
+    expect(nav.screen()).toBe('join-game');
+    expect(nav.consumeJoinCode()).toBe('ABC123');
   });
 });
 

@@ -22,6 +22,8 @@ export interface MiniAppUser {
 export interface HostWebApp {
   initData: string;
   initDataUnsafe?: { start_param?: string };
+  /** Bale puts startapp here; Telegram uses initDataUnsafe.start_param. */
+  startParam?: string;
   ready: () => void;
   expand: () => void;
   disableVerticalSwipes?: () => void;
@@ -108,7 +110,9 @@ class HostMiniApp implements MiniApp {
     webApp.BackButton.onClick(() => nav.requestBack());
     this.syncBackButton(nav.canGoBack());
 
-    const joinCode = joinCodeFromStartApp(webApp.initDataUnsafe?.start_param);
+    const joinCode = joinCodeFromStartApp(
+      webApp.initDataUnsafe?.start_param ?? webApp.startParam,
+    );
     if (joinCode) nav.offerJoinCode(joinCode);
 
     const initData = webApp.initData?.trim();
@@ -200,11 +204,18 @@ export class BrowserMiniApp implements MiniApp {
   async boot(): Promise<void> {}
 }
 
+function hasBaleNativeBridge(): boolean {
+  return typeof window !== 'undefined' && window.BaleWebApp != null;
+}
+
 /** Pick the host from signed initData. Empty SDK globals are not a WebView. */
 export function createMiniApp(): MiniApp {
   if (typeof window === 'undefined') return new BrowserMiniApp();
   const telegram = window.Telegram?.WebApp;
   const bale = window.Bale?.WebApp;
+  // Both SDKs parse the same tgWebAppData hash. Inside Bale that fills
+  // Telegram.initData too, and Telegram.BackButton.show() is a no-op there.
+  if (hasBaleNativeBridge() && bale) return new BaleMiniApp();
   if (telegram?.initData?.trim()) return new TelegramMiniApp();
   if (bale?.initData?.trim()) return new BaleMiniApp();
   if (isLocalInviteHost(location.hostname) && bale) return new BaleMiniApp();

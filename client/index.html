@@ -13,6 +13,23 @@
           var b = +parts[1];
           if (a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31)) return;
         }
+        // Both SDKs parse the same tgWebAppData hash. Loading Telegram's
+        // inside Bale fills Telegram.initData, and Telegram.BackButton
+        // needs Bot API 6.1+ — Bale reports 1.x, so the native back is a no-op.
+        var inBale = typeof BaleWebApp !== 'undefined';
+        var inTelegram =
+          typeof TelegramWebviewProxy !== 'undefined' ||
+          (window.webkit &&
+            window.webkit.messageHandlers &&
+            window.webkit.messageHandlers.TelegramWebView);
+        if (inBale && !inTelegram) {
+          document.write('<script src="https://tapi.bale.ai/miniapp.js?3"><\/script>');
+          return;
+        }
+        if (inTelegram && !inBale) {
+          document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
+          return;
+        }
         document.write('<script src="https://tapi.bale.ai/miniapp.js?3"><\/script>');
         document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
       })();
