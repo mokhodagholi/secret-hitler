@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, createGroupClosedReply, handleBotText, parseBotCommand, playMarkdownLink } from './commands';
+import { baleStartLink, createGroupClosedReply, handleBotText, parseBotCommand } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -56,12 +56,6 @@ describe('baleStartLink', () => {
       'https://ble.ir/secret_hitler_bot?startapp=naqvvxd7vbc2xvky',
     );
   });
-
-  it('Should escape underscores in markdown URLs so Bale sendMessage does not fail', () => {
-    expect(playMarkdownLink(BOT)).toBe(
-      '[بازی کن](https://ble.ir/secret\\_hitler\\_bot?startapp=)',
-    );
-  });
 });
 
 describe('handleBotText', () => {
@@ -74,8 +68,8 @@ describe('handleBotText', () => {
       'https://t.me/secret_hitler_bot/game?startapp=',
     );
     expect(JSON.stringify(reply)).not.toContain('ble.ir');
-    expect(reply.text).toContain('https://t.me/secret_hitler_bot/game?startapp=');
-    expect(reply.text).not.toContain('secret\\_hitler');
+    expect(reply.text).not.toContain('بازی کن');
+    expect(reply.text).not.toContain('t.me');
   });
 
   it('Should greet /start in natural Persian and never mention the public domain', () => {
@@ -85,7 +79,8 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('/find\\_game');
     expect(reply.text).not.toContain('/find-game');
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
-    expect(reply.text).toContain('https://ble.ir/secret\\_hitler\\_bot?startapp=');
+    expect(reply.text).not.toContain('بازی کن');
+    expect(reply.text).not.toContain('ble.ir');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
@@ -131,7 +126,7 @@ describe('handleBotText', () => {
   it('Should join by code with a ble.ir startapp link', () => {
     const reply = ctx({ text: '/join ABC123' });
     expect(reply.text).toContain('Friday');
-    expect(reply.text).toContain('https://ble.ir/secret\\_hitler\\_bot?startapp=ABC123');
+    expect(reply.text).not.toContain('بازی کن');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
@@ -151,7 +146,7 @@ describe('handleBotText', () => {
     });
     expect(reply.text).toContain('ABC123');
     expect(reply.text).toContain('Friday');
-    expect(reply.text).toContain('https://ble.ir/secret\\_hitler\\_bot?startapp=ABC123');
+    expect(reply.text).not.toContain('ورود به اتاق');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
@@ -175,5 +170,19 @@ describe('handleBotText', () => {
     const reply = ctx({ text: '/games', games: [lobby, playing], lobbies: [lobby] });
     expect(reply.text).toContain('در حال بازی');
     expect(reply.text).toContain('PLAY01');
+  });
+
+  it('Should keep Play on the inline button when no games are live', () => {
+    const reply = ctx({ text: '/games', games: [], lobbies: [] });
+    expect(reply.text).toContain('یکی بساز');
+    expect(reply.text).not.toContain('بازی کن');
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.text).toBe('بازی کن');
+  });
+
+  it('Should keep Play on the inline button when no lobbies are open', () => {
+    const reply = ctx({ text: '/find_game', games: [], lobbies: [] });
+    expect(reply.text).toContain('یکی بساز');
+    expect(reply.text).not.toContain('بازی کن');
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.text).toBe('بازی کن');
   });
 });

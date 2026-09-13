@@ -10,6 +10,7 @@ import {
 import { Phase, kickVoteYesNeeded, type GameStateView, type PublicPlayer } from '@secret-hitler/shared';
 import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
+import { copyText } from '../../services/clipboard';
 import {
   CONNECTION_STATUS_KEYS,
   ERROR_MESSAGE_KEYS,
@@ -122,14 +123,10 @@ export function WaitingRoomScreen() {
   });
 
   async function copyShareLink(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(shareLink());
-      sound.play('ui-copied');
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard unavailable (e.g. insecure context) — nothing to do.
-    }
+    if (!(await copyText(shareLink()))) return;
+    sound.play('ui-copied');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   }
 
   function leaveRoom(): void {

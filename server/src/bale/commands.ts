@@ -26,7 +26,6 @@ export interface BotCommandContext {
   botUsername: string;
   /** Mini-app deep link for this bot. Defaults to Bale `ble.ir`. */
   startLink?: (startApp?: string) => string;
-  /** Telegram replies skip Bale Markdown escaping of URLs (plain text). */
   platform?: MessengerKind;
 }
 
@@ -61,18 +60,6 @@ function linkOf(
   startApp = '',
 ): string {
   return ctx.startLink ? ctx.startLink(startApp) : baleStartLink(ctx.botUsername, startApp);
-}
-
-function markdownHref(
-  url: string,
-  ctx?: Pick<BotCommandContext, 'platform'>,
-): string {
-  return ctx?.platform === 'telegram' ? url : escapeBaleMarkdown(url);
-}
-
-/** Bale always parses Markdown; unmatched `_` in a URL or `/find_game` makes sendMessage fail. */
-export function playMarkdownLink(botUsername: string, code?: string): string {
-  return `[بازی کن](${escapeBaleMarkdown(baleStartLink(botUsername, code))})`;
 }
 
 /** Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail. */
@@ -110,13 +97,6 @@ function playKeyboardFor(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink
   };
 }
 
-function playMarkdownFor(
-  ctx: Pick<BotCommandContext, 'botUsername' | 'startLink' | 'platform'>,
-  code?: string,
-) {
-  return `[بازی کن](${markdownHref(linkOf(ctx, code), ctx)})`;
-}
-
 function roomDisplayName(room: RoomSummary): string {
   return room.kind === 'public' ? 'میز عمومی' : room.name;
 }
@@ -152,8 +132,6 @@ function startReply(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>): 
       '/join CODE — با کد اتاق بیا تو',
       '/invite — لینک دعوت دوستات',
       '/create — تو گروه میز باز کن',
-      '',
-      playMarkdownFor(ctx),
     ].join('\n'),
     reply_markup: playKeyboardFor(ctx),
   };
@@ -163,7 +141,7 @@ function findGameReply(ctx: BotCommandContext): BotReply {
   const open = ctx.lobbies.filter((room) => room.playerCount < room.maxPlayers);
   if (open.length === 0) {
     return {
-      text: ['الان اتاق بازی نیست. یکی بساز:', playMarkdownFor(ctx)].join('\n'),
+      text: 'الان اتاق بازی نیست. یکی بساز:',
       reply_markup: playKeyboardFor(ctx),
     };
   }
@@ -176,7 +154,7 @@ function findGameReply(ctx: BotCommandContext): BotReply {
 function gamesReply(ctx: BotCommandContext): BotReply {
   if (ctx.games.length === 0) {
     return {
-      text: ['الان هیچ بازی‌ای در جریان نیست. یکی بساز:', playMarkdownFor(ctx)].join('\n'),
+      text: 'الان هیچ بازی‌ای در جریان نیست. یکی بساز:',
       reply_markup: playKeyboardFor(ctx),
     };
   }
@@ -212,7 +190,7 @@ function joinReply(ctx: BotCommandContext, arg: string): BotReply {
   }
   const lock = room.hasPassword ? '\nاین اتاق رمز داره؛ تو بازی ازت می‌پرسه.' : '';
   return {
-    text: `ورود به ${room.name} — کد ${code}${lock}\n${playMarkdownFor(ctx, code)}`,
+    text: `ورود به ${room.name} — کد ${code}${lock}`,
     reply_markup: playKeyboardFor(ctx, code),
   };
 }
@@ -229,7 +207,7 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   const name = room?.name ?? ctx.seated?.roomName ?? code;
   const link = linkOf(ctx, code);
   return {
-    text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}\n[ورود به اتاق](${markdownHref(link, ctx)})`,
+    text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}`,
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
     },
@@ -265,7 +243,6 @@ export function createGroupPostedReply(params: {
       'اتاق ساخته شد.',
       `میز ${params.creatorName} — کد ${params.code}`,
       'از همین گروه با دکمه بیا تو. از بیرون رمز می‌خواد.',
-      `[ورود به اتاق](${markdownHref(link, params)})`,
     ].join('\n'),
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],

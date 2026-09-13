@@ -19,18 +19,16 @@ strings there, not here.
 Every useful reply is some mix of:
 
 1. **Text** — a short Persian message. Bale always parses it as Markdown, so
-   command names with `_` are escaped (`/find\_game`) **and so are `_` in
-   markdown link URLs** (`secret\_hitler\_bot` inside `[بازی کن](…)`).
-   An unescaped underscore italicizes and **the send fails** — `/start`
-   looks like a dead command. Hyphens (`/find-game`) still work if typed.
-   The **button** `url` stays unescaped; only the markdown in `text` is
-   escaped. Telegram replies do not escape URLs (plain text, no
-   `parse_mode`).
+   command names with `_` are escaped (`/find\_game`). An unescaped underscore
+   italicizes and **the send fails** — `/start` looks like a dead command.
+   Hyphens (`/find-game`) still work if typed. Telegram replies use plain
+   text (no `parse_mode`).
 2. **A button** — almost always «بازی کن» or «ورود به اتاق», opening
-   `https://ble.ir/{bot}?startapp=` or `…?startapp=CODE`.
-3. **The same URL in the text** as `[بازی کن](url)` / `[ورود به اتاق](url)`,
-   so it still works if Bale rejects the keyboard (the webhook retries
-   without buttons when that happens).
+   `https://ble.ir/{bot}?startapp=` or `…?startapp=CODE`. The `url` is
+   unescaped. Play and join links live **only** on this keyboard — Bale
+   does not open markdown links in chat text, so the webhook never puts
+   `[بازی کن](…)` in `text`. If Bale rejects the keyboard it retries the
+   same text without buttons.
 
 The bot never pastes the public website (`mrfantastic.ir`, localhost, …).
 Production invites are Bale deep links. Localhost copies
@@ -148,8 +146,6 @@ Reply:
 /join CODE — با کد اتاق بیا تو
 /invite — لینک دعوت دوستات
 /create — تو گروه میز باز کن
-
-[بازی کن](https://ble.ir/secret_hitler_bot?startapp=)
 ```
 
 Button: **بازی کن** → mini-app with an empty `startapp`. The client lands on
@@ -200,7 +196,6 @@ If nothing is joinable:
 
 ```
 الان اتاق بازی نیست. یکی بساز:
-[بازی کن](https://ble.ir/secret_hitler_bot?startapp=)
 ```
 
 Button: **بازی کن** with an empty `startapp` (create flow inside the app).
@@ -242,8 +237,9 @@ If the server has no live rooms at all:
 
 ```
 الان هیچ بازی‌ای در جریان نیست. یکی بساز:
-[بازی کن](…)
 ```
+
+Button: **بازی کن** with an empty `startapp`.
 
 ---
 
@@ -294,7 +290,6 @@ When it has a code:
 ```
 بیا راز هیتلر — {room name}
 کد اتاق: {CODE}
-[ورود به اتاق](https://ble.ir/secret_hitler_bot?startapp=CODE)
 ```
 
 Button: **ورود به اتاق** with that `startapp`. The name is the live room’s
@@ -349,7 +344,6 @@ Group reply (password is **not** in this message):
 اتاق ساخته شد.
 میز {name} — کد {CODE}
 از همین گروه با دکمه بیا تو. از بیرون رمز می‌خواد.
-[ورود به اتاق](https://ble.ir/secret_hitler_bot?startapp=CODE)
 ```
 
 Button: **ورود به اتاق**.
