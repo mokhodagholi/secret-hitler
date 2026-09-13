@@ -1,5 +1,6 @@
 import { createSignal, type Accessor, type Setter } from 'solid-js';
 import { joinCodeFromStartApp } from './startApp';
+import { isMessengerWebView } from './miniAppHost';
 
 export type ScreenName =
   | 'home'
@@ -52,8 +53,11 @@ export class NavigationService {
     this.setScreen = setScreen;
     // Deep links boot off home with an empty stack; back still returns home.
     this.canGoBack = () => this.screen() !== 'home';
-    // Clean the URL so a refresh lands on the app shell, not a stale link.
-    if (this.pendingJoinCode) history.replaceState(null, '', '/');
+    // Share links in the browser drop /join/CODE. Bale web BackButton
+    // needs in-memory routing — do not touch history inside the WebView.
+    if (this.pendingJoinCode && !isMessengerWebView()) {
+      history.replaceState(null, '', '/');
+    }
   }
 
   /** Leave-confirm / sheet intercept — native chrome and the in-app arrow share this. */

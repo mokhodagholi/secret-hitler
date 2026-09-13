@@ -65,7 +65,40 @@ describe('Bale webhook', () => {
     expect(JSON.stringify(sent[0].reply_markup)).toContain(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
+    expect(sent[0].text).toContain('secret\\_hitler\\_bot');
     expect(JSON.stringify(sent[0])).not.toContain('mrfantastic');
+  });
+
+  it('Should still reply to /start when Bale omits message.from', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: 'test-token',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/start',
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toContain('راز هیتلر');
   });
 
   it('Should reply when the user types start without a slash', async () => {

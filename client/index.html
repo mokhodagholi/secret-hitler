@@ -13,20 +13,28 @@
           var b = +parts[1];
           if (a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31)) return;
         }
+        var hay = document.referrer || '';
+        try {
+          if (location.ancestorOrigins && location.ancestorOrigins.length) {
+            hay += ' ' + Array.prototype.join.call(location.ancestorOrigins, ' ');
+          }
+        } catch (e) {}
         // Both SDKs parse the same tgWebAppData hash. Loading Telegram's
         // inside Bale fills Telegram.initData, and Telegram.BackButton
         // needs Bot API 6.1+ — Bale reports 1.x, so the native back is a no-op.
-        var inBale = typeof BaleWebApp !== 'undefined';
-        var inTelegram =
+        var nativeBale = typeof BaleWebApp !== 'undefined';
+        var nativeTelegram =
           typeof TelegramWebviewProxy !== 'undefined' ||
           (window.webkit &&
             window.webkit.messageHandlers &&
             window.webkit.messageHandlers.TelegramWebView);
-        if (inBale && !inTelegram) {
+        var parentBale = /bale\.ai/i.test(hay);
+        var parentTelegram = /telegram\.(org|me)|telesco\.pe/i.test(hay);
+        if ((nativeBale && !nativeTelegram) || (parentBale && !parentTelegram)) {
           document.write('<script src="https://tapi.bale.ai/miniapp.js?3"><\/script>');
           return;
         }
-        if (inTelegram && !inBale) {
+        if ((nativeTelegram && !nativeBale) || (parentTelegram && !parentBale)) {
           document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
           return;
         }

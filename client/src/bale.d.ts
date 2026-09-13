@@ -7,6 +7,7 @@ export interface BaleWebAppUser {
 
 export interface BaleWebApp {
   initData: string;
+  version?: string;
   initDataUnsafe: {
     query_id?: string;
     user?: BaleWebAppUser;
@@ -15,6 +16,7 @@ export interface BaleWebApp {
     start_param?: string;
   };
   isMiniAppSupported?: boolean;
+  isIframe?: boolean;
   startParam?: string;
   ready: () => void;
   expand: () => void;

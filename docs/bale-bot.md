@@ -19,8 +19,13 @@ strings there, not here.
 Every useful reply is some mix of:
 
 1. **Text** — a short Persian message. Bale always parses it as Markdown, so
-   command names with `_` are escaped (`/find\_game`). An unescaped underscore
-   italicizes and the send fails. Hyphens (`/find-game`) still work if typed.
+   command names with `_` are escaped (`/find\_game`) **and so are `_` in
+   markdown link URLs** (`secret\_hitler\_bot` inside `[بازی کن](…)`).
+   An unescaped underscore italicizes and **the send fails** — `/start`
+   looks like a dead command. Hyphens (`/find-game`) still work if typed.
+   The **button** `url` stays unescaped; only the markdown in `text` is
+   escaped. Telegram replies do not escape URLs (plain text, no
+   `parse_mode`).
 2. **A button** — almost always «بازی کن» or «ورود به اتاق», opening
    `https://ble.ir/{bot}?startapp=` or `…?startapp=CODE`.
 3. **The same URL in the text** as `[بازی کن](url)` / `[ورود به اتاق](url)`,
@@ -57,8 +62,9 @@ bot.sendMessage(chat_id, text, reply_markup)
 | Private text | Always a reply — known command, bare room code, or the start greeting. |
 
 On boot the server calls `setMyCommands` with the menu entries below.
-Bale’s Bot API still returns HTTP 501 for that call; the menu may be empty
-even though the commands work when typed.
+Bale's Bot API does not document that method and still returns HTTP 501;
+the menu may be empty even though the commands work when typed. Telegram
+accepts `setMyCommands`.
 
 Source: [`server/src/bale/webhook.ts`](../server/src/bale/webhook.ts),
 [`server/src/index.ts`](../server/src/index.ts).

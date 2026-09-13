@@ -47,7 +47,12 @@ Already true:
 - `pressable` on shared buttons. `type="button"` everywhere. Back control
   and chat tools are 44×44.
 - Bale `BackButton` via [`miniapp.ts`](../src/services/miniapp.ts).
-  `ready()` runs on boot. Do not call `expand()` — Bale and Telegram both
+  `ready()` runs on boot. Show/hide is `Bale.WebApp.BackButton` (not
+  Telegram's) — Bale's API is 1.x, so `Telegram.BackButton.show()` is a
+  no-op and the in-app arrow is already hidden. Navigation is in-memory;
+  do not `history.replaceState` inside the WebView ([Bale Mini App
+  docs](https://docs.bale.ai/miniapp) — BackButton / in-memory routing).
+  Do not call `expand()` — Bale and Telegram both
   stay a compact sheet, not a full-height WebView. Telegram may disable
   vertical swipes so a table swipe does not dismiss the WebView.
 - Themed scrollbars, screen-enter motion, no full page loads.

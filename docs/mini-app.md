@@ -173,29 +173,55 @@ with the global renamed. Callers already used only that surface
 
 ### Detect which class to construct
 
-Load **one** official script when the native bridge is unambiguous
-(`BaleWebApp` → Bale `miniapp.js`, `TelegramWebviewProxy` →
-`telegram-web-app.js`). Load both only when the host is unclear
-(web / desktop). They hang off different globals, but they both
-parse `tgWebAppData`, so they must not share a native WebView.
+Load **one** official script when the host is unambiguous:
+
+- `BaleWebApp` or an iframe parent on `*.bale.ai` → Bale
+  `https://tapi.bale.ai/miniapp.js?3` (first tag in `<head>`, as
+  [Bale's Mini App docs](https://docs.bale.ai/miniapp) require)
+- `TelegramWebviewProxy` / `TelegramWebView` or a Telegram iframe parent →
+  Telegram `telegram-web-app.js`
+
+Load both only when the host is still unclear (bare browser tab). They hang
+off different globals, but they both parse `tgWebAppData`, so they must not
+share a native WebView.
 
 Pick one:
 
 1. `BaleWebApp` native bridge is present → `BaleMiniApp` (Bale's
-   native app injects this; both SDKs parse `tgWebAppData`, so
-   Telegram `initData` is also non-empty inside Bale)
-2. `Telegram.WebApp.initData` non-empty → `TelegramMiniApp`
-3. `Bale.WebApp.initData` non-empty → `BaleMiniApp`
-4. Else localhost + Bale global → Bale (LAN mock)
-5. Else `BrowserMiniApp` (no-op chrome, no name lock)
+   Android client injects this)
+2. Telegram native bridge is present → `TelegramMiniApp`
+3. Iframe parent is `*.bale.ai` → `BaleMiniApp` (Bale **web** has no
+   `BaleWebApp`; this is the BackButton case)
+4. Iframe parent is Telegram → `TelegramMiniApp`
+5. Bale `initData` / `isMiniAppSupported` and API version **1.x** →
+   `BaleMiniApp` (Bale's Mini App API is 1.0–1.4; Telegram reports 6+)
+6. `Telegram.WebApp.initData` non-empty → `TelegramMiniApp`
+7. `Bale.WebApp.initData` non-empty → `BaleMiniApp`
+8. Else localhost + Bale global → Bale (LAN mock)
+9. Else `BrowserMiniApp` (no-op chrome, no name lock)
+
+Do **not** prefer `Telegram.WebApp.initData` over Bale just because both
+strings are filled. That is what Bale web looks like after both SDKs
+load, and `Telegram.BackButton.show()` is a no-op on API 1.x — the
+in-app arrow is hidden (`usesNativeBack`) and the header back icon
+never appears.
 
 Do not trust User-Agent as the primary signal. The signed `initData`
-string is the login; the native bridge is which wrapper to call when
-both SDKs saw the same hash.
+string is the login; the native bridge / iframe parent / API version is
+which wrapper to call when both SDKs saw the same hash.
 
 `start_param` / `tgWebAppStartParam` already feeds
 [`joinCodeFromStartApp`](../client/src/services/startApp.ts). Keep
 that. Both hosts inject the same query flag.
+
+### In-memory routing (Bale BackButton)
+
+Bale's docs: the web client's BackButton only works if the mini-app
+does **not** change browser history. There is no React
+`MemoryRouter` here — [`NavigationService`](../client/src/services/NavigationService.ts)
+is already a signal stack. Do not call `history.pushState` /
+`replaceState` / `location.assign` inside the WebView (join-code URL
+cleanup is browser-only).
 
 ### Native chrome
 
@@ -247,7 +273,8 @@ supplies `startLink(code)` and `seats`.
 ### Commands
 
 [`commands.ts`](../server/src/bale/commands.ts) is platform-blind
-except `baleStartLink` → `ble.ir`. Replace that with
+except `baleStartLink` → `ble.ir` and Bale Markdown (escape `_` in
+URLs; Telegram leaves them). Replace the deep link with
 `runtime.startLink(code)`:
 
 - Bale: `https://ble.ir/{nick}?startapp={code}`

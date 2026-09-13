@@ -6,6 +6,7 @@ import { SettingsService } from './SettingsService';
 function fakeTelegramWebApp(
   overrides: Partial<{
     initData: string;
+    version: string;
     initDataUnsafe: { start_param?: string };
     ready: () => void;
     expand: () => void;
@@ -27,7 +28,12 @@ function fakeTelegramWebApp(
 
 function fakeBaleWebApp(
   initData = '',
-  overrides: { startParam?: string } = {},
+  overrides: {
+    startParam?: string;
+    version?: string;
+    isIframe?: boolean;
+    isMiniAppSupported?: boolean;
+  } = {},
 ) {
   return {
     initData,
@@ -44,6 +50,26 @@ describe('createMiniApp', () => {
     delete window.Bale;
     delete window.Telegram;
     delete window.BaleWebApp;
+  });
+
+  it('Should pick Bale on the Bale web client even if Telegram parsed the hash', () => {
+    window.Telegram = { WebApp: fakeTelegramWebApp({ version: '1.0' }) };
+    window.Bale = {
+      WebApp: fakeBaleWebApp('query_id=BALE', {
+        version: '1.0',
+        isIframe: true,
+        isMiniAppSupported: true,
+      }),
+    };
+    expect(createMiniApp().platform).toBe('bale');
+  });
+
+  it('Should pick Telegram when both SDKs parsed a Telegram-generation hash', () => {
+    window.Telegram = { WebApp: fakeTelegramWebApp({ version: '7.0' }) };
+    window.Bale = {
+      WebApp: fakeBaleWebApp('query_id=BALE', { version: '7.0', isIframe: true }),
+    };
+    expect(createMiniApp().platform).toBe('telegram');
   });
 
   it('Should pick Telegram when that WebApp has signed initData', () => {

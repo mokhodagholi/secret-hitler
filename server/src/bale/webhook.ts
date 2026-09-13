@@ -187,13 +187,11 @@ export async function handleMessengerWebhook(
   }
 
   const fromId = Number(message.from?.id);
-  if (!Number.isFinite(fromId)) {
-    return reply.code(200).send({ ok: true });
-  }
+  const seatedId = Number.isFinite(fromId) ? fromId : 0;
 
   const kind = messengerKindOf(messenger);
   if (!isDirectMessage(chat)) {
-    if (isGroupChat(chat) && table) {
+    if (isGroupChat(chat) && table && Number.isFinite(fromId)) {
       await handleGroupCreate(chat, text, fromId, message.from?.first_name, repo, messenger, table, req);
     }
     return reply.code(200).send({ ok: true });
@@ -201,12 +199,13 @@ export async function handleMessengerWebhook(
 
   const response = handleBotText({
     text,
-    fromId,
+    fromId: seatedId,
     lobbies: repo.listPublic(),
     games: repo.listAll(),
-    seated: messenger.seats.get(fromId, kind),
+    seated: Number.isFinite(fromId) ? messenger.seats.get(fromId, kind) : undefined,
     botUsername: messenger.botUsername,
     startLink: startLinkFor(messenger),
+    platform: kind,
   });
 
   return sendBotReply(req, reply, messenger, chat.id, response);

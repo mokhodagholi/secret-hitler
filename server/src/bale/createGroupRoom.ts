@@ -70,6 +70,7 @@ export function createGroupRoom(params: {
       code: entry.room.code,
       botUsername: params.botUsername,
       startLink: params.startLink,
+      platform,
     }),
     password,
     code: entry.room.code,

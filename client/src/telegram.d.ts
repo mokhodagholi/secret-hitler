@@ -7,6 +7,7 @@ export interface TelegramWebAppUser {
 
 export interface TelegramWebApp {
   initData: string;
+  version?: string;
   initDataUnsafe: {
     query_id?: string;
     user?: TelegramWebAppUser;
@@ -29,6 +30,10 @@ export interface TelegramWebApp {
 declare global {
   interface Window {
     Telegram?: { WebApp: TelegramWebApp };
+    TelegramWebviewProxy?: { postEvent: (event: string, data: string) => void };
+    webkit?: {
+      messageHandlers?: { TelegramWebView?: { postMessage: (body: unknown) => void } };
+    };
   }
 }
 

@@ -1,29 +1,6 @@
 import { Phase, miniAppStartLink, type MessengerKind, type RoomSummary } from '@secret-hitler/shared';
 import type { BaleSeat } from './BaleSeatIndex';
 
-export interface BotCommandContext {
-  text: string;
-  fromId: number;
-  /** Joinable lobby rooms (same list the mini-app Join tab shows). */
-  lobbies: RoomSummary[];
-  /** Every live room, including in-progress games. */
-  games: RoomSummary[];
-  seated: BaleSeat | undefined;
-  /** Bot @username, e.g. `@secret_hitler_bot`. */
-  botUsername: string;
-  /** Mini-app deep link for this bot. Defaults to Bale `ble.ir`. */
-  startLink?: (startApp?: string) => string;
-}
-
-export interface BotReply {
-  text: string;
-  reply_markup?: {
-    inline_keyboard: Array<Array<{ text: string; url: string }>>;
-  };
-}
-
-const ROOM_CODE = /^[A-Za-z0-9]{6}$/;
-
 /** Slash is optional so a typed `start` still matches — Bale's menu often omits `/`. */
 const KNOWN_COMMANDS = new Set([
   'start',
@@ -36,6 +13,31 @@ const KNOWN_COMMANDS = new Set([
   'invite',
   'create',
 ]);
+
+export interface BotCommandContext {
+  text: string;
+  fromId: number;
+  /** Joinable lobby rooms (same list the mini-app Join tab shows). */
+  lobbies: RoomSummary[];
+  /** Every live room, including in-progress games. */
+  games: RoomSummary[];
+  seated: BaleSeat | undefined;
+  /** Bot @username, e.g. `@secret_hitler_bot`. */
+  botUsername: string;
+  /** Mini-app deep link for this bot. Defaults to Bale `ble.ir`. */
+  startLink?: (startApp?: string) => string;
+  /** Telegram replies skip Bale Markdown escaping of URLs (plain text). */
+  platform?: MessengerKind;
+}
+
+export interface BotReply {
+  text: string;
+  reply_markup?: {
+    inline_keyboard: Array<Array<{ text: string; url: string }>>;
+  };
+}
+
+const ROOM_CODE = /^[A-Za-z0-9]{6}$/;
 
 /**
  * Mini-app deep link for this bot. Defaults to Bale when `startLink` is omitted
@@ -61,9 +63,16 @@ function linkOf(
   return ctx.startLink ? ctx.startLink(startApp) : baleStartLink(ctx.botUsername, startApp);
 }
 
+function markdownHref(
+  url: string,
+  ctx?: Pick<BotCommandContext, 'platform'>,
+): string {
+  return ctx?.platform === 'telegram' ? url : escapeBaleMarkdown(url);
+}
+
 /** Bale always parses Markdown; unmatched `_` in a URL or `/find_game` makes sendMessage fail. */
 export function playMarkdownLink(botUsername: string, code?: string): string {
-  return `[بازی کن](${baleStartLink(botUsername, code)})`;
+  return `[بازی کن](${escapeBaleMarkdown(baleStartLink(botUsername, code))})`;
 }
 
 /** Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail. */
@@ -101,8 +110,11 @@ function playKeyboardFor(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink
   };
 }
 
-function playMarkdownFor(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>, code?: string) {
-  return `[بازی کن](${linkOf(ctx, code)})`;
+function playMarkdownFor(
+  ctx: Pick<BotCommandContext, 'botUsername' | 'startLink' | 'platform'>,
+  code?: string,
+) {
+  return `[بازی کن](${markdownHref(linkOf(ctx, code), ctx)})`;
 }
 
 function roomDisplayName(room: RoomSummary): string {
@@ -217,7 +229,7 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   const name = room?.name ?? ctx.seated?.roomName ?? code;
   const link = linkOf(ctx, code);
   return {
-    text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}\n[ورود به اتاق](${link})`,
+    text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}\n[ورود به اتاق](${markdownHref(link, ctx)})`,
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
     },
@@ -245,6 +257,7 @@ export function createGroupPostedReply(params: {
   code: string;
   botUsername: string;
   startLink?: (startApp?: string) => string;
+  platform?: MessengerKind;
 }): BotReply {
   const link = linkOf(params, params.code);
   return {
@@ -252,7 +265,7 @@ export function createGroupPostedReply(params: {
       'اتاق ساخته شد.',
       `میز ${params.creatorName} — کد ${params.code}`,
       'از همین گروه با دکمه بیا تو. از بیرون رمز می‌خواد.',
-      `[ورود به اتاق](${link})`,
+      `[ورود به اتاق](${markdownHref(link, params)})`,
     ].join('\n'),
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, createGroupClosedReply, handleBotText, parseBotCommand } from './commands';
+import { baleStartLink, createGroupClosedReply, handleBotText, parseBotCommand, playMarkdownLink } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -56,17 +56,26 @@ describe('baleStartLink', () => {
       'https://ble.ir/secret_hitler_bot?startapp=naqvvxd7vbc2xvky',
     );
   });
+
+  it('Should escape underscores in markdown URLs so Bale sendMessage does not fail', () => {
+    expect(playMarkdownLink(BOT)).toBe(
+      '[بازی کن](https://ble.ir/secret\\_hitler\\_bot?startapp=)',
+    );
+  });
 });
 
 describe('handleBotText', () => {
   it('Should put Telegram startapp links on Play when startLink is injected', () => {
     const reply = ctx({
       startLink: (startApp = '') => `https://t.me/secret_hitler_bot/game?startapp=${startApp}`,
+      platform: 'telegram',
     });
     expect(JSON.stringify(reply.reply_markup)).toContain(
       'https://t.me/secret_hitler_bot/game?startapp=',
     );
     expect(JSON.stringify(reply)).not.toContain('ble.ir');
+    expect(reply.text).toContain('https://t.me/secret_hitler_bot/game?startapp=');
+    expect(reply.text).not.toContain('secret\\_hitler');
   });
 
   it('Should greet /start in natural Persian and never mention the public domain', () => {
@@ -76,7 +85,7 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('/find\\_game');
     expect(reply.text).not.toContain('/find-game');
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
-    expect(reply.text).toContain('https://ble.ir/secret_hitler_bot?startapp=');
+    expect(reply.text).toContain('https://ble.ir/secret\\_hitler\\_bot?startapp=');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
@@ -122,7 +131,7 @@ describe('handleBotText', () => {
   it('Should join by code with a ble.ir startapp link', () => {
     const reply = ctx({ text: '/join ABC123' });
     expect(reply.text).toContain('Friday');
-    expect(reply.text).toContain('https://ble.ir/secret_hitler_bot?startapp=ABC123');
+    expect(reply.text).toContain('https://ble.ir/secret\\_hitler\\_bot?startapp=ABC123');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
@@ -142,7 +151,7 @@ describe('handleBotText', () => {
     });
     expect(reply.text).toContain('ABC123');
     expect(reply.text).toContain('Friday');
-    expect(reply.text).toContain(baleStartLink(BOT, 'ABC123'));
+    expect(reply.text).toContain('https://ble.ir/secret\\_hitler\\_bot?startapp=ABC123');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );

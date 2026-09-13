@@ -10,6 +10,12 @@ import {
 import type { NavigationService } from './NavigationService';
 import type { SettingsService } from './SettingsService';
 import { joinCodeFromStartApp } from './startApp';
+import {
+  hasBaleNativeBridge,
+  hasTelegramNativeBridge,
+  isBaleApiVersion,
+  parentMessenger,
+} from './miniAppHost';
 
 export type MiniAppPlatform = MessengerKind | 'browser';
 
@@ -21,9 +27,12 @@ export interface MiniAppUser {
 /** Shared WebApp chrome both Bale and Telegram expose. */
 export interface HostWebApp {
   initData: string;
+  version?: string;
   initDataUnsafe?: { start_param?: string };
   /** Bale puts startapp here; Telegram uses initDataUnsafe.start_param. */
   startParam?: string;
+  isIframe?: boolean;
+  isMiniAppSupported?: boolean;
   ready: () => void;
   expand: () => void;
   disableVerticalSwipes?: () => void;
@@ -204,18 +213,25 @@ export class BrowserMiniApp implements MiniApp {
   async boot(): Promise<void> {}
 }
 
-function hasBaleNativeBridge(): boolean {
-  return typeof window !== 'undefined' && window.BaleWebApp != null;
+function isLiveBaleWebApp(webApp: HostWebApp | undefined): boolean {
+  if (!webApp) return false;
+  return Boolean(webApp.initData?.trim() || webApp.isMiniAppSupported || webApp.isIframe);
 }
 
-/** Pick the host from signed initData. Empty SDK globals are not a WebView. */
+/** Pick the host from the native bridge / iframe parent. Empty SDK globals are not a WebView. */
 export function createMiniApp(): MiniApp {
   if (typeof window === 'undefined') return new BrowserMiniApp();
   const telegram = window.Telegram?.WebApp;
   const bale = window.Bale?.WebApp;
-  // Both SDKs parse the same tgWebAppData hash. Inside Bale that fills
-  // Telegram.initData too, and Telegram.BackButton.show() is a no-op there.
+  const parent = parentMessenger();
+  // Both SDKs parse the same tgWebAppData hash. Telegram.BackButton.show()
+  // needs Bot API 6.1+ — Bale reports 1.x, so that call is a no-op there.
   if (hasBaleNativeBridge() && bale) return new BaleMiniApp();
+  if (hasTelegramNativeBridge() && telegram) return new TelegramMiniApp();
+  if (parent === 'bale' && bale) return new BaleMiniApp();
+  if (parent === 'telegram' && telegram) return new TelegramMiniApp();
+  const version = bale?.version ?? telegram?.version;
+  if (bale && isLiveBaleWebApp(bale) && isBaleApiVersion(version)) return new BaleMiniApp();
   if (telegram?.initData?.trim()) return new TelegramMiniApp();
   if (bale?.initData?.trim()) return new BaleMiniApp();
   if (isLocalInviteHost(location.hostname) && bale) return new BaleMiniApp();
