@@ -59,7 +59,7 @@
 
 .notes {
   min-height: 0;
-  overflow-y: auto;
+  @include scroll-y;
   padding-inline-end: 12px;
 }
 

@@ -26,7 +26,7 @@
   --screen-pad-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  @include scroll-y;
   padding: var(--screen-pad-top) var(--screen-pad-x)
     calc(var(--screen-pad-bottom) + var(--keyboard-inset, 0px));
 }

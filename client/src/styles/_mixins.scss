@@ -76,6 +76,13 @@
   --scroll-thumb-to: #{$gold-deep};
 }
 
+// Real overflow-y panes. Do not put `overscroll-behavior: contain` on `*` —
+// `overflow: hidden` tiles become scrollports and eat the wheel on hover.
+@mixin scroll-y {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 @mixin themed-scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--scroll-thumb) transparent;

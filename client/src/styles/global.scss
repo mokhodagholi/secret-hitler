@@ -18,7 +18,6 @@
   box-sizing: border-box;
   // Innermost node wins; drag handles still set `none`.
   touch-action: manipulation;
-  overscroll-behavior: contain;
   @include themed-scroll;
 }
 

@@ -125,7 +125,7 @@
 .feed {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  @include scroll-y;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -302,7 +302,7 @@
   line-height: 1.45;
   outline: none;
   resize: none;
-  overflow-y: auto;
+  @include scroll-y;
   text-align: start;
 
   &::placeholder {

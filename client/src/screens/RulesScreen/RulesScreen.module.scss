@@ -14,7 +14,7 @@
 .body {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  @include scroll-y;
   padding-top: 32px;
   padding-bottom: 48px;
 }
@@ -91,7 +91,9 @@
 .topicFace {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  // Clip the corner glow. `hidden` would make a scrollport and swallow the
+  // wheel while the pointer is over the tile.
+  overflow: clip;
   display: flex;
   flex-direction: column;
   align-items: center;

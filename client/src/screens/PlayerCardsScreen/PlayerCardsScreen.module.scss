@@ -21,7 +21,7 @@
 .grid {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  @include scroll-y;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: 12px 10px;
