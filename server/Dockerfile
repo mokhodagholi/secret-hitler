@@ -2,7 +2,8 @@
 # Debian can, but Docker seccomp blocks io_uring so postinstall treats the
 # binary as invalid (status 1) and tries to compile via PyPI. Fetch the worker
 # ourselves and skip that compile.
-FROM node:22-bookworm-slim AS build
+# Trixie (not bookworm): the GitHub prebuilt needs GLIBCXX_3.4.31 / CXXABI_1.3.15.
+FROM node:22-trixie-slim AS build
 WORKDIR /app
 ENV NPM_CONFIG_FETCH_RETRIES=5
 ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
@@ -50,7 +51,7 @@ RUN pnpm --filter @secret-hitler/shared build \
   && pnpm --filter bale-bot build \
   && pnpm --filter @secret-hitler/server build
 
-FROM node:22-bookworm-slim
+FROM node:22-trixie-slim
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NPM_CONFIG_FETCH_RETRIES=5
