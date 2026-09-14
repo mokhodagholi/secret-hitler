@@ -139,6 +139,13 @@ keyboard fights the page. Do not `window.scrollTo` while a field is
 focused. The document does not scroll; inner panes may. Do not shrink
 `dvh` in JS.
 
+`KeyboardForm`'s sticky submit button reads `bottom: var(--keyboard-inset,
+0px)`, not `bottom: 0`. The pane's own height does not shrink for an
+on-screen keyboard, so a plain `bottom: 0` sticks the button to where the
+keyboard now covers it — the inset lifts it to sit just above the keyboard
+instead. Any other sticky action inside a `[data-keyboard-form]` (e.g.
+`RoomsScreen`'s `.primary`) needs the same `bottom` offset.
+
 `enterkeyhint="send"` on chat. Enter already sends (Shift+Enter for a
 newline) — the key cap should say so.
 

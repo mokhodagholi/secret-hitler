@@ -1,5 +1,8 @@
 .root > button:last-of-type {
   position: sticky;
-  bottom: 0;
+  // KeyboardService writes --keyboard-inset on the software keyboard's
+  // overlap. Stick above it, not behind it — the pane's own height does not
+  // shrink for an on-screen keyboard, so bottom: 0 would sit under it.
+  bottom: var(--keyboard-inset, 0px);
   z-index: 1;
 }

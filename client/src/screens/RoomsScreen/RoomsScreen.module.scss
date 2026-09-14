@@ -155,7 +155,8 @@ $edge: rgba(110, 65, 35, 0.6);
 .primary {
   margin-top: 6px;
   position: sticky;
-  bottom: 0;
+  // See KeyboardForm.module.scss — stick above the keyboard, not behind it.
+  bottom: var(--keyboard-inset, 0px);
   z-index: 1;
   height: 48px;
   border-radius: 8px;
