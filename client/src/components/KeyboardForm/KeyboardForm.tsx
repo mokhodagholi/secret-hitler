@@ -7,8 +7,8 @@ export interface KeyboardFormProps {
 }
 
 /**
- * Marks a field cluster and its action so KeyboardService can dock the
- * block above the software keyboard. The document itself does not move.
+ * Field cluster plus its action. The last button sticks to the pane so the
+ * submit control stays reachable while KeyboardService pads the shell.
  */
 export function KeyboardForm(props: KeyboardFormProps) {
   return (

@@ -127,11 +127,17 @@ else.
 iOS zooms any field whose computed font-size is under **16px**.
 Field type is 16px. The label can stay small.
 
-After dismiss, do not leave the page scrolled up. The table shell should
-keep `svh` / `dvh` stable. [`KeyboardService`](../src/services/KeyboardService.ts)
-reads `visualViewport`, writes `--keyboard-inset`, and docks
-`[data-keyboard-form]` (create/join, support, chat composer) so the action
-sits on the keyboard. The document does not scroll. Do not shrink `dvh`.
+After dismiss, do not leave the page scrolled up. The table shell is
+`100dvh` capped to `100%` so an Android WebView that shrinks for the
+keyboard is not clipped. Do not set `virtualKeyboard.overlaysContent`.
+
+[`KeyboardService`](../src/services/KeyboardService.ts) reads
+`visualViewport` and writes `--keyboard-inset`. The screen pads by that
+inset so the field stays in the visible viewport. Do not `translateY` a
+focused field — Android IME treats a transformed caret as lost and the
+keyboard fights the page. Do not `window.scrollTo` while a field is
+focused. The document does not scroll; inner panes may. Do not shrink
+`dvh` in JS.
 
 `enterkeyhint="send"` on chat. Enter already sends (Shift+Enter for a
 newline) — the key cap should say so.

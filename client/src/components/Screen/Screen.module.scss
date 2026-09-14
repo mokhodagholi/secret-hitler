@@ -3,7 +3,10 @@
 
 .shell {
   position: relative;
+  // dvh tracks the address bar; max-height 100% follows an Android WebView
+  // that shrinks for the keyboard, so the bottom of the app is not clipped.
   height: 100dvh;
+  max-height: 100%;
   width: 100%;
   max-width: $shell-max-width;
   margin-inline: auto;
@@ -43,6 +46,7 @@
   --screen-pad-x: 0px;
   --screen-pad-bottom: 0px;
   padding: 0;
+  padding-bottom: var(--keyboard-inset, 0px);
   overflow: hidden;
   display: flex;
   flex-direction: column;

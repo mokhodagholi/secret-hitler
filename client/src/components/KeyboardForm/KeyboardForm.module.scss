@@ -1,16 +1,5 @@
-.root {
-  transition: transform 0.2s ease;
-  transform: translateY(calc(-1 * var(--keyboard-shift, 0px)));
-}
-
 .root > button:last-of-type {
   position: sticky;
   bottom: 0;
   z-index: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .root {
-    transition: none;
-  }
 }

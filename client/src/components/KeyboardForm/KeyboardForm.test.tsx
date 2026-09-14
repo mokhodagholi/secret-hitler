@@ -3,7 +3,7 @@ import { KeyboardForm } from './KeyboardForm';
 import { renderWithApp, buildHarness } from '../../../test/test-utils';
 
 describe('KeyboardForm', () => {
-  it('Should mark the cluster so the keyboard service can dock it', () => {
+  it('Should mark the cluster so the last action can stick in the pane', () => {
     const harness = buildHarness();
     renderWithApp(
       () => (

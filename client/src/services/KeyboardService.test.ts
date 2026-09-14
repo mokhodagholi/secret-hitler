@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from '@rstest/core';
 import {
   KeyboardService,
-  formShiftPx,
   keyboardOverlap,
+  scrollFieldIntoView,
 } from './KeyboardService';
 
 describe('keyboardOverlap', () => {
@@ -20,20 +20,6 @@ describe('keyboardOverlap', () => {
 
   it('Should not double-count an iOS visual-viewport pan', () => {
     expect(keyboardOverlap(800, { height: 500, offsetTop: 80 })).toBe(220);
-  });
-});
-
-describe('formShiftPx', () => {
-  it('Should stay put when the form already clears the keyboard', () => {
-    expect(formShiftPx(80, 400, 0, 500)).toBe(0);
-  });
-
-  it('Should lift the form so its bottom sits just above the visible edge', () => {
-    expect(formShiftPx(200, 620, 0, 500, 12)).toBe(132);
-  });
-
-  it('Should not push the focused field off the top of the visible viewport', () => {
-    expect(formShiftPx(40, 900, 0, 500, 12, 40)).toBe(28);
   });
 });
 
@@ -59,7 +45,23 @@ describe('KeyboardService', () => {
     expect(document.documentElement.style.getPropertyValue('--keyboard-inset')).toBe('');
   });
 
-  it('Should dock a focused keyboard form above the keyboard', () => {
+  it('Should not ask Chromium to overlay the virtual keyboard', () => {
+    const virtual = { overlaysContent: false };
+    Object.defineProperty(navigator, 'virtualKeyboard', {
+      configurable: true,
+      value: virtual,
+    });
+
+    const keyboard = new KeyboardService();
+    keyboard.start();
+    expect(virtual.overlaysContent).toBe(false);
+    keyboard.stop();
+    expect(virtual.overlaysContent).toBe(false);
+
+    delete (navigator as Navigator & { virtualKeyboard?: unknown }).virtualKeyboard;
+  });
+
+  it('Should not translate a focused form', () => {
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
       value: fakeViewport({ height: 500, offsetTop: 0 }),
@@ -71,31 +73,85 @@ describe('KeyboardService', () => {
     const field = document.createElement('input');
     form.appendChild(field);
     document.body.appendChild(form);
-    const shifted = (top: number, bottom: number) => {
-      const shift = Number.parseFloat(form.style.getPropertyValue('--keyboard-shift')) || 0;
-      return {
-        top: top - shift,
-        bottom: bottom - shift,
-        left: 0,
-        right: 390,
-        width: 390,
-        height: bottom - top,
-        x: 0,
-        y: top - shift,
-        toJSON() {},
-      } as DOMRect;
-    };
-    form.getBoundingClientRect = () => shifted(200, 620);
-    field.getBoundingClientRect = () => shifted(220, 264);
 
     const keyboard = new KeyboardService();
     keyboard.start();
     field.focus();
     field.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
-    expect(form.style.getPropertyValue('--keyboard-shift')).toBe('132px');
+    expect(form.style.getPropertyValue('--keyboard-shift')).toBe('');
+    expect(form.style.transform).toBe('');
     keyboard.stop();
     form.remove();
+  });
+
+  it('Should not reset window scroll while a field is focused', () => {
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: fakeViewport({ height: 500, offsetTop: 0 }),
+    });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+    const scrollTo = window.scrollTo.bind(window);
+    const calls: Array<[number, number]> = [];
+    window.scrollTo = ((x: number, y: number) => {
+      calls.push([x, y]);
+    }) as typeof window.scrollTo;
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 40 });
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: 0 });
+
+    const field = document.createElement('input');
+    document.body.appendChild(field);
+    const keyboard = new KeyboardService();
+    field.focus();
+    keyboard.start();
+
+    expect(calls).toEqual([]);
+    keyboard.stop();
+    field.remove();
+    window.scrollTo = scrollTo;
+    delete (window as { scrollY?: number }).scrollY;
+    delete (window as { scrollX?: number }).scrollX;
+  });
+});
+
+describe('scrollFieldIntoView', () => {
+  it('Should scroll an overflow pane so the field clears the keyboard', () => {
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+    const scroller = document.createElement('div');
+    Object.assign(scroller.style, { overflowY: 'auto', height: '200px' });
+    const field = document.createElement('input');
+    scroller.appendChild(field);
+    document.body.appendChild(scroller);
+    Object.defineProperty(scroller, 'scrollHeight', { value: 400 });
+    Object.defineProperty(scroller, 'clientHeight', { value: 200 });
+    scroller.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        bottom: 800,
+        left: 0,
+        right: 390,
+        width: 390,
+        height: 800,
+        x: 0,
+        y: 0,
+        toJSON() {},
+      }) as DOMRect;
+    field.getBoundingClientRect = () =>
+      ({
+        top: 620,
+        bottom: 664,
+        left: 16,
+        right: 374,
+        width: 358,
+        height: 44,
+        x: 16,
+        y: 620,
+        toJSON() {},
+      }) as DOMRect;
+
+    scrollFieldIntoView(field, 300);
+    expect(scroller.scrollTop).toBe(176);
+    scroller.remove();
   });
 });
 
