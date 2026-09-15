@@ -1,4 +1,5 @@
 import { For, Match, Show, Switch, createEffect, onCleanup, onMount, createSignal, type ParentProps } from 'solid-js';
+import { Phase } from '@secret-hitler/shared';
 import { AppProvider, useApp, type AppServices } from './services/AppContext';
 import { HomeScreen } from './screens/HomeScreen/HomeScreen';
 import { PlayerCardsScreen } from './screens/PlayerCardsScreen/PlayerCardsScreen';
@@ -6,7 +7,7 @@ import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { RulesLessonScreen } from './screens/RulesScreen/RulesLessonScreen';
 import { VideoTutorialScreen } from './screens/RulesScreen/VideoTutorialScreen';
 import { TextTutorialScreen } from './screens/RulesScreen/TextTutorialScreen';
-import { topicFromScreen } from './screens/RulesScreen/topics';
+import { isGuideScreen, topicFromScreen } from './screens/RulesScreen/topics';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
 import { WaitingRoomScreen } from './screens/WaitingRoomScreen/WaitingRoomScreen';
@@ -60,6 +61,39 @@ function PlayGameClaimer() {
       .catch(() => {
         nav.consumePlaySeat();
       });
+  });
+  return null;
+}
+
+/**
+ * Waiting-room owns lobby → board. The guide unmounts that screen, so a
+ * start while reading would otherwise leave them in the lessons.
+ */
+function FollowMatchStart() {
+  const { nav, game, sound } = useApp();
+  let seenPhase: Phase | null = null;
+  let seenRoomId: string | null = null;
+
+  createEffect(() => {
+    const state = game.view();
+    const session = game.currentSession();
+    if (!state || !session || state.roomId !== session.roomId) {
+      seenPhase = null;
+      seenRoomId = null;
+      return;
+    }
+    if (seenRoomId !== state.roomId) {
+      seenPhase = null;
+      seenRoomId = state.roomId;
+    }
+    const previous = seenPhase;
+    seenPhase = state.phase;
+    if (state.phase === Phase.Lobby) return;
+    if (previous !== Phase.Lobby) return;
+    if (!isGuideScreen(nav.screen())) return;
+    sound.play('room-start');
+    game.clearError();
+    nav.navigate('game');
   });
   return null;
 }
@@ -214,6 +248,7 @@ export function App(props: { services?: Partial<AppServices> }) {
     <AppProvider services={props.services}>
       <BootGate skip={props.services != null}>
         <PlayGameClaimer />
+        <FollowMatchStart />
         <Router />
         <RoomClosedNotice />
         <ConnectionNotice />

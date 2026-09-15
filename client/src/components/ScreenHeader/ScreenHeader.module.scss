@@ -14,6 +14,7 @@
   position: absolute;
   inset-inline-start: 0;
   top: 6px;
+  z-index: 1;
   display: grid;
   place-items: center;
   min-width: 44px;
@@ -32,6 +33,7 @@
   position: absolute;
   inset-inline-end: 0;
   top: 6px;
+  z-index: 1;
 }
 
 .title {

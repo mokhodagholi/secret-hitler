@@ -15,6 +15,7 @@ import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { KickVoteOverlay } from '../GameScreen/KickVoteOverlay';
@@ -194,6 +195,16 @@ export function WaitingRoomScreen() {
           title={formatMessage('waiting.title')}
           tone="warm"
           onBack={() => setConfirmingLeave((open) => !open)}
+          right={
+            <button
+              type="button"
+              class={styles.guide}
+              aria-label={formatMessage('nav.rules')}
+              onClick={() => nav.navigate('rules')}
+            >
+              <Icon name="book" size={22} />
+            </button>
+          }
         />
 
         <Show

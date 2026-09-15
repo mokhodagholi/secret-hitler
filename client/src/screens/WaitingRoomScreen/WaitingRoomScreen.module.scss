@@ -41,6 +41,16 @@
   );
 }
 
+.guide {
+  @include pressable;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  color: #e0c184;
+}
+
 // --- Top: portraits fill this box; size is measured in SeatBoard -------------
 
 .seats {

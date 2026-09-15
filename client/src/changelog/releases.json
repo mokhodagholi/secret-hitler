@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.2.0",
+      "bump": "minor",
+      "date": "2026-09-15",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "در اتاق انتظار می‌توانید راهنما را باز کنید؛ با شروع بازی به میز برمی‌گردید.",
+          "en": "You can open the guide from the waiting room; when the match starts you return to the table."
+        }
+      ]
+    },
+    {
       "version": "0.1.1",
       "bump": "patch",
       "date": "2026-09-15",

@@ -260,6 +260,22 @@ describe('WaitingRoomScreen', () => {
     ).toHaveLength(6);
   });
 
+  it('Should open the guide from the header book without leaving the room', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.nav.navigate('waiting-room');
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: en.nav.rules }));
+    expect(harness.services.nav.screen()).toBe('rules');
+    expect(harness.services.game.inRoom()).toBe(true);
+  });
+
   it('Should ask before leaving the room when the shared back action fires', () => {
     const harness = buildHarness({ seated: true });
     harness.services.nav.navigate('waiting-room');

@@ -145,6 +145,16 @@ export function topicFromScreen(screen: ScreenName): TopicId | null {
   return TOPICS.find((topic) => topic.screen === screen)?.id ?? null;
 }
 
+/** Hub, video, written guide, or a lesson — anything that is not the table. */
+export function isGuideScreen(screen: ScreenName): boolean {
+  return (
+    screen === 'rules' ||
+    screen === 'rules-video' ||
+    screen === 'rules-text' ||
+    topicFromScreen(screen) != null
+  );
+}
+
 export function screenForTopic(topicId: TopicId): TopicDef['screen'] {
   return TOPICS.find((topic) => topic.id === topicId)!.screen;
 }
