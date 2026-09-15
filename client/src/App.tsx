@@ -5,6 +5,7 @@ import { PlayerCardsScreen } from './screens/PlayerCardsScreen/PlayerCardsScreen
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { RulesLessonScreen } from './screens/RulesScreen/RulesLessonScreen';
 import { VideoTutorialScreen } from './screens/RulesScreen/VideoTutorialScreen';
+import { TextTutorialScreen } from './screens/RulesScreen/TextTutorialScreen';
 import { topicFromScreen } from './screens/RulesScreen/topics';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
@@ -78,6 +79,9 @@ function Router() {
       </Match>
       <Match when={nav.screen() === 'rules-video'}>
         <VideoTutorialScreen />
+      </Match>
+      <Match when={nav.screen() === 'rules-text'}>
+        <TextTutorialScreen />
       </Match>
       <Match when={topicFromScreen(nav.screen())}>
         {(topicId) => (

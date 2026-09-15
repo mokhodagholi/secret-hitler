@@ -252,7 +252,7 @@ describe('WaitingRoomScreen', () => {
       }),
     );
 
-    expect(screen.getByRole('status').textContent).toBe(en.tip.chaos);
+    expect(screen.getByRole('region', { name: en.waiting.chat })).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.leaveDialog.confirm })).toBeNull();
 
     harness.services.nav.requestBack();
@@ -495,7 +495,7 @@ describe('WaitingRoomScreen', () => {
     expect(field.getAttribute('enterkeyhint')).toBe('send');
   });
 
-  it('Should keep the quote card height stable for long and short tips', () => {
+  it('Should show lobby chat without a rotating quote', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
@@ -505,17 +505,8 @@ describe('WaitingRoomScreen', () => {
       }),
     );
 
-    const card = document.querySelector('[data-lobby-tip]');
-    expect(card).toBeTruthy();
-    expect(card?.getAttribute('data-line-clamp')).toBe('3');
-    expect(screen.getByRole('status').textContent).toBe(en.tip.chaos);
-
-    const sizer = card?.querySelector('[aria-hidden="true"]');
-    expect(sizer?.textContent).toContain(en.tip.chaos);
-    expect(sizer?.textContent).toContain(en.tip.whoTheyCover);
-    expect(sizer?.textContent).toContain(en.tip.night);
-
-    const line = screen.getByRole('status').querySelector('span');
-    expect(line?.className).toMatch(/tipLine/);
+    expect(document.querySelector('[data-lobby-tip]')).toBeNull();
+    expect(screen.queryByText(en.tip.chaos)).toBeNull();
+    expect(screen.getByRole('region', { name: en.waiting.chat })).toBeTruthy();
   });
 });

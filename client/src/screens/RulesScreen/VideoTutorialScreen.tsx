@@ -2,10 +2,10 @@ import { useApp } from '../../services/AppContext';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { Button } from '../../components/Button/Button';
-import { APARAT_EMBED_URL, APARAT_WATCH_URL } from './topics';
+import { APARAT_WATCH_URL } from './topics';
 import styles from './RulesScreen.module.scss';
 
-/** In-app Aparat lesson. The labeled control is the fallback when the iframe is blocked. */
+/** Aparat will not play inside this Mini App — send them out to watch it. */
 export function VideoTutorialScreen() {
   const { i18n } = useApp();
   const { formatMessage } = i18n;
@@ -18,21 +18,8 @@ export function VideoTutorialScreen() {
     <Screen fill>
       <div class={styles.page}>
         <ScreenHeader title={formatMessage('tutorial.video')} />
-        <div class={styles.body}>
-          <div class={styles.videoFrame}>
-            <iframe
-              class={styles.videoEmbed}
-              src={APARAT_EMBED_URL}
-              title={formatMessage('tutorial.video')}
-              allow="accelerometer; autoplay; encrypted-media; fullscreen"
-              allowfullscreen
-            />
-          </div>
-          <div class={styles.videoFallback}>
-            <Button variant="outline" onClick={openOnAparat}>
-              {formatMessage('tutorial.videoOpen')}
-            </Button>
-          </div>
+        <div class={styles.videoOpen}>
+          <Button onClick={openOnAparat}>{formatMessage('tutorial.videoOpen')}</Button>
         </div>
       </div>
     </Screen>

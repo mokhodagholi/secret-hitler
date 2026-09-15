@@ -11,11 +11,7 @@ import { Phase, kickVoteYesNeeded, type GameStateView, type PublicPlayer } from 
 import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
 import { copyText } from '../../services/clipboard';
-import {
-  CONNECTION_STATUS_KEYS,
-  ERROR_MESSAGE_KEYS,
-  type MessageKey,
-} from '../../i18n';
+import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
@@ -28,24 +24,13 @@ import { PlayerSlot } from './PlayerSlot';
 import { seatLayoutForBox } from './slotSize';
 import styles from './WaitingRoomScreen.module.scss';
 
-const TIP_KEYS: MessageKey[] = [
-  'tip.chaos',
-  'tip.hitlerOffice',
-  'tip.claims',
-  'tip.inspect',
-  'tip.night',
-  'tip.trustedFace',
-  'tip.whoTheyCover',
-];
-const TIP_ROTATION_MS = 5000;
-
 /**
  * Lobby for a joined room. Paper profile cards fill the seats area over the
- * briefing-desk art; a rotating tip and the room controls sit at the bottom.
+ * briefing-desk art; chat and the room controls sit at the bottom.
  * Navigates to the game board as soon as the server leaves the lobby phase.
  */
 export function WaitingRoomScreen() {
-  const { nav, game, socket, i18n, animation, sound, prefetch, miniApp } = useApp();
+  const { nav, game, socket, i18n, sound, prefetch, miniApp } = useApp();
   const { formatMessage } = i18n;
 
   const [copied, setCopied] = createSignal(false);
@@ -58,8 +43,6 @@ export function WaitingRoomScreen() {
   const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [nowMs, setNowMs] = createSignal(Date.now());
-  const [tipIndex, setTipIndex] = createSignal(0);
-  let tipTextEl: HTMLParagraphElement | undefined;
 
   const view = game.view;
   const shareLink = () =>
@@ -107,20 +90,6 @@ export function WaitingRoomScreen() {
     if (readyCount > lastReadyCount) sound.play('player-ready');
     seenPlayerIds = ids;
     lastReadyCount = readyCount;
-  });
-
-  onMount(() => {
-    const timer = setInterval(
-      () => setTipIndex((index) => (index + 1) % TIP_KEYS.length),
-      TIP_ROTATION_MS,
-    );
-    onCleanup(() => clearInterval(timer));
-  });
-
-  createEffect((previous: number | undefined) => {
-    const index = tipIndex();
-    if (previous !== undefined && tipTextEl) void animation.play(tipTextEl, 'fade-in');
-    return index;
   });
 
   async function copyShareLink(): Promise<void> {
@@ -267,26 +236,6 @@ export function WaitingRoomScreen() {
               <SeatBoard state={state()} />
 
               <footer class={styles.footer}>
-                <div class={styles.tip} data-lobby-tip data-line-clamp="3">
-                  {/* Every tip shares one grid cell so rotation cannot resize the card. */}
-                  <div class={styles.tipSizer} aria-hidden="true">
-                    <For each={TIP_KEYS}>
-                      {(key) => (
-                        <span class={styles.tipLine}>{formatMessage(key)}</span>
-                      )}
-                    </For>
-                  </div>
-                  <p
-                    class={styles.tipText}
-                    role="status"
-                    ref={(element) => (tipTextEl = element)}
-                  >
-                    <span class={styles.tipLine}>
-                      {formatMessage(TIP_KEYS[tipIndex()])}
-                    </span>
-                  </p>
-                </div>
-
                 <Show when={game.lastError()}>
                   <p class={styles.error} onClick={() => game.clearError()}>
                     {formatMessage(ERROR_MESSAGE_KEYS[game.lastError()!.code])}

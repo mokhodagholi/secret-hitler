@@ -57,7 +57,7 @@
   margin-top: 8px;
 }
 
-// --- Bottom: tip + controls --------------------------------------------------
+// --- Bottom: chat + controls --------------------------------------------------
 
 .footer {
   position: relative;
@@ -76,54 +76,6 @@
     rgba(6, 4, 2, 0.45) 70%,
     transparent 100%
   );
-}
-
-.tip {
-  position: relative;
-  width: 92%;
-  max-width: 92%;
-  margin: 0;
-  padding: 16px 24px;
-  border-radius: 12px;
-  background: rgba(8, 6, 4, 0.78);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-  font-size: 1.28rem;
-  line-height: 1.75;
-  font-weight: 600;
-  text-align: center;
-  color: $cream;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  // Floor of two lines so a short quote cannot shrink under the sizer.
-  min-height: calc(1.28rem * 1.75 * 2);
-  box-sizing: border-box;
-}
-
-.tipSizer {
-  visibility: hidden;
-  display: grid;
-  pointer-events: none;
-
-  > * {
-    grid-area: 1 / 1;
-  }
-}
-
-.tipText {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 16px 24px;
-}
-
-.tipLine {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
-  width: 100%;
 }
 
 .actions {

@@ -6,6 +6,7 @@ export type ScreenName =
   | 'home'
   | 'rules'
   | 'rules-video'
+  | 'rules-text'
   | 'rules-what-is-this'
   | 'rules-contents'
   | 'rules-laws'

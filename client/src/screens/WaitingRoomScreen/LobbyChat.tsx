@@ -74,7 +74,7 @@ export function LobbyChat() {
   }
 
   return (
-    <section class={styles.panel} aria-label={formatMessage('waiting.chat')}>
+    <section class={styles.panel} role="region" aria-label={formatMessage('waiting.chat')}>
       <div class={styles.feed} ref={(element) => (feedScroller = element)}>
         <Show when={game.chatMessages().length === 0}>
           <p class={styles.empty}>{formatMessage('waiting.chatEmpty')}</p>

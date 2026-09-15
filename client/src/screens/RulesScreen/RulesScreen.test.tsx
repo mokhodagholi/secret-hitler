@@ -4,7 +4,8 @@ import { Match, Switch } from 'solid-js';
 import { RulesScreen } from './RulesScreen';
 import { RulesLessonScreen } from './RulesLessonScreen';
 import { VideoTutorialScreen } from './VideoTutorialScreen';
-import { topicFromScreen, APARAT_EMBED_URL, APARAT_WATCH_URL } from './topics';
+import { TextTutorialScreen } from './TextTutorialScreen';
+import { topicFromScreen, APARAT_WATCH_URL } from './topics';
 import { HomeScreen } from '../HomeScreen/HomeScreen';
 import { useApp } from '../../services/AppContext';
 import { en } from '../../i18n/locales/en';
@@ -21,6 +22,9 @@ function RulesRoutes() {
       <Match when={nav.screen() === 'rules-video'}>
         <VideoTutorialScreen />
       </Match>
+      <Match when={nav.screen() === 'rules-text'}>
+        <TextTutorialScreen />
+      </Match>
       <Match when={topicFromScreen(nav.screen())}>
         {(topicId) => <RulesLessonScreen topicId={topicId()} />}
       </Match>
@@ -28,8 +32,12 @@ function RulesRoutes() {
   );
 }
 
+function openWrittenGuide(name: string = en.tutorial.text) {
+  fireEvent.click(screen.getByRole('button', { name }));
+}
+
 describe('RulesScreen', () => {
-  it('Should put the video and written tutorials first on the hub', () => {
+  it('Should put only the video and written tutorials on the hub', () => {
     const harness = buildHarness();
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
@@ -38,12 +46,10 @@ describe('RulesScreen', () => {
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label'))
       .filter((label): label is string => label != null && label !== en.common.goBack);
-    expect(titles[0]).toBe(en.tutorial.video);
-    expect(titles[1]).toBe(en.tutorial.text);
-    expect(titles[2]).toBe(en.rules.overview);
+    expect(titles).toEqual([en.tutorial.video, en.tutorial.text]);
   });
 
-  it('Should play the Aparat lesson in-app from the video card', () => {
+  it('Should open Aparat from the video card instead of embedding it', () => {
     const harness = buildHarness();
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
@@ -51,12 +57,11 @@ describe('RulesScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: en.tutorial.video }));
     expect(harness.services.nav.screen()).toBe('rules-video');
     expect(screen.getByRole('heading', { name: en.tutorial.video })).toBeTruthy();
-    const frame = document.querySelector('iframe');
-    expect(frame?.getAttribute('src')).toBe(APARAT_EMBED_URL);
+    expect(document.querySelector('iframe')).toBeNull();
     expect(screen.getByRole('button', { name: en.tutorial.videoOpen })).toBeTruthy();
   });
 
-  it('Should open Aparat from the labeled fallback when the player cannot embed', () => {
+  it('Should open Aparat from the labeled button', () => {
     const opened: string[] = [];
     const originalOpen = window.open;
     window.open = ((url?: string | URL) => {
@@ -73,14 +78,15 @@ describe('RulesScreen', () => {
     window.open = originalOpen;
   });
 
-  it('Should enter the written guide from the text tutorial card', () => {
+  it('Should enter the written topic cards from the text tutorial card', () => {
     const harness = buildHarness();
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
-    fireEvent.click(screen.getByRole('button', { name: en.tutorial.text }));
-    expect(harness.services.nav.screen()).toBe('rules-what-is-this');
-    expect(screen.getByText(en.rules.whatIsThis.lead)).toBeTruthy();
+    openWrittenGuide();
+    expect(harness.services.nav.screen()).toBe('rules-text');
+    expect(screen.getByRole('button', { name: en.rules.overview })).toBeTruthy();
+    expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
   });
 
   it('Should show the announce banner on a first-run visit to the hub', () => {
@@ -101,6 +107,11 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    expect(screen.getByRole('button', { name: fa.tutorial.video })).toBeTruthy();
+    expect(screen.getByRole('button', { name: fa.tutorial.text })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: fa.rules.overview })).toBeNull();
+
+    openWrittenGuide(fa.tutorial.text);
     expect(screen.getByRole('button', { name: fa.rules.overview })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.kit.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.laws.title })).toBeTruthy();
@@ -123,6 +134,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide();
     fireEvent.click(screen.getByRole('button', { name: en.rules.kit.title }));
     expect(harness.services.nav.screen()).toBe('rules-contents');
     expect(screen.getByRole('heading', { name: en.rules.kit.title })).toBeTruthy();
@@ -139,6 +151,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide();
     fireEvent.click(screen.getByRole('button', { name: en.rules.laws.title }));
     expect(harness.services.nav.screen()).toBe('rules-laws');
     expect(screen.getByText(en.rules.laws.what)).toBeTruthy();
@@ -147,11 +160,13 @@ describe('RulesScreen', () => {
     expect(screen.getByText(en.rules.laws.win)).toBeTruthy();
   });
 
-  it('Should keep the hub to topic cards until one is opened', () => {
+  it('Should keep the hub to the two tutorial cards until one is opened', () => {
     const harness = buildHarness();
     renderWithApp(() => <RulesScreen />, harness);
 
-    expect(screen.getByRole('button', { name: en.rules.overview })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.tutorial.video })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.tutorial.text })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.rules.overview })).toBeNull();
     expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
     expect(screen.queryByText(en.rules.setupBody)).toBeNull();
     expect(screen.queryByText(en.rules.failBody)).toBeNull();
@@ -162,6 +177,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide();
     fireEvent.click(screen.getByRole('button', { name: en.rules.failTitle }));
     expect(harness.services.nav.screen()).toBe('rules-failed-government');
     expect(screen.getByRole('heading', { name: en.rules.failTitle })).toBeTruthy();
@@ -176,11 +192,12 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide();
     fireEvent.click(screen.getByRole('button', { name: en.rules.overview }));
     expect(screen.getByText(en.rules.whatIsThis.lead)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
-    expect(harness.services.nav.screen()).toBe('rules');
+    expect(harness.services.nav.screen()).toBe('rules-text');
     expect(screen.getByRole('button', { name: en.rules.overview })).toBeTruthy();
     expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
   });
@@ -190,6 +207,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide();
     fireEvent.click(screen.getByRole('button', { name: en.rules.overview }));
     fireEvent.click(screen.getByRole('button', { name: en.common.next }));
     expect(harness.services.nav.screen()).toBe('rules-contents');
@@ -197,7 +215,7 @@ describe('RulesScreen', () => {
     expect(screen.queryByText(en.rules.whatIsThis.lead)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
-    expect(harness.services.nav.screen()).toBe('rules');
+    expect(harness.services.nav.screen()).toBe('rules-text');
   });
 
   it('Should leave rules from the hub back control', () => {
@@ -215,6 +233,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide(fa.tutorial.text);
     fireEvent.click(screen.getByRole('button', { name: fa.rules.roundTitle }));
     expect(screen.getAllByText('۱').length).toBeGreaterThan(0);
     expect(screen.getAllByText('۲').length).toBeGreaterThan(0);
@@ -229,6 +248,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide(fa.tutorial.text);
     fireEvent.click(screen.getByRole('button', { name: fa.rules.setup }));
     expect(screen.getByText(fa.rules.setupMix.players.replace('{count}', '۵'))).toBeTruthy();
     expect(screen.getAllByText(fa.rules.setupMix.nightSmall).length).toBe(2);
@@ -240,6 +260,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide();
     fireEvent.click(screen.getByRole('button', { name: en.rules.failTitle }));
     expect(screen.getByText(en.rules.failTracker.first)).toBeTruthy();
     expect(screen.getByText(en.rules.failTracker.chaos)).toBeTruthy();
@@ -253,6 +274,7 @@ describe('RulesScreen', () => {
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
+    openWrittenGuide();
     fireEvent.click(screen.getByRole('button', { name: en.rules.winningTitle }));
     expect(screen.getByText(/Those are the clocks/)).toBeTruthy();
     expect(screen.getByText(en.rules.winning.liberals)).toBeTruthy();

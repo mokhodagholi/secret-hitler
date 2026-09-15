@@ -3,7 +3,7 @@ import { useApp } from '../../services/AppContext';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { TopicCard } from './TopicCard';
-import { HUB_CARDS, TOPICS } from './topics';
+import { HUB_CARDS } from './topics';
 import styles from './RulesScreen.module.scss';
 
 /** Topic cards. Each one navigates to its own lesson screen. */
@@ -45,17 +45,6 @@ export function RulesScreen() {
                   bubbleOrigin={card.bubbleOrigin}
                   title={formatMessage(card.titleKey)}
                   onOpen={() => nav.navigate(card.screen)}
-                />
-              )}
-            </For>
-            <For each={TOPICS}>
-              {(topic) => (
-                <TopicCard
-                  icon={topic.icon}
-                  hue={topic.hue}
-                  bubbleOrigin={topic.bubbleOrigin}
-                  title={formatMessage(topic.titleKey)}
-                  onOpen={() => nav.navigate(topic.screen)}
                 />
               )}
             </For>

@@ -17,8 +17,6 @@ export type TopicId = (typeof TOPIC_ORDER)[number];
 
 export const APARAT_VIDEO_HASH = 'uawafm2';
 export const APARAT_WATCH_URL = `https://www.aparat.com/v/${APARAT_VIDEO_HASH}`;
-export const APARAT_EMBED_URL =
-  `https://www.aparat.com/video/video/embed/videohash/${APARAT_VIDEO_HASH}/vt/frame`;
 
 /** One hue per hub card so the tiles never share a fill. */
 export type TopicHue =
@@ -56,7 +54,7 @@ export interface HubCardDef {
   screen: Extract<ScreenName, `rules-${string}`>;
 }
 
-/** Video and written entries sit above the topic table of contents. */
+/** The guide hub is only these two doors; written lessons live behind text. */
 export const HUB_CARDS: readonly HubCardDef[] = [
   {
     id: 'video',
@@ -72,7 +70,7 @@ export const HUB_CARDS: readonly HubCardDef[] = [
     hue: 'slate',
     bubbleOrigin: 'topEnd',
     titleKey: 'tutorial.text',
-    screen: 'rules-what-is-this',
+    screen: 'rules-text',
   },
 ];
 

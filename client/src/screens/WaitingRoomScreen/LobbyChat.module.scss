@@ -17,9 +17,9 @@
 }
 
 .feed {
-  // Two to three bubbles; fixed so an empty lobby does not collapse.
-  height: 96px;
-  min-height: 96px;
+  // Taller now that the lobby quote is gone; still fixed so empty does not collapse.
+  height: 200px;
+  min-height: 200px;
   @include scroll-y;
   display: flex;
   flex-direction: column;

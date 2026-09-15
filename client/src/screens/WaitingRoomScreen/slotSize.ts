@@ -25,7 +25,7 @@ export interface SeatLayout {
 /**
  * Largest square paper that still fits `count` seats in the box.
  * Leftover height goes into the row gap so a tall phone does not leave a
- * dead band between the last row and the quote.
+ * dead band between the last row and the chat.
  */
 export function seatLayoutForBox(options: SeatSlotSizeOptions): SeatLayout {
   const empty: SeatLayout = {
