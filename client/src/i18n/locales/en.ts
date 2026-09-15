@@ -429,7 +429,7 @@ export const en = {
     micAccess: {
       message: 'Allow the microphone so you can speak at the table.',
       blocked:
-        'The microphone is still blocked. Allow it for this game in the browser.',
+        'This app still has the microphone off. Turn it on in the phone settings, then tap Allow again.',
       allow: 'Allow',
     },
     mutePlayer: 'Mute {name}',

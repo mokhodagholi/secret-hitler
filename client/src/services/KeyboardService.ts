@@ -34,15 +34,41 @@ function visualSize(): VisualViewportSize | null {
   return { height: visual.height, offsetTop: visual.offsetTop };
 }
 
+export function isAndroidUserAgent(
+  userAgent: string = typeof navigator === 'undefined' ? '' : navigator.userAgent,
+): boolean {
+  return /Android/i.test(userAgent);
+}
+
 /**
- * Android WebView (Bale included) dismisses the IME when a scroller moves
- * and visualViewport height changes. Pad with `--keyboard-inset` instead.
+ * Android WebView (Bale included) dismisses the IME when a scroller moves.
  * iOS pans the visual viewport; that path still needs the inner-pane scroll.
  */
 export function shouldScrollFieldIntoView(
   userAgent: string = typeof navigator === 'undefined' ? '' : navigator.userAgent,
 ): boolean {
-  return !/Android/i.test(userAgent);
+  return !isAndroidUserAgent(userAgent);
+}
+
+/**
+ * Padding the shell by `--keyboard-inset` moves the focused field. Android
+ * IME treats that as a lost caret and closes. Trust the WebView shrink
+ * (`interactive-widget=resizes-content`) instead.
+ */
+export function shouldPadForKeyboard(
+  userAgent: string = typeof navigator === 'undefined' ? '' : navigator.userAgent,
+): boolean {
+  return !isAndroidUserAgent(userAgent);
+}
+
+/**
+ * Collapsing a textarea to height 0 to measure it kills the Android IME.
+ * Leave the CSS height alone there; the field can scroll internally.
+ */
+export function growComposerHeight(field: HTMLTextAreaElement): void {
+  if (isAndroidUserAgent()) return;
+  field.style.height = '0';
+  field.style.height = `${field.scrollHeight}px`;
 }
 
 /**
@@ -64,6 +90,8 @@ export class KeyboardService {
   start(): void {
     if (this.unbind || typeof window === 'undefined') return;
 
+    if (isAndroidUserAgent()) document.documentElement.dataset.android = '';
+
     const sync = () => this.sync();
     const onFocusOut = () => queueMicrotask(sync);
     const visual = window.visualViewport;
@@ -80,6 +108,7 @@ export class KeyboardService {
       document.removeEventListener('focusout', onFocusOut);
       this.setInset(0);
       document.documentElement.style.removeProperty('--keyboard-inset');
+      delete document.documentElement.dataset.android;
     };
   }
 
@@ -89,7 +118,9 @@ export class KeyboardService {
   }
 
   private sync(): void {
-    const inset = keyboardOverlap(window.innerHeight, visualSize());
+    const inset = shouldPadForKeyboard()
+      ? keyboardOverlap(window.innerHeight, visualSize())
+      : 0;
     this.setInset(inset);
     document.documentElement.style.setProperty('--keyboard-inset', `${inset}px`);
 

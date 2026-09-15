@@ -132,12 +132,18 @@ After dismiss, do not leave the page scrolled up. The table shell is
 keyboard is not clipped. Do not set `virtualKeyboard.overlaysContent`.
 
 [`KeyboardService`](../src/services/KeyboardService.ts) reads
-`visualViewport` and writes `--keyboard-inset`. The screen pads by that
-inset so the field stays in the visible viewport. Do not `translateY` a
-focused field — Android IME treats a transformed caret as lost and the
-keyboard fights the page. Do not `window.scrollTo` while a field is
-focused. The document does not scroll; inner panes may. Do not shrink
-`dvh` in JS.
+`visualViewport` and writes `--keyboard-inset` **except on Android**. The
+screen pads by that inset so the field stays in the visible viewport on
+iOS. Do not `translateY` a focused field — Android IME treats a
+transformed caret as lost and the keyboard fights the page. Do not
+`window.scrollTo` while a field is focused. The document does not scroll;
+inner panes may. Do not shrink `dvh` in JS. Do not collapse a textarea
+to `height: 0` to autosize it on Android. Chat composers stay
+uncontrolled — writing `value=` on every keystroke dismisses the IME.
+
+`interactive-widget=resizes-content` is on the viewport meta so Android
+Chrome / WebView shrinks the layout with the keyboard instead of overlaying
+it. The composer then sits at the bottom of the column without a JS hop.
 
 `KeyboardForm`'s sticky submit button reads `bottom: var(--keyboard-inset,
 0px)`, not `bottom: 0`. The pane's own height does not shrink for an
@@ -154,7 +160,7 @@ newline) — the key cap should say so.
 [`index.html`](../index.html):
 
 ```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="format-detection" content="telephone=no" />
 <meta name="theme-color" content="#051528" />
 ```

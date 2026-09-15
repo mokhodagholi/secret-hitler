@@ -38,9 +38,11 @@ seats, seat rings) renders only while `flags.enabled('voice')`.
 Join starts muted after opening night. The browser microphone prompt
 waits until day — it must not sit on the role cards. Tap the mic to speak.
 That same tap calls `getUserMedia` immediately (no permission modal hop
-first). Bale/WebView will not show the sheet after a dialog click. If
-capture is blocked, a retry dialog stays for `grantMicAccess`. The host
-page should allow microphone (`Permissions-Policy` / iframe `allow`).
+first), and on Android it must be `pointerdown` — `click` is not a user
+gesture in Bale’s WebView. If capture is blocked, a retry dialog stays for
+`grantMicAccess` on the same pointerdown. The host page should allow
+microphone (`Permissions-Policy: microphone=*`). A tight `(self)` policy
+makes `getUserMedia` fail with `NotAllowedError` and **no** OS sheet.
 The client waits for the microphone before `voice:join`, queues `voice:peer`
 until the recv transport exists, and passes the server’s ICE list
 (STUN/TURN) into mediasoup transports. Capture asks for echo cancellation,

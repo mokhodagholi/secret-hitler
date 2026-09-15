@@ -6,6 +6,7 @@ import { Icon } from '../../components/Icon/Icon';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import { KeyboardForm } from '../../components/KeyboardForm/KeyboardForm';
+import { growComposerHeight } from '../../services/KeyboardService';
 import styles from './LobbyChat.module.scss';
 
 /**
@@ -49,10 +50,7 @@ export function LobbyChat() {
   });
 
   const autosizeField = () => {
-    const field = composerField;
-    if (!field) return;
-    field.style.height = '0';
-    field.style.height = `${field.scrollHeight}px`;
+    if (composerField) growComposerHeight(composerField);
   };
 
   createEffect(() => {
@@ -71,6 +69,10 @@ export function LobbyChat() {
     game.sendChat(chatDraft());
     setChatDraft('');
     setNowMs(Date.now());
+    if (composerField) {
+      composerField.value = '';
+      growComposerHeight(composerField);
+    }
   }
 
   return (
@@ -123,7 +125,6 @@ export function LobbyChat() {
           class={styles.input}
           rows={1}
           dir={i18n.dir()}
-          value={chatDraft()}
           placeholder={
             slowSecondsLeft() > 0
               ? formatMessage('game.chatSlowPlaceholder', {

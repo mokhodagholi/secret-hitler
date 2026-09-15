@@ -6,6 +6,8 @@ export interface ButtonProps {
   variant?: 'gold' | 'outline' | 'danger';
   size?: 'lg' | 'md';
   onClick?: () => void;
+  /** Prefer this for getUserMedia — Android WebView click is not a gesture. */
+  onPointerDown?: (event: PointerEvent) => void;
   type?: 'button' | 'submit';
   disabled?: boolean;
 }
@@ -24,6 +26,7 @@ export function Button(props: ButtonProps) {
         [styles.lg]: props.size === 'lg',
       }}
       onClick={() => props.onClick?.()}
+      onPointerDown={(event) => props.onPointerDown?.(event)}
     >
       {props.children}
     </button>

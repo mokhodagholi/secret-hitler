@@ -90,6 +90,11 @@ describe('VoiceService', () => {
     expect(voice.micBlocked()).toBe(true);
     expect(voice.needsMicAccess()).toBe(true);
     expect(voice.selfMuted()).toBe(true);
+
+    asked = 0;
+    await voice.grantMicAccess();
+    expect(asked).toBe(1);
+    expect(voice.needsMicAccess()).toBe(true);
   });
 
   it('Should join the table as a listener without a microphone', async () => {
@@ -128,7 +133,15 @@ describe('VoiceService', () => {
 
   it('Should capture with echo cancellation and not force NS/AGC off', async () => {
     let asked: MediaStreamConstraints | undefined;
-    const track = { enabled: true, stop: () => {} };
+    let applied: MediaTrackConstraints | undefined;
+    const track = {
+      enabled: true,
+      stop: () => {},
+      applyConstraints: (constraints: MediaTrackConstraints) => {
+        applied = constraints;
+        return Promise.resolve();
+      },
+    };
     const stream = {
       getAudioTracks: () => [track],
       getTracks: () => [track],
@@ -148,12 +161,13 @@ describe('VoiceService', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(asked).toEqual({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
+      audio: true,
       video: false,
+    });
+    expect(applied).toEqual({
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
     });
   });
 

@@ -12,6 +12,8 @@ export interface ConfirmDialogProps {
   /** Omit with no labels for a blocking status card (reconnect). */
   onConfirm?: () => void;
   onCancel?: () => void;
+  /** Fire confirm on pointerdown so Android WebView keeps the user gesture. */
+  confirmOnPointerDown?: boolean;
   /** Auto-dismiss after this many ms. Hides action buttons when set. */
   autoCloseMs?: number;
 }
@@ -26,6 +28,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         cancelLabel={props.cancelLabel}
         onConfirm={props.onConfirm}
         onCancel={props.onCancel}
+        confirmOnPointerDown={props.confirmOnPointerDown}
         autoCloseMs={props.autoCloseMs}
       >
         {props.children}
@@ -41,6 +44,7 @@ function Notice(props: {
   cancelLabel?: string;
   onConfirm?: () => void;
   onCancel?: () => void;
+  confirmOnPointerDown?: boolean;
   autoCloseMs?: number;
 }) {
   const timed = () => props.autoCloseMs != null && props.autoCloseMs > 0;
@@ -72,7 +76,19 @@ function Notice(props: {
                 {props.cancelLabel}
               </Button>
             </Show>
-            <Button onClick={() => props.onConfirm?.()}>{props.confirmLabel}</Button>
+            <Button
+              onPointerDown={
+                props.confirmOnPointerDown
+                  ? (event) => {
+                      event.preventDefault();
+                      props.onConfirm?.();
+                    }
+                  : undefined
+              }
+              onClick={() => props.onConfirm?.()}
+            >
+              {props.confirmLabel}
+            </Button>
           </div>
         </Show>
       </div>

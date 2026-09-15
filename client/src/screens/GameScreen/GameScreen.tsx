@@ -1166,6 +1166,7 @@ export function GameScreen() {
               )}
               confirmLabel={formatMessage('game.micAccess.allow')}
               cancelLabel={formatMessage('common.cancel')}
+              confirmOnPointerDown
               onConfirm={() => void voice.grantMicAccess()}
               onCancel={() => voice.dismissMicAccess()}
             />

@@ -129,6 +129,12 @@
   &:focus-within {
     border-top-color: rgba($gold, 0.55);
   }
+
+  :global(html[data-android]) & {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+  }
 }
 
 .input {

@@ -114,6 +114,7 @@ export class VoiceService {
   private levelPollInFlight = false;
   private unlockGesture: (() => void) | null = null;
   private playbackUnlocked = false;
+  private micCaptureInFlight = false;
 
   constructor(
     private readonly socket: WebSocketService,
@@ -238,16 +239,24 @@ export class VoiceService {
 
   /**
    * `getUserMedia` must run in the same user-gesture turn. A ConfirmDialog hop
-   * loses the gesture in Bale WebView, so the sheet never appears.
+   * loses the gesture in Bale WebView, so the sheet never appears. Call this
+   * from `pointerdown` on Android — `click` is not a transient activation.
    */
   private async captureMic(opts: { unmute?: boolean } = {}): Promise<boolean> {
+    if (this.micCaptureInFlight) return this.localStream != null;
+    this.micCaptureInFlight = true;
     try {
+      // Bare `audio: true` is what Android WebView will actually prompt for.
+      // Echo / NS / AGC go on afterwards — they are not permission constraints.
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: MIC_AUDIO,
+        audio: true,
         video: false,
       });
       const track = this.localStream.getAudioTracks()[0];
-      if (track) track.enabled = false;
+      if (track) {
+        track.enabled = false;
+        void track.applyConstraints?.(MIC_AUDIO)?.catch(() => {});
+      }
       this.update('selfMuted', true);
       this.setMicBlocked(false);
       this.setNeedsMicAccess(false);
@@ -267,6 +276,8 @@ export class VoiceService {
         this.setNeedsMicAccess(true);
       }
       return false;
+    } finally {
+      this.micCaptureInFlight = false;
     }
   }
 

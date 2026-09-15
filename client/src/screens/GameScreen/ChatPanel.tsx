@@ -12,6 +12,7 @@ import { avatarImage } from '../../assets/avatars';
 import { Icon } from '../../components/Icon/Icon';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
+import { growComposerHeight } from '../../services/KeyboardService';
 import styles from './ChatPanel.module.scss';
 
 /** Handle + chrome only — feed and composer hide at this height. */
@@ -108,10 +109,7 @@ export function ChatPanel(props: ChatPanelProps) {
   });
 
   const autosizeInput = () => {
-    const el = inputEl;
-    if (!el) return;
-    el.style.height = '0';
-    el.style.height = `${el.scrollHeight}px`;
+    if (inputEl) growComposerHeight(inputEl);
   };
 
   createEffect(() => {
@@ -128,7 +126,10 @@ export function ChatPanel(props: ChatPanelProps) {
       applyHeight(height());
     }
     const ticker = setInterval(() => setNow(Date.now()), 1000);
-    const onWinResize = () => applyHeight(height(), true);
+    const onWinResize = () => {
+      if (inputEl != null && document.activeElement === inputEl) return;
+      applyHeight(height());
+    };
     window.addEventListener('resize', onWinResize);
     onCleanup(() => {
       clearInterval(ticker);
@@ -157,6 +158,10 @@ export function ChatPanel(props: ChatPanelProps) {
     game.sendChat(chatDraft());
     setChatDraft('');
     setNow(Date.now());
+    if (inputEl) {
+      inputEl.value = '';
+      growComposerHeight(inputEl);
+    }
   }
 
   function onResizePointerDown(event: PointerEvent): void {
@@ -263,6 +268,11 @@ export function ChatPanel(props: ChatPanelProps) {
                 voice.selfMuted() ? 'game.unmuteSelf' : 'game.muteSelf',
               )}
               aria-pressed={!voice.selfMuted()}
+              onPointerDown={(event) => {
+                if (event.button !== 0) return;
+                event.preventDefault();
+                voice.toggleSelfMute();
+              }}
               onClick={() => voice.toggleSelfMute()}
             >
               <Icon name={voice.selfMuted() ? 'micOff' : 'mic'} size={20} />
@@ -346,7 +356,6 @@ export function ChatPanel(props: ChatPanelProps) {
             class={styles.input}
             rows={1}
             dir={i18n.dir()}
-            value={chatDraft()}
             placeholder={
               !talkingAllowed()
                 ? formatMessage('game.chatSilentPlaceholder')

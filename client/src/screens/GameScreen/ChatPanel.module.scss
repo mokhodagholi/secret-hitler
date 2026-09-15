@@ -16,6 +16,10 @@
     inset 0 1px rgba(255, 220, 170, 0.08);
   transition: height 0.2s ease;
   @include scroll-wood;
+
+  :global(html[data-android]) & {
+    transition: none;
+  }
 }
 
 .resizing {
@@ -277,6 +281,12 @@
 
   &:focus-within {
     border-top-color: rgba($gold, 0.55);
+  }
+
+  :global(html[data-android]) & {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
   }
 }
 

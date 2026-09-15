@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from '@rstest/core';
 import {
   KeyboardService,
+  growComposerHeight,
   keyboardOverlap,
   scrollFieldIntoView,
+  shouldPadForKeyboard,
   shouldScrollFieldIntoView,
 } from './KeyboardService';
 
@@ -27,7 +29,33 @@ describe('keyboardOverlap', () => {
 describe('KeyboardService', () => {
   afterEach(() => {
     document.documentElement.style.removeProperty('--keyboard-inset');
+    delete document.documentElement.dataset.android;
     delete (window as { visualViewport?: unknown }).visualViewport;
+  });
+
+  it('Should not pad the shell for a keyboard on Android', () => {
+    const previousAgent = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Mobile Safari/537.36',
+    });
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: fakeViewport({ height: 500, offsetTop: 0 }),
+    });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+
+    const keyboard = new KeyboardService();
+    keyboard.start();
+    expect(keyboard.inset()).toBe(0);
+    expect(document.documentElement.style.getPropertyValue('--keyboard-inset')).toBe('0px');
+    expect(document.documentElement.dataset.android).toBe('');
+    keyboard.stop();
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: previousAgent,
+    });
   });
 
   it('Should write --keyboard-inset from the visual viewport overlap', () => {
@@ -148,6 +176,43 @@ describe('KeyboardService', () => {
     window.scrollTo = scrollTo;
     delete (window as { scrollY?: number }).scrollY;
     delete (window as { scrollX?: number }).scrollX;
+  });
+});
+
+describe('growComposerHeight', () => {
+  it('Should leave the field height alone on Android', () => {
+    const previousAgent = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Mobile Safari/537.36',
+    });
+    const field = document.createElement('textarea');
+    field.style.height = '40px';
+    growComposerHeight(field);
+    expect(field.style.height).toBe('40px');
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: previousAgent,
+    });
+  });
+});
+
+describe('shouldPadForKeyboard', () => {
+  it('Should skip shell padding on Android', () => {
+    expect(
+      shouldPadForKeyboard(
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Mobile Safari/537.36',
+      ),
+    ).toBe(false);
+  });
+
+  it('Should still pad the shell on iOS', () => {
+    expect(
+      shouldPadForKeyboard(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+      ),
+    ).toBe(true);
   });
 });
 
