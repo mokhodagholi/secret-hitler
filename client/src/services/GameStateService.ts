@@ -292,8 +292,8 @@ export class GameStateService {
 
   private beginSession(session: RoomSession): RoomSession {
     const previous = this.session();
-    // Find Game while a live seat is still open must leave that table first —
-    // otherwise the leftover in-game snapshot yanks the player back into it.
+    // Find Match / a new join while a live seat is still open must leave that
+    // table first — otherwise the leftover snapshot yanks the player back into it.
     if (previous && previous.roomId !== session.roomId) {
       this.socket.send({ type: 'room:leave' });
       this.socket.disconnect();

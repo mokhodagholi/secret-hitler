@@ -1,5 +1,9 @@
 import { Show, createSignal, onCleanup, onMount } from 'solid-js';
-import { Phase } from '@secret-hitler/shared';
+import {
+  Phase,
+  PUBLIC_TABLE_MAX_PLAYERS,
+  type RoomSummary,
+} from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
@@ -21,19 +25,70 @@ const SUPPORT_ROTATE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 2_800;
 const SUPPORT_FADE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 0 : 220;
+const PUBLIC_TABLE_POLL_MS =
+  import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 4_000;
 
 /**
- * Lobby splash: Hitler at the desk, Find Game on the table, rules and
- * settings as a brass pair in the top-right corner. A live seat that
- * can still be claimed gets its own return button above Find Game.
+ * Lobby splash: Hitler at the desk, Find Match on the table, Play with
+ * friends beside Support. A live seat that can still be claimed gets its
+ * own return button above Find Match.
  */
 export function HomeScreen() {
-  const { nav, game, i18n, prefetch, animation } = useApp();
+  const { nav, game, i18n, prefetch, animation, settings, miniApp } = useApp();
   const { formatMessage } = i18n;
 
   const canRejoin = () => game.inRoom() && game.view() != null;
 
-  const enterPlay = () => nav.navigate('join-game');
+  const [publicTable, setPublicTable] = createSignal<RoomSummary | null>(null);
+  const [joining, setJoining] = createSignal(false);
+
+  const seatedCount = () => publicTable()?.playerCount ?? 0;
+  const maxSeats = () => publicTable()?.maxPlayers ?? PUBLIC_TABLE_MAX_PLAYERS;
+
+  async function refreshPublicTable(): Promise<void> {
+    try {
+      const listed = await game.listRooms();
+      setPublicTable(listed.find((room) => room.kind === 'public') ?? null);
+    } catch {
+      /* keep the last occupancy we painted */
+    }
+  }
+
+  function resolvedName(): string {
+    return miniApp.user()?.firstName ?? settings.settings.profileName.trim();
+  }
+
+  async function enterMatch(): Promise<void> {
+    if (joining()) return;
+    const table = publicTable();
+    if (table && game.currentSession()?.roomId === table.id) {
+      nav.navigate(game.view()?.phase === Phase.Lobby ? 'waiting-room' : 'game');
+      return;
+    }
+    const joinable =
+      table != null &&
+      table.phase === Phase.Lobby &&
+      table.playerCount < table.maxPlayers;
+    const name = resolvedName();
+    if (!table || !joinable || name.length === 0) {
+      nav.navigate('join-game');
+      return;
+    }
+    setJoining(true);
+    try {
+      await game.joinRoom(table.id, {
+        name,
+        avatar: settings.settings.avatar,
+        clientId: settings.settings.profileId,
+        initData: miniApp.initData(),
+      });
+      nav.navigate('waiting-room');
+    } catch {
+      nav.navigate('join-game');
+    } finally {
+      setJoining(false);
+    }
+  }
 
   function rejoinMatch(): void {
     const phase = game.view()?.phase;
@@ -44,6 +99,10 @@ export function HomeScreen() {
   const [supportFading, setSupportFading] = createSignal(false);
 
   onMount(() => {
+    void refreshPublicTable();
+    const poll = setInterval(() => {
+      void refreshPublicTable();
+    }, PUBLIC_TABLE_POLL_MS);
     const tick = setInterval(() => {
       if (!animation.motionEnabled() || SUPPORT_FADE_MS === 0) {
         setSupportIndex((index) => (index + 1) % SUPPORT_LABELS.length);
@@ -55,29 +114,44 @@ export function HomeScreen() {
         setSupportFading(false);
       }, SUPPORT_FADE_MS);
     }, SUPPORT_ROTATE_MS);
-    onCleanup(() => clearInterval(tick));
+    onCleanup(() => {
+      clearInterval(poll);
+      clearInterval(tick);
+    });
   });
 
   return (
     <Screen>
       <div class={styles.home}>
         <div class={styles.tools}>
-          <button
-            type="button"
-            class={styles.supportChip}
-            aria-label={formatMessage('support.title')}
-            onClick={() => nav.navigate('support')}
-          >
-            <span
-              classList={{
-                [styles.supportLabel]: true,
-                [styles.supportLabelOut]: supportFading(),
-              }}
-              dir="auto"
+          <div class={styles.toolStart}>
+            <button
+              type="button"
+              class={styles.supportChip}
+              aria-label={formatMessage('support.title')}
+              onClick={() => nav.navigate('support')}
             >
-              {formatMessage(SUPPORT_LABELS[supportIndex()])}
-            </span>
-          </button>
+              <span
+                classList={{
+                  [styles.supportLabel]: true,
+                  [styles.supportLabelOut]: supportFading(),
+                }}
+                dir="auto"
+              >
+                {formatMessage(SUPPORT_LABELS[supportIndex()])}
+              </span>
+            </button>
+            <button
+              type="button"
+              class={styles.friendsChip}
+              aria-label={formatMessage('home.playWithFriends')}
+              onClick={() => nav.navigate('play')}
+            >
+              <span class={styles.supportLabel} dir="auto">
+                {formatMessage('home.playWithFriends')}
+              </span>
+            </button>
+          </div>
           <div class={styles.toolPair}>
             <button
               type="button"
@@ -128,9 +202,21 @@ export function HomeScreen() {
               </span>
             </button>
           </Show>
-          <button type="button" class={styles.cta} onClick={enterPlay}>
+          <button
+            type="button"
+            class={styles.cta}
+            aria-label={formatMessage('home.findGame')}
+            disabled={joining()}
+            onClick={() => void enterMatch()}
+          >
             <span class={styles.ctaLabel} dir="auto">
-              {formatMessage('home.findGame')}
+              {formatMessage(joining() ? 'joinGame.joining' : 'home.findGame')}
+            </span>
+            <span class={styles.ctaCount} aria-hidden="true">
+              {formatMessage('joinGame.playerCountShort', {
+                count: seatedCount(),
+                max: maxSeats(),
+              })}
             </span>
           </button>
         </div>

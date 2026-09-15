@@ -28,7 +28,7 @@
     linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 38%, transparent 58%);
 }
 
-// Support text chip on the start; rules + settings as a brass pair on the end.
+// Support + Play with friends on the start; rules + settings as a brass pair.
 .tools {
   direction: ltr;
   position: relative;
@@ -41,23 +41,32 @@
   flex-shrink: 0;
 }
 
+.toolStart,
 .toolPair {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.toolStart {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.toolPair {
   flex-shrink: 0;
 }
 
-.supportChip {
+.supportChip,
+.friendsChip {
   @include pressable;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 7.5rem;
   height: 36px;
   padding: 0 14px;
   border-radius: 999px;
-  flex-shrink: 0;
+  flex-shrink: 1;
   color: #fff4e3;
   background: rgba(18, 12, 8, 0.55);
   border: 1px solid rgba(227, 165, 62, 0.45);
@@ -68,12 +77,18 @@
   overflow: hidden;
 }
 
-.supportChip:hover {
+.supportChip {
+  min-width: 7.5rem;
+}
+
+.supportChip:hover,
+.friendsChip:hover {
   filter: brightness(1.08);
   border-color: rgba(227, 165, 62, 0.7);
 }
 
-.supportChip:active {
+.supportChip:active,
+.friendsChip:active {
   transform: translateY(1px);
 }
 
@@ -319,7 +334,7 @@
   width: 96%;
 }
 
-// --- Primary CTA: "Find Game" — a wax-sealed letter on the table ------------
+// --- Primary CTA: "Find Match" — a wax-sealed letter on the table -----------
 .ctaWrap {
   position: absolute;
   left: 50%;
@@ -333,7 +348,7 @@
   gap: 10px;
 }
 
-// Breathing glow behind Find Game, pulsing every few seconds (opacity only).
+// Breathing glow behind Find Match, pulsing every few seconds (opacity only).
 .cta::before {
   content: '';
   position: absolute;
@@ -357,9 +372,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   width: 100%;
   height: 58px;
-  padding: 0 22px;
+  padding: 0 16px 0 22px;
   border-radius: 18px;
   border: 1.5px solid #e3a53e;
   // Warm orange paper/leather gradient.
@@ -377,6 +393,11 @@
 
 .cta:hover {
   filter: brightness(1.08);
+}
+
+.cta:disabled {
+  cursor: wait;
+  filter: none;
 }
 
 .cta:active {
@@ -399,7 +420,21 @@
     0 -1px 1px rgba(95, 32, 10, 0.55);
 }
 
-// Live seat still waiting — brass, quieter than Find Game.
+.ctaCount {
+  flex-shrink: 0;
+  font-family: $font-display;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff4e3;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 244, 214, 0.38);
+  background: rgba(80, 28, 8, 0.32);
+  text-shadow: 0 -1px 1px rgba(95, 32, 10, 0.5);
+}
+
+// Live seat still waiting — brass, quieter than Find Match.
 .ctaRejoin {
   @include pressable;
   position: relative;

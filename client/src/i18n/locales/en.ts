@@ -32,7 +32,8 @@ export const en = {
   },
   home: {
     play: 'Play',
-    findGame: 'Find Game',
+    findGame: 'Find Match',
+    playWithFriends: 'Play with friends',
     rejoin: 'Return to table',
     title: 'Secret Hitler',
     tagline: 'One night, a thousand secrets, one winner!',

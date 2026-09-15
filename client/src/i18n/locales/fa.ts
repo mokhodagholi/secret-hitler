@@ -31,6 +31,7 @@ export const fa = {
   home: {
     play: 'بازی',
     findGame: 'پیدا کردن بازی',
+    playWithFriends: 'بازی با دوستان',
     rejoin: 'بازگشت به میز',
     title: 'راز هیتلر',
     tagline: 'یک شب، هزار راز و یک برنده!',

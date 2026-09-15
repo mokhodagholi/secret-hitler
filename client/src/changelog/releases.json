@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.3.0",
+      "bump": "minor",
+      "date": "2026-09-15",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "از خانه می‌توانید بازی پیدا کنید؛ میز عمومی شش‌نفره است.",
+          "en": "You can now find a match from home; the public table is six players."
+        }
+      ]
+    },
+    {
       "version": "0.2.0",
       "bump": "minor",
       "date": "2026-09-15",

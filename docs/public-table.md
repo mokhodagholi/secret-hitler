@@ -141,8 +141,9 @@ Join always shows that row, including `0/6`. Empty state “no rooms”
 only appears if the public table is somehow missing (a bug). `/find_game`
 must not send people to Create when the public table exists.
 
-Home **Find Game** should open the Join tab, not Create. The public
-table is the thing Find Game is for.
+Home **Find Match** sits you at the public table (the occupancy on
+that button is `n/6`). **Play with friends** is Create / Join — a
+hosted room for a group that already has a table.
 
 The public lobby also appears in `/games` (it is a live room). When it
 starts, the in-progress match stays on `/games`; the new empty public
