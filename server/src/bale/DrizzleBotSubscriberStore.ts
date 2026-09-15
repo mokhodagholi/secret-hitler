@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm';
 import type { MessengerKind } from '@secret-hitler/shared';
 import { connectDatabase, type Database, type DbConnection } from '../db/connection';
-import { botSubscribers } from '../db/schema';
-import type { BotSubscriberStore } from './BotSubscriberStore';
+import { botBlastDeliveries, botSubscribers } from '../db/schema';
+import type { BotBlastDelivery, BotSubscriberStore } from './BotSubscriberStore';
 
 /** Postgres-backed {@link BotSubscriberStore}. */
 export class DrizzleBotSubscriberStore implements BotSubscriberStore {
@@ -40,6 +40,31 @@ export class DrizzleBotSubscriberStore implements BotSubscriberStore {
     await this.db
       .delete(botSubscribers)
       .where(and(eq(botSubscribers.platform, platform), eq(botSubscribers.chatId, chatId)));
+  }
+
+  async replaceLastBlast(platform: MessengerKind, deliveries: BotBlastDelivery[]): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx.delete(botBlastDeliveries).where(eq(botBlastDeliveries.platform, platform));
+      if (deliveries.length === 0) return;
+      await tx.insert(botBlastDeliveries).values(
+        deliveries.map((row) => ({
+          platform,
+          chatId: row.chatId,
+          messageId: row.messageId,
+        })),
+      );
+    });
+  }
+
+  async listLastBlast(platform: MessengerKind): Promise<BotBlastDelivery[]> {
+    const rows = await this.db
+      .select({
+        chatId: botBlastDeliveries.chatId,
+        messageId: botBlastDeliveries.messageId,
+      })
+      .from(botBlastDeliveries)
+      .where(eq(botBlastDeliveries.platform, platform));
+    return rows;
   }
 
   close(): Promise<void> {

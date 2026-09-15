@@ -989,4 +989,113 @@ describe('Bale webhook — broadcast', () => {
     expect(status).toBe(200);
     expect(sent).toEqual([]);
   });
+
+  it('Should delete the last broadcast DMs on /unsend', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    await subscribers.upsert('bale', '11');
+    let nextId = 100;
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const deleted: Array<{ chat_id: number | string; message_id: number }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        nextId += 1;
+        return { message_id: nextId };
+      },
+      deleteMessage: async (params) => {
+        deleted.push(params);
+        return true;
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const admin = {
+      from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+      chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+    };
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: { message_id: 1, date: 0, text: '/broadcast بیا کانال', ...admin },
+    });
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 2,
+      message: { message_id: 2, date: 0, text: '/unsend', ...admin },
+    });
+
+    expect(deleted.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
+    expect(sent.at(-1)?.text).toContain('پاک شد');
+    expect(await subscribers.listLastBlast('bale')).toEqual([]);
+  });
+
+  it('Should tell the admin when there is nothing to unsend', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/unsend',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    expect(sent.at(-1)?.text).toContain('نیست');
+  });
+
+  it('Should ignore /unsend from anyone but the admin', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/unsend',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toEqual([]);
+  });
 });

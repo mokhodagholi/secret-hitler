@@ -288,6 +288,10 @@ export function isDirectMessageCommand(command: string | undefined): boolean {
   return command === 'message';
 }
 
+export function isUnsendCommand(command: string | undefined): boolean {
+  return command === 'unsend' || command === 'undo' || command === 'retract';
+}
+
 export function broadcastHelpReply(): BotReply {
   return { text: 'متن پیام رو بفرست.' };
 }
@@ -331,6 +335,19 @@ export function messageBadIdsReply(): BotReply {
   return {
     text: ['آیدی‌ها درست نیست. با ویرگول بفرست، مثلاً:', '123,456'].join('\n'),
   };
+}
+
+export function unsendEmptyReply(): BotReply {
+  return { text: 'پیامی نیست که پاک کنم.' };
+}
+
+export function unsendStartedReply(count: number): BotReply {
+  return { text: `دارم آخرین پیام رو از ${count} نفر پاک می‌کنم.` };
+}
+
+export function unsendDoneReply(deleted: number, failed: number): BotReply {
+  if (failed === 0) return { text: `تموم شد. از ${deleted} نفر پاک شد.` };
+  return { text: `تموم شد. از ${deleted} نفر پاک شد. ${failed} تا پاک نشد.` };
 }
 
 /**

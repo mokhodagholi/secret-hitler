@@ -473,6 +473,36 @@ the bot may fail; they are not dropped from the `/start` list.
 
 ---
 
+## `/unsend` — delete the last admin DMs (hidden)
+
+**Type:** `/unsend` · `/undo` · `/retract` in **private** chat. Not on the bot
+menu.
+
+Same admin gate as `/play-game`. Anyone else gets no reply.
+
+Deletes the last `/broadcast` or `/message` the bot sent (the player DMs, not
+the admin status lines). Type `/unsend`. No extra step.
+
+Empty list (nothing stored, or already unsent):
+
+```
+پیامی نیست که پاک کنم.
+```
+
+While deleting, then when done:
+
+```
+دارم آخرین پیام رو از N نفر پاک می‌کنم.
+تموم شد. از N نفر پاک شد.
+```
+
+(If some deletes fail: `M تا پاک نشد.` on the second line.)
+
+Only the latest blast is kept. An older round that went out before this
+command cannot be pulled back.
+
+---
+
 ## What happens after they tap the button
 
 The chat bot’s job is over. The mini-app boots, reads `start_param` /
@@ -529,7 +559,7 @@ From [`.env.example`](../.env.example):
 | `BALE_WEBHOOK_URL` | HTTPS URL Bale POSTs updates to (port 443 or 88). |
 | `BALE_WEBHOOK_SECRET` | Appended to the webhook path; also accepted as `X-Telegram-Bot-Api-Secret-Token`. |
 | `BALE_SUPPORT_CHAT_ID` | Group for support letters and kick notices. Not used by chat commands. |
-| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, and `/message`. `1902004260` is always allowed. |
+| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, `/message`, and `/unsend`. `1902004260` is always allowed. |
 
 Copy for new replies: [`docs/persian.md`](./persian.md) (register **بله**).
 Tests: [`server/src/bale/commands.test.ts`](../server/src/bale/commands.test.ts).

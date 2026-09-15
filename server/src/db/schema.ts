@@ -76,3 +76,15 @@ export const botSubscribers = pgTable(
   },
   (table) => [unique('bot_subscribers_platform_chat_id').on(table.platform, table.chatId)],
 );
+
+/**
+ * Last admin /broadcast or /message delivery, so /unsend can delete those DMs.
+ * Replaced on every new blast.
+ */
+export const botBlastDeliveries = pgTable('bot_blast_deliveries', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  platform: text('platform').notNull(),
+  chatId: text('chat_id').notNull(),
+  messageId: integer('message_id').notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+});

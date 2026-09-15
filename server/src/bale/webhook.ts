@@ -23,12 +23,16 @@ import {
   handleBotText,
   isBroadcastCommand,
   isDirectMessageCommand,
+  isUnsendCommand,
   messageAskTextReply,
   messageBadIdsReply,
   messageHelpReply,
   parseBotCommand,
   parseChatIds,
   parseMessageArg,
+  unsendDoneReply,
+  unsendEmptyReply,
+  unsendStartedReply,
   type BotReply,
 } from './commands';
 import { createGroupRoom } from './createGroupRoom';
@@ -56,6 +60,7 @@ export interface BaleMessenger {
   }): Promise<unknown>;
   setMyCommands?(params: { commands: { command: string; description: string }[] }): Promise<unknown>;
   setWebhook?(params: { url: string; secret_token?: string }): Promise<unknown>;
+  deleteMessage?(params: { chat_id: number | string; message_id: number }): Promise<unknown>;
   getChatMember?(params: {
     chat_id: number | string;
     user_id: number;
@@ -257,6 +262,14 @@ export async function handleMessengerWebhook(
       return reply.code(200).send({ ok: true });
     }
     return handleDirectMessage(req, reply, messenger, table, chat.id, parsed?.arg ?? '');
+  }
+
+  if (isUnsendCommand(parsed?.command)) {
+    if (!table || !isAdminUser(seatedId, table.adminUserIds)) {
+      return reply.code(200).send({ ok: true });
+    }
+    adminDrafts.delete(adminDraftKey(kind, chat.id));
+    return handleUnsend(req, reply, messenger, table, chat.id);
   }
 
   if (table && isAdminUser(seatedId, table.adminUserIds) && !parsed?.command) {
@@ -471,16 +484,58 @@ async function sendAdminBlast(
   const delayMs = table.broadcastDelayMs ?? 0;
   let sent = 0;
   let failed = 0;
+  const deliveries: { chatId: string; messageId: number }[] = [];
   for (const chatId of targets) {
-    const ok = await sendChat(req, messenger, Number(chatId), blast);
-    if (ok) sent += 1;
-    else {
+    const posted = await sendChat(req, messenger, Number(chatId), blast);
+    if (posted) {
+      sent += 1;
+      if (posted.message_id != null) {
+        deliveries.push({ chatId, messageId: posted.message_id });
+      }
+    } else {
       failed += 1;
       if (dropFailedSubscribers) await table.subscribers?.remove(kind, chatId);
     }
     if (delayMs > 0) await sleep(delayMs);
   }
+  await table.subscribers?.replaceLastBlast(kind, deliveries);
   await sendChat(req, messenger, adminChatId, broadcastDoneReply(sent, failed));
+  return reply.code(200).send({ ok: true });
+}
+
+async function handleUnsend(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+  adminChatId: number,
+): Promise<void> {
+  const kind = messengerKindOf(messenger);
+  const deliveries = (await table.subscribers?.listLastBlast(kind)) ?? [];
+  if (deliveries.length === 0) {
+    return sendBotReply(req, reply, messenger, adminChatId, unsendEmptyReply());
+  }
+
+  const started = await sendChat(req, messenger, adminChatId, unsendStartedReply(deliveries.length));
+  if (!started) {
+    return reply.code(500).send({ error: 'Failed to send reply' });
+  }
+
+  const delayMs = table.broadcastDelayMs ?? 0;
+  let deleted = 0;
+  let failed = 0;
+  const remaining: { chatId: string; messageId: number }[] = [];
+  for (const delivery of deliveries) {
+    const ok = await deleteChatMessage(req, messenger, delivery.chatId, delivery.messageId);
+    if (ok) deleted += 1;
+    else {
+      failed += 1;
+      remaining.push(delivery);
+    }
+    if (delayMs > 0) await sleep(delayMs);
+  }
+  await table.subscribers?.replaceLastBlast(kind, remaining);
+  await sendChat(req, messenger, adminChatId, unsendDoneReply(deleted, failed));
   return reply.code(200).send({ ok: true });
 }
 
@@ -553,6 +608,22 @@ function readMessageId(sent: unknown): number | undefined {
   if (!sent || typeof sent !== 'object') return undefined;
   const id = (sent as { message_id?: unknown }).message_id;
   return typeof id === 'number' ? id : undefined;
+}
+
+async function deleteChatMessage(
+  req: FastifyRequest,
+  bale: BaleRuntime,
+  chatId: string,
+  messageId: number,
+): Promise<boolean> {
+  if (!bale.bot.deleteMessage) return false;
+  try {
+    await bale.bot.deleteMessage({ chat_id: Number(chatId), message_id: messageId });
+    return true;
+  } catch (error) {
+    req.log.error(error, 'Failed to delete bot message');
+    return false;
+  }
 }
 
 /** Best-effort send; retries without the keyboard if Bale rejects markup. */

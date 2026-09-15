@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, broadcastHelpReply, createGroupClosedReply, handleBotText, isBroadcastCommand, isDirectMessageCommand, parseBotCommand, parseChatIds, parseMessageArg } from './commands';
+import { baleStartLink, broadcastHelpReply, createGroupClosedReply, handleBotText, isBroadcastCommand, isDirectMessageCommand, isUnsendCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -49,6 +49,10 @@ describe('parseBotCommand', () => {
     expect(parseBotCommand('/message 9,11 بیا')).toEqual({
       command: 'message',
       arg: '9,11 بیا',
+    });
+    expect(parseBotCommand('/unsend')).toEqual({
+      command: 'unsend',
+      arg: '',
     });
   });
 
@@ -232,5 +236,18 @@ describe('direct message copy', () => {
     expect(parseChatIds('9,11')).toEqual(['9', '11']);
     expect(parseChatIds('9,11 سلام')).toBeNull();
     expect(parseMessageArg('امشب بیا')).toBeNull();
+  });
+});
+
+describe('unsend copy', () => {
+  it('Should recognize hidden admin unsend aliases', () => {
+    expect(isUnsendCommand('unsend')).toBe(true);
+    expect(isUnsendCommand('undo')).toBe(true);
+    expect(isUnsendCommand('retract')).toBe(true);
+    expect(isUnsendCommand('broadcast')).toBe(false);
+  });
+
+  it('Should tell the admin when nothing was stored', () => {
+    expect(unsendEmptyReply().text).toContain('نیست');
   });
 });
