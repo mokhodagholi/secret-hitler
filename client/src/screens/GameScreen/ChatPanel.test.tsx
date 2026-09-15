@@ -3,7 +3,6 @@ import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
 import { ChatPanel } from './ChatPanel';
 import { en } from '../../i18n/locales/en';
-import { VOTE_BACK } from '../../assets/cards';
 import {
   buildHarness,
   makePlayer,
@@ -327,46 +326,16 @@ describe('ChatPanel', () => {
 
     const mic = screen.getByRole('button', { name: en.game.unmuteSelf });
     fireEvent.click(mic);
-    expect(harness.socket.lastSent('voice:mute')).toEqual({
-      type: 'voice:mute',
-      muted: false,
+    await waitFor(() => {
+      expect(harness.socket.lastSent('voice:mute')).toEqual({
+        type: 'voice:mute',
+        muted: false,
+      });
     });
     expect(screen.getByRole('button', { name: en.game.muteSelf })).toBeTruthy();
   });
 
-  it('Should keep ballots off the feed until this player has voted', () => {
-    const harness = buildHarness({ seated: true });
-    renderPanel(harness);
-    const view = seatedView();
-    harness.pushState({
-      ...view,
-      phase: Phase.Voting,
-      players: view.players.map((player) =>
-        player.id === 'sadf' ? { ...player, hasVoted: true } : player,
-      ),
-    });
-
-    expect(document.querySelector('[data-chat-ballot]')).toBeNull();
-  });
-
-  it('Should show a ballot in the feed after this player has voted', () => {
-    const harness = buildHarness({ seated: true });
-    renderPanel(harness);
-    const view = seatedView();
-    harness.pushState({
-      ...view,
-      phase: Phase.Voting,
-      you: { ...view.you, vote: 'ja' },
-      players: view.players.map((player) =>
-        player.id === 'you' ? { ...player, hasVoted: true } : player,
-      ),
-    });
-
-    expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
-    expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
-  });
-
-  it('Should show the vote back for another player’s ballot', () => {
+  it('Should keep ballots out of the chat feed during a vote', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);
     const view = seatedView();
@@ -381,10 +350,6 @@ describe('ChatPanel', () => {
       ),
     });
 
-    expect(
-      document
-        .querySelector('[data-chat-ballot="sadf"] [data-ballot-face="back"]')
-        ?.getAttribute('src'),
-    ).toBe(VOTE_BACK);
+    expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 });

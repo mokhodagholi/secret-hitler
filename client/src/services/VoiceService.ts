@@ -180,8 +180,7 @@ export class VoiceService {
     }
     this.waitingForDay = false;
     if (this.joined || this.status() === 'connecting') return;
-    if (this.status() === 'denied' || this.status() === 'failed') return;
-    void this.join();
+    void this.joinListen();
   }
 
   toggleSelfMute(): void {
@@ -190,27 +189,30 @@ export class VoiceService {
       this.setSelfMuted(!this.ui.selfMuted);
       return;
     }
-    if (this.status() === 'connecting') return;
     this.pendingUnmute = this.ui.selfMuted;
-    // Browser prompt during night sits on the role cards.
-    if (!this.waitingForDay) this.setNeedsMicAccess(true);
+    // Prompt during night sits on the role cards — wait for day.
+    if (this.waitingForDay) return;
+    // Same tap as unmute — Bale/WebView will not prompt after a modal hop.
+    void this.captureMic({ unmute: true });
   }
 
-  /** Confirm on the mic-access dialog — user gesture so the browser may prompt again. */
+  /** Retry from the blocked-mic dialog — that confirm is a fresh user gesture. */
   async grantMicAccess(): Promise<void> {
     if (!this.flags.enabled('voice')) return;
     if (this.localStream) {
       this.setNeedsMicAccess(false);
+      this.setMicBlocked(false);
       if (this.ui.selfMuted) this.setSelfMuted(false);
       return;
     }
-    const ok = await this.join({ unmute: true });
+    const ok = await this.captureMic({ unmute: true });
     this.setNeedsMicAccess(!ok);
   }
 
   dismissMicAccess(): void {
     this.pendingUnmute = false;
     this.setNeedsMicAccess(false);
+    this.setMicBlocked(false);
   }
 
   toggleRemoteMute(playerId: string): void {
@@ -225,10 +227,21 @@ export class VoiceService {
     if (enabled) this.unlockPlayback();
   }
 
-  private async join(opts: { unmute?: boolean } = {}): Promise<boolean> {
+  /** Listen-only SFU join. Mic capture waits for a tap so the permission sheet can appear. */
+  private async joinListen(): Promise<void> {
+    if (this.joined) return;
     this.setStatus('connecting');
+    this.joined = true;
+    this.armUnlock();
+    this.socket.send({ type: 'voice:join' });
+  }
+
+  /**
+   * `getUserMedia` must run in the same user-gesture turn. A ConfirmDialog hop
+   * loses the gesture in Bale WebView, so the sheet never appears.
+   */
+  private async captureMic(opts: { unmute?: boolean } = {}): Promise<boolean> {
     try {
-      // Mic first — capabilities/produce used to race ahead of getUserMedia.
       this.localStream = await navigator.mediaDevices.getUserMedia({
         audio: MIC_AUDIO,
         video: false,
@@ -236,10 +249,9 @@ export class VoiceService {
       const track = this.localStream.getAudioTracks()[0];
       if (track) track.enabled = false;
       this.update('selfMuted', true);
-      this.joined = true;
       this.setMicBlocked(false);
-      this.armUnlock();
-      this.socket.send({ type: 'voice:join' });
+      this.setNeedsMicAccess(false);
+      if (!this.joined) await this.joinListen();
       await this.tryProduce();
       if (opts.unmute || this.pendingUnmute) {
         this.pendingUnmute = false;
@@ -250,8 +262,10 @@ export class VoiceService {
       const denied =
         error instanceof DOMException &&
         (error.name === 'NotAllowedError' || error.name === 'NotFoundError');
-      this.setStatus(denied ? 'denied' : 'failed');
-      if (opts.unmute) this.setMicBlocked(denied);
+      if (denied) {
+        this.setMicBlocked(true);
+        this.setNeedsMicAccess(true);
+      }
       return false;
     }
   }

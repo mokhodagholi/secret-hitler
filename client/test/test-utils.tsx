@@ -21,6 +21,7 @@ import { PrefetchService } from '../src/services/prefetch';
 import { FeatureFlagService } from '../src/services/FeatureFlagService';
 import { VoiceService } from '../src/services/VoiceService';
 import { KeyboardService } from '../src/services/KeyboardService';
+import { TutorialPromptService } from '../src/services/TutorialPromptService';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -130,6 +131,7 @@ export function buildHarness(
       settings,
     ),
     keyboard: new KeyboardService(),
+    tutorial: new TutorialPromptService(),
   };
   return {
     services,
@@ -159,6 +161,8 @@ export function makePlayer(overrides: Partial<PublicPlayer> = {}): PublicPlayer 
     isPresident: false,
     isChancellor: false,
     hasVoted: false,
+    vote: null,
+    wantsContinue: false,
     role: null,
     party: null,
     selfMuted: false,

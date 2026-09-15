@@ -199,14 +199,50 @@ describe('WebSocket gameplay', () => {
     expect(error.code).toBe('PLAYERS_NOT_READY');
   });
 
-  it('Should close the room for everyone when the host leaves', async () => {
+  it('Should keep the table open and pass the host when the host leaves the lobby', async () => {
     server = await listenServer();
-    const { hostWs, benWs } = await seatThreePlayers();
+    const { created, ben, hostWs, benWs } = await seatThreePlayers();
 
     hostWs.send({ type: 'room:leave' });
-    const closed = await benWs.waitFor('room:closed');
-    expect(closed.reason).toBe('HOST_LEFT');
-    expect(server.repo.listPublic()).toHaveLength(0);
+    const state = await benWs.waitFor(
+      'state',
+      (message) => message.state.hostId === ben.playerId,
+    );
+    expect(state.state.phase).toBe(Phase.Lobby);
+    expect(state.state.players.map((player) => player.name)).toEqual(['Ben', 'Cal']);
+    expect(server.repo.get(created.roomId)).toBeTruthy();
+  });
+
+  it('Should keep an in-game table running when the host leaves', async () => {
+    server = await listenServer();
+    const { created, ben, hostWs, benWs, calWs } = await seatThreePlayers();
+
+    benWs.send({ type: 'player:ready' });
+    calWs.send({ type: 'player:ready' });
+    hostWs.send({ type: 'game:start' });
+    await benWs.waitFor('state', (message) => message.state.phase === Phase.Nomination);
+
+    hostWs.send({ type: 'room:leave' });
+    const state = await benWs.waitFor(
+      'state',
+      (message) => message.state.hostId === ben.playerId,
+    );
+    expect(state.state.phase).not.toBe(Phase.Lobby);
+    expect(state.state.phase).not.toBe(Phase.GameOver);
+    expect(server.repo.get(created.roomId)).toBeTruthy();
+  });
+
+  it('Should drop a hosted room when the last player leaves', async () => {
+    server = await listenServer();
+    const { created, hostWs, benWs, calWs } = await seatThreePlayers();
+
+    hostWs.send({ type: 'room:leave' });
+    await benWs.waitFor('state', (message) => message.state.players.length === 2);
+    benWs.send({ type: 'room:leave' });
+    await calWs.waitFor('state', (message) => message.state.players.length === 1);
+    calWs.send({ type: 'room:leave' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server.repo.get(created.roomId)).toBeUndefined();
   });
 
   it('Should let the host kick a guest from the lobby', async () => {

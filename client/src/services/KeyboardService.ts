@@ -35,6 +35,17 @@ function visualSize(): VisualViewportSize | null {
 }
 
 /**
+ * Android WebView (Bale included) dismisses the IME when a scroller moves
+ * and visualViewport height changes. Pad with `--keyboard-inset` instead.
+ * iOS pans the visual viewport; that path still needs the inner-pane scroll.
+ */
+export function shouldScrollFieldIntoView(
+  userAgent: string = typeof navigator === 'undefined' ? '' : navigator.userAgent,
+): boolean {
+  return !/Android/i.test(userAgent);
+}
+
+/**
  * Tracks the software keyboard via `visualViewport` and pads the shell with
  * `--keyboard-inset`. Never transforms a focused field — Android IME treats
  * that as a lost caret and the keyboard fights the page. See native-feel.md.
@@ -84,7 +95,7 @@ export class KeyboardService {
 
     const active = document.activeElement;
     if (isField(active)) {
-      scrollFieldIntoView(active, inset);
+      if (shouldScrollFieldIntoView()) scrollFieldIntoView(active, inset);
       return;
     }
 

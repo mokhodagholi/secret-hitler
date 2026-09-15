@@ -69,33 +69,39 @@ describe('VoiceService', () => {
     voice.sync(makeView({ phase: Phase.Lobby }));
   });
 
-  it('Should ask for the microphone again when unmute has no stream', async () => {
-    stubDeniedMicrophone();
+  it('Should request the microphone on the unmute tap', async () => {
+    let asked = 0;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: () => {
+          asked += 1;
+          return Promise.reject(new DOMException('Permission denied', 'NotAllowedError'));
+        },
+      },
+    });
     const { voice, socket } = makeVoice(true);
     voice.sync(makeView({ phase: Phase.Nomination }));
-    await Promise.resolve();
-    expect(voice.status()).toBe('denied');
-    expect(socket.lastSent('voice:join')).toBeUndefined();
-    expect(voice.selfMuted()).toBe(true);
+    expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
+    expect(asked).toBe(0);
     voice.toggleSelfMute();
+    await Promise.resolve();
+    expect(asked).toBe(1);
+    expect(voice.micBlocked()).toBe(true);
     expect(voice.needsMicAccess()).toBe(true);
     expect(voice.selfMuted()).toBe(true);
-    await voice.grantMicAccess();
-    expect(voice.needsMicAccess()).toBe(true);
-    expect(voice.micBlocked()).toBe(true);
   });
 
-  it('Should not join the SFU when the microphone is denied', async () => {
+  it('Should join the table as a listener without a microphone', async () => {
     stubDeniedMicrophone();
     const { voice, socket } = makeVoice(true);
     voice.sync(makeView({ phase: Phase.Nomination }));
-    expect(socket.lastSent('voice:join')).toBeUndefined();
+    expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
     await Promise.resolve();
-    expect(voice.status()).toBe('denied');
-    expect(socket.lastSent('voice:join')).toBeUndefined();
+    expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
   });
 
-  it('Should wait for the microphone before joining the SFU', async () => {
+  it('Should wait for a tap before capturing the microphone', async () => {
     let grant: (stream: MediaStream) => void = () => {};
     const pending = new Promise<MediaStream>((resolve) => {
       grant = resolve;
@@ -106,8 +112,9 @@ describe('VoiceService', () => {
     });
     const { voice, socket } = makeVoice(true);
     voice.sync(makeView({ phase: Phase.Nomination }));
-    expect(socket.lastSent('voice:join')).toBeUndefined();
+    expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
 
+    voice.toggleSelfMute();
     const track = { enabled: true, stop: () => {} };
     const stream = {
       getAudioTracks: () => [track],
@@ -116,8 +123,7 @@ describe('VoiceService', () => {
     grant(stream as unknown as MediaStream);
     await Promise.resolve();
     await Promise.resolve();
-    expect(socket.lastSent('voice:join')).toEqual({ type: 'voice:join' });
-    expect(track.enabled).toBe(false);
+    expect(track.enabled).toBe(true);
   });
 
   it('Should capture with echo cancellation and not force NS/AGC off', async () => {
@@ -138,6 +144,7 @@ describe('VoiceService', () => {
     });
     const { voice } = makeVoice(true);
     voice.sync(makeView({ phase: Phase.Nomination }));
+    voice.toggleSelfMute();
     await Promise.resolve();
     await Promise.resolve();
     expect(asked).toEqual({
@@ -197,6 +204,8 @@ describe('VoiceService', () => {
     await Promise.resolve();
     expect(voice.selfMuted()).toBe(true);
     voice.toggleSelfMute();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(voice.selfMuted()).toBe(false);
     expect(socket.lastSent('voice:mute')).toEqual({ type: 'voice:mute', muted: false });
 

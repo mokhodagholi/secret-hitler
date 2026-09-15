@@ -23,6 +23,7 @@ import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { KickVoteOverlay } from '../GameScreen/KickVoteOverlay';
 import { PlayerActionsMenu } from '../GameScreen/PlayerActionsMenu';
+import { LobbyChat } from './LobbyChat';
 import { PlayerSlot } from './PlayerSlot';
 import { seatLayoutForBox } from './slotSize';
 import styles from './WaitingRoomScreen.module.scss';
@@ -58,7 +59,7 @@ export function WaitingRoomScreen() {
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [nowMs, setNowMs] = createSignal(Date.now());
   const [tipIndex, setTipIndex] = createSignal(0);
-  let tipEl: HTMLParagraphElement | undefined;
+  let tipTextEl: HTMLParagraphElement | undefined;
 
   const view = game.view;
   const shareLink = () =>
@@ -118,7 +119,7 @@ export function WaitingRoomScreen() {
 
   createEffect((previous: number | undefined) => {
     const index = tipIndex();
-    if (previous !== undefined && tipEl) void animation.play(tipEl, 'fade-in');
+    if (previous !== undefined && tipTextEl) void animation.play(tipTextEl, 'fade-in');
     return index;
   });
 
@@ -266,9 +267,25 @@ export function WaitingRoomScreen() {
               <SeatBoard state={state()} />
 
               <footer class={styles.footer}>
-                <p class={styles.tip} ref={(element) => (tipEl = element)}>
-                  {formatMessage(TIP_KEYS[tipIndex()])}
-                </p>
+                <div class={styles.tip} data-lobby-tip data-line-clamp="3">
+                  {/* Every tip shares one grid cell so rotation cannot resize the card. */}
+                  <div class={styles.tipSizer} aria-hidden="true">
+                    <For each={TIP_KEYS}>
+                      {(key) => (
+                        <span class={styles.tipLine}>{formatMessage(key)}</span>
+                      )}
+                    </For>
+                  </div>
+                  <p
+                    class={styles.tipText}
+                    role="status"
+                    ref={(element) => (tipTextEl = element)}
+                  >
+                    <span class={styles.tipLine}>
+                      {formatMessage(TIP_KEYS[tipIndex()])}
+                    </span>
+                  </p>
+                </div>
 
                 <Show when={game.lastError()}>
                   <p class={styles.error} onClick={() => game.clearError()}>
@@ -336,6 +353,8 @@ export function WaitingRoomScreen() {
                     </p>
                   </Show>
                 </Show>
+
+                <LobbyChat />
               </footer>
 
               <ConfirmDialog

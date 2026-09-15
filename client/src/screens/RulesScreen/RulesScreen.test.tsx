@@ -1,9 +1,10 @@
-import { describe, expect, it } from '@rstest/core';
+import { afterEach, describe, expect, it } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Match, Switch } from 'solid-js';
 import { RulesScreen } from './RulesScreen';
 import { RulesLessonScreen } from './RulesLessonScreen';
-import { topicFromScreen } from './topics';
+import { VideoTutorialScreen } from './VideoTutorialScreen';
+import { topicFromScreen, APARAT_EMBED_URL, APARAT_WATCH_URL } from './topics';
 import { HomeScreen } from '../HomeScreen/HomeScreen';
 import { useApp } from '../../services/AppContext';
 import { en } from '../../i18n/locales/en';
@@ -17,6 +18,9 @@ function RulesRoutes() {
       <Match when={nav.screen() === 'rules'}>
         <RulesScreen />
       </Match>
+      <Match when={nav.screen() === 'rules-video'}>
+        <VideoTutorialScreen />
+      </Match>
       <Match when={topicFromScreen(nav.screen())}>
         {(topicId) => <RulesLessonScreen topicId={topicId()} />}
       </Match>
@@ -25,6 +29,72 @@ function RulesRoutes() {
 }
 
 describe('RulesScreen', () => {
+  it('Should put the video and written tutorials first on the hub', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    const titles = screen
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label'))
+      .filter((label): label is string => label != null && label !== en.common.goBack);
+    expect(titles[0]).toBe(en.tutorial.video);
+    expect(titles[1]).toBe(en.tutorial.text);
+    expect(titles[2]).toBe(en.rules.overview);
+  });
+
+  it('Should play the Aparat lesson in-app from the video card', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.tutorial.video }));
+    expect(harness.services.nav.screen()).toBe('rules-video');
+    expect(screen.getByRole('heading', { name: en.tutorial.video })).toBeTruthy();
+    const frame = document.querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe(APARAT_EMBED_URL);
+    expect(screen.getByRole('button', { name: en.tutorial.videoOpen })).toBeTruthy();
+  });
+
+  it('Should open Aparat from the labeled fallback when the player cannot embed', () => {
+    const opened: string[] = [];
+    const originalOpen = window.open;
+    window.open = ((url?: string | URL) => {
+      opened.push(String(url));
+      return null;
+    }) as typeof window.open;
+
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+    fireEvent.click(screen.getByRole('button', { name: en.tutorial.video }));
+    fireEvent.click(screen.getByRole('button', { name: en.tutorial.videoOpen }));
+    expect(opened).toEqual([APARAT_WATCH_URL]);
+    window.open = originalOpen;
+  });
+
+  it('Should enter the written guide from the text tutorial card', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.tutorial.text }));
+    expect(harness.services.nav.screen()).toBe('rules-what-is-this');
+    expect(screen.getByText(en.rules.whatIsThis.lead)).toBeTruthy();
+  });
+
+  it('Should show the announce banner on a first-run visit to the hub', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    harness.services.tutorial.beginAnnouncement();
+    renderWithApp(() => <RulesScreen />, harness);
+
+    expect(screen.getByText(en.tutorial.announce)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.tutorial.continue }));
+    expect(screen.queryByText(en.tutorial.announce)).toBeNull();
+    expect(harness.services.tutorial.announcing()).toBe(false);
+  });
+
   it('Should name the game راز هیتلر and use question-style section titles in Persian', () => {
     const harness = buildHarness();
     harness.services.settings.set('language', 'fa');

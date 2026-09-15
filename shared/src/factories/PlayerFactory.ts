@@ -26,6 +26,7 @@ export class PlayerFactory {
       joinKey: joinKey ?? null,
       isAlive: true,
       role: null,
+      wantsContinue: false,
     };
   }
 }

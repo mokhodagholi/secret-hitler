@@ -159,6 +159,27 @@ describe('GameEngine — lobby', () => {
     expect(host.isHost).toBe(false);
   });
 
+  it('Should keep the game running and pass the host when they leave mid-game', () => {
+    const { engine, room, players } = startGame();
+    const [host, ben] = players;
+    engine.removePlayer(host.id);
+    expect(host.isAlive).toBe(false);
+    expect(room.hostId).toBe(ben.id);
+    expect(ben.isHost).toBe(true);
+    expect(room.phase).not.toBe(Phase.Lobby);
+    expect(room.phase).not.toBe(Phase.GameOver);
+  });
+
+  it('Should pass the host seat when the host leaves the lobby', () => {
+    const engine = new GameEngine(makeRoom());
+    const [host, ben] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
+    engine.removePlayer(host.id);
+    expect(engine.room.hostId).toBe(ben.id);
+    expect(ben.isHost).toBe(true);
+    expect(engine.room.players.map((player) => player.name)).toEqual(['Ben', 'Cal']);
+    expect(engine.room.phase).toBe(Phase.Lobby);
+  });
+
   it('Should not migrate the host while they are still connected', () => {
     const engine = new GameEngine(makeRoom());
     const [host] = seatPlayers(engine, ['Ana', 'Ben']);

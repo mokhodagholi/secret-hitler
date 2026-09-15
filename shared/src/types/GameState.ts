@@ -88,6 +88,8 @@ export interface Player {
   isAlive: boolean;
   /** Secret role — never broadcast to other players. */
   role: Role | null;
+  /** Game-over: this seat wants another round in the same room. */
+  wantsContinue: boolean;
 }
 
 /** Player fields safe to broadcast to everyone in the room. */
@@ -103,8 +105,12 @@ export interface PublicPlayer {
   isAlive: boolean;
   isPresident: boolean;
   isChancellor: boolean;
-  /** Has cast a vote this election (the vote itself stays secret). */
+  /** Has cast a vote this election (the vote itself stays secret while voting). */
   hasVoted: boolean;
+  /** Ja/Nein once the election is public; null while the vote is secret. */
+  vote: Vote | null;
+  /** Game-over: this seat has chosen to stay for another round. */
+  wantsContinue: boolean;
   /** Revealed role, or null when still hidden to the viewer. */
   role: Role | null;
   /**

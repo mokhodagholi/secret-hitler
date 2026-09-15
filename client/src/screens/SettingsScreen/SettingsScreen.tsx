@@ -10,7 +10,7 @@ import { SettingRow } from '../../components/SettingRow/SettingRow';
 import { TextInput } from '../../components/TextInput/TextInput';
 
 export function SettingsScreen() {
-  const { settings, i18n, miniApp, nav, flags } = useApp();
+  const { settings, i18n, miniApp, nav, flags, ravi } = useApp();
   const state = settings.settings;
   const { formatMessage } = i18n;
   const fromHost = () => miniApp.user() != null;
@@ -70,7 +70,10 @@ export function SettingsScreen() {
         icon="chat"
         label={formatMessage('settings.raviVoice')}
         checked={state.raviVoice}
-        onChange={(value) => settings.set('raviVoice', value)}
+        onChange={(value) => {
+          settings.set('raviVoice', value);
+          ravi.setVoiceEnabled(value);
+        }}
       />
       <Show when={flags.flags.voice}>
         <SettingRow

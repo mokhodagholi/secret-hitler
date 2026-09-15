@@ -73,6 +73,7 @@ export function parseClientMessage(raw: string): ClientMessage | null {
     case 'player:wantStart':
     case 'player:retractStart':
     case 'game:start':
+    case 'game:continue':
     case 'room:leave':
     case 'ping':
     case 'voice:join':

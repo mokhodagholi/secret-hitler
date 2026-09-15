@@ -35,6 +35,7 @@ describe('parseClientMessage', () => {
       'player:wantStart',
       'player:retractStart',
       'game:start',
+      'game:continue',
       'room:leave',
       'ping',
     ]) {

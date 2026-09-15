@@ -37,8 +37,10 @@ seats, seat rings) renders only while `flags.enabled('voice')`.
 
 Join starts muted after opening night. The browser microphone prompt
 waits until day — it must not sit on the role cards. Tap the mic to speak.
-If this browser still has no mic, unmute opens a dialog that retries
-`getUserMedia` from that tap so the permission sheet can appear again.
+That same tap calls `getUserMedia` immediately (no permission modal hop
+first). Bale/WebView will not show the sheet after a dialog click. If
+capture is blocked, a retry dialog stays for `grantMicAccess`. The host
+page should allow microphone (`Permissions-Policy` / iframe `allow`).
 The client waits for the microphone before `voice:join`, queues `voice:peer`
 until the recv transport exists, and passes the server’s ICE list
 (STUN/TURN) into mediasoup transports. Capture asks for echo cancellation,

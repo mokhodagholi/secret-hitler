@@ -1,0 +1,184 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.panel {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #352418 0%, #241810 100%);
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.35),
+    inset 0 1px rgba(255, 220, 170, 0.08);
+  overflow: hidden;
+  @include scroll-wood;
+}
+
+.feed {
+  // Two to three bubbles; fixed so an empty lobby does not collapse.
+  height: 96px;
+  min-height: 96px;
+  @include scroll-y;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px 6px 12px;
+  direction: ltr;
+}
+
+.empty {
+  margin: auto 0;
+  padding: 0 8px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  font-weight: 600;
+  text-align: center;
+  color: rgba($cream, 0.55);
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mine {
+  flex-direction: row-reverse;
+}
+
+.bubble {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  max-width: min(78%, 280px);
+  padding: 6px 10px 4px;
+  border-radius: 12px 12px 12px 4px;
+  background: #3d2a1f;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.mine .bubble {
+  align-items: flex-end;
+  border-radius: 12px 12px 4px 12px;
+  background: #4a3124;
+}
+
+.author {
+  color: #e8c56b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.text {
+  color: $cream;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: start;
+}
+
+.stamp {
+  font-size: 0.58rem;
+  color: rgba($cream, 0.45);
+  align-self: flex-end;
+}
+
+.mine .stamp {
+  align-self: flex-start;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #2a1c14;
+  border: 1.5px solid rgba($cream, 0.35);
+  color: rgba($cream, 0.55);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.composer {
+  display: flex;
+  flex-direction: row;
+  direction: ltr;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 4px 10px 6px;
+  background: #1c140e;
+  border-top: 1px solid rgba(180, 130, 70, 0.38);
+
+  &:focus-within {
+    border-top-color: rgba($gold, 0.55);
+  }
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  max-height: calc(1.4em * 3 + 16px);
+  height: 40px;
+  padding: 8px 2px;
+  background: transparent;
+  border: none;
+  color: $cream;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  outline: none;
+  resize: none;
+  @include scroll-y;
+  text-align: start;
+
+  &::placeholder {
+    color: rgba($cream, 0.38);
+  }
+}
+
+.send {
+  @include pressable;
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: $gold;
+  cursor: pointer;
+
+  &:disabled {
+    color: rgba($cream, 0.28);
+    cursor: default;
+    transform: none;
+  }
+}
+
+.slowCount {
+  color: $gold;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

@@ -16,6 +16,7 @@ export type IconName =
   | 'speaker'
   | 'question'
   | 'info'
+  | 'play'
   | 'refresh'
   | 'trash'
   | 'chevronRight'
@@ -146,6 +147,7 @@ const glyphs: Record<IconName, () => JSX.Element> = {
       <path d="M12 8v.01" />
     </>
   ),
+  play: () => <path d="M8 5v14l11-7z" fill="currentColor" stroke="none" />,
   refresh: () => (
     <>
       <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />

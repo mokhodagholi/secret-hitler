@@ -114,6 +114,9 @@ export class SocketHandler {
         this.fail(ctx, ctx.engine.setWantStart(ctx.playerId, false)),
       )
       .on('game:start', (_m, ctx) => this.fail(ctx, ctx.engine.startGame(ctx.playerId)))
+      .on('game:continue', (_m, ctx) =>
+        this.fail(ctx, ctx.engine.continuePlaying(ctx.playerId)),
+      )
       .on('player:kick', (m, ctx) => this.kickPlayer(ctx, m.playerId))
       .on('kick:request', (m, ctx) =>
         this.fail(ctx, ctx.engine.requestKick(ctx.playerId, m.playerId)),
@@ -168,6 +171,7 @@ export class SocketHandler {
         !this.reconnectGrace.has(room.id) &&
         !(isPublicTable(room.options) && room.phase === 'lobby')
       ) {
+        this.noticeGroupRoomClosed(entry);
         this.removeRoom(room.id);
       }
     });
@@ -695,21 +699,25 @@ export class SocketHandler {
     });
   }
 
-  /** Host leave destroys the room; a guest just vacates their seat. */
+  /** Host leave vacates like a guest; an empty hosted table is dropped. */
   dropSeat(entry: RoomEntry, playerId: string): void {
     const player = entry.room.findPlayer(playerId);
     if (!player) return;
-    if (player.isHost) {
-      this.broadcast(entry.room.id, { type: 'room:closed', reason: 'HOST_LEFT' });
-      this.noticeGroupRoomClosed(entry);
-      this.destroyRoom(entry);
-      return;
-    }
+    const roomId = entry.room.id;
     void this.voice?.removePlayer(playerId);
     entry.engine.removePlayer(playerId);
     this.tokens.revokePlayer(playerId);
     this.seats?.releasePlayer(playerId);
     this.connections.close(playerId);
+    const remaining = this.repo.get(roomId);
+    if (
+      remaining &&
+      remaining.room.isEmpty &&
+      !isPublicTable(remaining.room.options)
+    ) {
+      this.noticeGroupRoomClosed(remaining);
+      this.destroyRoom(remaining);
+    }
   }
 
   private leaveRoom(context: GameContext): void {

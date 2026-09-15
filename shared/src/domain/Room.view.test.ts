@@ -56,8 +56,20 @@ describe('Room.viewFor — information hiding', () => {
     const view = room.viewFor(president.id);
     const benPublic = view.players.find((p) => p.id === ben.id)!;
     expect(benPublic.hasVoted).toBe(true);
+    expect(benPublic.vote).toBeNull();
     expect(JSON.stringify(view)).not.toContain('nein');
     expect(view.you.vote).toBeNull();
+  });
+
+  it('Should reveal each vote after the election is resolved', () => {
+    const game = startGame();
+    const { room, players } = game;
+    const [, chancellor] = players;
+    electGovernment(game, chancellor);
+
+    const view = room.viewFor(players[0].id);
+    expect(view.phase).not.toBe(Phase.Voting);
+    expect(view.players.every((player) => player.vote === 'ja')).toBe(true);
   });
 
   it('Should only show the legislative hand to the active legislator', () => {

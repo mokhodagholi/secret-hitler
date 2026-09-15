@@ -3,6 +3,7 @@ import {
   KeyboardService,
   keyboardOverlap,
   scrollFieldIntoView,
+  shouldScrollFieldIntoView,
 } from './KeyboardService';
 
 describe('keyboardOverlap', () => {
@@ -85,6 +86,42 @@ describe('KeyboardService', () => {
     form.remove();
   });
 
+  it('Should not scroll a parent pane on Android while a field is focused', () => {
+    const previousAgent = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Mobile Safari/537.36',
+    });
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: fakeViewport({ height: 500, offsetTop: 0 }),
+    });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+
+    const scroller = document.createElement('div');
+    Object.assign(scroller.style, { overflowY: 'auto', height: '200px' });
+    const field = document.createElement('input');
+    scroller.appendChild(field);
+    document.body.appendChild(scroller);
+    Object.defineProperty(scroller, 'scrollHeight', { value: 400 });
+    Object.defineProperty(scroller, 'clientHeight', { value: 200 });
+    scroller.scrollTop = 0;
+
+    const keyboard = new KeyboardService();
+    keyboard.start();
+    field.focus();
+    field.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+    expect(scroller.scrollTop).toBe(0);
+    keyboard.stop();
+    scroller.remove();
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: previousAgent,
+    });
+  });
+
   it('Should not reset window scroll while a field is focused', () => {
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
@@ -111,6 +148,24 @@ describe('KeyboardService', () => {
     window.scrollTo = scrollTo;
     delete (window as { scrollY?: number }).scrollY;
     delete (window as { scrollX?: number }).scrollX;
+  });
+});
+
+describe('shouldScrollFieldIntoView', () => {
+  it('Should skip inner-pane scroll on Android WebView', () => {
+    expect(
+      shouldScrollFieldIntoView(
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Mobile Safari/537.36',
+      ),
+    ).toBe(false);
+  });
+
+  it('Should still scroll an inner pane on iOS', () => {
+    expect(
+      shouldScrollFieldIntoView(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+      ),
+    ).toBe(true);
   });
 });
 

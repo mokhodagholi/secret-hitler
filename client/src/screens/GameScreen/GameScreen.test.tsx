@@ -72,7 +72,7 @@ describe('GameScreen — voting', () => {
     });
   });
 
-  it('Should hide the vote dock after the player has voted and show the ballot in chat', () => {
+  it('Should hide the vote dialog after the player has voted and show a back on their seat', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -87,18 +87,20 @@ describe('GameScreen — voting', () => {
     expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.querySelector('[data-ballot="you"]')).toBeTruthy();
-    expect(document.querySelector('[data-ballot-face="face"]')).toBeTruthy();
-    expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
-    expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
+    expect(
+      document.querySelector('[data-ballot="you"]')?.getAttribute('data-ballot-face'),
+    ).toBe('back');
+    expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
-  it('Should keep the vote dock on the table so seats stay in view', () => {
+  it('Should keep seats in view while the vote prompt is open', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
-    expect(document.querySelector('[data-game-table] [data-ballot-pile]')).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
     expect(document.querySelector('[data-seat-id="cal"]')).toBeTruthy();
+    expect(document.querySelector('[data-ballot-pile]')).toBeNull();
   });
 
   it('Should let the player drag the vote panel aside', () => {
@@ -120,16 +122,24 @@ describe('GameScreen — voting', () => {
     );
   });
 
-  it('Should throw this player’s ballot face-up onto the table', async () => {
+  it('Should show this player’s ballot face-down on their seat after they vote', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
-    harness.pushState(votingView());
-
+    const view = votingView();
+    harness.pushState(view);
     fireEvent.click(screen.getByRole('button', { name: 'Ja!' }));
+    harness.pushState({
+      ...view,
+      you: { ...view.you, vote: 'ja' },
+      players: view.players.map((player) =>
+        player.id === 'you' ? { ...player, hasVoted: true } : player,
+      ),
+    });
+
     await waitFor(() => {
-      expect(document.querySelector('[data-ballot="you"]')?.getAttribute('data-ballot-face')).toBe(
-        'face',
-      );
+      expect(
+        document.querySelector('[data-ballot="you"]')?.getAttribute('data-ballot-face'),
+      ).toBe('back');
     });
   });
 
@@ -142,10 +152,9 @@ describe('GameScreen — voting', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ja!' }));
 
     expect(play).toHaveBeenCalledWith('ballot-tap');
-    expect(play).toHaveBeenCalledWith('ballot-slide');
   });
 
-  it('Should throw a face-down ballot when someone else votes', async () => {
+  it('Should show a face-down ballot on another player’s seat when they vote', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -167,9 +176,10 @@ describe('GameScreen — voting', () => {
     expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).not.toBe(
       CARD_BACK,
     );
+    expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
-  it('Should keep already-cast ballots in the centre after this player votes', () => {
+  it('Should keep each ballot on its own seat after this player votes', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -183,28 +193,16 @@ describe('GameScreen — voting', () => {
       ),
     });
 
-    expect(document.querySelector('[data-ballot-pile]')).toBeTruthy();
+    expect(document.querySelector('[data-ballot-pile]')).toBeNull();
     expect(document.querySelector('[data-ballot="you"]')?.getAttribute('data-ballot-face')).toBe(
-      'face',
+      'back',
     );
     expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('data-ballot-face')).toBe(
       'back',
     );
-    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('src')).toBe(
-      VOTE_FACE.nein,
-    );
-    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(
-      VOTE_BACK,
-    );
-    expect(document.querySelector('[data-chat-ballot="you"]')).toBeTruthy();
-    expect(document.querySelector('[data-chat-ballot="cal"]')).toBeTruthy();
-    expect(
-      document
-        .querySelector('[data-chat-ballot="cal"] [data-ballot-face="back"]')
-        ?.getAttribute('src'),
-    ).toBe(VOTE_BACK);
-    expect(screen.getByLabelText(en.game.chatYourBallot)).toBeTruthy();
-    expect(screen.getByLabelText(/Cal.*cast a ballot/)).toBeTruthy();
+    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('src')).toBe(VOTE_BACK);
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(VOTE_BACK);
+    expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
   it('Should play a ballot effect when someone else votes', () => {
@@ -224,7 +222,7 @@ describe('GameScreen — voting', () => {
     expect(play).toHaveBeenCalledWith('ballot-slide');
   });
 
-  it('Should stack already-cast ballots when joining a vote late', async () => {
+  it('Should show already-cast ballots on their seats when joining a vote late', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -241,6 +239,30 @@ describe('GameScreen — voting', () => {
       expect(document.querySelector('[data-ballot="cal"]')).toBeTruthy();
       expect(document.querySelector('[data-ballot="pres"]')).toBeTruthy();
     });
+  });
+
+  it('Should flip seat ballots to ja and nein once the votes are public', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      voteDeadline: null,
+      players: view.players.map((player) => ({
+        ...player,
+        hasVoted: true,
+        vote: player.id === 'cal' ? 'nein' : 'ja',
+      })),
+    });
+
+    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.ja,
+    );
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.nein,
+    );
+    expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
   it('Should show the secret role on the deck strip after the opening look', () => {
@@ -1127,13 +1149,8 @@ describe('GameScreen — in-game menu', () => {
     const harness = buildHarness({ seated: true, flags: { voice: true } });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
-    await waitFor(() => {
-      expect(harness.services.voice.status()).toBe('denied');
-    });
 
     fireEvent.click(screen.getByRole('button', { name: en.game.unmuteSelf }));
-    expect(screen.getByText(en.game.micAccess.message)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: en.game.micAccess.allow }));
     await waitFor(() => {
       expect(screen.getByText(en.game.micAccess.blocked)).toBeTruthy();
     });
@@ -1539,5 +1556,26 @@ describe('GameScreen — game over', () => {
       },
       { timeout: 3_000 },
     );
+  });
+
+  it('Should send continue and leave from the game-over overlay', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.GameOver,
+      winner: 'liberal',
+      players: view.players.map((player) => ({
+        ...player,
+        role: 'liberal',
+      })),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.over.stay }));
+    expect(harness.socket.lastSent('game:continue')).toEqual({ type: 'game:continue' });
+    fireEvent.click(screen.getByRole('button', { name: en.game.leaveRoom }));
+    expect(harness.socket.lastSent('room:leave')).toEqual({ type: 'room:leave' });
   });
 });

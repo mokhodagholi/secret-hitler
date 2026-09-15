@@ -100,6 +100,17 @@ const HOLD_WITHOUT_CLIP_MS = 1_200;
 
 const canPlayAudio = typeof Audio !== 'undefined';
 
+const UNLOCK_EVENTS = ['pointerdown', 'touchend', 'keydown', 'click'] as const;
+
+function isAutoplayBlocked(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name: string }).name === 'NotAllowedError'
+  );
+}
+
 /**
  * Table narrator: a subtitle for the header and an optional spoken clip.
  * Subtitles always run; audio is gated on the Ravi Voice setting.
@@ -121,6 +132,7 @@ export class RaviService {
   private generation = 0;
   private epoch = 0;
   private queue: Promise<void> = Promise.resolve();
+  private unlockGesture: (() => void) | null = null;
 
   constructor(
     private readonly settings: SettingsService,
@@ -154,6 +166,21 @@ export class RaviService {
     this.setLineId(null);
   }
 
+  /**
+   * Call from the Ravi Voice toggle — that tap is a user gesture in Bale.
+   * Replays the current line when turning back on; does not touch table voice.
+   */
+  setVoiceEnabled(enabled: boolean): void {
+    if (!enabled) {
+      this.stopCurrent();
+      this.setSpeaking(false);
+      return;
+    }
+    this.unlockSession();
+    const id = this.lineId();
+    if (id) this.replayAfterUnlock(id);
+  }
+
   private deliver(id: RaviLineId, params?: MessageValues): Promise<void> {
     const subtitle = this.i18n.formatMessage(`ravi.${id}` as MessageKey, params);
     this.setLine(subtitle);
@@ -168,15 +195,14 @@ export class RaviService {
       return this.hold(generation);
     }
 
-    const audio = new Audio(this.prefetch?.src(src) ?? src);
-    audio.preload = 'auto';
-    audio.volume = 0.9;
-    this.current = audio;
+    this.playClip(id);
+    const audio = this.current;
+    if (!audio) return this.hold(generation);
     return new Promise((resolve) => {
       const finish = () => {
         if (this.generation !== generation) return;
         this.setSpeaking(false);
-        this.current = null;
+        if (this.current === audio) this.current = null;
         resolve();
       };
       audio.addEventListener('ended', finish, { once: true });
@@ -187,8 +213,81 @@ export class RaviService {
           // jsdom's play stub never starts, so paused stays true — don't hang.
           if (audio.paused || audio.ended) finish();
         })
-        .catch(() => finish());
+        .catch((error) => {
+          if (isAutoplayBlocked(error)) this.armUnlock();
+          finish();
+        });
     });
+  }
+
+  private playClip(id: RaviLineId): void {
+    const src = this.clipSrc(id);
+    if (!canPlayAudio || !this.settings.settings.raviVoice || !src) return;
+    this.stopCurrent();
+    const audio = new Audio(this.prefetch?.src(src) ?? src);
+    audio.preload = 'auto';
+    audio.volume = 0.9;
+    this.current = audio;
+  }
+
+  private unlockSession(): void {
+    if (!canPlayAudio) return;
+    const warm = new Audio();
+    warm.muted = true;
+    const played = warm.play() as Promise<void> | undefined;
+    played
+      ?.then(() => warm.pause())
+      .catch((error) => {
+        if (isAutoplayBlocked(error)) this.armUnlock();
+      });
+  }
+
+  private armUnlock(): void {
+    if (this.unlockGesture || typeof window === 'undefined') return;
+    const onGesture = () => {
+      this.disarmUnlock();
+      const id = this.lineId();
+      if (id && this.settings.settings.raviVoice) this.replayAfterUnlock(id);
+    };
+    this.unlockGesture = onGesture;
+    for (const event of UNLOCK_EVENTS) {
+      window.addEventListener(event, onGesture, true);
+    }
+  }
+
+  private disarmUnlock(): void {
+    const onGesture = this.unlockGesture;
+    if (!onGesture) return;
+    this.unlockGesture = null;
+    for (const event of UNLOCK_EVENTS) {
+      window.removeEventListener(event, onGesture, true);
+    }
+  }
+
+  private replayAfterUnlock(id: RaviLineId): void {
+    this.playClip(id);
+    const audio = this.current;
+    if (!audio) return;
+    this.setSpeaking(true);
+    const played = audio.play() as Promise<void> | undefined;
+    played
+      ?.then(() => {
+        if (audio.paused || audio.ended) this.setSpeaking(false);
+      })
+      .catch((error) => {
+        if (isAutoplayBlocked(error)) this.armUnlock();
+        this.setSpeaking(false);
+      });
+    audio.addEventListener(
+      'ended',
+      () => {
+        if (this.current === audio) {
+          this.setSpeaking(false);
+          this.current = null;
+        }
+      },
+      { once: true },
+    );
   }
 
   private clipSrc(id: RaviLineId): string | undefined {

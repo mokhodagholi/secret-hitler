@@ -17,6 +17,8 @@ export interface GameOverOverlayProps {
   youId: string;
   /** Roles wait until Ravi's "the roles are revealed" line. */
   showRoles: boolean;
+  wantsContinue: boolean;
+  onContinue: () => void;
   onLeave: () => void;
 }
 
@@ -84,9 +86,23 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
           </ul>
         </Show>
 
-        <button type="button" class={styles.leave} onClick={() => props.onLeave()}>
-          {formatMessage('game.leaveRoom')}
-        </button>
+        <Show when={props.wantsContinue}>
+          <p class={styles.waiting}>{formatMessage('game.over.waiting')}</p>
+        </Show>
+
+        <div class={styles.actions}>
+          <button
+            type="button"
+            class={styles.stay}
+            disabled={props.wantsContinue}
+            onClick={() => props.onContinue()}
+          >
+            {formatMessage('game.over.stay')}
+          </button>
+          <button type="button" class={styles.leave} onClick={() => props.onLeave()}>
+            {formatMessage('game.leaveRoom')}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -136,4 +136,13 @@ describe('NavigationService', () => {
     nav.back();
     expect(nav.screen()).toBe('home');
   });
+
+  it('Should open the video tutorial without stacking extra hub entries', () => {
+    const nav = new NavigationService('/');
+    nav.navigate('rules');
+    nav.navigate('rules-video');
+    expect(nav.screen()).toBe('rules-video');
+    nav.back();
+    expect(nav.screen()).toBe('rules');
+  });
 });

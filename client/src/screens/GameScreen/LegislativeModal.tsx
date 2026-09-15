@@ -218,6 +218,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
         aria-modal="true"
         aria-label={title()}
         ref={(element) => void animation.play(element, 'pop-in')}
+        {...drag.surfaceProps}
       >
         <DialogDragHandle
           label={formatMessage('game.moveDialog')}

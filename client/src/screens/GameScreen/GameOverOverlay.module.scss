@@ -71,7 +71,22 @@
   color: $red-bright;
 }
 
-.leave {
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.waiting {
+  margin: 0;
+  color: $cream;
+  font-size: 0.88rem;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.stay {
   @include display(0.85rem, 0.12em);
   @include pressable;
   width: 100%;
@@ -79,4 +94,19 @@
   border-radius: $radius;
   color: $navy-950;
   background: linear-gradient(180deg, $gold-bright, $gold-dark);
+
+  &:disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+}
+
+.leave {
+  @include display(0.85rem, 0.12em);
+  @include pressable;
+  width: 100%;
+  padding: 13px;
+  border-radius: $radius;
+  color: $cream;
+  background: rgba($navy-700, 0.7);
 }

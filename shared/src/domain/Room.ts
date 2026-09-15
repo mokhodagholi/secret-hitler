@@ -180,6 +180,8 @@ export class Room {
       isPresident: p.id === this.presidentId,
       isChancellor: p.id === this.chancellorId,
       hasVoted: this.votes.has(p.id),
+      vote: this.phase === Phase.Voting ? null : (this.votes.get(p.id) ?? null),
+      wantsContinue: p.wantsContinue,
       role: this.roleVisibleTo(viewer, p),
       party: this.partyVisibleTo(viewer.id, p.id),
       selfMuted: false,
@@ -357,6 +359,7 @@ export class Room {
       wantStartAt: player.wantStartAt ?? null,
       unreadySince: player.unreadySince ?? null,
       joinKey: player.joinKey ?? null,
+      wantsContinue: player.wantsContinue ?? false,
     }));
     room.phase = snapshot.phase;
     room.hostId = snapshot.hostId;

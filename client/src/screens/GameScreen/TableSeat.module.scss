@@ -250,6 +250,22 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
+.ballot {
+  position: absolute;
+  right: -10%;
+  bottom: 6%;
+  z-index: 3;
+  width: 38%;
+  aspect-ratio: 2 / 3;
+  object-fit: contain;
+  display: block;
+  border-radius: 2px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .party {
   position: absolute;
   top: 9%;

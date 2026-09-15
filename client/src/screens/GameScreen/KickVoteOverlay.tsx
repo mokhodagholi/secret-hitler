@@ -60,6 +60,7 @@ export function KickVoteOverlay(props: KickVoteOverlayProps) {
           aria-modal="true"
           aria-label={formatMessage('game.kickVote.title')}
           ref={(element) => void animation.play(element, 'pop-in')}
+          {...drag.surfaceProps}
         >
           <DialogDragHandle
             label={formatMessage('game.moveDialog')}

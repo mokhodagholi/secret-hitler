@@ -444,6 +444,21 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.changed();
   }
 
+  /** Stay after a win — the table returns to lobby once everyone still here has stayed. */
+  continuePlaying(playerId: string): EngineError | null {
+    const room = this.room;
+    if (room.phase !== Phase.GameOver) {
+      return err('INVALID_ACTION', 'The game is not over.');
+    }
+    const player = room.findPlayer(playerId);
+    if (!player?.connected) {
+      return err('INVALID_ACTION', 'That player is not in the room.');
+    }
+    player.wantsContinue = true;
+    if (!this.maybeReturnToLobby()) this.changed();
+    return null;
+  }
+
   /** Living players ordered by seat. */
   private livingInSeatOrder(): Player[] {
     return this.room.players
@@ -497,6 +512,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     player.isAlive = false;
     player.connected = false;
     if (alreadyDead) {
+      if (this.room.hostId === player.id) this.maybeMigrateHost();
+      if (this.room.phase === Phase.GameOver) this.maybeReturnToLobby();
       this.changed();
       return;
     }
@@ -504,6 +521,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.log(reason, { name: player.name });
     if (this.room.hostId === player.id) this.maybeMigrateHost();
     if (this.room.phase === Phase.GameOver) {
+      this.maybeReturnToLobby();
       this.changed();
       return;
     }
@@ -906,7 +924,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   private maybeMigrateHost(): boolean {
-    if (isPublicTable(this.room.options) || !this.room.hostId) return false;
+    if (!this.room.hostId) return false;
+    // Public lobby has no host; an in-game public table still needs a successor.
+    if (isPublicTable(this.room.options) && this.room.phase === Phase.Lobby) {
+      return false;
+    }
     const host = this.room.findPlayer(this.room.hostId);
     if (host?.connected) return false;
     const successor = this.room.players.find((p) => p.connected);
@@ -999,6 +1021,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     for (const player of connected) {
       player.wantsStart = false;
       player.wantStartAt = null;
+      player.wantsContinue = false;
       player.unreadySince = null;
       this.armLobbyAfk(player);
     }
@@ -1026,10 +1049,88 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.kickVote = null;
     room.spentKickRequestIds.clear();
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
+    if (isPublicTable(room.options) && !room.hostId) {
+      const first = this.livingInSeatOrder()[0];
+      if (first) {
+        room.hostId = first.id;
+        first.isHost = true;
+      }
+    }
     this.transitionTo(Phase.Nomination);
 
     this.log('gameStarted');
     this.emit('gameStarted', { room });
+    this.changed();
+  }
+
+  /**
+   * After a win: reset this room to lobby once every remaining connected
+   * seat has chosen to stay (leavers are already gone).
+   */
+  private maybeReturnToLobby(): boolean {
+    if (this.room.phase !== Phase.GameOver) return false;
+    const remaining = this.room.players.filter((player) => player.connected);
+    if (remaining.length === 0) return false;
+    if (!remaining.every((player) => player.wantsContinue)) return false;
+    this.returnToLobby(remaining);
+    return true;
+  }
+
+  private returnToLobby(seated: Player[]): void {
+    const room = this.room;
+    this.closeDiscussion();
+    this.closeVote();
+    this.closeLegislativeTimer();
+    this.closeNominationTimer();
+    if (room.kickVote) {
+      room.kickVote = null;
+      this.emit('kickVoteTimerChanged', { endsAt: null });
+    }
+    this.clearStartChoice();
+
+    room.players = seated;
+    const publicTable = isPublicTable(room.options);
+    if (publicTable) {
+      room.hostId = '';
+    } else {
+      this.maybeMigrateHost();
+    }
+
+    seated.forEach((player, seat) => {
+      player.seat = seat;
+      player.isAlive = true;
+      player.role = null;
+      player.wantsContinue = false;
+      player.wantsStart = false;
+      player.wantStartAt = null;
+      player.isHost = !publicTable && player.id === room.hostId;
+      player.ready = player.isHost;
+      player.unreadySince = player.ready ? null : Date.now();
+      this.armLobbyAfk(player);
+    });
+
+    room.deck.reset();
+    room.liberalPolicies = 0;
+    room.fascistPolicies = 0;
+    room.electionTracker = 0;
+    room.lastEnacted = [];
+    room.drawnPolicies = [];
+    room.winner = null;
+    room.votes.clear();
+    room.lastElectedPresidentId = null;
+    room.lastElectedChancellorId = null;
+    room.presidentId = null;
+    room.chancellorId = null;
+    room.activePower = null;
+    room.investigatedIds = [];
+    room.investigations = [];
+    room.peekedPolicies = [];
+    room.investigation = null;
+    room.specialElectionResumeAfterId = null;
+    room.vetoRequested = false;
+    room.spentKickRequestIds.clear();
+
+    this.transitionTo(Phase.Lobby);
     this.changed();
   }
 

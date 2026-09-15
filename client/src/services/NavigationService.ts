@@ -5,6 +5,7 @@ import { isMessengerWebView } from './miniAppHost';
 export type ScreenName =
   | 'home'
   | 'rules'
+  | 'rules-video'
   | 'rules-what-is-this'
   | 'rules-contents'
   | 'rules-laws'

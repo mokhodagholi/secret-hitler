@@ -1,9 +1,9 @@
-import { Show } from 'solid-js';
-import type { PublicPlayer } from '@secret-hitler/shared';
+import { Show, createEffect } from 'solid-js';
+import type { PublicPlayer, Vote } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { playerLabel } from '../../i18n/perspective';
 import { avatarImage } from '../../assets/avatars';
-import { PARTY_FACE } from '../../assets/cards';
+import { PARTY_FACE, VOTE_BACK, VOTE_FACE } from '../../assets/cards';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
@@ -22,6 +22,8 @@ export interface TableSeatProps {
   /** Seat numbers and office ribbons — hidden until the opening night ends. */
   showPublicMarks?: boolean;
   bubble?: string;
+  /** Face-down or revealed election ballot sitting on this seat. */
+  ballot?: Vote | 'back' | null;
   onSelect: () => void;
   formatMessage: FormatMessage;
 }
@@ -33,7 +35,17 @@ export interface TableSeatProps {
  */
 export function TableSeat(props: TableSeatProps) {
   const { formatMessage } = props;
-  const { flags, voice } = useApp();
+  const { flags, voice, sound } = useApp();
+  let lastBallot: Vote | 'back' | null = null;
+
+  createEffect(() => {
+    const next = props.ballot ?? null;
+    if (next && lastBallot == null) sound.play('ballot-slide');
+    if ((next === 'ja' || next === 'nein') && lastBallot === 'back') {
+      sound.play('card-flip');
+    }
+    lastBallot = next;
+  });
 
   const showPublicMarks = () => props.showPublicMarks !== false;
 
@@ -128,6 +140,18 @@ export function TableSeat(props: TableSeatProps) {
           <span class={styles.badge} data-seat-number>
             {formatMessage('game.seatNumber', { n: props.player.seat + 1 })}
           </span>
+        </Show>
+        <Show when={props.ballot}>
+          {(card) => (
+            <WarmImg
+              class={styles.ballot}
+              src={card() === 'back' ? VOTE_BACK : VOTE_FACE[card()]}
+              alt=""
+              data-seat-ballot={props.player.id}
+              data-ballot={props.player.id}
+              data-ballot-face={card() === 'back' ? 'back' : 'face'}
+            />
+          )}
         </Show>
         <Show when={props.player.party}>
           {(party) => (

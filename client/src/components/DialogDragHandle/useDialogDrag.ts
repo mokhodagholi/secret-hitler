@@ -1,9 +1,17 @@
 import { createSignal } from 'solid-js';
 
+const INTERACTIVE =
+  'button, a, input, textarea, select, option, [role="button"], [data-no-drag]';
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(INTERACTIVE) != null;
+}
+
 /**
  * Pointer-drag offset for an in-game panel. The handle owns the gesture;
  * apply `style()` to a wrapper around the dialog so pop-in animations on
- * the dialog itself keep using `transform`.
+ * the dialog itself keep using `transform`. `surfaceProps` drag from empty
+ * panel chrome without stealing clicks from buttons and cards.
  */
 export function useDialogDrag() {
   const [offset, setOffset] = createSignal({ x: 0, y: 0 });
@@ -29,6 +37,11 @@ export function useDialogDrag() {
     originY = offset().y;
   }
 
+  function onSurfacePointerDown(event: PointerEvent): void {
+    if (isInteractiveTarget(event.target)) return;
+    onPointerDown(event);
+  }
+
   function onPointerMove(event: PointerEvent): void {
     if (!active) return;
     setOffset({
@@ -43,6 +56,13 @@ export function useDialogDrag() {
     setDragging(false);
   }
 
+  const moveProps = {
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel: onPointerUp,
+    onLostPointerCapture: onPointerUp,
+  };
+
   return {
     dragging,
     style: () => ({
@@ -50,10 +70,11 @@ export function useDialogDrag() {
     }),
     handleProps: {
       onPointerDown,
-      onPointerMove,
-      onPointerUp,
-      onPointerCancel: onPointerUp,
-      onLostPointerCapture: onPointerUp,
+      ...moveProps,
+    },
+    surfaceProps: {
+      onPointerDown: onSurfacePointerDown,
+      ...moveProps,
     },
   };
 }

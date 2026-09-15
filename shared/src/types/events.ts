@@ -40,6 +40,8 @@ export type ClientMessage =
   | { type: 'player:wantStart' }
   | { type: 'player:retractStart' }
   | { type: 'game:start' }
+  /** After a win: stay at the table and wait for the lobby reset. */
+  | { type: 'game:continue' }
   | { type: 'chat:message'; text: string }
   | { type: 'command'; command: GameCommand }
   /** Host removes a guest. Lobby: seat gone. In-game: marked dead. */
@@ -48,7 +50,7 @@ export type ClientMessage =
   | { type: 'kick:request'; playerId: string }
   /** Ja/Nein on an open table kick vote (`agree` = remove them). */
   | { type: 'kick:vote'; agree: boolean }
-  /** Explicit leave — host: destroys the room; guest: vacates the seat. */
+  /** Explicit leave — vacates the seat; the table stays up if anyone remains. */
   | { type: 'room:leave' }
   | { type: 'ping' }
   | { type: 'voice:join' }

@@ -34,6 +34,21 @@ describe('GameEngine — public table', () => {
     expect(engine.setWantStart(cal.id, true)).toBeNull();
     expect(engine.room.phase).toBe(Phase.Nomination);
     expect(engine.room.players).toHaveLength(3);
+    expect(engine.room.hostId).toBe(ana.id);
+    expect(ana.isHost).toBe(true);
+  });
+
+  it('Should pass the host on a public table when they leave mid-game', () => {
+    const engine = publicEngine(3);
+    const [ana, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
+    expect(engine.setWantStart(ana.id, true)).toBeNull();
+    expect(engine.setWantStart(ben.id, true)).toBeNull();
+    expect(engine.setWantStart(cal.id, true)).toBeNull();
+    engine.removePlayer(ana.id);
+    expect(engine.room.hostId).toBe(ben.id);
+    expect(ben.isHost).toBe(true);
+    expect(engine.room.phase).not.toBe(Phase.Lobby);
+    expect(engine.room.phase).not.toBe(Phase.GameOver);
   });
 
   it('Should open a must-choose window once half have tapped Start', () => {

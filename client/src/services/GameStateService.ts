@@ -48,6 +48,7 @@ export interface ServerError {
 
 const SESSION_KEY = 'sh:session';
 const MAX_CHAT_ENTRIES = 200;
+const ERROR_TOAST_MS = 3_500;
 
 /**
  * Client-side mirror of the authoritative server state. Exposes the latest
@@ -82,6 +83,7 @@ export class GameStateService {
   private readonly lastErrorSignal = createSignal<ServerError | null>(null);
   readonly lastError = this.lastErrorSignal[0];
   private readonly setLastError = this.lastErrorSignal[1];
+  private errorClearTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Epoch ms when this seat may send another table-chat line. */
   private readonly chatSlowUntilSignal = createSignal(0);
@@ -155,6 +157,7 @@ export class GameStateService {
   }
 
   clearError(): void {
+    this.clearErrorTimer();
     this.setLastError(null);
   }
 
@@ -236,6 +239,10 @@ export class GameStateService {
     this.socket.send({ type: 'game:start' });
   }
 
+  continuePlaying(): void {
+    this.socket.send({ type: 'game:continue' });
+  }
+
   setWantStart(want: boolean): void {
     this.socket.send({ type: want ? 'player:wantStart' : 'player:retractStart' });
   }
@@ -264,6 +271,7 @@ export class GameStateService {
     this.setLogEntries([]);
     this.setUnreadChat(0);
     this.setLastError(null);
+    this.clearErrorTimer();
     this.setChatSlowUntil(0);
   }
 
@@ -285,6 +293,7 @@ export class GameStateService {
     this.setLogEntries([]);
     this.setUnreadChat(0);
     this.setLastError(null);
+    this.clearErrorTimer();
     this.setChatSlowUntil(0);
     this.socket.connect(session.token);
     return session;
@@ -330,8 +339,23 @@ export class GameStateService {
           this.leaveRoom();
         } else {
           this.setLastError({ code: message.code, message: message.message });
+          this.armErrorClear();
         }
       });
+  }
+
+  private armErrorClear(): void {
+    this.clearErrorTimer();
+    this.errorClearTimer = setTimeout(() => {
+      this.errorClearTimer = null;
+      this.setLastError(null);
+    }, ERROR_TOAST_MS);
+  }
+
+  private clearErrorTimer(): void {
+    if (this.errorClearTimer == null) return;
+    clearTimeout(this.errorClearTimer);
+    this.errorClearTimer = null;
   }
 
   private async request<T>(

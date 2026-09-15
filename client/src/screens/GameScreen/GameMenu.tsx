@@ -17,7 +17,7 @@ export interface GameMenuProps {
  * main Settings screen, outside a running game.
  */
 export function GameMenu(props: GameMenuProps) {
-  const { i18n, settings, animation, flags } = useApp();
+  const { i18n, settings, animation, flags, ravi } = useApp();
   const { formatMessage } = i18n;
   const state = settings.settings;
 
@@ -66,7 +66,11 @@ export function GameMenu(props: GameMenuProps) {
               icon="chat"
               label={formatMessage('gameMenu.ravi')}
               active={state.raviVoice}
-              onClick={() => settings.set('raviVoice', !state.raviVoice)}
+              onClick={() => {
+                const enabled = !state.raviVoice;
+                settings.set('raviVoice', enabled);
+                ravi.setVoiceEnabled(enabled);
+              }}
             />
             <Show when={flags.flags.voice}>
               <MenuIcon

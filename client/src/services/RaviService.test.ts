@@ -120,4 +120,21 @@ describe('RaviService', () => {
     expect(play).toHaveBeenCalledTimes(2);
     expect(ravi.line()).toBe('Election tracker 1 of 3.');
   });
+
+  it('Should replay the current line when Ravi Voice is turned back on', async () => {
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+    const settings = new SettingsService();
+    settings.set('language', 'en');
+    settings.set('raviVoice', false);
+    const ravi = new RaviService(
+      settings,
+      new I18nService(() => settings.settings.language),
+    );
+    await ravi.speak('vote.start');
+    expect(play).not.toHaveBeenCalled();
+    settings.set('raviVoice', true);
+    ravi.setVoiceEnabled(true);
+    expect(play).toHaveBeenCalled();
+    expect(ravi.line()).toBe('Voting has begun.');
+  });
 });

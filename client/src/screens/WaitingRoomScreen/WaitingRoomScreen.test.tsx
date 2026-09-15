@@ -252,7 +252,7 @@ describe('WaitingRoomScreen', () => {
       }),
     );
 
-    expect(screen.getByText(en.tip.chaos)).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe(en.tip.chaos);
     expect(screen.queryByRole('button', { name: en.leaveDialog.confirm })).toBeNull();
 
     harness.services.nav.requestBack();
@@ -434,5 +434,88 @@ describe('WaitingRoomScreen', () => {
       type: 'kick:vote',
       agree: true,
     });
+  });
+
+  it('Should send a lobby chat line the player types', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(makeView({ hostId: 'you' }));
+
+    const input = screen.getByPlaceholderText(en.game.chatPlaceholder);
+    fireEvent.input(input, { target: { value: 'hello lobby' } });
+    fireEvent.click(screen.getByRole('button', { name: en.game.send }));
+
+    expect(harness.socket.lastSent('chat:message')).toEqual({
+      type: 'chat:message',
+      text: 'hello lobby',
+    });
+  });
+
+  it('Should show the player’s own lobby message and another seat’s', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1 }),
+        ],
+      }),
+    );
+
+    harness.socket.emit({
+      type: 'chat',
+      message: { id: 'm1', playerId: 'ben', name: 'Ben', text: 'see you soon', at: 0 },
+    });
+    harness.socket.emit({
+      type: 'chat',
+      message: { id: 'm2', playerId: 'you', name: 'You', text: 'already here', at: 1 },
+    });
+
+    expect(screen.getByText('see you soon')).toBeTruthy();
+    expect(screen.getByText('already here')).toBeTruthy();
+    const theirs = screen.getByText('see you soon').closest('article');
+    const mine = screen.getByText('already here').closest('article');
+    expect(theirs?.textContent).toContain('Ben');
+    expect(mine?.textContent).toContain(en.game.you);
+    expect(mine?.className).toMatch(/mine/);
+    expect(theirs?.className).not.toMatch(/mine/);
+  });
+
+  it('Should keep the lobby composer from inviting browser suggest', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(makeView({ hostId: 'you' }));
+
+    const field = screen.getByPlaceholderText(en.game.chatPlaceholder);
+    expect(field.getAttribute('autocomplete')).toBe('off');
+    expect(field.getAttribute('autocorrect')).toBe('off');
+    expect(field.getAttribute('spellcheck')).toBe('false');
+    expect(field.getAttribute('enterkeyhint')).toBe('send');
+  });
+
+  it('Should keep the quote card height stable for long and short tips', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    const card = document.querySelector('[data-lobby-tip]');
+    expect(card).toBeTruthy();
+    expect(card?.getAttribute('data-line-clamp')).toBe('3');
+    expect(screen.getByRole('status').textContent).toBe(en.tip.chaos);
+
+    const sizer = card?.querySelector('[aria-hidden="true"]');
+    expect(sizer?.textContent).toContain(en.tip.chaos);
+    expect(sizer?.textContent).toContain(en.tip.whoTheyCover);
+    expect(sizer?.textContent).toContain(en.tip.night);
+
+    const line = screen.getByRole('status').querySelector('span');
+    expect(line?.className).toMatch(/tipLine/);
   });
 });

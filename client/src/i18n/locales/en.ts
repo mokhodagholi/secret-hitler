@@ -212,6 +212,13 @@ export const en = {
       'Listen to the story, then look at the votes. The player who always says Ja, the one who never takes office, and the one who explodes after a Fascist law — any of them might be lying.',
     trustNoOne: 'Trust no one.',
   },
+  tutorial: {
+    video: 'Watch the tutorial',
+    text: 'Read the rules',
+    announce: 'Look over the guide before you sit down. There is a video, and there is the written one.',
+    continue: 'Got it',
+    videoOpen: 'Open in Aparat',
+  },
   settings: {
     title: 'Settings',
     headerLabel: 'Settings',
@@ -345,6 +352,8 @@ export const en = {
       'Half the table wants to start. Tap Start, or you leave the table.',
     startChoiceWaiting: 'Waiting on the others to decide.',
     startChoiceClock: '{seconds} seconds left.',
+    chat: 'Lobby chat',
+    chatEmpty: 'The table is quiet. Say something.',
   },
   tip: {
     chaos:
@@ -473,6 +482,8 @@ export const en = {
     over: {
       liberalsWin: 'The Liberals win!',
       fascistsWin: 'The Fascists win!',
+      stay: 'Stay',
+      waiting: 'Waiting for the others…',
     },
     killed: {
       title: 'You were executed',
@@ -720,7 +731,7 @@ export const en = {
   leaveDialog: {
     message: 'Do you want to leave the room?',
     hostMessage:
-      'You are the host — if you leave, the room will be closed for everyone.',
+      'You are the host. The table stays open for the others if you leave.',
     confirm: 'Leave Room',
   },
   roomClosed: {

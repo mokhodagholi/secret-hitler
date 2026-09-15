@@ -4,6 +4,7 @@ import { HomeScreen } from './screens/HomeScreen/HomeScreen';
 import { PlayerCardsScreen } from './screens/PlayerCardsScreen/PlayerCardsScreen';
 import { RulesScreen } from './screens/RulesScreen/RulesScreen';
 import { RulesLessonScreen } from './screens/RulesScreen/RulesLessonScreen';
+import { VideoTutorialScreen } from './screens/RulesScreen/VideoTutorialScreen';
 import { topicFromScreen } from './screens/RulesScreen/topics';
 import { SettingsScreen } from './screens/SettingsScreen/SettingsScreen';
 import { RoomsScreen } from './screens/RoomsScreen/RoomsScreen';
@@ -57,6 +58,9 @@ function Router() {
       <Match when={nav.screen() === 'rules'}>
         <RulesScreen />
       </Match>
+      <Match when={nav.screen() === 'rules-video'}>
+        <VideoTutorialScreen />
+      </Match>
       <Match when={topicFromScreen(nav.screen())}>
         {(topicId) => (
           // Remount so Screen can play screen-enter when the topic changes.
@@ -95,14 +99,19 @@ function Router() {
 
 function BootGate(props: ParentProps<{ skip?: boolean }>) {
   const skip = props.skip || process.env.NODE_ENV === 'test';
-  const { prefetch, settings, nav, flags } = useApp();
+  const { prefetch, settings, nav, flags, game, tutorial } = useApp();
   const [booting, setBooting] = createSignal(!skip);
   const [offline, setOffline] = createSignal(false);
   let startBoot = () => {};
 
+  const offerGuide = () => {
+    tutorial.offerAfterSplash(nav, game.inRoom());
+  };
+
   onMount(() => {
     if (skip) {
       void prefetch.boot([]);
+      offerGuide();
       return;
     }
     let cancelled = false;
@@ -113,6 +122,8 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
     const finish = () => {
       if (finished || cancelled) return;
       finished = true;
+      // Route before the lectern lifts so the first paint is the guide, not home.
+      offerGuide();
       setBooting(false);
     };
 

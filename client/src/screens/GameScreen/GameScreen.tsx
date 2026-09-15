@@ -3,6 +3,7 @@ import {
   Phase,
   type Policy,
   type PublicPlayer,
+  type Vote,
 } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { ERROR_MESSAGE_KEYS } from '../../i18n';
@@ -65,12 +66,32 @@ export function GameScreen() {
 
   const CEREMONY_GRACE_MS = CEREMONY_MS + 2_000;
   const [ceremonyOpen, setCeremonyOpen] = createSignal(false);
+  const [hideRevealedVotes, setHideRevealedVotes] = createSignal(false);
   let ceremonyRoomId: string | null = null;
   let ceremonyDecided = false;
 
   // Session dropped (left / expired) → back to the play menu.
   createEffect(() => {
     if (!game.inRoom()) nav.returnTo('play');
+  });
+
+  // After a win, Continue returns this room to lobby — sit there for another game.
+  createEffect(() => {
+    const state = view();
+    if (!state || !game.inRoom()) return;
+    if (state.phase === Phase.Lobby) nav.returnTo('waiting-room');
+  });
+
+  const VOTE_REVEAL_HOLD_MS = 5_000;
+  createEffect(() => {
+    const revealed = view()?.players.some((player) => player.vote != null) === true;
+    if (!revealed) {
+      setHideRevealedVotes(false);
+      return;
+    }
+    setHideRevealedVotes(false);
+    const timer = window.setTimeout(() => setHideRevealedVotes(true), VOTE_REVEAL_HOLD_MS);
+    onCleanup(() => window.clearTimeout(timer));
   });
 
   onMount(() => {
@@ -723,6 +744,13 @@ export function GameScreen() {
     nav.returnTo('play');
   }
 
+  function seatBallot(player: PublicPlayer): Vote | 'back' | null {
+    if (hideRevealedVotes()) return null;
+    if (player.vote != null) return player.vote;
+    if (player.hasVoted) return 'back';
+    return null;
+  }
+
   return (
     <Screen fill>
       <Show when={view()}>
@@ -784,6 +812,7 @@ export function GameScreen() {
                         }
                         showPublicMarks={!ceremonyOpen()}
                         bubble={bubbleFor(player.id)}
+                        ballot={seatBallot(player)}
                         onSelect={() => onSeat(player)}
                         formatMessage={formatMessage}
                       />
@@ -805,9 +834,6 @@ export function GameScreen() {
                 yourVote={state().you.vote}
                 votedCount={votedCount()}
                 totalVoters={voters().length}
-                votedIds={state()
-                  .players.filter((player) => player.hasVoted)
-                  .map((player) => player.id)}
                 youId={state().you.id}
                 showTimer
                 secondsLeft={voteSecondsLeft()}
@@ -961,7 +987,7 @@ export function GameScreen() {
             <Show when={tableOverlay() === 'veto'}>
               <div class={styles.overlayLayer}>
                 <div class={styles.voteShift} style={vetoDrag.style()}>
-                <div class={styles.votePanel}>
+                <div class={styles.votePanel} {...vetoDrag.surfaceProps}>
                   <DialogDragHandle
                     label={formatMessage('game.moveDialog')}
                     dragging={vetoDrag.dragging()}
@@ -1177,10 +1203,12 @@ export function GameScreen() {
                 players={state().players}
                 youId={state().you.id}
                 showRoles={showRoles()}
-                onLeave={() => {
-                  game.leaveRoom();
-                  nav.returnTo('play');
-                }}
+                wantsContinue={
+                  state().players.find((player) => player.id === state().you.id)
+                    ?.wantsContinue === true
+                }
+                onContinue={() => game.continuePlaying()}
+                onLeave={leaveRoom}
               />
             </Show>
             </div>
