@@ -34,6 +34,10 @@ describe('parseBotCommand', () => {
       command: 'join',
       arg: 'ABC123',
     });
+    expect(parseBotCommand('/play-game 2')).toEqual({
+      command: 'play_game',
+      arg: '2',
+    });
   });
 
   it('Should treat a typed start without a slash as /start', () => {

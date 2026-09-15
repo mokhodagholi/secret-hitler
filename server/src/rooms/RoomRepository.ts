@@ -55,9 +55,18 @@ export class RoomRepository {
   /** Public, joinable rooms (still in lobby) for the room-list endpoint. */
   listPublic() {
     return [...this.rooms.values()]
+      .filter((entry) => entry.room.options.adminPlayUserId == null)
       .map((e) => e.room.summary())
       .filter((s) => s.phase === 'lobby')
       .sort(pinPublicFirst);
+  }
+
+  /** Live `/play-game` table for this admin, if it is still in play. */
+  findAdminPlay(userId: number): RoomEntry | undefined {
+    return [...this.rooms.values()].find((entry) => {
+      if (entry.room.options.adminPlayUserId !== userId) return false;
+      return entry.room.phase !== Phase.GameOver;
+    });
   }
 
   /** Every live room, including games already in progress. */

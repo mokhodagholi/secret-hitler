@@ -56,6 +56,8 @@ export interface RoomOptions {
   originMessageId?: number;
   /** Evergreen Join lobby — no host, vote-to-start. Absent means hosted. */
   kind?: 'public';
+  /** Bale/Telegram user who opened this table with `/play-game`. Hidden from public lists. */
+  adminPlayUserId?: number;
 }
 
 /** Stored name for the evergreen lobby; UIs localize via `kind`. */

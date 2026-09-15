@@ -181,6 +181,19 @@ export class GameStateService {
     return this.beginSession(response);
   }
 
+  async claimPlaySeat(
+    code: string,
+    seat: number,
+    initData: string | undefined,
+  ): Promise<RoomSession> {
+    const response = await this.request<JoinRoomResponse>('POST', '/api/play-game', {
+      code,
+      seat,
+      initData,
+    });
+    return this.beginSession(response);
+  }
+
   async listRooms(): Promise<RoomSummary[]> {
     let response: Response;
     try {

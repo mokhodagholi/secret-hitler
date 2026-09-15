@@ -298,13 +298,14 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       return err('NOT_HOST', 'Only the host can start the game.');
     }
     const connected = room.players.filter((p) => p.connected);
-    if (connected.length < room.options.minPlayers) {
+    const adminPlay = room.options.adminPlayUserId != null;
+    if (!adminPlay && connected.length < room.options.minPlayers) {
       return err(
         'NOT_ENOUGH_PLAYERS',
         `Need at least ${room.options.minPlayers} players.`,
       );
     }
-    if (!connected.every((p) => p.ready)) {
+    if (!adminPlay && !connected.every((p) => p.ready)) {
       return err('PLAYERS_NOT_READY', 'Everyone must be ready to start.');
     }
     this.dealLobby(connected);

@@ -9,7 +9,7 @@ import {
 } from '@secret-hitler/shared';
 import type { NavigationService } from './NavigationService';
 import type { SettingsService } from './SettingsService';
-import { joinCodeFromStartApp } from './startApp';
+import { joinCodeFromStartApp, parsePlayGameStartApp } from './startApp';
 import {
   hasBaleNativeBridge,
   hasTelegramNativeBridge,
@@ -119,9 +119,10 @@ class HostMiniApp implements MiniApp {
     webApp.BackButton.onClick(() => nav.requestBack());
     this.syncBackButton(nav.canGoBack());
 
-    const joinCode = joinCodeFromStartApp(
-      webApp.initDataUnsafe?.start_param ?? webApp.startParam,
-    );
+    const startParam = webApp.initDataUnsafe?.start_param ?? webApp.startParam;
+    const playSeat = parsePlayGameStartApp(startParam);
+    if (playSeat) nav.offerPlaySeat(playSeat);
+    const joinCode = joinCodeFromStartApp(startParam);
     if (joinCode) nav.offerJoinCode(joinCode);
 
     const initData = webApp.initData?.trim();

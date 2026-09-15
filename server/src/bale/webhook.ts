@@ -21,6 +21,12 @@ import {
 } from './commands';
 import { createGroupRoom } from './createGroupRoom';
 import type { BaleSeatIndex } from './BaleSeatIndex';
+import { isAdminUser, parsePlayGameSeat } from './adminIds';
+import {
+  ensureAdminPlayTable,
+  playGameReadyReply,
+  playGameSeatHelpReply,
+} from './adminPlay';
 
 /** Minimal Bale send surface so tests can stub the client. */
 export interface BaleMessenger {
@@ -80,6 +86,7 @@ export function startLinkFor(runtime: BaleRuntime): (startApp?: string) => strin
 export interface BaleTableHooks {
   sockets: SocketHandler;
   recorder: GameResultRecorder;
+  adminUserIds: ReadonlySet<number>;
 }
 
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
@@ -197,6 +204,15 @@ export async function handleMessengerWebhook(
     return reply.code(200).send({ ok: true });
   }
 
+  if (parseBotCommand(text)?.command === 'play_game') {
+    // Unknown users must not learn this command exists.
+    if (!table || !isAdminUser(seatedId, table.adminUserIds)) {
+      return reply.code(200).send({ ok: true });
+    }
+    const playReply = handlePlayGame(text, seatedId, repo, messenger, table);
+    return sendBotReply(req, reply, messenger, chat.id, playReply);
+  }
+
   const response = handleBotText({
     text,
     fromId: seatedId,
@@ -212,6 +228,30 @@ export async function handleMessengerWebhook(
 }
 
 export const handleBaleWebhook = handleMessengerWebhook;
+
+function handlePlayGame(
+  text: string,
+  fromId: number,
+  repo: RoomRepository,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+): BotReply {
+  const seat = parsePlayGameSeat(parseBotCommand(text)?.arg ?? '');
+  if (seat == null) return playGameSeatHelpReply();
+  const opened = ensureAdminPlayTable({
+    repo,
+    sockets: table.sockets,
+    recorder: table.recorder,
+    userId: fromId,
+  });
+  if ('error' in opened) return { text: 'نتونستم میز آزمایش رو باز کنم. دوباره بزن.' };
+  return playGameReadyReply({
+    code: opened.code,
+    seat,
+    botUsername: messenger.botUsername,
+    startLink: startLinkFor(messenger),
+  });
+}
 
 async function handleGroupCreate(
   chat: Chat,

@@ -57,6 +57,8 @@ export interface ServerOptions {
   flags?: FeatureFlags;
   /** Present when FEATURE_VOICE is on. Tests inject a memory hub. */
   voice?: VoiceHub | null;
+  /** Who may run `/play-game`. Defaults to ADMIN_USER_IDS + your Bale id. */
+  adminUserIds?: ReadonlySet<number>;
 }
 
 export interface BuiltServer {
@@ -130,6 +132,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     bale,
     telegram,
     flags,
+    adminUserIds: options.adminUserIds,
   });
 
   await app.ready();

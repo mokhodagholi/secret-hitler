@@ -21,6 +21,8 @@ export interface RoomCreateArgs {
   originPlatform?: MessengerKind;
   /** Evergreen Join lobby — no host. */
   kind?: 'public';
+  /** Admin `/play-game` table owner. */
+  adminPlayUserId?: number;
 }
 
 /** Creates {@link Room} instances with validated defaults. */
@@ -42,6 +44,7 @@ export class RoomFactory {
       ...(args.originChatId != null ? { originChatId: args.originChatId } : {}),
       ...(args.originPlatform != null ? { originPlatform: args.originPlatform } : {}),
       ...(args.kind === 'public' ? { kind: 'public' as const } : {}),
+      ...(args.adminPlayUserId != null ? { adminPlayUserId: args.adminPlayUserId } : {}),
     };
     return new Room({
       id: makeId(),

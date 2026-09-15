@@ -45,6 +45,24 @@ function RoomClosedNotice() {
   );
 }
 
+function PlayGameClaimer() {
+  const { nav, game, miniApp } = useApp();
+  onMount(() => {
+    const claim = nav.peekPlaySeat();
+    if (!claim) return;
+    void game
+      .claimPlaySeat(claim.code, claim.seat, miniApp.initData())
+      .then(() => {
+        nav.consumePlaySeat();
+        nav.navigate('waiting-room');
+      })
+      .catch(() => {
+        nav.consumePlaySeat();
+      });
+  });
+  return null;
+}
+
 function Router() {
   const { nav } = useApp();
   return (
@@ -105,7 +123,7 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
   let startBoot = () => {};
 
   const offerGuide = () => {
-    tutorial.offerAfterSplash(nav, game.inRoom());
+    tutorial.offerAfterSplash(nav, game.inRoom() || nav.peekPlaySeat() != null);
   };
 
   onMount(() => {
@@ -191,6 +209,7 @@ export function App(props: { services?: Partial<AppServices> }) {
   return (
     <AppProvider services={props.services}>
       <BootGate skip={props.services != null}>
+        <PlayGameClaimer />
         <Router />
         <RoomClosedNotice />
         <ConnectionNotice />

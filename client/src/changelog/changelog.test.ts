@@ -62,9 +62,9 @@ describe('parseChangelog', () => {
     expect(parseChangelog({ releases: [{ version: '1.0.0' }] })).toEqual([]);
   });
 
-  it('Should ship an empty archive until the first player-facing release', () => {
-    expect(CHANGELOG_RELEASES).toEqual([]);
-    expect(APP_PACKAGE_VERSION).toBe('0.0.1');
+  it('Should keep the shipped archive version in lockstep with the client package', () => {
+    expect(CHANGELOG_RELEASES[0]?.version).toBe(APP_PACKAGE_VERSION);
+    expect(APP_PACKAGE_VERSION).toBe('0.1.0');
   });
 });
 

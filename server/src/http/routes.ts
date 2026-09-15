@@ -9,7 +9,7 @@ import type {
   ProfileResponse,
   SaveProfileRequest,
 } from '@secret-hitler/shared';
-import { normalizeAvatar, toFlagsResponse, roomInviteLink } from '@secret-hitler/shared';
+import { ADMIN_PLAY_SEAT_COUNT, normalizeAvatar, roomInviteLink, toFlagsResponse } from '@secret-hitler/shared';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
@@ -27,6 +27,8 @@ import {
   type BaleRuntime,
 } from '../bale/webhook';
 import { formatSupportLetter, isSupportTopic } from '../bale/support';
+import { isAdminUser, parseAdminUserIds } from '../bale/adminIds';
+import { ensureAdminPlayTable } from '../bale/adminPlay';
 
 export interface RouteDeps {
   repo: RoomRepository;
@@ -42,6 +44,7 @@ export interface RouteDeps {
   bale?: BaleRuntime;
   telegram?: BaleRuntime;
   flags: FeatureFlags;
+  adminUserIds?: ReadonlySet<number>;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -92,6 +95,8 @@ function inviteRuntime(
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const { repo, tokens, sockets, recorder, history, profiles, bale, telegram, flags } =
     deps;
+  const adminUserIds = deps.adminUserIds ?? parseAdminUserIds();
+  const tableHooks = { sockets, recorder, adminUserIds };
   const messengers = configuredMessengers(bale, telegram);
   registerBaleBodyParser(app);
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
@@ -232,17 +237,68 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return res;
   });
 
+  app.post('/api/play-game', async (req, reply) => {
+    const body = (req.body ?? {}) as {
+      initData?: unknown;
+      code?: unknown;
+      seat?: unknown;
+    };
+    const identified = identifyInitData(
+      typeof body.initData === 'string' ? body.initData : undefined,
+      messengers,
+    );
+    if (!identified) {
+      return reply.code(401).send({ error: 'Invalid mini-app login', code: 'AUTH_FAILED' });
+    }
+    if (!isAdminUser(identified.user.id, adminUserIds)) {
+      return reply.code(403).send({ error: 'Not allowed', code: 'AUTH_FAILED' });
+    }
+    const seat =
+      typeof body.seat === 'number' ? body.seat : Number.parseInt(String(body.seat ?? ''), 10);
+    if (!Number.isInteger(seat) || seat < 1 || seat > ADMIN_PLAY_SEAT_COUNT) {
+      return reply.code(400).send({ error: 'Invalid seat', code: 'INVALID_ACTION' });
+    }
+    const opened = ensureAdminPlayTable({
+      repo,
+      sockets,
+      recorder,
+      userId: identified.user.id,
+    });
+    if ('error' in opened) {
+      return reply.code(400).send({ error: opened.error, code: 'INVALID_ACTION' });
+    }
+    const entry = repo.getByCode(opened.code);
+    const player = entry?.room.players[seat - 1];
+    if (!entry || !player) {
+      return reply.code(404).send({ error: 'Seat not found', code: 'ROOM_NOT_FOUND' });
+    }
+    const joinRuntime = runtimeOf(identified.kind, bale, telegram);
+    const token = tokens.issue({ roomId: entry.room.id, playerId: player.id });
+    const res: JoinRoomResponse = {
+      roomId: entry.room.id,
+      code: entry.room.code,
+      shareLink: requestInviteLink(
+        req,
+        entry.room.code,
+        inviteRuntime(joinRuntime, bale, telegram),
+      ),
+      token,
+      playerId: player.id,
+    };
+    return res;
+  });
+
   app.post('/api/bale/webhook', async (req, reply) => {
-    return handleMessengerWebhook(req, reply, repo, bale, { sockets, recorder });
+    return handleMessengerWebhook(req, reply, repo, bale, tableHooks);
   });
   app.post('/api/bale/webhook/:secret', async (req, reply) => {
-    return handleMessengerWebhook(req, reply, repo, bale, { sockets, recorder });
+    return handleMessengerWebhook(req, reply, repo, bale, tableHooks);
   });
   app.post('/api/telegram/webhook', async (req, reply) => {
-    return handleMessengerWebhook(req, reply, repo, telegram, { sockets, recorder });
+    return handleMessengerWebhook(req, reply, repo, telegram, tableHooks);
   });
   app.post('/api/telegram/webhook/:secret', async (req, reply) => {
-    return handleMessengerWebhook(req, reply, repo, telegram, { sockets, recorder });
+    return handleMessengerWebhook(req, reply, repo, telegram, tableHooks);
   });
 
   // Create a room and seat the host.

@@ -5,6 +5,7 @@ import { DrizzleGameHistoryStore } from './history/DrizzleGameHistoryStore';
 import { DrizzleProfileStore } from './profiles/DrizzleProfileStore';
 import { DrizzleLiveRoomStore } from './rooms/DrizzleLiveRoomStore';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
+import { parseAdminUserIds } from './bale/adminIds';
 import { registerBaleCommands, webhookListenUrl, type BaleRuntime } from './bale/webhook';
 import { parseSupportChatId } from './bale/support';
 import { connectDatabase } from './db/connection';
@@ -159,6 +160,7 @@ async function main() {
     telegram,
     flags,
     voice,
+    adminUserIds: parseAdminUserIds(),
   });
 
   app.log.info({ flags }, 'Feature flags');

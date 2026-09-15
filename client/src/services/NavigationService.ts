@@ -1,5 +1,5 @@
 import { createSignal, type Accessor, type Setter } from 'solid-js';
-import { joinCodeFromStartApp } from './startApp';
+import { joinCodeFromStartApp, parsePlayGameStartApp } from './startApp';
 import { isMessengerWebView } from './miniAppHost';
 
 export type ScreenName =
@@ -37,6 +37,7 @@ export class NavigationService {
   private readonly setScreen: Setter<ScreenName>;
   private readonly stack: ScreenName[] = [];
   private pendingJoinCode: string | null;
+  private pendingPlaySeat: { code: string; seat: number } | null;
   private backHandler: (() => void) | null = null;
 
   constructor(initialPath: string = location.pathname) {
@@ -45,8 +46,11 @@ export class NavigationService {
       typeof location !== 'undefined'
         ? new URLSearchParams(location.search).get('tgWebAppStartParam')
         : null;
-    this.pendingJoinCode =
-      joinCodeFromStartApp(fromPath) ?? joinCodeFromStartApp(fromQuery);
+    this.pendingPlaySeat =
+      parsePlayGameStartApp(fromPath) ?? parsePlayGameStartApp(fromQuery);
+    this.pendingJoinCode = this.pendingPlaySeat
+      ? null
+      : joinCodeFromStartApp(fromPath) ?? joinCodeFromStartApp(fromQuery);
     const [screen, setScreen] = createSignal<ScreenName>(
       this.pendingJoinCode ? 'join-game' : 'home',
     );
@@ -94,9 +98,24 @@ export class NavigationService {
 
   /** Mini-app `startapp` / start_param — same as a `/join/CODE` share link. */
   offerJoinCode(code: string): void {
-    if (this.pendingJoinCode) return;
+    if (this.pendingJoinCode || this.pendingPlaySeat) return;
     this.pendingJoinCode = code;
     if (this.screen() === 'home') this.setScreen('join-game');
+  }
+
+  offerPlaySeat(claim: { code: string; seat: number }): void {
+    if (this.pendingPlaySeat) return;
+    this.pendingPlaySeat = claim;
+  }
+
+  peekPlaySeat(): { code: string; seat: number } | null {
+    return this.pendingPlaySeat;
+  }
+
+  consumePlaySeat(): { code: string; seat: number } | null {
+    const claim = this.pendingPlaySeat;
+    this.pendingPlaySeat = null;
+    return claim;
   }
 
   navigate(next: ScreenName): void {

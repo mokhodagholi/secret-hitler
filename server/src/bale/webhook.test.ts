@@ -593,4 +593,77 @@ describe('Telegram webhook', () => {
     expect(JSON.stringify(sent[0])).not.toContain('ble.ir');
     expect(JSON.stringify(sent[0])).not.toContain('mrfantastic');
   });
+
+  it('Should open a started test table when the admin types /play-game 1', async () => {
+    const sent: Array<{ text: string; reply_markup?: unknown }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app, repo } = await buildServer({
+      publicUrl: 'https://mrfantastic.ir',
+      bale: {
+        bot,
+        botToken: TOKEN,
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/play-game 1',
+        from: { id: 1_902_004_260, is_bot: false, first_name: 'Admin' },
+        chat: { id: 1_902_004_260, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent[0]?.text).toContain('صندلی 1');
+    const entry = repo.findAdminPlay(1_902_004_260);
+    expect(entry?.room.phase).not.toBe('lobby');
+    expect(entry?.room.players).toHaveLength(5);
+    expect(JSON.stringify(sent[0].reply_markup)).toContain(
+      `startapp=p1${entry?.room.code}`,
+    );
+  });
+
+  it('Should ignore /play-game from anyone but the admin', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app, repo } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/play-game 1',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toEqual([]);
+    expect(repo.findAdminPlay(9)).toBeUndefined();
+  });
 });

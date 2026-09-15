@@ -46,6 +46,11 @@ export {
   roomInviteLink,
 } from './net/miniAppLink';
 export type { MiniAppStartLinkParams } from './net/miniAppLink';
+export {
+  ADMIN_PLAY_SEAT_COUNT,
+  parsePlayGameStartApp,
+  playGameStartApp,
+} from './net/playGameStartApp';
 
 // Utilities
 export { TypedEmitter } from './util/TypedEmitter';

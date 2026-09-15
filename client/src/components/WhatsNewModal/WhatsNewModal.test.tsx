@@ -16,11 +16,11 @@ describe('WhatsNewModal', () => {
     expect(localStorage.getItem('sh:seen-changelog')).toBe(APP_PACKAGE_VERSION);
   });
 
-  it('Should stay hidden when the archive has no notes', () => {
+  it('Should show unread notes after an older version', () => {
     localStorage.setItem('sh:seen-changelog', '0.0.0');
     const harness = buildHarness();
     renderWithApp(() => <WhatsNewModal />, harness);
-    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
   });
 
   it('Should stay silent at the table even when a later briefing could wait', () => {

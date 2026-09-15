@@ -12,6 +12,7 @@ const KNOWN_COMMANDS = new Set([
   'join',
   'invite',
   'create',
+  'play_game',
 ]);
 
 export interface BotCommandContext {

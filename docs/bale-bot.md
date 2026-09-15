@@ -124,6 +124,7 @@ These extra names work in chat but are **not** on the menu:
 | `/game` | `/games` |
 | a bare `ABC123` | `/join ABC123` |
 | `/start ABC123` | `/join ABC123` |
+| `/play-game N` | admin test table (hidden; only user `1902004260`) |
 
 ---
 
@@ -381,11 +382,42 @@ The bot must be **in the group** (it already is if it saw `/create`) so
 
 ---
 
+## `/play-game` — admin test table (hidden)
+
+**Type:** `/play-game N` in **private** chat. Not on the bot menu.
+
+Only Bale user `1902004260` (plus any ids in `ADMIN_USER_IDS`). Anyone else
+gets no reply — the bot pretends it never heard the command.
+
+`N` is the seat on this device (`1`–`5`). Same Bale account, another phone:
+`/play-game 2`. The server does **not** bind that user to one seat
+(`BaleSeatIndex.occupy` is skipped).
+
+What it opens:
+
+- One live 5-seat table per admin (`میز آزمایش`, seats `بازیکن ۱`…`بازیکن ۵`).
+- Deal runs immediately — no ready check, no min-player gate.
+- Hidden from `/find_game` / the Join tab.
+
+Reply:
+
+```
+میز آزمایش آماده‌ست. تو صندلی {N} هستی. دکمه رو بزن بری سر میز.
+```
+
+Button: **بازی کن** with `startapp=p{N}{CODE}` (e.g. `p1ABC123`). The mini-app
+claims that seat via `POST /api/play-game` and lands on the board.
+
+Bad `N`: `شماره صندلی ۱ تا ۵ رو بنویس، مثلاً:` `/play-game 1`.
+
+---
+
 ## What happens after they tap the button
 
 The chat bot’s job is over. The mini-app boots, reads `start_param` /
 `startapp`, and if it is a 6-character code, joins that room the same way
 a browser `/join/CODE` link does (name from Bale, password if needed).
+`p1ABC123` is the admin `/play-game` seat, not a join code.
 
 ```
 ble.ir/{bot}?startapp=L2YYP4
@@ -397,6 +429,16 @@ client NavigationService / BaleService.offerJoinCode
 POST /api/rooms/L2YYP4/join
         ↓
 waiting room
+```
+
+Admin `/play-game`:
+
+```
+ble.ir/{bot}?startapp=p1ABC123
+        ↓
+offerPlaySeat → POST /api/play-game
+        ↓
+waiting room → game (already dealt)
 ```
 
 Empty `startapp` opens the app with no pending room (home / play).
@@ -426,6 +468,7 @@ From [`.env.example`](../.env.example):
 | `BALE_WEBHOOK_URL` | HTTPS URL Bale POSTs updates to (port 443 or 88). |
 | `BALE_WEBHOOK_SECRET` | Appended to the webhook path; also accepted as `X-Telegram-Bot-Api-Secret-Token`. |
 | `BALE_SUPPORT_CHAT_ID` | Group for support letters and kick notices. Not used by chat commands. |
+| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`. `1902004260` is always allowed. |
 
 Copy for new replies: [`docs/persian.md`](./persian.md) (register **بله**).
 Tests: [`server/src/bale/commands.test.ts`](../server/src/bale/commands.test.ts).

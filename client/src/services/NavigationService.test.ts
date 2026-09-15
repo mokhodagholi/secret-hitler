@@ -27,6 +27,15 @@ describe('NavigationService', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  it('Should hold an admin play-game startapp seat without opening join', () => {
+    window.history.replaceState(null, '', '/?tgWebAppStartParam=p2ABC123');
+    const nav = new NavigationService('/');
+    expect(nav.screen()).toBe('home');
+    expect(nav.peekPlaySeat()).toEqual({ code: 'ABC123', seat: 2 });
+    expect(nav.consumeJoinCode()).toBeNull();
+    window.history.replaceState(null, '', '/');
+  });
+
   it('Should hand the join code out only once', () => {
     const nav = new NavigationService('/join/ABC123');
     expect(nav.consumeJoinCode()).toBe('ABC123');

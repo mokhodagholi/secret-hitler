@@ -380,3 +380,48 @@ describe('room HTTP — Telegram + Bale together', () => {
     expect(seats.get(9, 'telegram')?.playerId).toBe(joined.body.playerId);
   });
 });
+
+describe('play-game HTTP', () => {
+  it('Should seat the admin on two different players from the same table', async () => {
+    const { app, repo } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: BALE_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const first = await httpJson<JoinRoomResponse>(app, 'POST', '/api/play-game', {
+      seat: 1,
+      initData: signInitData(1_902_004_260, 'Admin'),
+    });
+    const second = await httpJson<JoinRoomResponse>(app, 'POST', '/api/play-game', {
+      seat: 2,
+      initData: signInitData(1_902_004_260, 'Admin'),
+    });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(first.body.playerId).not.toBe(second.body.playerId);
+    expect(first.body.roomId).toBe(second.body.roomId);
+    expect(repo.get(first.body.roomId)?.room.phase).not.toBe('lobby');
+    expect(repo.listPublic()).toEqual([]);
+  });
+
+  it('Should refuse play-game for a non-admin mini-app user', async () => {
+    const { app } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: BALE_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const refused = await httpJson(app, 'POST', '/api/play-game', {
+      seat: 1,
+      initData: signInitData(9, 'Ana'),
+    });
+    expect(refused.status).toBe(403);
+  });
+});
