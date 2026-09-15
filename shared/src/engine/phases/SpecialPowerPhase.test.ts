@@ -113,6 +113,10 @@ describe('SpecialPowerPhase — 7-player powers', () => {
     expect(
       game.room.viewFor(target.id).players.find((p) => p.id === target.id)?.party,
     ).toBeNull();
+    expect(game.room.specialPowerEndsAt).toBeGreaterThan(Date.now());
+    expect(game.room.specialPowerEndsAt - game.room.specialPowerStartedAt).toBe(
+      10_000,
+    );
 
     // A second investigate of the same player is rejected before acknowledging.
     const repeat = game.engine.handleCommand(investigatorId, {
@@ -126,6 +130,34 @@ describe('SpecialPowerPhase — 7-player powers', () => {
       game.room.viewFor(investigatorId).players.find((p) => p.id === target.id)
         ?.party,
     ).toBe('fascist');
+  });
+
+  it('Should open a 15-second choose window when Investigate begins', () => {
+    const game = startGame(SEVEN, new StackedDeck(['fascist', 'liberal', 'liberal']));
+    setRoles(game);
+    enactFascist(game, 1);
+
+    expect(game.room.phase).toBe(Phase.SpecialPower);
+    expect(game.room.specialPowerEndsAt - game.room.specialPowerStartedAt).toBe(
+      15_000,
+    );
+  });
+
+  it('Should advance after the investigate reveal hold times out', () => {
+    const game = startGame(SEVEN, new StackedDeck(['fascist', 'liberal', 'liberal']));
+    setRoles(game);
+    enactFascist(game, 1);
+
+    const investigatorId = game.room.presidentId!;
+    const target = game.players.find((p) => p.role === 'hitler')!;
+    game.engine.handleCommand(investigatorId, {
+      kind: 'useSpecialPower',
+      targetId: target.id,
+    });
+    expect(game.room.investigation).not.toBeNull();
+
+    game.engine.resolveSpecialPowerTimeout();
+    expect(game.room.phase).toBe(Phase.Nomination);
   });
 
   it('Should hand the presidency to the special-election pick', () => {

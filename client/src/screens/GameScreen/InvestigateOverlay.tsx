@@ -9,7 +9,7 @@ import styles from './InvestigateOverlay.module.scss';
 const NOTICE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test'
     ? 200
-    : 12_000;
+    : 10_000;
 
 export interface InvestigateOverlayProps {
   targetId: string;

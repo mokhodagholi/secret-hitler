@@ -11,7 +11,7 @@ const PEEK_COUNT = 3;
 const NOTICE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test'
     ? 200
-    : 12_000;
+    : 10_000;
 const TRAVEL_MS = 560;
 
 export interface PeekOverlayProps {

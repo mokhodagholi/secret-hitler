@@ -12,6 +12,7 @@ for the flags themselves.
 | `voice` | `FEATURE_VOICE` | off |
 | `publicTable` | `FEATURE_PUBLIC_TABLE` | off |
 | `lobbyKick` | `FEATURE_LOBBY_KICK` | off |
+| `gameKick` | `FEATURE_GAME_KICK` | off |
 
 Adding a flag: one name in `FLAG_NAMES`, one default in `DEFAULT_FLAGS`, one
 `FEATURE_<NAME>` key in [`.env.example`](../.env.example). Unknown `FEATURE_*`
@@ -44,5 +45,7 @@ AFK kicks in every lobby still run. A disconnected lobby seat is dropped after
 15 seconds (no ban). See [`public-table.md`](./public-table.md).
 
 When `lobbyKick` is off, hosted rooms hide host-kick in the waiting room and
-the server rejects `player:kick` / lobby `kick:request`. In-game host kick and
-in-game kick votes still run.
+the server rejects lobby `player:kick` / lobby `kick:request`.
+
+When `gameKick` is off, in-game kick votes and mid-game host kick stay dark;
+the server rejects those frames too.

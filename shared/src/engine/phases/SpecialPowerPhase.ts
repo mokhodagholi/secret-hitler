@@ -1,4 +1,10 @@
-import { Phase, partyOf, type Player } from '../../types/GameState';
+import {
+  INVESTIGATION_HOLD_MS,
+  Phase,
+  SPECIAL_POWER_DURATION_MS,
+  partyOf,
+  type Player,
+} from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import type { GamePhase, PhaseHost } from './GamePhase';
@@ -9,7 +15,12 @@ export class SpecialPowerPhase implements GamePhase {
 
   constructor(private readonly host: PhaseHost) {}
 
+  enter(): void {
+    this.host.openSpecialPowerTimer(SPECIAL_POWER_DURATION_MS);
+  }
+
   exit(): void {
+    this.host.closeSpecialPowerTimer();
     const room = this.host.room;
     room.activePower = null;
     room.peekedPolicies = [];
@@ -41,6 +52,54 @@ export class SpecialPowerPhase implements GamePhase {
     }
   }
 
+  /** Choose-window elapsed, or the investigate reveal hold finished. */
+  timeout(): void {
+    const room = this.host.room;
+    if (room.activePower === 'investigate' && room.investigation) {
+      this.host.advanceRound();
+      return;
+    }
+    const presidentId = room.presidentId;
+    if (!presidentId) {
+      this.host.advanceRound();
+      return;
+    }
+    switch (room.activePower) {
+      case 'policyPeek':
+        this.host.advanceRound();
+        return;
+      case 'investigate': {
+        const target = this.randomInvestigateTarget(presidentId);
+        if (!target) {
+          this.host.advanceRound();
+          return;
+        }
+        this.investigate(presidentId, target.id);
+        return;
+      }
+      case 'execution': {
+        const target = this.randomLivingTarget(presidentId);
+        if (!target) {
+          this.host.advanceRound();
+          return;
+        }
+        this.execute(presidentId, target.id);
+        return;
+      }
+      case 'specialElection': {
+        const target = this.randomConnectedTarget(presidentId);
+        if (!target) {
+          this.host.advanceRound();
+          return;
+        }
+        this.specialElection(presidentId, target.id);
+        return;
+      }
+      default:
+        this.host.advanceRound();
+    }
+  }
+
   private investigate(playerId: string, targetId: string): EngineError | null {
     const room = this.host.room;
     // Two steps: first pick the target, then acknowledge the revealed result.
@@ -62,8 +121,10 @@ export class SpecialPowerPhase implements GamePhase {
       targetId: target.id,
       party,
     });
-    this.host.log('investigated', { name: target.name });
+    this.host.openSpecialPowerTimer(INVESTIGATION_HOLD_MS);
     this.host.changed();
+    // Log after the private snapshot so the President overlay already has the party.
+    this.host.log('investigated', { name: target.name });
     return null;
   }
 
@@ -95,5 +156,32 @@ export class SpecialPowerPhase implements GamePhase {
     const target = this.host.room.findPlayer(targetId);
     if (!target || !target.isAlive || target.id === playerId) return null;
     return target;
+  }
+
+  private randomLivingTarget(presidentId: string): Player | null {
+    const choices = this.host.room.players.filter(
+      (player) => player.isAlive && player.id !== presidentId,
+    );
+    if (choices.length === 0) return null;
+    return choices[Math.floor(Math.random() * choices.length)] ?? null;
+  }
+
+  private randomInvestigateTarget(presidentId: string): Player | null {
+    const choices = this.host.room.players.filter(
+      (player) =>
+        player.isAlive &&
+        player.id !== presidentId &&
+        !this.host.room.investigatedIds.includes(player.id),
+    );
+    if (choices.length === 0) return null;
+    return choices[Math.floor(Math.random() * choices.length)] ?? null;
+  }
+
+  private randomConnectedTarget(presidentId: string): Player | null {
+    const choices = this.host.room.players.filter(
+      (player) => player.isAlive && player.connected && player.id !== presidentId,
+    );
+    if (choices.length === 0) return null;
+    return choices[Math.floor(Math.random() * choices.length)] ?? null;
   }
 }

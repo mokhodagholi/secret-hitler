@@ -366,6 +366,32 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.phase).toBe(Phase.GameOver);
   });
 
+  it('Should hand the Fascists victory next round when leavers leave Fascists ahead', () => {
+    const { engine, room, players } = startGame([
+      'Ana',
+      'Ben',
+      'Cal',
+      'Dia',
+      'Eli',
+      'Fay',
+      'Gil',
+    ]);
+    // 7 players → 4 liberal, 3 fascist. Drop two liberals so fascists lead 3–2.
+    const presidentId = room.presidentId!;
+    const liberals = players.filter(
+      (player) => player.role === 'liberal' && player.id !== presidentId,
+    );
+    engine.setConnected(liberals[0]!.id, false);
+    engine.setConnected(liberals[1]!.id, false);
+
+    const president = room.findPlayer(presidentId)!;
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+    engine.handleCommand(president.id, { kind: 'endTurn' });
+
+    expect(room.winner).toBe('fascist');
+    expect(room.phase).toBe(Phase.GameOver);
+  });
+
   it('Should keep playing when a Fascist leaves and Liberals still lead', () => {
     const { engine, room, players } = startGame([
       'Ana',

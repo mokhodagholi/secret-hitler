@@ -58,6 +58,8 @@ export class SocketHandler {
   private readonly legislativeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room nomination-window deadline timers. */
   private readonly nominationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room executive-power deadline timers. */
+  private readonly specialPowerTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room table kick-vote deadline timers. */
   private readonly kickVoteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room public-table must-choose deadline timers. */
@@ -144,8 +146,8 @@ export class SocketHandler {
       )
       .on('player:kick', (m, ctx) => this.kickPlayer(ctx, m.playerId))
       .on('kick:request', (m, ctx) => {
-        if (!this.lobbyKickAllowed(ctx.entry)) {
-          this.sendError(ctx.ws, 'INVALID_ACTION', 'Lobby kick is not enabled.');
+        if (!this.kickAllowed(ctx.entry)) {
+          this.sendError(ctx.ws, 'INVALID_ACTION', 'Kick is not enabled.');
           return;
         }
         this.fail(ctx, ctx.engine.requestKick(ctx.playerId, m.playerId));
@@ -248,6 +250,14 @@ export class SocketHandler {
       }, Math.max(0, endsAt - Date.now()));
       this.nominationTimers.set(room.id, timer);
     });
+    engine.on('specialPowerTimerChanged', ({ endsAt }) => {
+      this.stopSpecialPowerTimer(room.id);
+      if (endsAt == null) return;
+      const timer = setTimeout(() => {
+        this.repo.get(room.id)?.engine.resolveSpecialPowerTimeout();
+      }, Math.max(0, endsAt - Date.now()));
+      this.specialPowerTimers.set(room.id, timer);
+    });
     engine.on('kickVoteTimerChanged', ({ endsAt }) => {
       this.stopKickVoteTimer(room.id);
       if (endsAt == null) return;
@@ -336,6 +346,9 @@ export class SocketHandler {
     });
     this.armTimer(this.nominationTimers, room.id, room.nominationEndsAt, () => {
       this.repo.get(room.id)?.engine.resolveNominationTimeout();
+    });
+    this.armTimer(this.specialPowerTimers, room.id, room.specialPowerEndsAt, () => {
+      this.repo.get(room.id)?.engine.resolveSpecialPowerTimeout();
     });
     if (room.startChoice) {
       this.armTimer(this.startChoiceTimers, room.id, room.startChoice.endsAt, () => {
@@ -426,6 +439,14 @@ export class SocketHandler {
     if (timer) {
       clearTimeout(timer);
       this.nominationTimers.delete(roomId);
+    }
+  }
+
+  private stopSpecialPowerTimer(roomId: string): void {
+    const timer = this.specialPowerTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.specialPowerTimers.delete(roomId);
     }
   }
 
@@ -691,15 +712,15 @@ export class SocketHandler {
     });
   }
 
-  /** Host kick and public-lobby kick votes stay dark unless the flag is on. */
-  private lobbyKickAllowed(entry: RoomEntry): boolean {
-    return this.flags.lobbyKick || entry.room.phase !== Phase.Lobby;
+  /** Lobby kick needs lobbyKick; in-game kick needs gameKick. */
+  private kickAllowed(entry: RoomEntry): boolean {
+    return entry.room.phase === Phase.Lobby ? this.flags.lobbyKick : this.flags.gameKick;
   }
 
-  /** Host removes a lobby guest and closes their seat. */
+  /** Host removes a lobby guest (or in-game seat when gameKick is on). */
   private kickPlayer(context: GameContext, targetId: string): void {
-    if (!this.lobbyKickAllowed(context.entry)) {
-      this.sendError(context.ws, 'INVALID_ACTION', 'Lobby kick is not enabled.');
+    if (!this.kickAllowed(context.entry)) {
+      this.sendError(context.ws, 'INVALID_ACTION', 'Kick is not enabled.');
       return;
     }
     const error = context.engine.kickPlayer(context.playerId, targetId);
@@ -817,6 +838,7 @@ export class SocketHandler {
     this.stopVoteTimer(roomId);
     this.stopLegislativeTimer(roomId);
     this.stopNominationTimer(roomId);
+    this.stopSpecialPowerTimer(roomId);
     this.stopKickVoteTimer(roomId);
     this.stopStartChoiceTimer(roomId);
     this.cancelHostGrace(roomId);

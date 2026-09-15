@@ -1,40 +1,33 @@
 import { describe, expect, it } from '@rstest/core';
 import { NavigationService } from './NavigationService';
 import {
+  TUTORIAL_ANNOUNCE_LIMIT,
   TUTORIAL_SEEN_COUNT_KEY,
   TutorialPromptService,
 } from './TutorialPromptService';
 
 describe('TutorialPromptService', () => {
-  it('Should offer the guide for the first three launches', () => {
+  it('Should offer the guide for the first five launches', () => {
     const tutorial = new TutorialPromptService();
     expect(tutorial.shouldOffer()).toBe(true);
     expect(tutorial.seenCount()).toBe(0);
 
-    const first = new NavigationService('/');
-    expect(tutorial.offerAfterSplash(first, false)).toBe(true);
-    expect(first.screen()).toBe('rules');
-    expect(tutorial.announcing()).toBe(true);
+    for (let launch = 1; launch <= TUTORIAL_ANNOUNCE_LIMIT; launch++) {
+      const service = launch === 1 ? tutorial : new TutorialPromptService();
+      const nav = new NavigationService('/');
+      expect(service.offerAfterSplash(nav, false)).toBe(true);
+      expect(nav.screen()).toBe('rules');
+      expect(service.announcing()).toBe(true);
+      service.dismissAnnouncement();
+      expect(service.seenCount()).toBe(launch);
+      expect(service.announcing()).toBe(false);
+    }
 
-    tutorial.dismissAnnouncement();
-    expect(tutorial.seenCount()).toBe(1);
-    expect(tutorial.announcing()).toBe(false);
-
-    const second = new TutorialPromptService();
-    const secondNav = new NavigationService('/');
-    expect(second.offerAfterSplash(secondNav, false)).toBe(true);
-    second.dismissAnnouncement();
-
-    const third = new TutorialPromptService();
-    const thirdNav = new NavigationService('/');
-    expect(third.offerAfterSplash(thirdNav, false)).toBe(true);
-    third.dismissAnnouncement();
-    expect(third.seenCount()).toBe(3);
-    expect(third.shouldOffer()).toBe(false);
+    expect(new TutorialPromptService().shouldOffer()).toBe(false);
   });
 
-  it('Should stop offering after three dismissals', () => {
-    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, '3');
+  it('Should stop offering after five dismissals', () => {
+    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
     const tutorial = new TutorialPromptService();
     const nav = new NavigationService('/');
     expect(tutorial.offerAfterSplash(nav, false)).toBe(false);

@@ -333,6 +333,7 @@ export function GameScreen() {
       state.nominationDeadline?.endsAt,
       state.voteDeadline?.endsAt,
       state.legislativeDeadline?.endsAt,
+      state.specialPowerDeadline?.endsAt,
     ].filter((value): value is number => value != null && value > 0);
     if (endsAt.length === 0 || state.kickVote) {
       lastClockSecond = -1;
@@ -448,6 +449,7 @@ export function GameScreen() {
   const canReport = (player: PublicPlayer) => {
     const state = view();
     const you = game.you();
+    if (!flags.enabled('gameKick')) return false;
     if (!state || !you?.isAlive) return false;
     if (!state.you.canRequestKick) return false;
     if (state.phase === Phase.Lobby || state.phase === Phase.GameOver) return false;
@@ -504,6 +506,11 @@ export function GameScreen() {
     const deadline = view()?.legislativeDeadline;
     if (!deadline) return 0;
     if (now() < deadline.startedAt) return 0;
+    return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
+  };
+  const specialPowerSecondsLeft = () => {
+    const deadline = view()?.specialPowerDeadline;
+    if (!deadline) return 0;
     return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
   };
 
@@ -1075,7 +1082,7 @@ export function GameScreen() {
                   isPresident={iAmPresident()}
                   presidentName={playerName(state().board.president)}
                   investigation={state().you.investigation}
-                  onContinue={() => usePower('')}
+                  secondsLeft={specialPowerSecondsLeft()}
                 />
               </div>
             </Show>

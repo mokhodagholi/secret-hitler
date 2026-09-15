@@ -2,7 +2,7 @@ import { describe, expect, it } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { App } from './App';
 import { en } from './i18n/locales/en';
-import { TUTORIAL_SEEN_COUNT_KEY } from './services/TutorialPromptService';
+import { TUTORIAL_ANNOUNCE_LIMIT, TUTORIAL_SEEN_COUNT_KEY } from './services/TutorialPromptService';
 import { buildHarness } from '../test/test-utils';
 
 describe('App — first-run guide', () => {
@@ -37,8 +37,8 @@ describe('App — first-run guide', () => {
     expect(localStorage.getItem(TUTORIAL_SEEN_COUNT_KEY)).toBe('1');
   });
 
-  it('Should go home after splash once the guide has been seen three times', async () => {
-    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, '3');
+  it('Should go home after splash once the guide has been seen five times', async () => {
+    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
     const harness = buildHarness();
     render(() => <App services={harness.services} />);
 

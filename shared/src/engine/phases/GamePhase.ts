@@ -43,6 +43,10 @@ export interface PhaseHost {
   openNominationTimer(): void;
   /** Close the nomination window and cancel its deadline. */
   closeNominationTimer(): void;
+  /** Open the executive-power window (`durationMs` defaults to the choose clock). */
+  openSpecialPowerTimer(durationMs?: number): void;
+  /** Close the executive-power window and cancel its deadline. */
+  closeSpecialPowerTimer(): void;
   /** Enter the SpecialPower phase with the President's pending power. */
   grantPower(power: ExecutivePower): void;
   /** Special election: hand the presidency to `playerId` for the next round. */

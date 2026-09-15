@@ -6,6 +6,7 @@ import {
   LOBBY_DISCONNECT_MS,
   NOMINATION_DURATION_MS,
   Phase,
+  SPECIAL_POWER_DURATION_MS,
   START_CHOICE_DURATION_MS,
   VOTE_DURATION_MS,
   isOpeningNight,
@@ -53,6 +54,8 @@ export interface EngineEvents extends Record<string, unknown> {
   legislativeTimerChanged: { endsAt: number | null };
   /** Nomination window opened (endsAt set) or closed (null); server (un)schedules. */
   nominationTimerChanged: { endsAt: number | null };
+  /** Executive-power window opened (endsAt set) or closed (null); server (un)schedules. */
+  specialPowerTimerChanged: { endsAt: number | null };
   /** Table kick-vote window opened or closed; server (un)schedules. */
   kickVoteTimerChanged: { endsAt: number | null };
   /** Public-table Accept window opened or closed; server (un)schedules. */
@@ -470,9 +473,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   /**
-   * A leaver can shrink the table until Fascists equal or outnumber Liberals.
-   * Official rules don't cover mid-game absences; we check at the start of
-   * the next round so the current election/legislation can finish.
+   * A leaver can shrink the table until Fascists equal or outnumber Liberals
+   * among players still connected. Official rules don't cover mid-game
+   * absences; we check at the start of the next round.
    */
   private fascistsHoldTheTable(): boolean {
     const living = this.room.players.filter((player) => player.isAlive);
@@ -678,6 +681,27 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.currentPhase.timeout?.();
   }
 
+  // --- Special power timer (PhaseHost) ---------------------------------------
+
+  openSpecialPowerTimer(durationMs = SPECIAL_POWER_DURATION_MS): void {
+    const room = this.room;
+    room.specialPowerStartedAt = Date.now();
+    room.specialPowerEndsAt = room.specialPowerStartedAt + durationMs;
+    this.emit('specialPowerTimerChanged', { endsAt: room.specialPowerEndsAt });
+  }
+
+  closeSpecialPowerTimer(): void {
+    this.room.specialPowerStartedAt = 0;
+    this.room.specialPowerEndsAt = 0;
+    this.emit('specialPowerTimerChanged', { endsAt: null });
+  }
+
+  /** Server calls this when the President's power window elapses. */
+  resolveSpecialPowerTimeout(): void {
+    if (this.room.kickVote) return;
+    this.currentPhase.timeout?.();
+  }
+
   // --- Table kick vote ----------------------------------------------------------
 
   /**
@@ -879,6 +903,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.emit('voteTimerChanged', { endsAt: null });
     this.emit('legislativeTimerChanged', { endsAt: null });
     this.emit('nominationTimerChanged', { endsAt: null });
+    this.emit('specialPowerTimerChanged', { endsAt: null });
   }
 
   /** Slide frozen deadlines forward by the pause so remaining time is intact. */
@@ -915,6 +940,12 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       room.nominationStartedAt = next.startedAt;
       room.nominationEndsAt = next.endsAt;
       this.emit('nominationTimerChanged', { endsAt: room.nominationEndsAt });
+    }
+    if (room.specialPowerEndsAt > 0) {
+      const next = shift(room.specialPowerStartedAt, room.specialPowerEndsAt);
+      room.specialPowerStartedAt = next.startedAt;
+      room.specialPowerEndsAt = next.endsAt;
+      this.emit('specialPowerTimerChanged', { endsAt: room.specialPowerEndsAt });
     }
   }
 
@@ -1084,6 +1115,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.closeVote();
     this.closeLegislativeTimer();
     this.closeNominationTimer();
+    this.closeSpecialPowerTimer();
     if (room.kickVote) {
       room.kickVote = null;
       this.emit('kickVoteTimerChanged', { endsAt: null });

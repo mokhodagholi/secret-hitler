@@ -2,7 +2,7 @@ import { createSignal, type Accessor, type Setter } from 'solid-js';
 import type { NavigationService } from './NavigationService';
 
 /** How many launches show the guide as a first-run announcement. */
-export const TUTORIAL_ANNOUNCE_LIMIT = 3;
+export const TUTORIAL_ANNOUNCE_LIMIT = 5;
 
 export const TUTORIAL_SEEN_COUNT_KEY = 'sh:tutorial-seen-count';
 
@@ -14,7 +14,7 @@ function parseSeenCount(raw: string | null): number {
 }
 
 /**
- * First-run guide: the first three app opens land on the rules hub with a
+ * First-run guide: the first five app opens land on the rules hub with a
  * dismissible banner. A live seat or join link still wins over this detour.
  */
 export class TutorialPromptService {

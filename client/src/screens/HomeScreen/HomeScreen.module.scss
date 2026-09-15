@@ -28,17 +28,69 @@
     linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 38%, transparent 58%);
 }
 
-// Rules + settings as one brass pair, pinned to the top-right corner.
+// Support text chip on the start; rules + settings as a brass pair on the end.
 .tools {
   direction: ltr;
   position: relative;
   z-index: 5;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 8px;
   padding: calc(40px + env(safe-area-inset-top, 0px)) 20px 0 12px;
   flex-shrink: 0;
+}
+
+.toolPair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.supportChip {
+  @include pressable;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 7.5rem;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  color: #fff4e3;
+  background: rgba(18, 12, 8, 0.55);
+  border: 1px solid rgba(227, 165, 62, 0.45);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 244, 214, 0.12);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.supportChip:hover {
+  filter: brightness(1.08);
+  border-color: rgba(227, 165, 62, 0.7);
+}
+
+.supportChip:active {
+  transform: translateY(1px);
+}
+
+.supportLabel {
+  font-family: $font-display;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.supportLabelOut {
+  opacity: 0;
+  transform: translateY(6px);
 }
 
 .tool {
@@ -398,9 +450,13 @@
   }
 }
 
-// Respect Reduce Motion — no idle pulsing.
+// Respect Reduce Motion — no idle pulsing or support label fades.
 @media (prefers-reduced-motion: reduce) {
   .cta::before {
     animation: none;
+  }
+
+  .supportLabel {
+    transition: none;
   }
 }

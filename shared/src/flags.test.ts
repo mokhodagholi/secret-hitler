@@ -36,6 +36,8 @@ describe('parseFeatureFlags', () => {
     expect(parseFeatureFlags({ FEATURE_PUBLICTABLE: 'true' }).publicTable).toBe(false);
     expect(parseFeatureFlags({ FEATURE_LOBBY_KICK: 'true' }).lobbyKick).toBe(true);
     expect(parseFeatureFlags({ FEATURE_LOBBYKICK: 'true' }).lobbyKick).toBe(false);
+    expect(parseFeatureFlags({ FEATURE_GAME_KICK: 'true' }).gameKick).toBe(true);
+    expect(parseFeatureFlags({ FEATURE_GAMEKICK: 'true' }).gameKick).toBe(false);
   });
 });
 

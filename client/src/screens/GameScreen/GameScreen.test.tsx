@@ -644,9 +644,10 @@ describe('GameScreen — nomination', () => {
     });
 
     const cal = screen.getByRole('button', { name: /Cal/ });
-    expect(cal.getAttribute('aria-disabled')).toBe('false');
+    // Discussion is still open and gameKick is off — seat is not a pick target.
+    expect(cal.getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(cal);
-    expect(screen.getByText(/Ask the table to remove/)).toBeTruthy();
+    expect(screen.queryByText(/Ask the table to remove/)).toBeNull();
     expect(harness.socket.lastSent('command')).toBeUndefined();
     expect(harness.socket.lastSent('kick:request')).toBeUndefined();
   });
@@ -1136,7 +1137,7 @@ describe('GameScreen — in-game menu', () => {
     fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
 
     fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
-    expect(screen.getByRole('button', { name: en.game.playerMenu.report })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.game.playerMenu.report })).toBeNull();
     const muteCal = screen.getByRole('button', {
       name: en.game.mutePlayer.replace('{name}', 'Cal'),
     });
@@ -1200,9 +1201,9 @@ describe('GameScreen — in-game menu', () => {
     expect(cal.getAttribute('data-speaking')).toBe('true');
   });
 
-  it('Should confirm a kick from the seat menu when voice is on', () => {
+  it('Should confirm a kick from the seat menu when voice and gameKick are on', () => {
     stubDeniedMicrophone();
-    const harness = buildHarness({ seated: true, flags: { voice: true } });
+    const harness = buildHarness({ seated: true, flags: { voice: true, gameKick: true } });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
@@ -1216,9 +1217,19 @@ describe('GameScreen — in-game menu', () => {
     });
   });
 
-  it('Should omit report from the seat menu after the player has already asked once', () => {
+  it('Should omit report from the seat menu when gameKick is off', () => {
     stubDeniedMicrophone();
     const harness = buildHarness({ seated: true, flags: { voice: true } });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(screen.queryByRole('button', { name: en.game.playerMenu.report })).toBeNull();
+  });
+
+  it('Should omit report from the seat menu after the player has already asked once', () => {
+    stubDeniedMicrophone();
+    const harness = buildHarness({ seated: true, flags: { voice: true, gameKick: true } });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
     harness.pushState({
@@ -1365,7 +1376,7 @@ describe('GameScreen — vote timer', () => {
 
 describe('GameScreen — table kick vote', () => {
   it('Should ask to confirm before requesting a kick', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { gameKick: true } });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
@@ -1379,7 +1390,7 @@ describe('GameScreen — table kick vote', () => {
   });
 
   it('Should hide the kick request after the player has already asked once', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { gameKick: true } });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
     harness.pushState({
@@ -1393,7 +1404,7 @@ describe('GameScreen — table kick vote', () => {
   });
 
   it('Should play a stamp when a seat is tapped for a kick', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { gameKick: true } });
     const play = rs.spyOn(harness.services.sound, 'play');
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());

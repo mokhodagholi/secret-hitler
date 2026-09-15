@@ -79,14 +79,33 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: en.rules.title })).toBeTruthy();
   });
 
-  it('Should keep the home poster to Find Game, rules, and settings', () => {
+  it('Should keep the home poster to Find Game, support, rules, and settings', () => {
     const harness = buildHarness();
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(screen.getByRole('button', { name: 'Find Game' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.support.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.getAllByRole('button')).toHaveLength(4);
+  });
+
+  it('Should open Support from the cycling text chip', () => {
+    const harness = buildHarness();
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<div data-testid="support-open" />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: en.support.title }));
+    expect(harness.services.nav.screen()).toBe('support');
   });
 
   it('Should offer a way back when a live seat is still open', () => {

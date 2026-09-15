@@ -1,4 +1,4 @@
-import { Show, onCleanup, onMount } from 'solid-js';
+import { Show } from 'solid-js';
 import type { ExecutivePower } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
@@ -10,7 +10,7 @@ export interface PowerPanelProps {
   isPresident: boolean;
   presidentName: string;
   investigation: { name: string; party: 'liberal' | 'fascist' } | null;
-  onContinue: () => void;
+  secondsLeft: number;
 }
 
 const HINT_KEY = {
@@ -24,15 +24,7 @@ const HINT_KEY = {
 export function PowerPanel(props: PowerPanelProps) {
   const { formatMessage } = props;
   const { animation } = useApp();
-  const needsAck = () => props.investigation != null;
-
-  onMount(() => {
-    if (!needsAck()) return;
-    const lingerMs =
-      import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 200 : 4000;
-    const timer = window.setTimeout(() => props.onContinue(), lingerMs);
-    onCleanup(() => clearTimeout(timer));
-  });
+  const urgent = () => props.secondsLeft > 0 && props.secondsLeft <= 4;
 
   return (
     <div class={styles.votePanel}>
@@ -55,6 +47,18 @@ export function PowerPanel(props: PowerPanelProps) {
               })}
             </span>
           )}
+        </Show>
+
+        <Show when={props.secondsLeft > 0 && !props.investigation}>
+          <span
+            classList={{
+              [styles.voteClock]: true,
+              [styles.urgent]: urgent(),
+              [styles.pulse]: urgent() && animation.motionEnabled(),
+            }}
+          >
+            {formatMessage('game.secondsLeft', { seconds: props.secondsLeft })}
+          </span>
         </Show>
       </Show>
     </div>

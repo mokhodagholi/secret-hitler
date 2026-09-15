@@ -226,6 +226,8 @@ export interface GameStateView {
   legislativeDeadline: { startedAt: number; endsAt: number } | null;
   /** Active nomination window (epoch ms) while the President nominates, else null. */
   nominationDeadline: { startedAt: number; endsAt: number } | null;
+  /** Active executive-power window (epoch ms) while the President acts, else null. */
+  specialPowerDeadline: { startedAt: number; endsAt: number } | null;
   /** Open table vote to remove a player. Game clocks are frozen while set. */
   kickVote: KickVoteView | null;
   /** Player ids that may not be nominated as Chancellor (term limits). */
@@ -286,6 +288,10 @@ export const LEGISLATIVE_DEAL_MS = 100 + 3 * LEGISLATIVE_TRAVEL_CARD_MS;
 export const LEGISLATIVE_PASS_MS = 100 + 2 * LEGISLATIVE_TRAVEL_CARD_MS;
 /** How long the President has to nominate before the election fails. */
 export const NOMINATION_DURATION_MS = 25_000;
+/** How long the President has to use an executive power (pick a target / peek). */
+export const SPECIAL_POWER_DURATION_MS = 15_000;
+/** After an investigate reveal, hold this long before the next round. */
+export const INVESTIGATION_HOLD_MS = 10_000;
 /** How long a table kick vote stays open before it is counted as-is. */
 export const KICK_VOTE_DURATION_MS = 30_000;
 /** Public-table holdouts must Accept before this, or they are kicked. */

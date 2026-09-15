@@ -55,6 +55,8 @@ export class Room {
   legislativeEndsAt = 0;
   nominationStartedAt = 0;
   nominationEndsAt = 0;
+  specialPowerStartedAt = 0;
+  specialPowerEndsAt = 0;
   /** Executive power awaiting the President's use, else null. */
   activePower: ExecutivePower | null = null;
   /** Players already investigated this game (each may be investigated once). */
@@ -235,6 +237,10 @@ export class Room {
         this.nominationEndsAt > 0
           ? { startedAt: this.nominationStartedAt, endsAt: this.nominationEndsAt }
           : null,
+      specialPowerDeadline:
+        this.phase === Phase.SpecialPower && this.specialPowerEndsAt > 0
+          ? { startedAt: this.specialPowerStartedAt, endsAt: this.specialPowerEndsAt }
+          : null,
       kickVote: this.kickVoteViewFor(viewerId),
       ineligibleChancellors:
         this.phase === Phase.Nomination ? this.ineligibleChancellorIds() : [],
@@ -318,6 +324,8 @@ export class Room {
       legislativeEndsAt: this.legislativeEndsAt,
       nominationStartedAt: this.nominationStartedAt,
       nominationEndsAt: this.nominationEndsAt,
+      specialPowerStartedAt: this.specialPowerStartedAt,
+      specialPowerEndsAt: this.specialPowerEndsAt,
       activePower: this.activePower,
       investigatedIds: [...this.investigatedIds],
       peekedPolicies: [...this.peekedPolicies],
@@ -382,6 +390,8 @@ export class Room {
     room.legislativeEndsAt = snapshot.legislativeEndsAt;
     room.nominationStartedAt = snapshot.nominationStartedAt;
     room.nominationEndsAt = snapshot.nominationEndsAt;
+    room.specialPowerStartedAt = snapshot.specialPowerStartedAt ?? 0;
+    room.specialPowerEndsAt = snapshot.specialPowerEndsAt ?? 0;
     room.activePower = snapshot.activePower;
     room.investigatedIds = [...snapshot.investigatedIds];
     room.peekedPolicies = [...snapshot.peekedPolicies];
@@ -458,6 +468,9 @@ export interface RoomSnapshot {
   legislativeEndsAt: number;
   nominationStartedAt: number;
   nominationEndsAt: number;
+  /** Absent on rooms snapshotted before special-power clocks. */
+  specialPowerStartedAt?: number;
+  specialPowerEndsAt?: number;
   activePower: ExecutivePower | null;
   investigatedIds: string[];
   peekedPolicies: Policy[];
