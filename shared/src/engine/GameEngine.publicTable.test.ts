@@ -1,10 +1,10 @@
 import { describe, expect, it } from '@rstest/core';
 import { GameEngine } from './GameEngine';
-import { LOBBY_AFK_MS, Phase, WANT_START_COOLDOWN_MS } from '../types/GameState';
+import { LOBBY_AFK_MS, Phase } from '../types/GameState';
 import { makeRoom, seatPlayers } from '../../test/test-utils';
 
-function publicEngine(minPlayers = 5) {
-  return new GameEngine(makeRoom({ kind: 'public', minPlayers }));
+function publicEngine(minPlayers = 5, maxPlayers = 10) {
+  return new GameEngine(makeRoom({ kind: 'public', minPlayers, maxPlayers }));
 }
 
 describe('GameEngine — public table', () => {
@@ -17,20 +17,20 @@ describe('GameEngine — public table', () => {
   });
 
   it('Should refuse a host-style start on the public table', () => {
-    const engine = publicEngine(3);
+    const engine = publicEngine(3, 3);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
     expect(engine.startGame(players[0].id)).toMatchObject({ code: 'NOT_HOST' });
     expect(engine.room.phase).toBe(Phase.Lobby);
   });
 
-  it('Should ignore Ready and deal when everyone taps Start', () => {
-    const engine = publicEngine(3);
+  it('Should ignore Ready and deal when a full table all Accept', () => {
+    const engine = publicEngine(3, 3);
     const [ana, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
     engine.setReady(ana.id, true);
     expect(ana.ready).toBe(false);
+    expect(engine.room.startChoice).not.toBeNull();
     expect(engine.setWantStart(ana.id, true)).toBeNull();
     expect(engine.setWantStart(ben.id, true)).toBeNull();
-    expect(engine.room.startChoice).not.toBeNull();
     expect(engine.setWantStart(cal.id, true)).toBeNull();
     expect(engine.room.phase).toBe(Phase.Nomination);
     expect(engine.room.players).toHaveLength(3);
@@ -39,7 +39,7 @@ describe('GameEngine — public table', () => {
   });
 
   it('Should pass the host on a public table when they leave mid-game', () => {
-    const engine = publicEngine(3);
+    const engine = publicEngine(3, 3);
     const [ana, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
     expect(engine.setWantStart(ana.id, true)).toBeNull();
     expect(engine.setWantStart(ben.id, true)).toBeNull();
@@ -51,19 +51,20 @@ describe('GameEngine — public table', () => {
     expect(engine.room.phase).not.toBe(Phase.GameOver);
   });
 
-  it('Should open a must-choose window once half have tapped Start', () => {
-    const engine = publicEngine(5);
-    const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']);
-    expect(engine.setWantStart(players[0].id, true)).toBeNull();
-    expect(engine.setWantStart(players[1].id, true)).toBeNull();
+  it('Should open an Accept window only when the public table is full', () => {
+    const engine = publicEngine(5, 6);
+    const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);
     expect(engine.room.startChoice).toBeNull();
-    expect(engine.setWantStart(players[2].id, true)).toBeNull();
+    expect(engine.setWantStart(players[0].id, true)).toMatchObject({
+      code: 'INVALID_ACTION',
+    });
+    seatPlayers(engine, ['Fay']);
     expect(engine.room.startChoice).not.toBeNull();
     expect(engine.room.phase).toBe(Phase.Lobby);
   });
 
   it('Should kick silent holdouts and still refuse a table below the minimum', () => {
-    const engine = publicEngine(5);
+    const engine = publicEngine(5, 6);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']);
     engine.setWantStart(players[0].id, true);
     engine.setWantStart(players[1].id, true);
@@ -82,21 +83,34 @@ describe('GameEngine — public table', () => {
     expect(engine.room.startChoice).toBeNull();
   });
 
-  it('Should deal after holdouts tap Start during the must-choose window', () => {
-    const engine = publicEngine(5);
+  it('Should not ban a sitter kicked for missing Accept', () => {
+    const engine = publicEngine(3, 3);
+    const [ana, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
+    const joinKey = 'client:eeeeeeee-bbbb-cccc-dddd-eeeeeeeeeeee';
+    cal.joinKey = joinKey;
+    engine.setWantStart(ana.id, true);
+    engine.setWantStart(ben.id, true);
+    engine.resolveStartChoiceTimeout();
+    expect(engine.room.findPlayer(cal.id)).toBeUndefined();
+    expect(engine.room.bannedJoinKeys.size).toBe(0);
+    expect(engine.addPlayer('Cal', false, undefined, joinKey)).toMatchObject({
+      name: 'Cal',
+    });
+  });
+
+  it('Should deal after holdouts Accept during the window', () => {
+    const engine = publicEngine(5, 5);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);
-    for (const player of players.slice(0, 3)) {
-      engine.setWantStart(player.id, true);
-    }
     expect(engine.room.startChoice).not.toBeNull();
-    expect(engine.setWantStart(players[3].id, true)).toBeNull();
-    expect(engine.setWantStart(players[4].id, true)).toBeNull();
+    for (const player of players) {
+      expect(engine.setWantStart(player.id, true)).toBeNull();
+    }
     expect(engine.room.phase).toBe(Phase.Nomination);
     expect(engine.room.players).toHaveLength(5);
   });
 
   it('Should deal after kicking holdouts when a legal table remains', () => {
-    const engine = publicEngine(3);
+    const engine = publicEngine(3, 5);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);
     engine.setWantStart(players[0].id, true);
     engine.setWantStart(players[1].id, true);
@@ -108,34 +122,19 @@ describe('GameEngine — public table', () => {
     expect(engine.room.players).toHaveLength(3);
   });
 
-  it('Should refuse retracting Start once the must-choose window is open', () => {
-    const engine = publicEngine(5);
+  it('Should refuse retracting Accept once the window is open', () => {
+    const engine = publicEngine(5, 6);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']);
     engine.setWantStart(players[0].id, true);
-    engine.setWantStart(players[1].id, true);
-    engine.setWantStart(players[2].id, true);
     expect(engine.setWantStart(players[0].id, false)).toMatchObject({
       code: 'INVALID_ACTION',
     });
     expect(players[0].wantsStart).toBe(true);
   });
 
-  it('Should refuse another collecting Start tap for three minutes', () => {
-    const engine = publicEngine(5);
-    const [ana] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
-    expect(engine.setWantStart(ana.id, true)).toBeNull();
-    expect(engine.setWantStart(ana.id, false)).toBeNull();
-    expect(engine.setWantStart(ana.id, true)).toMatchObject({ code: 'INVALID_ACTION' });
-    ana.wantStartAt = Date.now() - WANT_START_COOLDOWN_MS;
-    expect(engine.setWantStart(ana.id, true)).toBeNull();
-  });
-
-  it('Should still let a holdout tap Start during the must-choose window', () => {
-    const engine = publicEngine(5);
+  it('Should still let a holdout Accept during the window', () => {
+    const engine = publicEngine(5, 6);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']);
-    engine.setWantStart(players[0].id, true);
-    engine.setWantStart(players[1].id, true);
-    engine.setWantStart(players[2].id, true);
     players[3].wantStartAt = Date.now();
     expect(engine.setWantStart(players[3].id, true)).toBeNull();
     expect(players[3].wantsStart).toBe(true);
@@ -182,7 +181,7 @@ describe('GameEngine — public table', () => {
     });
   });
 
-  it('Should refuse Start while a public lobby kick vote is open', () => {
+  it('Should refuse Accept while a public lobby kick vote is open', () => {
     const engine = publicEngine();
     const [ana, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
     expect(engine.requestKick(ana.id, ben.id)).toBeNull();
@@ -213,7 +212,7 @@ describe('GameEngine — lobby AFK', () => {
     expect(engine.room.findPlayer(host.id)).toBeTruthy();
   });
 
-  it('Should kick a public sitter who does not tap Start for five minutes', () => {
+  it('Should kick a public sitter who sits idle for five minutes', () => {
     const engine = publicEngine();
     const [ana] = seatPlayers(engine, ['Ana']);
     ana.unreadySince = Date.now() - LOBBY_AFK_MS;
@@ -221,10 +220,12 @@ describe('GameEngine — lobby AFK', () => {
     expect(engine.room.findPlayer(ana.id)).toBeUndefined();
   });
 
-  it('Should not AFK-kick a public sitter who has already tapped Start', () => {
-    const engine = publicEngine();
-    const [ana] = seatPlayers(engine, ['Ana']);
+  it('Should not AFK-kick a public sitter who already Accepted', () => {
+    const engine = publicEngine(3, 3);
+    const [ana, ben] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
     engine.setWantStart(ana.id, true);
+    engine.removePlayer(ben.id);
+    expect(engine.room.startChoice).toBeNull();
     ana.unreadySince = Date.now() - LOBBY_AFK_MS;
     engine.resolveLobbyAfkTimeout(ana.id);
     expect(engine.room.findPlayer(ana.id)).toBeTruthy();
@@ -243,12 +244,10 @@ describe('GameEngine — lobby AFK', () => {
     });
   });
 
-  it('Should pause AFK while the public start-choice window is open', () => {
-    const engine = publicEngine(5);
+  it('Should pause AFK while the public Accept window is open', () => {
+    const engine = publicEngine(5, 6);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']);
-    engine.setWantStart(players[0].id, true);
-    engine.setWantStart(players[1].id, true);
-    engine.setWantStart(players[2].id, true);
+    expect(engine.room.startChoice).not.toBeNull();
     players[3].unreadySince = Date.now() - LOBBY_AFK_MS;
     engine.resolveLobbyAfkTimeout(players[3].id);
     expect(engine.room.findPlayer(players[3].id)).toBeTruthy();

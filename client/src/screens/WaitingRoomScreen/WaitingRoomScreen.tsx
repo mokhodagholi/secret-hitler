@@ -7,7 +7,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { Phase, kickVoteYesNeeded, type GameStateView, type PublicPlayer } from '@secret-hitler/shared';
+import { Phase, type GameStateView, type PublicPlayer } from '@secret-hitler/shared';
 import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
 import { copyText } from '../../services/clipboard';
@@ -150,38 +150,8 @@ export function WaitingRoomScreen() {
     return 'confirm';
   };
 
-  const startConnectedPlayers = () => startConnected();
-  const startNeed = () => kickVoteYesNeeded(Math.max(1, startConnectedCount()));
-  const startHave = () =>
-    startConnectedPlayers().filter((player) => player.wantsStart).length;
-  const startCooldownUntil = () => view()?.you.wantStartCooldownUntil ?? null;
-  const startCooldownSeconds = () => {
-    const until = startCooldownUntil();
-    if (until == null) return 0;
-    return Math.max(0, Math.ceil((until - nowMs()) / 1000));
-  };
-  const publicStartCooling = () =>
-    !amWantStart() &&
-    view()?.startChoice == null &&
-    startCooldownSeconds() > 0;
-  const startHintText = () => {
-    if (publicStartCooling()) {
-      return startCooldownSeconds() >= 60
-        ? ('waiting.startCooldownMinutes' as const)
-        : ('waiting.startCooldownSeconds' as const);
-    }
-    if (startHave() > 0) return 'waiting.startHintProgress' as const;
-    return 'waiting.startHint' as const;
-  };
-
-  function tapPublicStart(): void {
-    if (publicStartCooling()) return;
-    game.setWantStart(!amWantStart());
-  }
-
   createEffect(() => {
-    const cooling = startCooldownUntil() != null && startCooldownUntil()! > Date.now();
-    if (!view()?.startChoice && !cooling && !view()?.kickVote) return;
+    if (!view()?.startChoice && !view()?.kickVote) return;
     setNowMs(Date.now());
     const timer = setInterval(() => setNowMs(Date.now()), 250);
     onCleanup(() => clearInterval(timer));
@@ -242,65 +212,40 @@ export function WaitingRoomScreen() {
                   </p>
                 </Show>
 
-                <div class={styles.actions}>
-                  <Button variant="outline" onClick={copyShareLink}>
-                    {formatMessage(copied() ? 'waiting.copied' : 'waiting.shareLink')}
-                  </Button>
+                <Show when={!isPublicTable()}>
+                  <div class={styles.actions}>
+                    <Button variant="outline" onClick={copyShareLink}>
+                      {formatMessage(copied() ? 'waiting.copied' : 'waiting.shareLink')}
+                    </Button>
 
-                  <Show
-                    when={isPublicTable()}
-                    fallback={
-                      <Show
-                        when={game.isHost()}
-                        fallback={
-                          <Button
-                            variant={amReady() ? 'outline' : 'gold'}
-                            onClick={() => game.setReady(!amReady())}
-                          >
-                            {formatMessage(
-                              amReady() ? 'waiting.notReadyYet' : 'waiting.imReady',
-                            )}
-                          </Button>
-                        }
-                      >
-                        <Button onClick={tryStart}>
-                          {formatMessage('waiting.startGame')}
+                    <Show
+                      when={game.isHost()}
+                      fallback={
+                        <Button
+                          variant={amReady() ? 'outline' : 'gold'}
+                          onClick={() => game.setReady(!amReady())}
+                        >
+                          {formatMessage(
+                            amReady() ? 'waiting.notReadyYet' : 'waiting.imReady',
+                          )}
                         </Button>
-                      </Show>
-                    }
-                  >
-                    <Show when={!(view()?.startChoice && !amWantStart())}>
-                      <Button
-                        variant={amWantStart() ? 'outline' : 'gold'}
-                        disabled={
-                          view()?.kickVote != null ||
-                          (view()?.startChoice != null && amWantStart()) ||
-                          publicStartCooling()
-                        }
-                        onClick={tapPublicStart}
-                      >
-                        {formatMessage(
-                          amWantStart() ? 'waiting.retractStart' : 'waiting.wantStart',
-                        )}
+                      }
+                    >
+                      <Button onClick={tryStart}>
+                        {formatMessage('waiting.startGame')}
                       </Button>
                     </Show>
-                  </Show>
-                </div>
+                  </div>
+                </Show>
 
                 <Show when={isPublicTable()}>
                   <p class={styles.startHint}>
-                    {formatMessage(startHintText(), {
-                      have: startHave(),
-                      need: startNeed(),
-                      minutes: Math.ceil(startCooldownSeconds() / 60),
-                      seconds: startCooldownSeconds(),
-                    })}
+                    {formatMessage(
+                      view()?.startChoice && amWantStart()
+                        ? 'waiting.startChoiceWaiting'
+                        : 'waiting.publicFillHint',
+                    )}
                   </p>
-                  <Show when={view()?.startChoice && amWantStart()}>
-                    <p class={styles.startHint}>
-                      {formatMessage('waiting.startChoiceWaiting')}
-                    </p>
-                  </Show>
                 </Show>
 
                 <LobbyChat />

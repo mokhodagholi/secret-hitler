@@ -76,9 +76,9 @@ export interface Player {
   isHost: boolean;
   connected: boolean;
   ready: boolean;
-  /** Public-table Start tap. Hosted rooms leave this false. */
+  /** Public-table Accept tap during the full-table window. Hosted rooms leave this false. */
   wantsStart: boolean;
-  /** Last public Start tap; next collecting tap waits {@link WANT_START_COOLDOWN_MS}. */
+  /** Last public Accept tap; unused for collecting Start (there is none). */
   wantStartAt: number | null;
   /** Lobby clock for the 5-minute idle kick; null while engaged or offline. */
   unreadySince: number | null;
@@ -288,9 +288,9 @@ export const LEGISLATIVE_PASS_MS = 100 + 2 * LEGISLATIVE_TRAVEL_CARD_MS;
 export const NOMINATION_DURATION_MS = 25_000;
 /** How long a table kick vote stays open before it is counted as-is. */
 export const KICK_VOTE_DURATION_MS = 30_000;
-/** Public-table holdouts must tap Start before this, or they are kicked. */
-export const START_CHOICE_DURATION_MS = 20_000;
-/** After a collecting Start tap, that seat cannot tap Start again until this elapses. */
+/** Public-table holdouts must Accept before this, or they are kicked. */
+export const START_CHOICE_DURATION_MS = 15_000;
+/** Kept on the snapshot; collecting Start no longer exists on the public table. */
 export const WANT_START_COOLDOWN_MS = 3 * 60_000;
 /** Lobby: connected and idle this long (non-host) → kicked as away. */
 export const LOBBY_AFK_MS = 5 * 60_000;

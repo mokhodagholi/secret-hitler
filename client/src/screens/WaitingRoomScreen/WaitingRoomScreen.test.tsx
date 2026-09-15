@@ -279,7 +279,7 @@ describe('WaitingRoomScreen', () => {
     expect(harness.services.nav.screen()).not.toBe('game');
   });
 
-  it('Should show Start without Ready on the public table', () => {
+  it('Should hide Start and the share link on the public table', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
@@ -295,64 +295,20 @@ describe('WaitingRoomScreen', () => {
     );
 
     expect(screen.queryByRole('button', { name: "I'm Ready" })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy();
-    expect(screen.getByText(en.waiting.startHint)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Start Game' })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.waiting.shareLink })).toBeNull();
+    expect(screen.getByText(en.waiting.publicFillHint)).toBeTruthy();
   });
 
-  it('Should send want-start when a public sitter taps Start', () => {
+  it('Should force everyone to Accept when the public table is full', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
       makeView({
         kind: 'public',
         hostId: '',
-        you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
-        players: [
-          makePlayer({ id: 'you', name: 'You', seat: 0, ready: true }),
-          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: true }),
-        ],
-      }),
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
-    expect(harness.socket.lastSent('player:wantStart')).toEqual({
-      type: 'player:wantStart',
-    });
-  });
-
-  it('Should disable Start while the public cooldown is running', () => {
-    const harness = buildHarness({ seated: true });
-    renderWithApp(() => <WaitingRoomScreen />, harness);
-    harness.pushState(
-      makeView({
-        kind: 'public',
-        hostId: '',
-        you: {
-          id: 'you',
-          role: null,
-          vote: null,
-          policies: [],
-          peek: [],
-          investigation: null,
-          wantStartCooldownUntil: Date.now() + 180_000,
-        },
-        players: [makePlayer({ id: 'you', name: 'You', seat: 0 })],
-      }),
-    );
-
-    const start = screen.getByRole('button', { name: 'Start' });
-    expect((start as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/You can tap Start again in 3 minutes/)).toBeTruthy();
-  });
-
-  it('Should force holdouts to tap Start when half the table already has', () => {
-    const harness = buildHarness({ seated: true });
-    renderWithApp(() => <WaitingRoomScreen />, harness);
-    harness.pushState(
-      makeView({
-        kind: 'public',
-        hostId: '',
-        startChoice: { startedAt: 1, endsAt: Date.now() + 20_000 },
+        startChoice: { startedAt: 1, endsAt: Date.now() + 15_000 },
         you: { id: 'you', role: null, vote: null, policies: [], peek: [], investigation: null },
         players: [
           makePlayer({ id: 'ben', name: 'Ben', seat: 0, ready: true, wantsStart: true }),
@@ -362,7 +318,7 @@ describe('WaitingRoomScreen', () => {
     );
 
     expect(screen.getByText(en.waiting.startChoiceHoldout)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(screen.getByRole('button', { name: en.waiting.wantStart }));
     expect(harness.socket.lastSent('player:wantStart')).toEqual({
       type: 'player:wantStart',
     });

@@ -77,7 +77,7 @@ export class Room {
   kickVote: KickVoteState | null = null;
   /** Viewers who already used their one kick request; refunded if that kick passes. */
   spentKickRequestIds = new Set<string>();
-  /** Public-table must-choose window while half have tapped Start. */
+  /** Public-table Accept window after the table fills. */
   startChoice: StartChoiceState | null = null;
   /** Join keys voted off this room — they cannot sit here again. */
   bannedJoinKeys = new Set<string>();

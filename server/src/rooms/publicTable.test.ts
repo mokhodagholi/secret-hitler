@@ -69,12 +69,23 @@ describe('public table', () => {
     expect(waiting).toBeTruthy();
     const entry = built.repo.get(waiting!.id)!;
     const ids: string[] = [];
-    for (const name of ['Ana', 'Ben', 'Cal']) {
+    for (const name of [
+      'Ana',
+      'Ben',
+      'Cal',
+      'Dia',
+      'Eli',
+      'Fay',
+      'Gus',
+      'Hal',
+      'Ivy',
+      'Jen',
+    ]) {
       const player = entry.engine.addPlayer(name);
       expect('id' in player).toBe(true);
       if ('id' in player) ids.push(player.id);
     }
-    for (const id of ids) entry.engine.setReady(id, true);
+    expect(entry.room.startChoice).not.toBeNull();
     for (const id of ids) expect(entry.engine.setWantStart(id, true)).toBeNull();
     expect(entry.room.phase).toBe(Phase.Nomination);
     const publicLobbies = built.repo.listPublic().filter((room) => room.kind === 'public');

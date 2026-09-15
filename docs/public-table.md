@@ -17,14 +17,14 @@ table ([`mini-app.md`](./mini-app.md)); this is how the lobby itself helps.
 | Always-on public lobby, no host, pinned on Join | Yes. Do this. |
 | When it starts, spawn a fresh empty public lobby | Yes. Join must never lack one. |
 | Show it on Join **and** in `/games` / in-progress lists | Yes. Pin it on Join. |
-| Every sitter has a **Start** button, separate from Ready | Yes, on **this** table only. |
-| Hint that start needs at least half the table | Yes — always visible, not a one-shot tutorial. |
-| When half have tapped Start, the rest must choose | Yes. Silence is a kick, then deal if a legal table remains. |
+| Every sitter has a **Start** button, separate from Ready | No. The public table has no Start and no share link. |
+| When the table is full (10), everyone must Accept | Yes — 15 s. Silence is a kick (not a ban), then deal if a legal table remains. |
 | 5-minute lobby AFK kick on **every** room | Yes, with the host exception below. |
 | Vote to remove someone in the public lobby, same as in-game | Yes. Half yes → kick, report, and ban from **that** room. |
 
-The diagnosis is right. Start is not a host gavel and not a second ready
-toggle. The locked chrome and the half → must-choose rule are below.
+The diagnosis is right. The public table fills to ten, then everyone
+Accepts. There is no host gavel and no Start button. The locked chrome
+and the full-table Accept rule are below.
 
 ## Why this helps a small pool
 
@@ -43,11 +43,9 @@ table is the default place for everyone else.
 ```
 Open Join (or /find_game)
   → public table is the first row, even at 0/10
-  → sit, tap Ready (I will play)
-  → tap Start (I want to deal now) — a different control
-  → footer shows how many have tapped Start vs half of the table
-  → when half have tapped Start, everyone who has not gets a modal
-  → they must tap Start; if they do not, they are kicked
+  → sit and wait (no Ready, no Start, no share link)
+  → when 10 connected sitters fill the table, everyone gets Accept
+  → they have 15 seconds; if they do not Accept, they are kicked (not banned)
   → if enough seats remain, the rest deal
   → a new empty public table appears on Join immediately
 ```
@@ -91,80 +89,38 @@ if the pool actually fills a table.
 Hosted rooms keep today's host button, host kick, and host-leave
 destroys-the-room behaviour.
 
-### Start, not Ready
+### Full table → everyone Accepts
 
-Sitting is the seat. Hosted rooms keep Ready (the host waits, then deals).
-The public table does not: one **Start** button.
+Sitting is the seat. Hosted rooms keep Ready and the host Start / share
+link. The public table has none of those.
 
-| Control | Means | Who |
-|---|---|---|
-| **Start** | Deal **now**. | Every connected sitter. |
+When **connected sitters = maxPlayers** (10), every connected player who
+has not Accepted gets a modal they cannot ignore. One action: **Accept**.
+Clock **15 s**. There is no Nein on this modal — staying and refusing
+is what the kick is for. Leave is still Leave.
 
-Tapping Start does not need a Ready first. Before the must-choose modal
-opens, they may take Start back (count drops). After the modal opens,
-yes is locked.
+If they Accept in time, they stay. If the clock hits and they have not
+Accepted, they are kicked with the away / did-not-choose reason. They
+are **not** banned; they can sit the same public table again.
 
-That same seat cannot tap Start again for **3 minutes**
-(`WANT_START_COOLDOWN_MS`). Retract does not reset the clock. The
-must-choose modal skips the cooldown so a holdout can still answer.
-This stops one impatient person from hammering Start.
+People who already Accepted do **not** get that modal. They see the
+table waiting on the others.
 
-Seats show who has already tapped Start — a brass glow, not a ready
-blot.
-
-### Hint — half the table
-
-The Start control always carries a short hint, even at 1/10. Not a
-one-shot dialog they will dismiss and forget.
-
-Meaning (write real **میز** lines in `fa.ts` / `en.ts` at implement
-time, not these English glosses):
-
-- Idle: you need at least half the people at the table to tap Start.
-- Progress: `{have} از {need}` — how many have tapped, how many are
-  `ceil(connected / 2)`.
-- Cooldown: you can tap Start again in N minutes / seconds.
-
-No Wikipedia paragraph. One line under the buttons is enough. A first
-tap on a disabled Start can open a small confirm with the same sentence
-if the footer feels easy to miss — same copy, not a second explanation.
-
-### Half have tapped Start → the rest must choose
-
-`needed = ceil(connected / 2)`, same idea as `kickVoteYesNeeded`.
-Disconnected seats do not count.
-
-Two phases:
-
-1. **Collecting.** People tap Start on their own. No modal. The
-   footer is the only chrome.
-2. **Must-choose.** The moment `startCount >= needed`, every connected
-   player who has **not** tapped Start gets a modal they cannot ignore.
-   One action: Start. Clock **20 s**. There is no Nein on this modal —
-   staying and refusing is what the kick is for. Leave is still Leave.
-
-If they tap Start in time, they stay. If the clock hits and they have
-  not tapped Start, they are
-kicked with the away / did-not-start reason. They can join the public
-table again.
-
-People who already tapped Start do **not** get that modal. They see
-the table waiting on the holdouts.
+If someone leaves or drops so the table is no longer full, the window
+closes. Filling to 10 opens it again.
 
 Then the engine looks at who is left:
 
-- Remaining connected `>= minPlayers` (5) → `startGame` on those seats.
+- Remaining connected `>= minPlayers` (5) and all remaining Accepted →
+  deal on those seats.
 - Remaining connected `< minPlayers` → **do not deal**. The people who
-  already said Start stay seated. The ones who did not choose are gone.
-  Collecting begins again from the current Start taps.
+  Accepted stay seated. Wait until the table is full again.
 
-That is the hole from “half agreed, kick the rest, always deal.” Six
-sit, three tap Start, three ignore the modal, three remain — the game
-cannot start. Kicking the holdouts is still right (they blocked the
-table). The three who wanted to play wait for two more. Do not pretend
-a 3-player Secret Hitler began.
+Ten sit, two ignore Accept, eight remain — the game can start. Ten sit,
+six ignore Accept, four remain — wait for more people. Do not pretend
+a 4-player Secret Hitler began.
 
-Do **not** add this Start button to hosted rooms. A private table
+Do **not** add this Accept window to hosted rooms. A private table
 already has a host who is supposed to wait for their group.
 
 ### Lists, pin, name
@@ -194,14 +150,14 @@ lobby is pinned on Join **and** listed on `/games` as اتاق انتظار.
 If a **connected** player sits idle in lobby for **5 minutes**, the
 server kicks them and tells them they were away.
 
-Idle means: hosted room, Ready is off; public table, Start has not
+Idle means: hosted room, Ready is off; public table, Accept has not
 been tapped.
 
 | | Rule |
 |---|---|
-| Clock starts | On sit, or when they flip ready → unready (hosted), or retract Start (public). |
-| Clock resets | Hosted: Ready. Public: Start. Disconnect clears the clock. |
-| Pauses | While the must-choose Start modal is open, and while a kick vote is open. |
+| Clock starts | On sit, or when they flip ready → unready (hosted). |
+| Clock resets | Hosted: Ready. Public: Accept. Disconnect clears the clock. |
+| Pauses | While the Accept modal is open, and while a kick vote is open. |
 | Message | `room:closed` with a dedicated reason (not `KICKED` / `HOST_LEFT`). Client copy: they were away; they can join again. |
 | Who | Every non-host seat, every lobby. On the public table there is no host, so every seat. |
 
@@ -222,8 +178,8 @@ corpse seat does not sit on a 4/5 table for an hour.
 The public lobby has no host, so it uses the same kick vote as the game
 page: tap a seat, confirm, Ja / Nein overlay. No Ravi in the waiting
 room. Half of the **connected** sitters (`kickVoteYesNeeded`) is enough.
-Fewer than three connected cannot open a vote. Must-choose Start and a
-kick vote do not overlap; Start taps wait while a vote is open.
+Fewer than three connected cannot open a vote. The Accept window and a
+kick vote do not overlap; Accept waits while a vote is open.
 
 On a **yes**, the server reports to the support group (same kick letter
 as in-game), removes the seat, and bans that player's sit identity
@@ -232,14 +188,14 @@ reserved-seat reconnect both refuse with `BANNED`. They can sit a
 later public lobby — that is a new room after this one deals.
 
 The same ban list is written by an in-game kick that passes, and by a
-hosted-room host kick. AFK and must-choose silence do **not** ban;
+hosted-room host kick. AFK and Accept silence do **not** ban;
 those people can sit again.
 
 ## What stays the same
 
 - Server is the source of truth. The client never starts a game locally.
-- `GameEngine` is the only mutator. Who has tapped Start, and whether
-  the must-choose clock is running, is lobby state on the engine (same
+- `GameEngine` is the only mutator. Who has Accepted, and whether
+  the full-table clock is running, is lobby state on the engine (same
   family as `kickVote`: snapshot + timer owned by `SocketHandler`).
 - `MIN_PLAYERS` / role mix / night deal do not change.
 - Password rooms, group `/create`, share codes, mid-game join still
@@ -252,12 +208,12 @@ those people can sit again.
 | Piece | Where |
 |---|---|
 | Public flag on the room | `RoomOptions` / `Room.summary()` in `shared/` |
-| Never assign host; want-start set; must-choose; AFK clock | `shared/src/engine/GameEngine.ts` lobby methods |
-| Commands | `shared/src/types/events.ts` + `clientMessages.ts` (`player:wantStart` / retract, must-choose is the same want) |
+| Never assign host; Accept set; full-table window; AFK clock | `shared/src/engine/GameEngine.ts` lobby methods |
+| Commands | `shared/src/types/events.ts` + `clientMessages.ts` (`player:wantStart` is Accept; retract stays unused on this table) |
 | Ensure-one-lobby on boot and after start | `server/src/rooms/` + `server/src/app.ts` boot (after `restoreLiveRooms`) |
 | Empty public room must persist | `SocketHandler` — do not destroy an empty public lobby |
 | Pin + always list | `RoomRepository.listPublic` / `listAll`, Join tab, `server/src/bale/commands.ts` |
-| Footer + hint + must-choose modal | `WaitingRoomScreen` — Start only; modal is one Start action plus a clock |
+| Footer hint + Accept modal | `WaitingRoomScreen` — no Start, no share; modal is one Accept action plus a clock |
 | Public lobby kick vote | `requestKick` in lobby when `kind: public`; same overlay as the game page |
 | Ban on this room | `Room.bannedJoinKeys` — set on vote-yes and host kick; checked at join |
 | Copy | `fa.ts` **and** `en.ts` — [`persian.md`](./persian.md) **میز** |
@@ -269,9 +225,9 @@ itself stays behind `FEATURE_PUBLIC_TABLE`.
 ## Follow-ups (not v1)
 
 - A second public lobby when the first is full and still in lobby.
-- Auto-start when `minPlayers` have tapped Start for N seconds with no
-  holdouts. Not v1 — the must-choose modal is the delay valve.
-- Giving hosted rooms the same per-player Start.
+- Auto-start when `minPlayers` have Accepted for N seconds with no
+  holdouts. Not v1 — the full-table Accept modal is the delay valve.
+- Giving hosted rooms the same per-player Accept.
 - Kicking a hosted-room host for AFK (would need host migration instead
   of destroy).
 
@@ -279,14 +235,13 @@ itself stays behind `FEATURE_PUBLIC_TABLE`.
 
 - Several always-on public tables “to give choice.” That re-fragments
   the same small pool.
-- Start as soon as anyone taps Start, ignoring ready and ignoring half.
-  The ready toggle would become a lie, and one impatient sitter would
-  deal a 2-player table.
+- Deal as soon as anyone Accepts, ignoring a full table. One impatient
+  sitter would deal a 2-player table.
 - A Ja / Nein political vote that everyone casts at once when one
-  person “calls start.” Start **is** the vote; the modal is only for
-  people who have not tapped it yet.
-- Dealing after the must-choose kicks if fewer than `minPlayers` remain.
+  person “calls start.” Filling the table **is** the call; Accept is
+  only “I am here.”
+- Dealing after the Accept kicks if fewer than `minPlayers` remain.
 - Majority of **all seated including disconnected**. Disconnected
-  seats do not tap Start and are already dropped at deal.
+  seats do not Accept and are already dropped at deal.
 - A public table with a rotating host. Then we inherit host-leave
   destroys-the-room and “waiting for the host.”

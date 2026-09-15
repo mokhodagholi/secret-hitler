@@ -6,7 +6,6 @@ import {
   NOMINATION_DURATION_MS,
   Phase,
   START_CHOICE_DURATION_MS,
-  WANT_START_COOLDOWN_MS,
   VOTE_DURATION_MS,
   isOpeningNight,
   isPublicTable,
@@ -55,7 +54,7 @@ export interface EngineEvents extends Record<string, unknown> {
   nominationTimerChanged: { endsAt: number | null };
   /** Table kick-vote window opened or closed; server (un)schedules. */
   kickVoteTimerChanged: { endsAt: number | null };
-  /** Public-table must-choose window opened or closed; server (un)schedules. */
+  /** Public-table Accept window opened or closed; server (un)schedules. */
   startChoiceTimerChanged: { endsAt: number | null };
   /** Lobby AFK clock for one seat; dueAt null cancels. */
   lobbyAfkTimerChanged: { playerId: string; dueAt: number | null };
@@ -256,13 +255,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!want && room.startChoice) {
       return err('INVALID_ACTION', 'Start is locked while the table decides.');
     }
-    if (
-      want &&
-      !room.startChoice &&
-      player.wantStartAt != null &&
-      Date.now() < player.wantStartAt + WANT_START_COOLDOWN_MS
-    ) {
-      return err('INVALID_ACTION', 'Wait before tapping Start again.');
+    if (want && !room.startChoice) {
+      return err('INVALID_ACTION', 'Wait until the table is full.');
     }
     if (player.wantsStart === want) return null;
     player.wantsStart = want;
@@ -961,18 +955,16 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       this.clearStartChoice();
       return;
     }
-    const needed = kickVoteYesNeeded(connected.length);
-    const startCount = connected.filter((player) => player.wantsStart).length;
-    if (startCount >= needed && connected.every((player) => player.wantsStart)) {
+    if (connected.length < room.options.maxPlayers) {
+      this.clearStartChoice();
+      return;
+    }
+    if (connected.every((player) => player.wantsStart)) {
       this.clearStartChoice();
       this.maybeDealPublicTable();
       return;
     }
-    if (startCount >= needed) {
-      this.openStartChoice();
-      return;
-    }
-    this.clearStartChoice();
+    this.openStartChoice();
   }
 
   private maybeDealPublicTable(): void {
