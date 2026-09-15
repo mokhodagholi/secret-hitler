@@ -82,9 +82,11 @@ if the pool actually fills a table.
   the match has started.
 - Last sitter leaving does **not** destroy the room. The empty lobby
   stays in `RoomRepository` and on disk.
-- After a process restart, reconnect grace must **not** delete an empty
-  public lobby the way it drops empty hosted rooms. Join and `/find_game`
-  also call `ensurePublicLobby` so a missing evergreen seat heals itself.
+- After a process restart, hosted waiting rooms and finished games are
+  dropped (every socket is gone, so they look empty). In-progress matches
+  keep a reconnect window. That window must **not** delete an empty public
+  lobby. Join and `/find_game` also call `ensurePublicLobby` so a missing
+  evergreen seat heals itself.
 
 Hosted rooms keep today's host button and host-leave destroys-the-room
 behaviour. Host kick in the waiting room is behind `lobbyKick`

@@ -6,8 +6,9 @@ import type { SocketHandler } from '../ws/SocketHandler';
 import type { LiveRoomStore } from './LiveRoomStore';
 
 /**
- * Rebuild engines from the last durable snapshot. One bad row must not
- * prevent the rest of the tables from coming back.
+ * Rebuild engines from the last durable snapshot. Hosted lobbies and
+ * finished games are adopted then dropped (they look empty after boot).
+ * One bad row must not prevent the rest of the tables from coming back.
  */
 export async function restoreLiveRooms(args: {
   repo: RoomRepository;
@@ -30,6 +31,7 @@ export async function restoreLiveRooms(args: {
         });
       }
       args.sockets.adoptRestored(entry);
+      if (!args.repo.get(room.id)) continue;
       args.recorder.attach(entry);
       restored += 1;
     } catch (error) {

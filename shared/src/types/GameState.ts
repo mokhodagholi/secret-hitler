@@ -320,7 +320,7 @@ export function kickVoteYesNeeded(livingCount: number): number {
 /** How long a disconnected host keeps the host seat before migration, in ms. */
 export const HOST_MIGRATION_GRACE_MS = 30_000;
 
-/** After a process restart, keep empty tables until clients can reconnect. */
+/** After a process restart, keep an in-progress match until clients reconnect. */
 export const LIVE_ROOM_RECONNECT_GRACE_MS = 5 * 60_000;
 
 /** Opening night: face-down cards fly to every seat. */

@@ -24,6 +24,11 @@ import {
 import { ConnectionRegistry } from './ConnectionRegistry';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomEntry, RoomRepository } from '../rooms/RoomRepository';
+import {
+  isInProgressLiveGame,
+  shouldKeepEmptyRoom,
+  shouldPersistLiveRoom,
+} from '../rooms/liveRoomPolicy';
 import type { TokenStore } from '../rooms/TokenStore';
 import type { BaleSeatIndex } from '../bale/BaleSeatIndex';
 import type { LiveRoomStore } from '../rooms/LiveRoomStore';
@@ -68,7 +73,7 @@ export class SocketHandler {
   private readonly lobbyAfkTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room pending host-migration timers (disconnect grace period). */
   private readonly hostGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  /** Rooms that just came back from disk — do not wipe them while empty. */
+  /** In-progress rooms that just came back from disk — keep them while empty. */
   private readonly reconnectGrace = new Map<string, ReturnType<typeof setTimeout>>();
   /** Serialize durable writes so a token issue cannot lose a racing snapshot. */
   private readonly persistChain = new Map<string, Promise<void>>();
@@ -197,14 +202,7 @@ export class SocketHandler {
         }
       }
       void this.persistRoom(room.id);
-      if (
-        room.isEmpty &&
-        !this.reconnectGrace.has(room.id) &&
-        !(isPublicTable(room.options) && room.phase === 'lobby')
-      ) {
-        this.noticeGroupRoomClosed(entry);
-        this.removeRoom(room.id);
-      }
+      this.dropEmptyRoomIfUnkept(room.id);
     });
 
     engine.on('roleAssigned', ({ playerId }) => {
@@ -290,13 +288,19 @@ export class SocketHandler {
   }
 
   /**
-   * Wire a room that survived a process restart: timers, host grace, and a
-   * window so `isEmpty` does not delete it before anyone reconnects.
+   * Wire a room that survived a process restart. In-progress matches get a
+   * reconnect window so `isEmpty` does not delete them before anyone returns.
+   * Hosted lobbies and finished games are already empty (every socket is gone)
+   * and are dropped immediately.
    */
   adoptRestored(entry: RoomEntry): void {
     this.registerEngine(entry);
+    if (isInProgressLiveGame(entry.room)) {
+      this.beginReconnectGrace(entry.room.id);
+    } else if (this.dropEmptyRoomIfUnkept(entry.room.id)) {
+      return;
+    }
     this.restoreDeadlines(entry);
-    this.beginReconnectGrace(entry.room.id);
     this.scheduleHostGrace(entry.room.id);
   }
 
@@ -321,10 +325,25 @@ export class SocketHandler {
     if (!this.live) return;
     const entry = this.repo.get(roomId);
     if (!entry) return;
+    if (!shouldPersistLiveRoom(entry.room)) {
+      await this.live.remove(roomId);
+      return;
+    }
     await this.live.save(roomId, entry.room.code, {
       room: entry.room.toSnapshot(),
       tokens: this.tokens.listForRoom(roomId),
     });
+  }
+
+  /** Drop an empty hosted / finished table; public lobby and grace stay. */
+  private dropEmptyRoomIfUnkept(roomId: string): boolean {
+    const entry = this.repo.get(roomId);
+    if (!entry?.room.isEmpty) return false;
+    if (shouldKeepEmptyRoom(entry.room, this.reconnectGrace.has(roomId))) return false;
+    this.noticeGroupRoomClosed(entry);
+    this.removeRoom(roomId);
+    this.ensurePublicLobby();
+    return true;
   }
 
   private restoreDeadlines(entry: RoomEntry): void {
@@ -392,12 +411,7 @@ export class SocketHandler {
     this.clearReconnectGrace(roomId);
     const timer = setTimeout(() => {
       this.reconnectGrace.delete(roomId);
-      const entry = this.repo.get(roomId);
-      if (!entry?.room.isEmpty) return;
-      // Same rule as stateChanged — an empty public lobby must stay on Join.
-      if (isPublicTable(entry.room.options) && entry.room.phase === 'lobby') return;
-      this.removeRoom(roomId);
-      this.ensurePublicLobby();
+      this.dropEmptyRoomIfUnkept(roomId);
     }, LIVE_ROOM_RECONNECT_GRACE_MS);
     this.reconnectGrace.set(roomId, timer);
   }
@@ -793,10 +807,7 @@ export class SocketHandler {
       this.destroyRoom(remaining);
       return;
     }
-    if (remaining.room.isEmpty && !isPublicTable(remaining.room.options)) {
-      this.noticeGroupRoomClosed(remaining);
-      this.destroyRoom(remaining);
-    }
+    this.dropEmptyRoomIfUnkept(roomId);
   }
 
   private leaveRoom(context: GameContext): void {
