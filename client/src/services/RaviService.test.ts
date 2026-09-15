@@ -36,6 +36,15 @@ describe('RaviService', () => {
     expect(play).toHaveBeenCalled();
   });
 
+  it('Should idle after queued lines finish', async () => {
+    const ravi = makeRavi(false);
+    void ravi.speak('night.end');
+    void ravi.speak('discuss.start');
+    await ravi.idle();
+    expect(ravi.line()).toBe('Okay. Time to talk.');
+    expect(ravi.speaking()).toBe(false);
+  });
+
   it('Should interpolate names into the subtitle', async () => {
     const ravi = makeRavi(false);
     await ravi.speak('president.first', { name: 'Ana' });

@@ -151,6 +151,11 @@ export class RaviService {
     return run;
   }
 
+  /** Wait until every queued line has finished (or been cancelled). */
+  idle(): Promise<void> {
+    return this.queue.then(() => {});
+  }
+
   /** Drop the current clip so a new beat can take the speaker. */
   cancel(): void {
     this.epoch += 1;
@@ -200,9 +205,10 @@ export class RaviService {
     if (!audio) return this.hold(generation);
     return new Promise((resolve) => {
       const finish = () => {
-        if (this.generation !== generation) return;
-        this.setSpeaking(false);
-        if (this.current === audio) this.current = null;
+        if (this.generation === generation) {
+          this.setSpeaking(false);
+          if (this.current === audio) this.current = null;
+        }
         resolve();
       };
       audio.addEventListener('ended', finish, { once: true });

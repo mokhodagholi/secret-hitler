@@ -333,6 +333,16 @@ describe('ChatPanel', () => {
       });
     });
     expect(screen.getByRole('button', { name: en.game.muteSelf })).toBeTruthy();
+
+    fireEvent.pointerDown(mic, { button: 0 });
+    fireEvent.click(mic);
+    await waitFor(() => {
+      expect(harness.socket.lastSent('voice:mute')).toEqual({
+        type: 'voice:mute',
+        muted: true,
+      });
+    });
+    expect(screen.getByRole('button', { name: en.game.unmuteSelf })).toBeTruthy();
   });
 
   it('Should keep ballots out of the chat feed during a vote', () => {

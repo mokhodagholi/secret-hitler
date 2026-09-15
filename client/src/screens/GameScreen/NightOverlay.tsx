@@ -65,7 +65,8 @@ function glanceLine(role: Role, playerCount: number): RaviLineId {
       ? 'private.nightFascistSmall'
       : 'private.nightFascistLarge';
   }
-  // Liberals and Hitler: keep your eyes closed.
+  if (role === 'hitler' && playerCount <= 6) return 'private.nightHitlerSmall';
+  // Liberals, and Hitler at 7–10: keep your eyes closed.
   return 'private.nightLiberal';
 }
 
@@ -113,7 +114,8 @@ function undealtCardTransform(index: number, count: number): string {
 
 /**
  * Opening ceremony: face-down cards split to every seat, night falls with
- * the private look, then the team glance. Beats stay on the shared clock.
+ * the private look, then the team glance. Beats follow the shared clock, but
+ * they do not cut Ravi — the next sheet waits until the current line ends.
  */
 export function NightOverlay(props: NightOverlayProps) {
   const { i18n, ravi, animation, sound } = useApp();
@@ -159,22 +161,29 @@ export function NightOverlay(props: NightOverlayProps) {
   function openLook(): void {
     if (closed || beat() === 'look' || beat() === 'glance') return;
     clearTimeout(lookTimer);
-    ravi.cancel();
-    setBeat('look');
-    sound.play('night-fall');
-    sound.play('card-flip');
-    void ravi.speak('night.start');
-    void ravi.speak(lookKey(props.role).slice('ravi.'.length) as RaviLineId);
+    void (async () => {
+      await ravi.idle();
+      if (closed || beat() === 'look' || beat() === 'glance') return;
+      setBeat('look');
+      sound.play('night-fall');
+      sound.play('card-flip');
+      await ravi.speak('night.start');
+      if (closed || beat() === 'glance') return;
+      await ravi.speak(lookKey(props.role).slice('ravi.'.length) as RaviLineId);
+    })();
   }
 
   function openGlance(): void {
     if (closed || beat() === 'glance') return;
     clearTimeout(lookTimer);
     clearTimeout(glanceTimer);
-    ravi.cancel();
-    setBeat('glance');
-    sound.play('glance-tick');
-    void ravi.speak(glanceLine(props.role, props.playerCount));
+    void (async () => {
+      await ravi.idle();
+      if (closed || beat() === 'glance') return;
+      setBeat('glance');
+      sound.play('glance-tick');
+      await ravi.speak(glanceLine(props.role, props.playerCount));
+    })();
   }
 
   function finish(): void {
@@ -183,21 +192,24 @@ export function NightOverlay(props: NightOverlayProps) {
     clearTimeout(lookTimer);
     clearTimeout(glanceTimer);
     clearTimeout(doneTimer);
-    ravi.cancel();
-    sound.play('night-lift');
-    void ravi.speak('night.end');
-    void ravi.speak(
-      props.presidentIsYou ? 'president.firstYou' : 'president.first',
-      { name: props.presidentName },
-    );
-    props.onDone();
+    void (async () => {
+      await ravi.idle();
+      sound.play('night-lift');
+      await ravi.speak('night.end');
+      await ravi.speak(
+        props.presidentIsYou ? 'president.firstYou' : 'president.first',
+        { name: props.presidentName },
+      );
+      await ravi.speak('discuss.start');
+      props.onDone();
+    })();
   }
 
   const showingLook = () => beat() === 'look';
   const seeingTeam = () => {
     if (beat() !== 'glance' || props.role === 'liberal') return false;
-    // Hitler always keeps eyes closed; Fascists look at their teammates.
-    if (props.role === 'hitler') return false;
+    // 5–6: Hitler looks with the Fascists. 7–10: he keeps his eyes closed.
+    if (props.role === 'hitler') return props.playerCount <= 6;
     return true;
   };
   const raisingHand = () =>

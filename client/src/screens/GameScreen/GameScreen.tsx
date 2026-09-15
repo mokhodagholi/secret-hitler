@@ -929,7 +929,6 @@ export function GameScreen() {
                   startedAt={state().discussionDeadline?.startedAt ?? Date.now()}
                   onDone={() => {
                     setCeremonyOpen(false);
-                    void ravi.speak('discuss.start');
                   }}
                 />
               )}

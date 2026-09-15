@@ -73,11 +73,13 @@ describe('NightOverlay', () => {
     );
   });
 
-  it('Should open night with the private role after the deal', () => {
+  it('Should open night with the private role after the deal', async () => {
     const harness = buildHarness({ seated: true });
     renderOverlay(harness, { startedAt: Date.now() - DEAL_MS - 80 });
 
-    expect(screen.getByText(en.ravi.night.start)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(en.ravi.night.start)).toBeTruthy();
+    });
     expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.game.gotIt })).toBeNull();
   });
@@ -117,9 +119,9 @@ describe('NightOverlay', () => {
     const harness = buildHarness({ seated: true });
     renderOverlay(harness, { startedAt: Date.now() - GLANCE_AT_MS - 80 });
 
-    expect(
-      screen.getByLabelText(en.ravi.private.nightLiberal),
-    ).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText(en.ravi.private.nightLiberal)).toBeTruthy();
+    });
     expect(screen.queryByText(en.ravi.private.nightLiberal)).toBeNull();
     await waitFor(() => {
       expect(harness.services.ravi.line()).toBe(en.ravi.private.nightLiberal);
@@ -134,7 +136,9 @@ describe('NightOverlay', () => {
       teammates: [makePlayer({ id: 'ana', name: 'Ana', seat: 1, role: 'hitler' })],
     });
 
-    expect(screen.getByText(en.ravi.private.nightFascistSmall)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(en.ravi.private.nightFascistSmall)).toBeTruthy();
+    });
     expect(screen.getByText('Ana')).toBeTruthy();
     expect(screen.getByText(en.role.hitler)).toBeTruthy();
     expect(document.querySelector('[data-teammate-seat]')?.textContent).toBe('2');
@@ -143,15 +147,37 @@ describe('NightOverlay', () => {
     });
   });
 
-  it('Should tell Hitler to keep their eyes closed', async () => {
+  it('Should show teammates to Hitler on a 5–6 player table', async () => {
     const harness = buildHarness({ seated: true });
     renderOverlay(harness, {
       role: 'hitler',
+      playerCount: 5,
       startedAt: Date.now() - GLANCE_AT_MS - 80,
       teammates: [makePlayer({ id: 'ana', name: 'Ana', seat: 1, role: 'fascist' })],
     });
 
-    expect(screen.getByLabelText(en.ravi.private.nightLiberal)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(en.ravi.private.nightHitlerSmall)).toBeTruthy();
+    });
+    expect(screen.getByText('Ana')).toBeTruthy();
+    expect(screen.getByText(en.role.fascist)).toBeTruthy();
+    await waitFor(() => {
+      expect(harness.services.ravi.line()).toBe(en.ravi.private.nightHitlerSmall);
+    });
+  });
+
+  it('Should tell Hitler to keep their eyes closed at 7–10', async () => {
+    const harness = buildHarness({ seated: true });
+    renderOverlay(harness, {
+      role: 'hitler',
+      playerCount: 7,
+      startedAt: Date.now() - GLANCE_AT_MS - 80,
+      teammates: [makePlayer({ id: 'ana', name: 'Ana', seat: 1, role: 'fascist' })],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(en.ravi.private.nightLiberal)).toBeTruthy();
+    });
     expect(screen.queryByText('Ana')).toBeNull();
     await waitFor(() => {
       expect(harness.services.ravi.line()).toBe(en.ravi.private.nightLiberal);

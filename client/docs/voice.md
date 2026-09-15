@@ -39,9 +39,13 @@ Join starts muted after opening night. The browser microphone prompt
 waits until day — it must not sit on the role cards. Tap the mic to speak.
 That same tap calls `getUserMedia` immediately (no permission modal hop
 first), and on Android it must be `pointerdown` — `click` is not a user
-gesture in Bale’s WebView. If capture is blocked, a retry dialog stays for
-`grantMicAccess` on the same pointerdown. The host page should allow
-microphone (`Permissions-Policy: microphone=*`). A tight `(self)` policy
+gesture in Bale’s WebView. The mic button must not also handle `click`
+after that `pointerdown`, or mute immediately unmutes again. If capture is
+blocked, a retry dialog stays for `grantMicAccess` on the same pointerdown.
+Once the OS / WebView has granted the mic for this origin, later taps only
+toggle mute — they do not show the sheet again unless the user revoked it
+in phone settings. The host page should allow microphone
+(`Permissions-Policy: microphone=*`). A tight `(self)` policy
 makes `getUserMedia` fail with `NotAllowedError` and **no** OS sheet.
 The client waits for the microphone before `voice:join`, queues `voice:peer`
 until the recv transport exists, and passes the server’s ICE list

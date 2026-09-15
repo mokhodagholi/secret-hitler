@@ -55,6 +55,7 @@ export function ChatPanel(props: ChatPanelProps) {
   let dragStartHeight = CHAT_DEFAULT;
   let lastExpanded = CHAT_DEFAULT;
   let dragging = false;
+  let micHandledByPointer = false;
 
   const talkingAllowed = () => props.talkingAllowed !== false;
   const slowSecondsLeft = () => {
@@ -270,10 +271,19 @@ export function ChatPanel(props: ChatPanelProps) {
               aria-pressed={!voice.selfMuted()}
               onPointerDown={(event) => {
                 if (event.button !== 0) return;
+                // Swallow the synthetic click — both handlers would toggle twice
+                // and the mic could never stay muted.
+                micHandledByPointer = true;
                 event.preventDefault();
                 voice.toggleSelfMute();
               }}
-              onClick={() => voice.toggleSelfMute()}
+              onClick={() => {
+                if (micHandledByPointer) {
+                  micHandledByPointer = false;
+                  return;
+                }
+                voice.toggleSelfMute();
+              }}
             >
               <Icon name={voice.selfMuted() ? 'micOff' : 'mic'} size={20} />
             </button>

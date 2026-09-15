@@ -318,7 +318,7 @@ describe('GameScreen — voting', () => {
     expect(screen.getByPlaceholderText(en.game.chatSilentPlaceholder)).toBeTruthy();
   });
 
-  it('Should open the private role look after the deal and night', () => {
+  it('Should open the private role look after the deal and night', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -333,7 +333,9 @@ describe('GameScreen — voting', () => {
       you: { ...view.you, role: 'liberal' },
     });
 
-    expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(en.ravi.private.youLiberal)).toBeTruthy();
+    });
     expect(screen.queryByRole('button', { name: en.game.gotIt })).toBeNull();
     expect(screen.getByRole('dialog', { name: en.game.yourRole })).toBeTruthy();
     expect(screen.queryByText(en.game.government.first)).toBeNull();
@@ -354,7 +356,9 @@ describe('GameScreen — voting', () => {
       you: { ...view.you, role: 'liberal' },
     });
 
-    expect(screen.getByLabelText(en.ravi.private.nightLiberal)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByLabelText(en.ravi.private.nightLiberal)).toBeTruthy();
+    });
     expect(screen.queryByRole('button', { name: en.game.gotIt })).toBeNull();
     expect(screen.queryByText(en.game.government.first)).toBeNull();
     await waitFor(() => {

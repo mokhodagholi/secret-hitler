@@ -48,6 +48,7 @@ function Notice(props: {
   autoCloseMs?: number;
 }) {
   const timed = () => props.autoCloseMs != null && props.autoCloseMs > 0;
+  let confirmHandledByPointer = false;
 
   onMount(() => {
     if (!timed()) return;
@@ -80,12 +81,19 @@ function Notice(props: {
               onPointerDown={
                 props.confirmOnPointerDown
                   ? (event) => {
+                      confirmHandledByPointer = true;
                       event.preventDefault();
                       props.onConfirm?.();
                     }
                   : undefined
               }
-              onClick={() => props.onConfirm?.()}
+              onClick={() => {
+                if (props.confirmOnPointerDown && confirmHandledByPointer) {
+                  confirmHandledByPointer = false;
+                  return;
+                }
+                props.onConfirm?.();
+              }}
             >
               {props.confirmLabel}
             </Button>
