@@ -51,6 +51,16 @@ describe('GameEngine — public table', () => {
     expect(engine.room.phase).not.toBe(Phase.GameOver);
   });
 
+  it('Should open Accept when a ten-seat public lobby is capped to six', () => {
+    const engine = publicEngine(5, 10);
+    seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']);
+    expect(engine.room.startChoice).toBeNull();
+    engine.applyPublicSeatCap(6);
+    expect(engine.room.options.maxPlayers).toBe(6);
+    expect(engine.room.startChoice).not.toBeNull();
+    expect(engine.room.phase).toBe(Phase.Lobby);
+  });
+
   it('Should open an Accept window only when the public table is full', () => {
     const engine = publicEngine(5, 6);
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eli']);

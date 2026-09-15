@@ -1,4 +1,12 @@
-import { GameEngine, Phase, PUBLIC_TABLE_NAME, Room, RoomFactory, type RoomCreateArgs } from '@secret-hitler/shared';
+import {
+  GameEngine,
+  Phase,
+  PUBLIC_TABLE_MAX_PLAYERS,
+  PUBLIC_TABLE_NAME,
+  Room,
+  RoomFactory,
+  type RoomCreateArgs,
+} from '@secret-hitler/shared';
 
 /**
  * Repository pattern — the single owner of the `roomId → { room, engine }`
@@ -85,7 +93,10 @@ export class RoomRepository {
     const existing = [...this.rooms.values()].find(
       (entry) => entry.room.options.kind === 'public' && entry.room.phase === Phase.Lobby,
     );
-    if (existing) return null;
+    if (existing) {
+      existing.engine.applyPublicSeatCap(PUBLIC_TABLE_MAX_PLAYERS);
+      return null;
+    }
     return this.create({ name: PUBLIC_TABLE_NAME, kind: 'public' });
   }
 }

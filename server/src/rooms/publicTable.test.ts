@@ -28,10 +28,24 @@ describe('public table', () => {
     const publicRooms = built.repo.listPublic().filter((room) => room.kind === 'public');
     expect(publicRooms).toHaveLength(1);
     expect(publicRooms[0].playerCount).toBe(0);
+    expect(publicRooms[0].maxPlayers).toBe(6);
     expect(publicRooms[0].phase).toBe(Phase.Lobby);
 
     const { body } = await httpJson<RoomSummary[]>(built.app, 'GET', '/api/rooms');
     expect(body[0]?.kind).toBe('public');
+  });
+
+  it('Should cap a restored public lobby to six seats', async () => {
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+    });
+    app = built.app;
+    const lobby = built.repo.listPublic().find((room) => room.kind === 'public');
+    expect(lobby).toBeTruthy();
+    const entry = built.repo.get(lobby!.id)!;
+    entry.room.options.maxPlayers = 10;
+    built.sockets.ensurePublicLobby();
+    expect(entry.room.options.maxPlayers).toBe(6);
   });
 
   it('Should refuse a second public lobby while one is still waiting', async () => {
@@ -69,18 +83,7 @@ describe('public table', () => {
     expect(waiting).toBeTruthy();
     const entry = built.repo.get(waiting!.id)!;
     const ids: string[] = [];
-    for (const name of [
-      'Ana',
-      'Ben',
-      'Cal',
-      'Dia',
-      'Eli',
-      'Fay',
-      'Gus',
-      'Hal',
-      'Ivy',
-      'Jen',
-    ]) {
+    for (const name of ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']) {
       const player = entry.engine.addPlayer(name);
       expect('id' in player).toBe(true);
       if ('id' in player) ids.push(player.id);

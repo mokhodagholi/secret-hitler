@@ -985,6 +985,20 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     return this.room.players.filter((player) => player.connected);
   }
 
+  /**
+   * Deploy may drop the public cap onto a lobby that was still 10-seat.
+   * Open Accept immediately if that lobby is already full.
+   */
+  applyPublicSeatCap(maxPlayers: number): void {
+    if (!isPublicTable(this.room.options) || this.room.phase !== Phase.Lobby) {
+      return;
+    }
+    if (this.room.options.maxPlayers === maxPlayers) return;
+    this.room.options.maxPlayers = maxPlayers;
+    this.maybeAdvancePublicStart();
+    this.changed();
+  }
+
   private maybeAdvancePublicStart(): void {
     const room = this.room;
     if (!isPublicTable(room.options) || room.phase !== Phase.Lobby) return;

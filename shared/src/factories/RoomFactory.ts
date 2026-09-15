@@ -1,6 +1,7 @@
 import {
   MAX_PLAYERS,
   MIN_PLAYERS,
+  PUBLIC_TABLE_MAX_PLAYERS,
   SUPPORTED_MIN_PLAYERS,
   type MessengerKind,
   type RoomOptions,
@@ -33,7 +34,9 @@ export class RoomFactory {
       SUPPORTED_MIN_PLAYERS,
       MAX_PLAYERS,
     );
-    const maxPlayers = clamp(args.maxPlayers ?? MAX_PLAYERS, minPlayers, MAX_PLAYERS);
+    const defaultMax =
+      args.kind === 'public' ? PUBLIC_TABLE_MAX_PLAYERS : MAX_PLAYERS;
+    const maxPlayers = clamp(args.maxPlayers ?? defaultMax, minPlayers, MAX_PLAYERS);
     const options: RoomOptions = {
       name: args.name.trim() || 'Untitled Room',
       hasPassword: args.passwordHash != null,

@@ -62,6 +62,8 @@ export interface RoomOptions {
 
 /** Stored name for the evergreen lobby; UIs localize via `kind`. */
 export const PUBLIC_TABLE_NAME = 'میز عمومی';
+/** Public Accept opens at this many connected sitters — not {@link MAX_PLAYERS}. */
+export const PUBLIC_TABLE_MAX_PLAYERS = 6;
 
 export function isPublicTable(options: Pick<RoomOptions, 'kind'>): boolean {
   return options.kind === 'public';

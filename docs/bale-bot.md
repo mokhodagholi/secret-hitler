@@ -170,7 +170,7 @@ Same list the mini-app Join tab uses: live rooms still in **lobby**, with
 at least one empty seat. Password rooms are included (🔒). In-progress
 games are not. The public table
 ([`public-table.md`](./public-table.md)) is always the first line when
-`FEATURE_PUBLIC_TABLE` is on, including `0/10` — the empty-state Create
+`FEATURE_PUBLIC_TABLE` is on, including `0/6` — the empty-state Create
 button is only for a missing table (a bug).
 
 Each line:

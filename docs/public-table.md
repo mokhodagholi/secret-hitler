@@ -18,11 +18,11 @@ table ([`mini-app.md`](./mini-app.md)); this is how the lobby itself helps.
 | When it starts, spawn a fresh empty public lobby | Yes. Join must never lack one. |
 | Show it on Join **and** in `/games` / in-progress lists | Yes. Pin it on Join. |
 | Every sitter has a **Start** button, separate from Ready | No. The public table has no Start and no share link. |
-| When the table is full (10), everyone must Accept | Yes — 15 s. Silence is a kick (not a ban), then deal if a legal table remains. |
+| When the table is full (6), everyone must Accept | Yes — 15 s. Silence is a kick (not a ban), then deal if a legal table remains. |
 | 5-minute lobby AFK kick on **every** room | Yes, with the host exception below. |
 | Vote to remove someone in the public lobby, same as in-game | Yes. Half yes → kick, report, and ban from **that** room. |
 
-The diagnosis is right. The public table fills to ten, then everyone
+The diagnosis is right. The public table fills to six, then everyone
 Accepts. There is no host gavel and no Start button. The locked chrome
 and the full-table Accept rule are below.
 
@@ -42,9 +42,9 @@ table is the default place for everyone else.
 
 ```
 Open Join (or /find_game)
-  → public table is the first row, even at 0/10
+  → public table is the first row, even at 0/6
   → sit and wait (no Ready, no Start, no share link)
-  → when 10 connected sitters fill the table, everyone gets Accept
+  → when 6 connected sitters fill the table, everyone gets Accept
   → they have 15 seconds; if they do not Accept, they are kicked (not banned)
   → if enough seats remain, the rest deal
   → a new empty public table appears on Join immediately
@@ -67,7 +67,7 @@ the next empty public table in the same turn so Join does not flicker
 empty. The game that just started keeps its code and seats; it is a
 normal match from then on.
 
-V1 does **not** open a second public lobby when the current one is 10/10
+V1 does **not** open a second public lobby when the current one is 6/6
 and still waiting. The row stays, marked full. Spillover is a follow-up
 if the pool actually fills a table.
 
@@ -97,7 +97,7 @@ behaviour. Host kick in the waiting room is behind `lobbyKick`
 Sitting is the seat. Hosted rooms keep Ready and the host Start / share
 link. The public table has none of those.
 
-When **connected sitters = maxPlayers** (10), every connected player who
+When **connected sitters = maxPlayers** (6), every connected player who
 has not Accepted gets a modal they cannot ignore. One action: **Accept**.
 Clock **15 s**. There is no Nein on this modal — staying and refusing
 is what the kick is for. Leave is still Leave.
@@ -110,7 +110,7 @@ People who already Accepted do **not** get that modal. They see the
 table waiting on the others.
 
 If someone leaves or drops so the table is no longer full, the window
-closes. Filling to 10 opens it again.
+closes. Filling to 6 opens it again.
 
 Then the engine looks at who is left:
 
@@ -137,7 +137,7 @@ already has a host who is supposed to wait for their group.
 | fa | میز عمومی |
 | en | Public table |
 
-Join always shows that row, including `0/10`. Empty state “no rooms”
+Join always shows that row, including `0/6`. Empty state “no rooms”
 only appears if the public table is somehow missing (a bug). `/find_game`
 must not send people to Create when the public table exists.
 
