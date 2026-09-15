@@ -57,6 +57,22 @@ describe('public table', () => {
     expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(1);
   });
 
+  it('Should drop an empty leftover public lobby from the room list', async () => {
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+    });
+    app = built.app;
+    const original = built.repo.listPublic().find((room) => room.kind === 'public');
+    expect(original).toBeTruthy();
+    built.repo.create({ name: 'میز عمومی', kind: 'public' });
+    expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(2);
+
+    built.sockets.ensurePublicLobby();
+    const publicRooms = built.repo.listPublic().filter((room) => room.kind === 'public');
+    expect(publicRooms).toHaveLength(1);
+    expect(publicRooms[0].id).toBe(original!.id);
+  });
+
   it('Should keep an empty public lobby after the last sitter leaves', async () => {
     const built = await buildServer({
       flags: { ...DEFAULT_FLAGS, publicTable: true },

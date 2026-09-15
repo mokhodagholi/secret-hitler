@@ -90,14 +90,34 @@ export class RoomRepository {
    * entry, or null when a lobby-phase public table already exists.
    */
   ensurePublicLobby(): RoomEntry | null {
-    const existing = [...this.rooms.values()].find(
-      (entry) => entry.room.options.kind === 'public' && entry.room.phase === Phase.Lobby,
-    );
-    if (existing) {
-      existing.engine.applyPublicSeatCap(PUBLIC_TABLE_MAX_PLAYERS);
+    const waiting = this.waitingPublicLobbies();
+    if (waiting.length > 0) {
+      waiting[0].engine.applyPublicSeatCap(PUBLIC_TABLE_MAX_PLAYERS);
       return null;
     }
     return this.create({ name: PUBLIC_TABLE_NAME, kind: 'public' });
+  }
+
+  /**
+   * Extra empty public lobbies left over after a restart. Keep the occupied
+   * table, or the first empty one so Join still has a row.
+   */
+  extraEmptyPublicLobbies(): RoomEntry[] {
+    const waiting = this.waitingPublicLobbies();
+    if (waiting.length <= 1) return [];
+    const kept = waiting[0];
+    return waiting.filter((entry) => entry.room.id !== kept.room.id && entry.room.isEmpty);
+  }
+
+  private waitingPublicLobbies(): RoomEntry[] {
+    return [...this.rooms.values()]
+      .filter(
+        (entry) =>
+          entry.room.options.kind === 'public' &&
+          entry.room.phase === Phase.Lobby &&
+          entry.room.options.adminPlayUserId == null,
+      )
+      .sort((left, right) => right.room.players.length - left.room.players.length);
   }
 }
 

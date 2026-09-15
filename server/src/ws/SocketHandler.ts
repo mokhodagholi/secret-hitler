@@ -109,6 +109,9 @@ export class SocketHandler {
   /** Create the evergreen Join lobby when the flag is on and none is waiting. */
   ensurePublicLobby(): void {
     if (!this.flags.publicTable) return;
+    for (const extra of this.repo.extraEmptyPublicLobbies()) {
+      this.removeRoom(extra.room.id);
+    }
     const created = this.repo.ensurePublicLobby();
     if (!created) return;
     this.registerEngine(created);

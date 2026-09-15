@@ -59,8 +59,9 @@ The started game is now an ordinary in-progress room. It shows on
 
 Exactly **one** room in `Phase.Lobby` is the public table. It has no
 password, no host, no `originChatId`. It is created on boot (and after a
-restart, restored or recreated). It is never destroyed because it went
-empty.
+restart, restored or recreated). Extra empty public lobbies left in
+`live_rooms` after a deploy are dropped. It is never destroyed because
+it went empty.
 
 When that room **leaves lobby** (a successful start), the server creates
 the next empty public table in the same turn so Join does not flicker
