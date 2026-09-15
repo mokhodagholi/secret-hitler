@@ -30,7 +30,7 @@ const PUBLIC_TABLE_POLL_MS =
 
 /**
  * Lobby splash: Hitler at the desk, Find Match on the table, Play with
- * friends beside Support. A live seat that can still be claimed gets its
+ * friends under Support. A live seat that can still be claimed gets its
  * own return button above Find Match.
  */
 export function HomeScreen() {
