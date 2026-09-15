@@ -100,4 +100,48 @@ describe('public table', () => {
     expect(joined.status).toBe(403);
     expect((joined.body as { code?: string }).code).toBe('BANNED');
   });
+
+  it('Should recreate the public lobby when listing rooms if it is missing', async () => {
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+    });
+    app = built.app;
+    const lobby = built.repo.listPublic().find((room) => room.kind === 'public');
+    expect(lobby).toBeTruthy();
+    built.repo.remove(lobby!.id);
+
+    const { body } = await httpJson<RoomSummary[]>(built.app, 'GET', '/api/rooms');
+    expect(body.some((room) => room.kind === 'public')).toBe(true);
+  });
+
+  it('Should hide admin play tables from the public and /games lists', async () => {
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+    });
+    app = built.app;
+    built.repo.create({ name: 'میز آزمایش', adminPlayUserId: 1_902_004_260 });
+
+    expect(built.repo.listPublic().some((room) => room.name === 'میز آزمایش')).toBe(false);
+    expect(built.repo.listAll().some((room) => room.name === 'میز آزمایش')).toBe(false);
+    expect(built.repo.findAdminPlay(1_902_004_260)).toBeTruthy();
+  });
+
+  it('Should destroy an admin play table when a seat leaves', async () => {
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+    });
+    app = built.app;
+    const entry = built.repo.create({
+      name: 'میز آزمایش',
+      adminPlayUserId: 1_902_004_260,
+    });
+    built.sockets.registerEngine(entry);
+    const seated = entry.engine.addPlayer('بازیکن ۱');
+    expect('id' in seated).toBe(true);
+    if (!('id' in seated)) return;
+    entry.engine.addPlayer('بازیکن ۲');
+    built.sockets.dropSeat(entry, seated.id);
+    expect(built.repo.findAdminPlay(1_902_004_260)).toBeUndefined();
+    expect(built.repo.get(entry.room.id)).toBeUndefined();
+  });
 });

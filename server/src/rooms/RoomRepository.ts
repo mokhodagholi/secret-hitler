@@ -69,9 +69,12 @@ export class RoomRepository {
     });
   }
 
-  /** Every live room, including games already in progress. */
+  /** Every live room, including games already in progress. Hidden admin `/play-game` tables stay out. */
   listAll() {
-    return [...this.rooms.values()].map((e) => e.room.summary()).sort(pinPublicFirst);
+    return [...this.rooms.values()]
+      .filter((entry) => entry.room.options.adminPlayUserId == null)
+      .map((e) => e.room.summary())
+      .sort(pinPublicFirst);
   }
 
   /**

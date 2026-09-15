@@ -213,6 +213,9 @@ export async function handleMessengerWebhook(
     return sendBotReply(req, reply, messenger, chat.id, playReply);
   }
 
+  // Heal a missing evergreen lobby (e.g. wiped after reconnect grace).
+  table?.sockets.ensurePublicLobby();
+
   const response = handleBotText({
     text,
     fromId: seatedId,

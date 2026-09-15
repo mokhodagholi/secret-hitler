@@ -353,7 +353,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   });
 
   // List public, joinable rooms.
-  app.get('/api/rooms', async () => repo.listPublic());
+  app.get('/api/rooms', async () => {
+    // Heal a missing evergreen lobby (e.g. wiped after reconnect grace).
+    sockets.ensurePublicLobby();
+    return repo.listPublic();
+  });
 
   // Recent finished games.
   app.get('/api/history', async (req) => {

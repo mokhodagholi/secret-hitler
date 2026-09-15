@@ -213,7 +213,8 @@ in the mini-app via `POST /api/rooms/:idOrCode/join`.
 Broader than `/find_game`. This is `RoomRepository.listAll()`: lobbies
 **and** games that already started. The public table (lobby or, after it
 deals, the match that just left it plus the replacement lobby) belongs
-here too — [`public-table.md`](./public-table.md).
+here too — [`public-table.md`](./public-table.md). Admin `/play-game`
+tables (`میز آزمایش`) stay out of this list.
 
 Each line:
 
@@ -397,7 +398,11 @@ What it opens:
 
 - One live 5-seat table per admin (`میز آزمایش`, seats `بازیکن ۱`…`بازیکن ۵`).
 - Deal runs immediately — no ready check, no min-player gate.
-- Hidden from `/find_game` / the Join tab.
+- Hidden from `/find_game` / the Join tab / `/games`.
+- Leaving the board (`room:leave`) destroys the table. Dummy seats stay
+  connected, so an empty-room check would never fire. `/play-game` again
+  opens a fresh one. Claiming another seat on the same table does not
+  leave, so that table stays.
 
 Reply:
 

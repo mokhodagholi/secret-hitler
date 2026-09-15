@@ -349,7 +349,11 @@ export class SocketHandler {
     const timer = setTimeout(() => {
       this.reconnectGrace.delete(roomId);
       const entry = this.repo.get(roomId);
-      if (entry?.room.isEmpty) this.removeRoom(roomId);
+      if (!entry?.room.isEmpty) return;
+      // Same rule as stateChanged — an empty public lobby must stay on Join.
+      if (isPublicTable(entry.room.options) && entry.room.phase === 'lobby') return;
+      this.removeRoom(roomId);
+      this.ensurePublicLobby();
     }, LIVE_ROOM_RECONNECT_GRACE_MS);
     this.reconnectGrace.set(roomId, timer);
   }
@@ -710,11 +714,14 @@ export class SocketHandler {
     this.seats?.releasePlayer(playerId);
     this.connections.close(playerId);
     const remaining = this.repo.get(roomId);
-    if (
-      remaining &&
-      remaining.room.isEmpty &&
-      !isPublicTable(remaining.room.options)
-    ) {
+    if (!remaining) return;
+    // Dummy seats stay connected, so this table is never empty — drop it
+    // when a real device leaves (back / خروج), not on seat-claim within it.
+    if (remaining.room.options.adminPlayUserId != null) {
+      this.destroyRoom(remaining);
+      return;
+    }
+    if (remaining.room.isEmpty && !isPublicTable(remaining.room.options)) {
       this.noticeGroupRoomClosed(remaining);
       this.destroyRoom(remaining);
     }
