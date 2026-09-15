@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, broadcastHelpReply, createGroupClosedReply, handleBotText, isBroadcastCommand, isDirectMessageCommand, isUnsendCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply } from './commands';
+import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, handleBotText, isBroadcastCommand, isDirectMessageCommand, isUnsendCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -217,6 +217,16 @@ describe('broadcast copy', () => {
 
   it('Should tell the admin to send the text next', () => {
     expect(broadcastHelpReply().text).toContain('متن');
+  });
+
+  it('Should leave underscores in a ble.ir path', () => {
+    const reply = broadcastPlayerReply(
+      { botUsername: BOT, platform: 'bale' },
+      'شناسه درست: ble.ir/secret_hitler_official',
+    );
+    expect(reply.text).toContain('secret_hitler_official');
+    expect(reply.text).not.toContain('\\_');
+    expect(reply.parse_mode).toBe('HTML');
   });
 });
 

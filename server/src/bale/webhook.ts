@@ -50,6 +50,7 @@ export interface BaleMessenger {
   sendMessage(params: {
     chat_id: number | string;
     text: string;
+    parse_mode?: BotReply['parse_mode'];
     reply_markup?: BotReply['reply_markup'];
   }): Promise<{ message_id?: number } | unknown>;
   editMessageText?(params: {
@@ -635,6 +636,7 @@ async function sendChat(
     const sent = await bale.bot.sendMessage({
       chat_id: chatId,
       text: response.text,
+      parse_mode: response.parse_mode,
       reply_markup: response.reply_markup,
     });
     return { message_id: readMessageId(sent) };
@@ -642,7 +644,11 @@ async function sendChat(
     req.log.error(error, 'Failed to send bot reply');
     if (!response.reply_markup) return null;
     try {
-      const sent = await bale.bot.sendMessage({ chat_id: chatId, text: response.text });
+      const sent = await bale.bot.sendMessage({
+        chat_id: chatId,
+        text: response.text,
+        parse_mode: response.parse_mode,
+      });
       return { message_id: readMessageId(sent) };
     } catch (retryError) {
       req.log.error(retryError, 'Failed to send bot reply without markup');

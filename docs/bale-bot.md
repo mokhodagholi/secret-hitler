@@ -435,8 +435,9 @@ A one-time SQL backfill copies existing `profiles.bale_user_id` /
 `telegram_user_id` rows. Bale admins reach Bale sitters; Telegram admins
 reach Telegram sitters.
 
-Each player DM has the same **بازی کن** button as `/start`. People who
-blocked the bot are dropped from the list.
+Each player DM has the same **بازی کن** button as `/start`. The body is
+HTML, not Markdown, so a `ble.ir/secret_hitler_official` path keeps its
+underscores. People who blocked the bot are dropped from the list.
 
 Empty list:
 

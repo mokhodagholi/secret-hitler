@@ -32,6 +32,7 @@ export interface BotCommandContext {
 
 export interface BotReply {
   text: string;
+  parse_mode?: 'HTML';
   reply_markup?: {
     inline_keyboard: Array<Array<{ text: string; url: string }>>;
   };
@@ -66,6 +67,11 @@ function linkOf(
 /** Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail. */
 export function escapeBaleMarkdown(text: string): string {
   return text.replace(/([_*`\[\]])/g, '\\$1');
+}
+
+/** HTML parse_mode: `_` in a URL stays `_`, not `\_`. */
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** Slash command as Bale Markdown. `_` must be escaped or sendMessage fails. */
@@ -316,9 +322,12 @@ export function broadcastPlayerReply(
   body: string,
 ): BotReply {
   const trimmed = body.trim().slice(0, BROADCAST_MAX);
-  const text = ctx.platform === 'telegram' ? trimmed : escapeBaleMarkdown(trimmed);
+  if (ctx.platform === 'telegram') {
+    return { text: trimmed, reply_markup: playKeyboardFor(ctx) };
+  }
   return {
-    text,
+    text: escapeHtml(trimmed),
+    parse_mode: 'HTML',
     reply_markup: playKeyboardFor(ctx),
   };
 }
