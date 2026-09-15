@@ -439,6 +439,28 @@ describe('WaitingRoomScreen', () => {
     expect(theirs?.className).not.toMatch(/mine/);
   });
 
+  it('Should keep lobby chat where it is when the reader has scrolled up', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(makeView({ hostId: 'you' }));
+    harness.socket.emit({
+      type: 'chat',
+      message: { id: 'm1', playerId: 'ben', name: 'Ben', text: 'first', at: 0 },
+    });
+
+    const feed = screen.getByText('first').closest('article')?.parentElement as HTMLElement;
+    Object.defineProperty(feed, 'scrollHeight', { configurable: true, value: 500 });
+    Object.defineProperty(feed, 'clientHeight', { configurable: true, value: 100 });
+    feed.scrollTop = 0;
+    fireEvent.scroll(feed);
+
+    harness.socket.emit({
+      type: 'chat',
+      message: { id: 'm2', playerId: 'ben', name: 'Ben', text: 'second', at: 1 },
+    });
+    expect(feed.scrollTop).toBe(0);
+  });
+
   it('Should keep the lobby composer from inviting browser suggest', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);

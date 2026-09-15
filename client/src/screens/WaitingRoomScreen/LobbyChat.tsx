@@ -7,6 +7,7 @@ import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import { KeyboardForm } from '../../components/KeyboardForm/KeyboardForm';
 import { growComposerHeight } from '../../services/KeyboardService';
+import { isChatNearBottom, scrollChatToBottom } from '../chatScroll';
 import styles from './LobbyChat.module.scss';
 
 /**
@@ -20,6 +21,7 @@ export function LobbyChat() {
   const [chatDraft, setChatDraft] = createSignal('');
   const [nowMs, setNowMs] = createSignal(Date.now());
   let feedScroller: HTMLDivElement | undefined;
+  let stickToBottom = true;
   let composerField: HTMLTextAreaElement | undefined;
 
   const slowSecondsLeft = () => {
@@ -46,7 +48,7 @@ export function LobbyChat() {
 
   createEffect(() => {
     game.chatMessages();
-    if (feedScroller) feedScroller.scrollTop = feedScroller.scrollHeight;
+    if (feedScroller && stickToBottom) scrollChatToBottom(feedScroller);
   });
 
   const autosizeField = () => {
@@ -77,7 +79,13 @@ export function LobbyChat() {
 
   return (
     <section class={styles.panel} role="region" aria-label={formatMessage('waiting.chat')}>
-      <div class={styles.feed} ref={(element) => (feedScroller = element)}>
+      <div
+        class={styles.feed}
+        ref={(element) => (feedScroller = element)}
+        onScroll={() => {
+          if (feedScroller) stickToBottom = isChatNearBottom(feedScroller);
+        }}
+      >
         <Show when={game.chatMessages().length === 0}>
           <p class={styles.empty}>{formatMessage('waiting.chatEmpty')}</p>
         </Show>

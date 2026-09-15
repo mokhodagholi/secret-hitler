@@ -309,10 +309,12 @@ export const LIVE_ROOM_RECONNECT_GRACE_MS = 5 * 60_000;
 
 /** Opening night: face-down cards fly to every seat. */
 export const OPENING_DEAL_MS = 10_000;
-/** Opening night: private look — longest spoken pair (night.start + youFascist) + 2s. */
-export const OPENING_LOOK_MS = 18_000;
-/** Opening night: glance — longest teammate line (nightFascistLarge) + 2s. */
-export const OPENING_GLANCE_MS = 9_000;
+/** Hold after the longest spoken beat so every seat lifts night together. */
+export const OPENING_NIGHT_PAD_MS = 2_000;
+/** Private look — longest pair: night.start (2.14s) + youFascist (12.70s). */
+export const OPENING_LOOK_MS = 2_140 + 12_700 + OPENING_NIGHT_PAD_MS;
+/** Glance — longest teammate line: nightFascistLarge (5.98s). */
+export const OPENING_GLANCE_MS = 5_980 + OPENING_NIGHT_PAD_MS;
 /** Full opening ceremony. Chat and the first President stay hidden until this elapses. */
 export const OPENING_CEREMONY_MS =
   OPENING_DEAL_MS + OPENING_LOOK_MS + OPENING_GLANCE_MS;

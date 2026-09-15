@@ -114,8 +114,9 @@ function undealtCardTransform(index: number, count: number): string {
 
 /**
  * Opening ceremony: face-down cards split to every seat, night falls with
- * the private look, then the team glance. Beats follow the shared clock, but
- * they do not cut Ravi — the next sheet waits until the current line ends.
+ * the private look, then the team glance. Sheets and night.end follow the
+ * shared clock (longest role + pad), so a short liberal line cannot lift
+ * night before the Fascists are done.
  */
 export function NightOverlay(props: NightOverlayProps) {
   const { i18n, ravi, animation, sound } = useApp();
@@ -161,10 +162,10 @@ export function NightOverlay(props: NightOverlayProps) {
   function openLook(): void {
     if (closed || beat() === 'look' || beat() === 'glance') return;
     clearTimeout(lookTimer);
+    setBeat('look');
     void (async () => {
       await ravi.idle();
-      if (closed || beat() === 'look' || beat() === 'glance') return;
-      setBeat('look');
+      if (closed || beat() === 'glance') return;
       sound.play('night-fall');
       sound.play('card-flip');
       await ravi.speak('night.start');
@@ -177,10 +178,9 @@ export function NightOverlay(props: NightOverlayProps) {
     if (closed || beat() === 'glance') return;
     clearTimeout(lookTimer);
     clearTimeout(glanceTimer);
+    setBeat('glance');
     void (async () => {
-      await ravi.idle();
-      if (closed || beat() === 'glance') return;
-      setBeat('glance');
+      if (closed) return;
       sound.play('glance-tick');
       await ravi.speak(glanceLine(props.role, props.playerCount));
     })();
@@ -192,8 +192,8 @@ export function NightOverlay(props: NightOverlayProps) {
     clearTimeout(lookTimer);
     clearTimeout(glanceTimer);
     clearTimeout(doneTimer);
+    ravi.cancel();
     void (async () => {
-      await ravi.idle();
       sound.play('night-lift');
       await ravi.speak('night.end');
       await ravi.speak(

@@ -115,6 +115,22 @@ describe('NightOverlay', () => {
     });
   });
 
+  it('Should keep the glance up until the shared clock, even for a short role', async () => {
+    const harness = buildHarness({ seated: true });
+    let done = 0;
+    renderOverlay(harness, {
+      role: 'liberal',
+      startedAt: Date.now() - GLANCE_AT_MS - 80,
+      onDone: () => {
+        done += 1;
+      },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(done).toBe(0);
+    expect(screen.getByRole('dialog', { name: en.game.yourRole })).toBeTruthy();
+  });
+
   it('Should wait with closed eyes instead of repeating the header line', async () => {
     const harness = buildHarness({ seated: true });
     renderOverlay(harness, { startedAt: Date.now() - GLANCE_AT_MS - 80 });

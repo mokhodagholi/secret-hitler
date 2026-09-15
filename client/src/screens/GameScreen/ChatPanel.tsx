@@ -13,6 +13,7 @@ import { Icon } from '../../components/Icon/Icon';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import { growComposerHeight } from '../../services/KeyboardService';
+import { isChatNearBottom, scrollChatToBottom } from '../chatScroll';
 import styles from './ChatPanel.module.scss';
 
 /** Handle + chrome only — feed and composer hide at this height. */
@@ -50,6 +51,7 @@ export function ChatPanel(props: ChatPanelProps) {
   const [now, setNow] = createSignal(Date.now());
   let panelEl: HTMLElement | undefined;
   let feedScroller: HTMLDivElement | undefined;
+  let stickToBottom = true;
   let inputEl: HTMLTextAreaElement | undefined;
   let dragStartY = 0;
   let dragStartHeight = CHAT_DEFAULT;
@@ -106,7 +108,7 @@ export function ChatPanel(props: ChatPanelProps) {
 
   createEffect(() => {
     game.chatMessages();
-    if (feedScroller) feedScroller.scrollTop = feedScroller.scrollHeight;
+    if (feedScroller && stickToBottom) scrollChatToBottom(feedScroller);
   });
 
   const autosizeInput = () => {
@@ -316,6 +318,9 @@ export function ChatPanel(props: ChatPanelProps) {
           }}
           ref={feedScroller}
           aria-hidden={!feedOpen()}
+          onScroll={() => {
+            if (feedScroller) stickToBottom = isChatNearBottom(feedScroller);
+          }}
         >
           <For each={game.chatMessages()}>
             {(message) => {

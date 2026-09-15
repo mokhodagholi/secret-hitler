@@ -22,10 +22,14 @@ function seatedView() {
   });
 }
 
-function emitChat(harness: ReturnType<typeof buildHarness>, text: string) {
+function emitChat(
+  harness: ReturnType<typeof buildHarness>,
+  text: string,
+  id = 'm1',
+) {
   harness.socket.emit({
     type: 'chat',
-    message: { id: 'm1', playerId: 'sadf', name: 'sadf', text, at: 0 },
+    message: { id, playerId: 'sadf', name: 'sadf', text, at: 0 },
   });
 }
 
@@ -52,6 +56,38 @@ describe('ChatPanel', () => {
 
     expect(screen.getByText('hello table')).toBeTruthy();
     expect(screen.getByText('sadf')).toBeTruthy();
+  });
+
+  it('Should keep the feed where it is when the reader has scrolled up', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+    emitChat(harness, 'first');
+
+    const feed = screen.getByText('first').closest('[aria-hidden]') as HTMLElement;
+    Object.defineProperty(feed, 'scrollHeight', { configurable: true, value: 500 });
+    Object.defineProperty(feed, 'clientHeight', { configurable: true, value: 100 });
+    feed.scrollTop = 0;
+    fireEvent.scroll(feed);
+
+    emitChat(harness, 'second', 'm2');
+    expect(feed.scrollTop).toBe(0);
+  });
+
+  it('Should follow a new line when the feed is already at the bottom', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+    emitChat(harness, 'first');
+
+    const feed = screen.getByText('first').closest('[aria-hidden]') as HTMLElement;
+    Object.defineProperty(feed, 'scrollHeight', { configurable: true, value: 500 });
+    Object.defineProperty(feed, 'clientHeight', { configurable: true, value: 100 });
+    feed.scrollTop = 400;
+    fireEvent.scroll(feed);
+
+    emitChat(harness, 'second', 'm2');
+    expect(feed.scrollTop).toBe(500);
   });
 
   it('Should keep a long chat line in the feed, not clip it', () => {
