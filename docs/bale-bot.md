@@ -417,6 +417,62 @@ Bad `N`: `شماره صندلی ۱ تا ۵ رو بنویس، مثلاً:` `/play
 
 ---
 
+## `/broadcast` — admin retention DM (hidden)
+
+**Type:** `/broadcast` · `/sendall` · `/send-all` in **private** chat. Not on
+the bot menu.
+
+Same admin gate as `/play-game`. Anyone else gets no reply.
+
+1. Type `/broadcast`.
+2. Bot: «متن پیام رو بفرست.»
+3. Send the text.
+
+Sends that text to every private chat that has talked to this bot (`/start` or
+any later private command). Mini-app login also adds that messenger id.
+A one-time SQL backfill copies existing `profiles.bale_user_id` /
+`telegram_user_id` rows. Bale admins reach Bale sitters; Telegram admins
+reach Telegram sitters.
+
+Each player DM has the same **بازی کن** button as `/start`. People who
+blocked the bot are dropped from the list.
+
+Empty list:
+
+```
+کسی نیست که براش بفرستم. هر کی تو چت خصوصی /start بزنه، می‌مونه تو لیست.
+```
+
+While sending, then when done:
+
+```
+دارم می‌فرستم به N نفر.
+تموم شد. رسید به N نفر.
+```
+
+(If some DMs fail: `M تا نرسید.` on the second line.)
+
+The admin's own chat is skipped so they only get these status replies.
+
+---
+
+## `/message` — admin DM to chosen ids (hidden)
+
+**Type:** `/message` in **private** chat. Not on the bot menu.
+
+Same admin gate as `/play-game`. Anyone else gets no reply.
+
+1. Type `/message`.
+2. Bot: «آیدی‌ها رو با ویرگول بفرست.»
+3. Send ids (`123,456` — ASCII `,` or Persian `،`).
+4. Bot: «متن پیام رو بفرست.»
+5. Send the text.
+
+A **بازی کن** button is attached, same as `/broadcast`. Ids that never started
+the bot may fail; they are not dropped from the `/start` list.
+
+---
+
 ## What happens after they tap the button
 
 The chat bot’s job is over. The mini-app boots, reads `start_param` /
@@ -473,7 +529,7 @@ From [`.env.example`](../.env.example):
 | `BALE_WEBHOOK_URL` | HTTPS URL Bale POSTs updates to (port 443 or 88). |
 | `BALE_WEBHOOK_SECRET` | Appended to the webhook path; also accepted as `X-Telegram-Bot-Api-Secret-Token`. |
 | `BALE_SUPPORT_CHAT_ID` | Group for support letters and kick notices. Not used by chat commands. |
-| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`. `1902004260` is always allowed. |
+| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, and `/message`. `1902004260` is always allowed. |
 
 Copy for new replies: [`docs/persian.md`](./persian.md) (register **بله**).
 Tests: [`server/src/bale/commands.test.ts`](../server/src/bale/commands.test.ts).

@@ -3,6 +3,7 @@ import { parseFeatureFlags } from '@secret-hitler/shared';
 import { buildServer } from './app';
 import { DrizzleGameHistoryStore } from './history/DrizzleGameHistoryStore';
 import { DrizzleProfileStore } from './profiles/DrizzleProfileStore';
+import { DrizzleBotSubscriberStore } from './bale/DrizzleBotSubscriberStore';
 import { DrizzleLiveRoomStore } from './rooms/DrizzleLiveRoomStore';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import { parseAdminUserIds } from './bale/adminIds';
@@ -123,6 +124,7 @@ async function main() {
   const connection = connectDatabase(databaseUrl);
   const history = new DrizzleGameHistoryStore(connection);
   const profiles = new DrizzleProfileStore(connection);
+  const subscribers = new DrizzleBotSubscriberStore(connection);
   const live = new DrizzleLiveRoomStore(connection);
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
@@ -154,6 +156,7 @@ async function main() {
     logger: true,
     history,
     profiles,
+    subscribers,
     live,
     publicUrl,
     bale,
@@ -161,6 +164,7 @@ async function main() {
     flags,
     voice,
     adminUserIds: parseAdminUserIds(),
+    broadcastDelayMs: 40,
   });
 
   app.log.info({ flags }, 'Feature flags');

@@ -16,6 +16,8 @@ import type { GameHistoryStore } from './history/GameHistoryStore';
 import { InMemoryGameHistoryStore } from './history/InMemoryGameHistoryStore';
 import type { ProfileStore } from './profiles/ProfileStore';
 import { InMemoryProfileStore } from './profiles/InMemoryProfileStore';
+import type { BotSubscriberStore } from './bale/BotSubscriberStore';
+import { InMemoryBotSubscriberStore } from './bale/InMemoryBotSubscriberStore';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import type { BaleRuntime } from './bale/webhook';
 import type { LiveRoomStore } from './rooms/LiveRoomStore';
@@ -39,6 +41,10 @@ export interface ServerOptions {
   history?: GameHistoryStore;
   /** Chosen player cards. Tests default to in-memory. */
   profiles?: ProfileStore;
+  /** Private-chat /start list for admin broadcast. Tests default to in-memory. */
+  subscribers?: BotSubscriberStore;
+  /** Pause between broadcast DMs. Production sets a small delay; tests omit (0). */
+  broadcastDelayMs?: number;
   /**
    * Durable live rooms. Production always supplies Postgres; tests omit this
    * unless they are asserting restart survival.
@@ -98,6 +104,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   );
   const history = options.history ?? new InMemoryGameHistoryStore();
   const profiles = options.profiles ?? new InMemoryProfileStore();
+  const subscribers = options.subscribers ?? new InMemoryBotSubscriberStore();
   const recorder = new GameResultRecorder(history);
   sockets.onRoomCreated = (entry) => recorder.attach(entry);
 
@@ -128,11 +135,13 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     recorder,
     history,
     profiles,
+    subscribers,
     publicUrl: options.publicUrl,
     bale,
     telegram,
     flags,
     adminUserIds: options.adminUserIds,
+    broadcastDelayMs: options.broadcastDelayMs,
   });
 
   await app.ready();

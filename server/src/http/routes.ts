@@ -17,6 +17,7 @@ import type { TokenStore } from '../rooms/TokenStore';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
 import type { GameHistoryStore } from '../history/GameHistoryStore';
 import type { ProfileStore } from '../profiles/ProfileStore';
+import type { BotSubscriberStore } from '../bale/BotSubscriberStore';
 import { hashPassword, verifyPassword } from './password';
 import { identifyInitData } from '../bale/initData';
 import { baleUserInOriginChat } from '../bale/groupMember';
@@ -40,11 +41,14 @@ export interface RouteDeps {
   history: GameHistoryStore;
   /** Chosen player-card portraits. */
   profiles: ProfileStore;
+  /** People who opened a private chat with the bot. */
+  subscribers: BotSubscriberStore;
   publicUrl?: string;
   bale?: BaleRuntime;
   telegram?: BaleRuntime;
   flags: FeatureFlags;
   adminUserIds?: ReadonlySet<number>;
+  broadcastDelayMs?: number;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -93,10 +97,16 @@ function inviteRuntime(
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, profiles, bale, telegram, flags } =
+  const { repo, tokens, sockets, recorder, history, profiles, subscribers, bale, telegram, flags } =
     deps;
   const adminUserIds = deps.adminUserIds ?? parseAdminUserIds();
-  const tableHooks = { sockets, recorder, adminUserIds };
+  const tableHooks = {
+    sockets,
+    recorder,
+    adminUserIds,
+    subscribers,
+    broadcastDelayMs: deps.broadcastDelayMs,
+  };
   const messengers = configuredMessengers(bale, telegram);
   registerBaleBodyParser(app);
   const createLimiter = new RateLimiter(CREATE_LIMIT, LIMIT_WINDOW_MS);
@@ -118,6 +128,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!identified) {
       return reply.code(401).send({ error: 'Invalid mini-app login', code: 'AUTH_FAILED' });
     }
+    await subscribers.upsert(identified.kind, String(identified.user.id));
     const avatar = await profiles.get(
       identified.kind === 'telegram'
         ? { telegramUserId: String(identified.user.id) }

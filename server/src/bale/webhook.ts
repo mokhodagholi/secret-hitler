@@ -12,15 +12,28 @@ import type { GameResultRecorder } from '../history/GameResultRecorder';
 import { RateLimiter } from '../util/RateLimiter';
 import {
   BALE_BOT_COMMANDS,
+  broadcastDoneReply,
+  broadcastEmptyReply,
+  broadcastHelpReply,
+  broadcastPlayerReply,
+  broadcastStartedReply,
   createPasswordDm,
   createPasswordFallbackReply,
   createRateLimitedReply,
   handleBotText,
+  isBroadcastCommand,
+  isDirectMessageCommand,
+  messageAskTextReply,
+  messageBadIdsReply,
+  messageHelpReply,
   parseBotCommand,
+  parseChatIds,
+  parseMessageArg,
   type BotReply,
 } from './commands';
 import { createGroupRoom } from './createGroupRoom';
 import type { BaleSeatIndex } from './BaleSeatIndex';
+import type { BotSubscriberStore } from './BotSubscriberStore';
 import { isAdminUser, parsePlayGameSeat } from './adminIds';
 import {
   ensureAdminPlayTable,
@@ -87,10 +100,24 @@ export interface BaleTableHooks {
   sockets: SocketHandler;
   recorder: GameResultRecorder;
   adminUserIds: ReadonlySet<number>;
+  subscribers?: BotSubscriberStore;
+  /** Pause between broadcast DMs. Tests leave this at 0. */
+  broadcastDelayMs?: number;
 }
 
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 const GROUP_CREATE_LIMIT = new RateLimiter(3, 60_000);
+
+type AdminDraft =
+  | { step: 'broadcast-text' }
+  | { step: 'message-ids' }
+  | { step: 'message-text'; chatIds: string[] };
+
+const adminDrafts = new Map<string, AdminDraft>();
+
+function adminDraftKey(kind: MessengerKind, chatId: number): string {
+  return `${kind}:${chatId}`;
+}
 
 /** Append the secret as a path segment so Bale POSTs to an unguessable URL. */
 export function webhookListenUrl(base: string, secret: string | undefined): string {
@@ -204,13 +231,41 @@ export async function handleMessengerWebhook(
     return reply.code(200).send({ ok: true });
   }
 
-  if (parseBotCommand(text)?.command === 'play_game') {
+  const chatId = String(chat.id);
+  if (chatId) await table?.subscribers?.upsert(kind, chatId);
+
+  const parsed = parseBotCommand(text);
+  if (parsed?.command === 'play_game') {
     // Unknown users must not learn this command exists.
     if (!table || !isAdminUser(seatedId, table.adminUserIds)) {
       return reply.code(200).send({ ok: true });
     }
+    adminDrafts.delete(adminDraftKey(kind, chat.id));
     const playReply = handlePlayGame(text, seatedId, repo, messenger, table);
     return sendBotReply(req, reply, messenger, chat.id, playReply);
+  }
+
+  if (isBroadcastCommand(parsed?.command)) {
+    if (!table || !isAdminUser(seatedId, table.adminUserIds)) {
+      return reply.code(200).send({ ok: true });
+    }
+    return handleBroadcast(req, reply, messenger, table, chat.id, parsed?.arg ?? '');
+  }
+
+  if (isDirectMessageCommand(parsed?.command)) {
+    if (!table || !isAdminUser(seatedId, table.adminUserIds)) {
+      return reply.code(200).send({ ok: true });
+    }
+    return handleDirectMessage(req, reply, messenger, table, chat.id, parsed?.arg ?? '');
+  }
+
+  if (table && isAdminUser(seatedId, table.adminUserIds) && !parsed?.command) {
+    const continued = await continueAdminDraft(req, reply, messenger, table, chat.id, text);
+    if (continued) return;
+  }
+
+  if (table && isAdminUser(seatedId, table.adminUserIds)) {
+    adminDrafts.delete(adminDraftKey(kind, chat.id));
   }
 
   // Heal a missing evergreen lobby (e.g. wiped after reconnect grace).
@@ -254,6 +309,183 @@ function handlePlayGame(
     botUsername: messenger.botUsername,
     startLink: startLinkFor(messenger),
   });
+}
+
+async function handleBroadcast(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+  adminChatId: number,
+  body: string,
+): Promise<void> {
+  const kind = messengerKindOf(messenger);
+  const key = adminDraftKey(kind, adminChatId);
+  const trimmed = body.trim();
+  if (!trimmed) {
+    adminDrafts.set(key, { step: 'broadcast-text' });
+    return sendBotReply(req, reply, messenger, adminChatId, broadcastHelpReply());
+  }
+  adminDrafts.delete(key);
+  return sendBroadcastToSubscribers(req, reply, messenger, table, adminChatId, trimmed);
+}
+
+async function handleDirectMessage(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+  adminChatId: number,
+  arg: string,
+): Promise<void> {
+  const kind = messengerKindOf(messenger);
+  const key = adminDraftKey(kind, adminChatId);
+  const trimmed = arg.trim();
+  if (!trimmed) {
+    adminDrafts.set(key, { step: 'message-ids' });
+    return sendBotReply(req, reply, messenger, adminChatId, messageHelpReply());
+  }
+  const parsed = parseMessageArg(trimmed);
+  if (!parsed) {
+    adminDrafts.set(key, { step: 'message-ids' });
+    return sendBotReply(req, reply, messenger, adminChatId, messageBadIdsReply());
+  }
+  const targets = parsed.chatIds.filter((chatId) => chatId !== String(adminChatId));
+  if (targets.length === 0) {
+    adminDrafts.set(key, { step: 'message-ids' });
+    return sendBotReply(req, reply, messenger, adminChatId, messageHelpReply());
+  }
+  if (!parsed.text) {
+    adminDrafts.set(key, { step: 'message-text', chatIds: targets });
+    return sendBotReply(req, reply, messenger, adminChatId, messageAskTextReply());
+  }
+  adminDrafts.delete(key);
+  return sendAdminBlast(req, reply, messenger, table, adminChatId, targets, parsed.text, false);
+}
+
+async function continueAdminDraft(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+  adminChatId: number,
+  text: string,
+): Promise<boolean> {
+  const kind = messengerKindOf(messenger);
+  const key = adminDraftKey(kind, adminChatId);
+  const draft = adminDrafts.get(key);
+  if (!draft) return false;
+
+  if (draft.step === 'broadcast-text') {
+    const body = text.trim();
+    if (!body) {
+      await sendBotReply(req, reply, messenger, adminChatId, broadcastHelpReply());
+      return true;
+    }
+    adminDrafts.delete(key);
+    await sendBroadcastToSubscribers(req, reply, messenger, table, adminChatId, body);
+    return true;
+  }
+
+  if (draft.step === 'message-ids') {
+    const ids = parseChatIds(text);
+    const oneShot = parseMessageArg(text);
+    if (ids && ids.length > 0) {
+      const targets = ids.filter((chatId) => chatId !== String(adminChatId));
+      if (targets.length === 0) {
+        await sendBotReply(req, reply, messenger, adminChatId, messageHelpReply());
+        return true;
+      }
+      adminDrafts.set(key, { step: 'message-text', chatIds: targets });
+      await sendBotReply(req, reply, messenger, adminChatId, messageAskTextReply());
+      return true;
+    }
+    if (oneShot?.text) {
+      const targets = oneShot.chatIds.filter((chatId) => chatId !== String(adminChatId));
+      if (targets.length === 0) {
+        await sendBotReply(req, reply, messenger, adminChatId, messageHelpReply());
+        return true;
+      }
+      adminDrafts.delete(key);
+      await sendAdminBlast(req, reply, messenger, table, adminChatId, targets, oneShot.text, false);
+      return true;
+    }
+    await sendBotReply(req, reply, messenger, adminChatId, messageBadIdsReply());
+    return true;
+  }
+
+  const body = text.trim();
+  if (!body) {
+    await sendBotReply(req, reply, messenger, adminChatId, messageAskTextReply());
+    return true;
+  }
+  adminDrafts.delete(key);
+  await sendAdminBlast(req, reply, messenger, table, adminChatId, draft.chatIds, body, false);
+  return true;
+}
+
+async function sendBroadcastToSubscribers(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+  adminChatId: number,
+  body: string,
+): Promise<void> {
+  const subscribers = table.subscribers;
+  if (!subscribers) {
+    return sendBotReply(req, reply, messenger, adminChatId, broadcastEmptyReply());
+  }
+  const kind = messengerKindOf(messenger);
+  const targets = (await subscribers.list(kind)).filter((chatId) => chatId !== String(adminChatId));
+  if (targets.length === 0) {
+    return sendBotReply(req, reply, messenger, adminChatId, broadcastEmptyReply());
+  }
+  return sendAdminBlast(req, reply, messenger, table, adminChatId, targets, body, true);
+}
+
+async function sendAdminBlast(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+  adminChatId: number,
+  targets: string[],
+  body: string,
+  dropFailedSubscribers: boolean,
+): Promise<void> {
+  const kind = messengerKindOf(messenger);
+  const started = await sendChat(req, messenger, adminChatId, broadcastStartedReply(targets.length));
+  if (!started) {
+    return reply.code(500).send({ error: 'Failed to send reply' });
+  }
+
+  const blast = broadcastPlayerReply(
+    {
+      botUsername: messenger.botUsername,
+      startLink: startLinkFor(messenger),
+      platform: kind,
+    },
+    body,
+  );
+  const delayMs = table.broadcastDelayMs ?? 0;
+  let sent = 0;
+  let failed = 0;
+  for (const chatId of targets) {
+    const ok = await sendChat(req, messenger, Number(chatId), blast);
+    if (ok) sent += 1;
+    else {
+      failed += 1;
+      if (dropFailedSubscribers) await table.subscribers?.remove(kind, chatId);
+    }
+    if (delayMs > 0) await sleep(delayMs);
+  }
+  await sendChat(req, messenger, adminChatId, broadcastDoneReply(sent, failed));
+  return reply.code(200).send({ ok: true });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function handleGroupCreate(

@@ -278,6 +278,89 @@ export function createPasswordFallbackReply(password: string): BotReply {
   return { text: `رمز برای کسی که تو گروه نیست: ${password}` };
 }
 
+const BROADCAST_MAX = 3500;
+
+export function isBroadcastCommand(command: string | undefined): boolean {
+  return command === 'broadcast' || command === 'sendall' || command === 'send_all';
+}
+
+export function isDirectMessageCommand(command: string | undefined): boolean {
+  return command === 'message';
+}
+
+export function broadcastHelpReply(): BotReply {
+  return { text: 'متن پیام رو بفرست.' };
+}
+
+export function broadcastEmptyReply(): BotReply {
+  return {
+    text: 'کسی نیست که براش بفرستم. هر کی تو چت خصوصی /start بزنه، می‌مونه تو لیست.',
+  };
+}
+
+export function broadcastStartedReply(count: number): BotReply {
+  return { text: `دارم می‌فرستم به ${count} نفر.` };
+}
+
+export function broadcastDoneReply(sent: number, failed: number): BotReply {
+  if (failed === 0) return { text: `تموم شد. رسید به ${sent} نفر.` };
+  return { text: `تموم شد. رسید به ${sent} نفر. ${failed} تا نرسید.` };
+}
+
+export function broadcastPlayerReply(
+  ctx: Pick<BotCommandContext, 'botUsername' | 'startLink' | 'platform'>,
+  body: string,
+): BotReply {
+  const trimmed = body.trim().slice(0, BROADCAST_MAX);
+  const text = ctx.platform === 'telegram' ? trimmed : escapeBaleMarkdown(trimmed);
+  return {
+    text,
+    reply_markup: playKeyboardFor(ctx),
+  };
+}
+
+export function messageHelpReply(): BotReply {
+  return { text: 'آیدی‌ها رو با ویرگول بفرست.' };
+}
+
+export function messageAskTextReply(): BotReply {
+  return { text: 'متن پیام رو بفرست.' };
+}
+
+export function messageBadIdsReply(): BotReply {
+  return {
+    text: ['آیدی‌ها درست نیست. با ویرگول بفرست، مثلاً:', '123,456'].join('\n'),
+  };
+}
+
+/**
+ * Comma-separated ids, optional body after them.
+ * `/message` waits for ids on the next line; this parses that line.
+ */
+export function parseMessageArg(arg: string): { chatIds: string[]; text: string } | null {
+  const trimmed = arg.trim();
+  if (!trimmed) return null;
+  const match = /^(\d+(?:\s*[,،]\s*\d+)*)(?:\s+([\s\S]+))?$/.exec(trimmed);
+  if (!match) return null;
+  const chatIds = [
+    ...new Set(
+      match[1]
+        .split(/[,،]/)
+        .map((part) => part.trim())
+        .filter((part) => /^\d+$/.test(part) && part !== '0'),
+    ),
+  ];
+  const text = match[2]?.trim() ?? '';
+  if (chatIds.length === 0) return null;
+  return { chatIds, text };
+}
+
+export function parseChatIds(arg: string): string[] | null {
+  const parsed = parseMessageArg(arg);
+  if (!parsed || parsed.text) return null;
+  return parsed.chatIds;
+}
+
 /**
  * Map inbound private-chat text to a reply. Unknown slash-commands get help;
  * a bare 6-character code is treated as /join. Group `/create` is handled in

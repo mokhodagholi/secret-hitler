@@ -3,6 +3,8 @@ import { createHmac } from 'node:crypto';
 import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
 import { BaleSeatIndex } from './BaleSeatIndex';
+import { InMemoryBotSubscriberStore } from './InMemoryBotSubscriberStore';
+import { DEFAULT_ADMIN_USER_ID } from './adminIds';
 import {
   webhookListenUrl,
   webhookSecretMatches,
@@ -665,5 +667,326 @@ describe('Telegram webhook', () => {
     expect(status).toBe(200);
     expect(sent).toEqual([]);
     expect(repo.findAdminPlay(9)).toBeUndefined();
+  });
+});
+
+describe('Bale webhook — broadcast', () => {
+  it('Should remember a private /start so an admin can broadcast later', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    const bot: BaleMessenger = {
+      sendMessage: async () => ({}),
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/start',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(await subscribers.list('bale')).toEqual(['9']);
+  });
+
+  it('Should send a retention broadcast to everyone who started, with Play', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    await subscribers.upsert('bale', '11');
+    const sent: Array<{ chat_id: number | string; text: string; reply_markup?: unknown }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/broadcast امشب ساعت ۹ میز عمومیه',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent[0]?.text).toContain('2 نفر');
+    const blasts = sent.filter((row) => row.text.includes('میز عمومیه'));
+    expect(blasts).toHaveLength(2);
+    expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
+    expect(JSON.stringify(blasts[0]?.reply_markup)).toContain(
+      'https://ble.ir/secret_hitler_bot?startapp=',
+    );
+    expect(sent.at(-1)?.text).toContain('رسید به 2 نفر');
+  });
+
+  it('Should ignore /broadcast from anyone but the admin', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/broadcast سلام',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toEqual([]);
+  });
+
+  it('Should tell the admin to include a message when /broadcast has no text', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/broadcast',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    expect(sent[0]?.text).toContain('متن');
+  });
+
+  it('Should take /broadcast then the text on the next message', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const admin = {
+      from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+      chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+    };
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: { message_id: 1, date: 0, text: '/broadcast', ...admin },
+    });
+    expect(sent.at(-1)?.text).toContain('متن');
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 2,
+      message: { message_id: 2, date: 0, text: 'امشب بیا', ...admin },
+    });
+    expect(sent.some((row) => row.chat_id === 9 && row.text.includes('امشب بیا'))).toBe(true);
+  });
+
+  it('Should drop a subscriber who can no longer receive the broadcast', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    await subscribers.upsert('bale', '11');
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        if (params.chat_id === 11) throw new Error('blocked');
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/broadcast بیا',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    const remaining = await subscribers.list('bale');
+    expect(remaining).toContain('9');
+    expect(remaining).not.toContain('11');
+  });
+
+  it('Should send /message only to the comma-separated ids', async () => {
+    const sent: Array<{ chat_id: number | string; text: string; reply_markup?: unknown }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/message 9,11 امشب بیا',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    const blasts = sent.filter((row) => row.text.includes('امشب بیا'));
+    expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
+    expect(JSON.stringify(blasts[0]?.reply_markup)).toContain(
+      'https://ble.ir/secret_hitler_bot?startapp=',
+    );
+  });
+
+  it('Should take /message then ids then the text', async () => {
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const admin = {
+      from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+      chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+    };
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: { message_id: 1, date: 0, text: '/message', ...admin },
+    });
+    expect(sent.at(-1)?.text).toContain('آیدی');
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 2,
+      message: { message_id: 2, date: 0, text: '9,11', ...admin },
+    });
+    expect(sent.at(-1)?.text).toContain('متن');
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 3,
+      message: { message_id: 3, date: 0, text: 'امشب بیا', ...admin },
+    });
+    const blasts = sent.filter((row) => row.text.includes('امشب بیا'));
+    expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
+  });
+
+  it('Should ignore /message from anyone but the admin', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/message 9 سلام',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toEqual([]);
   });
 });

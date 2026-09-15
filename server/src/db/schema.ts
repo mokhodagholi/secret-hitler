@@ -1,4 +1,13 @@
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import type { LiveRoomSnapshot } from '../rooms/LiveRoomStore';
 
 /**
@@ -52,3 +61,18 @@ export const liveRooms = pgTable('live_rooms', {
   snapshot: jsonb('snapshot').$type<LiveRoomSnapshot>().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/**
+ * Private-chat users the bot can DM. Filled on /start (and any later private
+ * message) so an admin broadcast has somewhere to go.
+ */
+export const botSubscribers = pgTable(
+  'bot_subscribers',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    platform: text('platform').notNull(),
+    chatId: text('chat_id').notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique('bot_subscribers_platform_chat_id').on(table.platform, table.chatId)],
+);

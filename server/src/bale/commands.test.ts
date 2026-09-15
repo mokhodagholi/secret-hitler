@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, createGroupClosedReply, handleBotText, parseBotCommand } from './commands';
+import { baleStartLink, broadcastHelpReply, createGroupClosedReply, handleBotText, isBroadcastCommand, isDirectMessageCommand, parseBotCommand, parseChatIds, parseMessageArg } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -37,6 +37,18 @@ describe('parseBotCommand', () => {
     expect(parseBotCommand('/play-game 2')).toEqual({
       command: 'play_game',
       arg: '2',
+    });
+    expect(parseBotCommand('/broadcast امشب بیا')).toEqual({
+      command: 'broadcast',
+      arg: 'امشب بیا',
+    });
+    expect(parseBotCommand('/send-all hi')).toEqual({
+      command: 'send_all',
+      arg: 'hi',
+    });
+    expect(parseBotCommand('/message 9,11 بیا')).toEqual({
+      command: 'message',
+      arg: '9,11 بیا',
     });
   });
 
@@ -188,5 +200,37 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('یکی بساز');
     expect(reply.text).not.toContain('بازی کن');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.text).toBe('بازی کن');
+  });
+});
+
+describe('broadcast copy', () => {
+  it('Should recognize hidden admin broadcast aliases', () => {
+    expect(isBroadcastCommand('broadcast')).toBe(true);
+    expect(isBroadcastCommand('sendall')).toBe(true);
+    expect(isBroadcastCommand('send_all')).toBe(true);
+    expect(isBroadcastCommand('start')).toBe(false);
+  });
+
+  it('Should tell the admin to send the text next', () => {
+    expect(broadcastHelpReply().text).toContain('متن');
+  });
+});
+
+describe('direct message copy', () => {
+  it('Should parse comma-separated ids then the body', () => {
+    expect(isDirectMessageCommand('message')).toBe(true);
+    expect(isDirectMessageCommand('broadcast')).toBe(false);
+    expect(parseMessageArg('9,11 امشب بیا')).toEqual({
+      chatIds: ['9', '11'],
+      text: 'امشب بیا',
+    });
+    expect(parseMessageArg('9، 11، 22  سلام')).toEqual({
+      chatIds: ['9', '11', '22'],
+      text: 'سلام',
+    });
+    expect(parseMessageArg('9,11')).toEqual({ chatIds: ['9', '11'], text: '' });
+    expect(parseChatIds('9,11')).toEqual(['9', '11']);
+    expect(parseChatIds('9,11 سلام')).toBeNull();
+    expect(parseMessageArg('امشب بیا')).toBeNull();
   });
 });
