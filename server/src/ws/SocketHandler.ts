@@ -7,6 +7,8 @@ import {
   LOBBY_AFK_MS,
   LOBBY_DISCONNECT_MS,
   Phase,
+  WS_IDLE_CHECK_MS,
+  WS_IDLE_MS,
   MessageRouter,
   isPublicTable,
   parseClientMessage,
@@ -70,6 +72,9 @@ export class SocketHandler {
   private readonly persistChain = new Map<string, Promise<void>>();
   /** One table-chat line per player, then a pause. */
   private readonly chatLimiter = new RateLimiter(1, CHAT_SLOWMODE_MS);
+  /** Last inbound traffic per live socket — silent drops never fire `close`. */
+  private readonly socketLastSeen = new Map<WebSocket, number>();
+  private readonly idleWatch: ReturnType<typeof setInterval>;
   private readonly router: MessageRouter<ClientMessage, GameContext>;
 
   constructor(
@@ -81,8 +86,14 @@ export class SocketHandler {
     private readonly flags: FeatureFlags = DEFAULT_FLAGS,
     private readonly voice: VoiceHub | null = null,
     private readonly telegram: BaleRuntime | null = null,
+    private readonly now: () => number = Date.now,
+    private readonly idleMs: number = WS_IDLE_MS,
   ) {
     this.router = this.buildRouter();
+    this.idleWatch = setInterval(() => this.sweepIdleSockets(), WS_IDLE_CHECK_MS);
+    if (typeof this.idleWatch === 'object' && 'unref' in this.idleWatch) {
+      this.idleWatch.unref();
+    }
   }
 
   /** History attach — set after construction so the recorder can exist first. */
@@ -100,9 +111,21 @@ export class SocketHandler {
 
   /** Drop pending timers so a Fastify close does not keep the process. */
   dispose(): void {
+    clearInterval(this.idleWatch);
+    this.socketLastSeen.clear();
     for (const roomId of this.startChoiceTimers.keys()) this.stopStartChoiceTimer(roomId);
     for (const playerId of [...this.lobbyAfkTimers.keys()]) {
       this.armLobbyAfk('', playerId, null);
+    }
+  }
+
+  /** Drop sockets that went quiet without a clean close (phone sleep / kill). */
+  sweepIdleSockets(now = this.now()): void {
+    const cutoff = now - this.idleMs;
+    for (const [ws, lastSeen] of this.socketLastSeen) {
+      if (lastSeen >= cutoff) continue;
+      this.socketLastSeen.delete(ws);
+      ws.terminate();
     }
   }
 
@@ -439,9 +462,20 @@ export class SocketHandler {
 
   /** Attach handlers to a freshly upgraded socket. */
   handleConnection(ws: WebSocket): void {
-    ws.on('message', (data) => this.onMessage(ws, data.toString()));
-    ws.on('close', () => this.onClose(ws));
+    this.touchSocket(ws);
+    ws.on('message', (data) => {
+      this.touchSocket(ws);
+      this.onMessage(ws, data.toString());
+    });
+    ws.on('close', () => {
+      this.socketLastSeen.delete(ws);
+      this.onClose(ws);
+    });
     ws.on('error', () => ws.close());
+  }
+
+  private touchSocket(ws: WebSocket): void {
+    this.socketLastSeen.set(ws, this.now());
   }
 
   private onMessage(ws: WebSocket, raw: string): void {

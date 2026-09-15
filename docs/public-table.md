@@ -172,6 +172,10 @@ not reconnect. That is a kick, not a ban — they can sit again. The same
 clock applies to every lobby seat, including the host of a hosted room
 (host migrates if someone else is still connected).
 
+Silent drops (phone kill / sleep without a clean WebSocket close) are
+detected when the client stops pinging (~40s idle). Then the 15s lobby
+clock starts.
+
 This AFK rule is for people who are online and idle. `startGame` still
 keeps only `connected` seats.
 

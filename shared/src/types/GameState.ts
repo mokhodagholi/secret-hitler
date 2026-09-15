@@ -296,6 +296,14 @@ export const WANT_START_COOLDOWN_MS = 3 * 60_000;
 export const LOBBY_AFK_MS = 5 * 60_000;
 /** Lobby: disconnected this long without a reconnect → seat dropped, not banned. */
 export const LOBBY_DISCONNECT_MS = 15_000;
+/**
+ * No WebSocket traffic this long → server terminates the socket.
+ * Client pings every 25s; this is one miss plus slack so a silent phone
+ * drop still runs the lobby disconnect kick.
+ */
+export const WS_IDLE_MS = 40_000;
+/** How often the server looks for idle sockets. */
+export const WS_IDLE_CHECK_MS = 10_000;
 /** Pause between a player's table-chat messages — one line, then wait. */
 export const CHAT_SLOWMODE_MS = 7_000;
 
