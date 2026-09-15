@@ -1,10 +1,11 @@
 import { describe, expect, it } from '@rstest/core';
 import { createHmac } from 'node:crypto';
-import type {
-  CreateRoomResponse,
-  FlagsResponse,
-  JoinRoomResponse,
-  RoomSummary,
+import {
+  DEFAULT_FLAGS,
+  type CreateRoomResponse,
+  type FlagsResponse,
+  type JoinRoomResponse,
+  type RoomSummary,
 } from '@secret-hitler/shared';
 import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
@@ -281,18 +282,18 @@ describe('GET /api/flags', () => {
     const { app } = await buildServer();
     const { status, body } = await httpJson<FlagsResponse>(app, 'GET', '/api/flags');
     expect(status).toBe(200);
-    expect(body).toEqual({ flags: { voice: false, publicTable: false } });
+    expect(body).toEqual({ flags: DEFAULT_FLAGS });
   });
 
   it('Should return injected flags as-is', async () => {
-    const { app } = await buildServer({ flags: { voice: true, publicTable: false } });
+    const { app } = await buildServer({ flags: { ...DEFAULT_FLAGS, voice: true } });
     const { status, body } = await httpJson<FlagsResponse>(app, 'GET', '/api/flags');
     expect(status).toBe(200);
-    expect(body).toEqual({ flags: { voice: true, publicTable: false } });
+    expect(body).toEqual({ flags: { ...DEFAULT_FLAGS, voice: true } });
   });
 
   it('Should tell browsers not to cache the flag catalog', async () => {
-    const { app } = await buildServer({ flags: { voice: true, publicTable: false } });
+    const { app } = await buildServer({ flags: { ...DEFAULT_FLAGS, voice: true } });
     const response = await app.inject({ method: 'GET', url: '/api/flags' });
     expect(response.headers['cache-control']).toBe('no-store');
   });

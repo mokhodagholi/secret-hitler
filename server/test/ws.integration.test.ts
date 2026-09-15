@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from '@rstest/core';
-import { Phase, type CreateRoomResponse, type JoinRoomResponse } from '@secret-hitler/shared';
+import {
+  DEFAULT_FLAGS,
+  Phase,
+  type CreateRoomResponse,
+  type JoinRoomResponse,
+} from '@secret-hitler/shared';
 import { TestClient, httpJson, listenServer, type LiveServer } from './test-utils';
 
 let server: LiveServer | undefined;
@@ -61,7 +66,7 @@ describe('WebSocket gameplay', () => {
   });
 
   it('Should put feature flags on the auth handshake', async () => {
-    server = await listenServer(3, { flags: { voice: true, publicTable: false } });
+    server = await listenServer(3, { flags: { ...DEFAULT_FLAGS, voice: true } });
     const created = (
       await httpJson<CreateRoomResponse>(server.app, 'POST', '/api/rooms', {
         name: 'Bunker',
@@ -72,7 +77,7 @@ describe('WebSocket gameplay', () => {
     const ws = await connect();
     ws.send({ type: 'auth', token: created.token });
     const authed = await ws.waitFor('authed');
-    expect(authed.flags).toEqual({ voice: true, publicTable: false });
+    expect(authed.flags).toEqual({ ...DEFAULT_FLAGS, voice: true });
   });
 
   it('Should reject an invalid token and refuse unauthenticated messages', async () => {
@@ -246,7 +251,7 @@ describe('WebSocket gameplay', () => {
   });
 
   it('Should let the host kick a guest from the lobby', async () => {
-    server = await listenServer();
+    server = await listenServer(3, { flags: { ...DEFAULT_FLAGS, lobbyKick: true } });
     const { ben, hostWs, benWs } = await seatThreePlayers();
 
     hostWs.send({ type: 'player:kick', playerId: ben.playerId });
@@ -258,6 +263,16 @@ describe('WebSocket gameplay', () => {
       (m) => !m.state.players.some((p) => p.id === ben.playerId),
     );
     expect(hostState.state.players.map((p) => p.name)).toEqual(['Ana', 'Cal']);
+  });
+
+  it('Should refuse a lobby kick when the lobbyKick flag is off', async () => {
+    server = await listenServer();
+    const { created, ben, hostWs } = await seatThreePlayers();
+
+    hostWs.send({ type: 'player:kick', playerId: ben.playerId });
+    const refused = await hostWs.waitFor('error');
+    expect(refused.code).toBe('INVALID_ACTION');
+    expect(server.repo.get(created.roomId)!.room.findPlayer(ben.playerId)).toBeTruthy();
   });
 
   it('Should wait between chat messages from the same player', async () => {

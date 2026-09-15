@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from '@rstest/core';
 import { AUTH_REJECTED_CLOSE_CODE, WebSocketService } from './WebSocketService';
+import { DEFAULT_FLAGS } from '@secret-hitler/shared';
 
 const OriginalWebSocket = globalThis.WebSocket;
 
@@ -58,7 +59,7 @@ function connectAuthed(): { service: WebSocketService; socket: FakeWebSocket } {
   service.connect('seat-token');
   const socket = lastSocket();
   socket.completeOpen();
-  socket.receive({ type: 'authed', playerId: 'p1', flags: { voice: false, publicTable: false } });
+  socket.receive({ type: 'authed', playerId: 'p1', flags: DEFAULT_FLAGS });
   return { service, socket };
 }
 
@@ -75,7 +76,7 @@ describe('WebSocketService', () => {
     service.connect('seat-token');
     const second = lastSocket();
     second.completeOpen();
-    second.receive({ type: 'authed', playerId: 'p1', flags: { voice: false, publicTable: false } });
+    second.receive({ type: 'authed', playerId: 'p1', flags: DEFAULT_FLAGS });
 
     expect(first.onclose).toBeNull();
     first.close(AUTH_REJECTED_CLOSE_CODE);

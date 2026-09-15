@@ -1,13 +1,17 @@
 // Typed catalog of server-owned feature flags. Adding a flag is one name
 // here, one default, and one FEATURE_* env key — never a scattered boolean.
 
-export const FLAG_NAMES = ['voice', 'publicTable'] as const;
+export const FLAG_NAMES = ['voice', 'publicTable', 'lobbyKick'] as const;
 
 export type FlagName = (typeof FLAG_NAMES)[number];
 
 export type FeatureFlags = Record<FlagName, boolean>;
 
-export const DEFAULT_FLAGS: FeatureFlags = { voice: false, publicTable: false };
+export const DEFAULT_FLAGS: FeatureFlags = {
+  voice: false,
+  publicTable: false,
+  lobbyKick: false,
+};
 
 export interface FlagsResponse {
   flags: FeatureFlags;

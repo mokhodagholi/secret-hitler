@@ -34,6 +34,8 @@ describe('parseFeatureFlags', () => {
   it('Should read camelCase flags from SNAKE_CASE env keys', () => {
     expect(parseFeatureFlags({ FEATURE_PUBLIC_TABLE: 'true' }).publicTable).toBe(true);
     expect(parseFeatureFlags({ FEATURE_PUBLICTABLE: 'true' }).publicTable).toBe(false);
+    expect(parseFeatureFlags({ FEATURE_LOBBY_KICK: 'true' }).lobbyKick).toBe(true);
+    expect(parseFeatureFlags({ FEATURE_LOBBYKICK: 'true' }).lobbyKick).toBe(false);
   });
 });
 

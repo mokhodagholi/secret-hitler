@@ -294,6 +294,8 @@ export const START_CHOICE_DURATION_MS = 15_000;
 export const WANT_START_COOLDOWN_MS = 3 * 60_000;
 /** Lobby: connected and idle this long (non-host) → kicked as away. */
 export const LOBBY_AFK_MS = 5 * 60_000;
+/** Lobby: disconnected this long without a reconnect → seat dropped, not banned. */
+export const LOBBY_DISCONNECT_MS = 15_000;
 /** Pause between a player's table-chat messages — one line, then wait. */
 export const CHAT_SLOWMODE_MS = 7_000;
 

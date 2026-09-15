@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { GameEngine } from './GameEngine';
-import { LOBBY_AFK_MS, Phase } from '../types/GameState';
+import { LOBBY_AFK_MS, LOBBY_DISCONNECT_MS, Phase } from '../types/GameState';
 import { makeRoom, seatPlayers } from '../../test/test-utils';
 
 function publicEngine(minPlayers = 5, maxPlayers = 10) {
@@ -251,5 +251,36 @@ describe('GameEngine — lobby AFK', () => {
     players[3].unreadySince = Date.now() - LOBBY_AFK_MS;
     engine.resolveLobbyAfkTimeout(players[3].id);
     expect(engine.room.findPlayer(players[3].id)).toBeTruthy();
+  });
+
+  it('Should drop a disconnected lobby guest after fifteen seconds without a ban', () => {
+    const engine = new GameEngine(makeRoom());
+    const [host, guest] = seatPlayers(engine, ['Ana', 'Ben']);
+    const joinKey = 'client:eeeeeeee-bbbb-cccc-dddd-eeeeeeeeeeee';
+    guest.joinKey = joinKey;
+    engine.setConnected(guest.id, false);
+    guest.unreadySince = Date.now() - LOBBY_DISCONNECT_MS;
+    const ejected: string[] = [];
+    engine.on('lobbyPlayersEjected', ({ playerIds }) => ejected.push(...playerIds));
+    engine.resolveLobbyAfkTimeout(guest.id);
+    expect(engine.room.findPlayer(guest.id)).toBeUndefined();
+    expect(engine.room.findPlayer(host.id)).toBeTruthy();
+    expect(ejected).toEqual([guest.id]);
+    expect(engine.room.bannedJoinKeys.size).toBe(0);
+    expect(engine.addPlayer('Ben', false, undefined, joinKey)).toMatchObject({
+      name: 'Ben',
+    });
+  });
+
+  it('Should keep a disconnected lobby guest if they return before fifteen seconds', () => {
+    const engine = new GameEngine(makeRoom());
+    const [, guest] = seatPlayers(engine, ['Ana', 'Ben']);
+    engine.setConnected(guest.id, false);
+    engine.resolveLobbyAfkTimeout(guest.id);
+    expect(engine.room.findPlayer(guest.id)).toBeTruthy();
+    engine.setConnected(guest.id, true);
+    guest.unreadySince = Date.now() - LOBBY_DISCONNECT_MS;
+    engine.resolveLobbyAfkTimeout(guest.id);
+    expect(engine.room.findPlayer(guest.id)).toBeTruthy();
   });
 });

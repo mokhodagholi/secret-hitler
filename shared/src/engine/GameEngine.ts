@@ -3,6 +3,7 @@ import {
   KICK_VOTE_DURATION_MS,
   LEGISLATIVE_DURATION_MS,
   LOBBY_AFK_MS,
+  LOBBY_DISCONNECT_MS,
   NOMINATION_DURATION_MS,
   Phase,
   START_CHOICE_DURATION_MS,
@@ -208,9 +209,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.log(connected ? 'reconnected' : 'disconnected', { name: player.name });
     if (this.room.phase === Phase.Lobby) {
       if (connected) {
-        if (this.isLobbyIdle(player)) player.unreadySince = Date.now();
+        player.unreadySince = this.isLobbyIdle(player) ? Date.now() : null;
       } else {
-        player.unreadySince = null;
+        player.unreadySince = Date.now();
       }
       this.armLobbyAfk(player);
       this.maybeAdvancePublicStart();
@@ -326,11 +327,18 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   resolveLobbyAfkTimeout(playerId: string): void {
     const room = this.room;
-    if (room.phase !== Phase.Lobby || room.startChoice) return;
+    if (room.phase !== Phase.Lobby) return;
     const player = room.findPlayer(playerId);
-    if (!player || !this.isLobbyIdle(player) || !player.connected) return;
+    if (!player || player.unreadySince == null) return;
+    if (!player.connected) {
+      if (Date.now() < player.unreadySince + LOBBY_DISCONNECT_MS) return;
+      this.removePlayer(playerId, 'kicked');
+      this.emit('lobbyPlayersEjected', { playerIds: [playerId], reason: 'AFK' });
+      return;
+    }
+    if (room.startChoice) return;
+    if (!this.isLobbyIdle(player)) return;
     if (player.isHost || player.id === room.hostId) return;
-    if (player.unreadySince == null) return;
     if (Date.now() < player.unreadySince + LOBBY_AFK_MS) return;
     this.removePlayer(playerId, 'kicked');
     this.emit('lobbyPlayersEjected', { playerIds: [playerId], reason: 'AFK' });
@@ -993,18 +1001,19 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   private armLobbyAfk(player: Player): void {
-    const paused = this.room.startChoice != null || this.room.kickVote != null;
-    const dueAt =
-      paused ||
-      this.room.phase !== Phase.Lobby ||
-      !this.isLobbyIdle(player) ||
-      player.isHost ||
-      player.id === this.room.hostId ||
-      !player.connected ||
-      player.unreadySince == null
-        ? null
-        : player.unreadySince + LOBBY_AFK_MS;
-    this.emit('lobbyAfkTimerChanged', { playerId: player.id, dueAt });
+    this.emit('lobbyAfkTimerChanged', {
+      playerId: player.id,
+      dueAt: this.lobbyAfkDueAt(player),
+    });
+  }
+
+  private lobbyAfkDueAt(player: Player): number | null {
+    if (this.room.phase !== Phase.Lobby || player.unreadySince == null) return null;
+    if (!player.connected) return player.unreadySince + LOBBY_DISCONNECT_MS;
+    if (this.room.startChoice != null || this.room.kickVote != null) return null;
+    if (!this.isLobbyIdle(player)) return null;
+    if (player.isHost || player.id === this.room.hostId) return null;
+    return player.unreadySince + LOBBY_AFK_MS;
   }
 
   /** Shared deal path — host check already happened, or the public table is legal. */

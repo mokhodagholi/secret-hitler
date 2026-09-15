@@ -86,8 +86,9 @@ if the pool actually fills a table.
   public lobby the way it drops empty hosted rooms. Join and `/find_game`
   also call `ensurePublicLobby` so a missing evergreen seat heals itself.
 
-Hosted rooms keep today's host button, host kick, and host-leave
-destroys-the-room behaviour.
+Hosted rooms keep today's host button and host-leave destroys-the-room
+behaviour. Host kick in the waiting room is behind `lobbyKick`
+(`FEATURE_LOBBY_KICK`, default off).
 
 ### Full table → everyone Accepts
 
@@ -166,9 +167,13 @@ destroys that room. A host waiting for friends from a group chat is
 the intended use of Create. Kicking them after five minutes of unreadiness
 would delete the table they just opened.
 
-Disconnected lobby seats are already dropped at start
-(`startGame` keeps only `connected`). This AFK rule is for people who
-are online and idle.
+A **disconnected** lobby seat is dropped after **15 seconds** if they do
+not reconnect. That is a kick, not a ban — they can sit again. The same
+clock applies to every lobby seat, including the host of a hosted room
+(host migrates if someone else is still connected).
+
+This AFK rule is for people who are online and idle. `startGame` still
+keeps only `connected` seats.
 
 Five minutes is long enough to take a call and short enough that a
 corpse seat does not sit on a 4/5 table for an hour.

@@ -99,12 +99,12 @@ describe('WaitingRoomScreen', () => {
     expect(
       screen.getByText(/These players are not ready yet/i),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Kick Ben' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Kick Ben' })).toBeNull();
     expect(harness.socket.lastSent('game:start')).toBeUndefined();
   });
 
   it('Should let the host kick an unready player from the start prompt', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { lobbyKick: true } });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
       makeView({
@@ -176,7 +176,7 @@ describe('WaitingRoomScreen', () => {
   });
 
   it('Should ask the host before kicking a guest', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { lobbyKick: true } });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
       makeView({
@@ -202,6 +202,25 @@ describe('WaitingRoomScreen', () => {
       type: 'player:kick',
       playerId: 'ben',
     });
+  });
+
+  it('Should not let the host kick a guest when lobby kick is off', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [
+          makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true, ready: true }),
+          makePlayer({ id: 'ben', name: 'Ben', seat: 1, ready: false }),
+        ],
+      }),
+    );
+
+    const guestSeat = screen.getByRole('listitem', { name: 'Ben' });
+    expect(guestSeat.tagName).not.toBe('BUTTON');
+    fireEvent.click(guestSeat);
+    expect(screen.queryByText(/Kick Ben from the room/i)).toBeNull();
   });
 
   it('Should put the seat number to the left of the player name', () => {
@@ -325,7 +344,7 @@ describe('WaitingRoomScreen', () => {
   });
 
   it('Should open a kick vote from a public-table seat', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { lobbyKick: true } });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
       makeView({

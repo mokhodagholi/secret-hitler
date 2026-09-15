@@ -5,6 +5,8 @@ import {
   HOST_MIGRATION_GRACE_MS,
   LIVE_ROOM_RECONNECT_GRACE_MS,
   LOBBY_AFK_MS,
+  LOBBY_DISCONNECT_MS,
+  Phase,
   MessageRouter,
   isPublicTable,
   parseClientMessage,
@@ -118,9 +120,13 @@ export class SocketHandler {
         this.fail(ctx, ctx.engine.continuePlaying(ctx.playerId)),
       )
       .on('player:kick', (m, ctx) => this.kickPlayer(ctx, m.playerId))
-      .on('kick:request', (m, ctx) =>
-        this.fail(ctx, ctx.engine.requestKick(ctx.playerId, m.playerId)),
-      )
+      .on('kick:request', (m, ctx) => {
+        if (!this.lobbyKickAllowed(ctx.entry)) {
+          this.sendError(ctx.ws, 'INVALID_ACTION', 'Lobby kick is not enabled.');
+          return;
+        }
+        this.fail(ctx, ctx.engine.requestKick(ctx.playerId, m.playerId));
+      })
       .on('kick:vote', (m, ctx) => this.fail(ctx, ctx.engine.voteKick(ctx.playerId, m.agree)))
       .on('chat:message', (m, ctx) => {
         if (!this.chatLimiter.allow(ctx.playerId)) {
@@ -314,18 +320,20 @@ export class SocketHandler {
       });
     }
     for (const player of room.players) {
-      const idle = isPublicTable(room.options) ? !player.wantsStart : !player.ready;
-      const dueAt =
-        room.startChoice ||
-        !idle ||
-        player.isHost ||
-        player.id === room.hostId ||
-        !player.connected ||
-        player.unreadySince == null
-          ? null
-          : player.unreadySince + LOBBY_AFK_MS;
-      this.armLobbyAfk(room.id, player.id, dueAt);
+      this.armLobbyAfk(room.id, player.id, this.restoredLobbyAfkDueAt(room, player));
     }
+  }
+
+  private restoredLobbyAfkDueAt(
+    room: RoomEntry['room'],
+    player: RoomEntry['room']['players'][number],
+  ): number | null {
+    if (room.phase !== Phase.Lobby || player.unreadySince == null) return null;
+    if (!player.connected) return player.unreadySince + LOBBY_DISCONNECT_MS;
+    if (room.startChoice != null || room.kickVote != null) return null;
+    const idle = isPublicTable(room.options) ? !player.wantsStart : !player.ready;
+    if (!idle || player.isHost || player.id === room.hostId) return null;
+    return player.unreadySince + LOBBY_AFK_MS;
   }
 
   private armTimer(
@@ -649,8 +657,17 @@ export class SocketHandler {
     });
   }
 
+  /** Host kick and public-lobby kick votes stay dark unless the flag is on. */
+  private lobbyKickAllowed(entry: RoomEntry): boolean {
+    return this.flags.lobbyKick || entry.room.phase !== Phase.Lobby;
+  }
+
   /** Host removes a lobby guest and closes their seat. */
   private kickPlayer(context: GameContext, targetId: string): void {
+    if (!this.lobbyKickAllowed(context.entry)) {
+      this.sendError(context.ws, 'INVALID_ACTION', 'Lobby kick is not enabled.');
+      return;
+    }
     const error = context.engine.kickPlayer(context.playerId, targetId);
     if (error) {
       this.fail(context, error);

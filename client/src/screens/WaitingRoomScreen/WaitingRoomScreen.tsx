@@ -30,7 +30,7 @@ import styles from './WaitingRoomScreen.module.scss';
  * Navigates to the game board as soon as the server leaves the lobby phase.
  */
 export function WaitingRoomScreen() {
-  const { nav, game, socket, i18n, sound, prefetch, miniApp } = useApp();
+  const { nav, game, socket, i18n, sound, prefetch, miniApp, flags } = useApp();
   const { formatMessage } = i18n;
 
   const [copied, setCopied] = createSignal(false);
@@ -170,7 +170,10 @@ export function WaitingRoomScreen() {
     return seat != null ? seat + 1 : 0;
   };
 
+  const canKickInLobby = () => flags.enabled('lobbyKick');
+
   const canReportLobby = (player: PublicPlayer, state: GameStateView) => {
+    if (!canKickInLobby()) return false;
     if (state.kind !== 'public') return false;
     if (!state.you.canRequestKick) return false;
     if (state.kickVote || state.startChoice) return false;
@@ -329,17 +332,19 @@ export function WaitingRoomScreen() {
                             compact
                           />
                         </div>
-                        <Button
-                          variant="danger"
-                          onClick={() => {
-                            sound.play('player-ready');
-                            setKickTarget({ id: player.id, name: player.name });
-                          }}
-                        >
-                          {formatMessage('waiting.kickNamed', {
-                            name: player.name,
-                          })}
-                        </Button>
+                        <Show when={canKickInLobby()}>
+                          <Button
+                            variant="danger"
+                            onClick={() => {
+                              sound.play('player-ready');
+                              setKickTarget({ id: player.id, name: player.name });
+                            }}
+                          >
+                            {formatMessage('waiting.kickNamed', {
+                              name: player.name,
+                            })}
+                          </Button>
+                        </Show>
                       </div>
                     )}
                   </For>
@@ -519,7 +524,9 @@ export function WaitingRoomScreen() {
                       sound.play('player-ready');
                       setPlayerMenu(player);
                     }
-                  : game.isHost() && player.id !== props.state.you.id
+                  : canKickInLobby() &&
+                      game.isHost() &&
+                      player.id !== props.state.you.id
                     ? () => {
                         sound.play('player-ready');
                         setKickTarget({ id: player.id, name: player.name });

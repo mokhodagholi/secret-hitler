@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.1.1",
+      "bump": "patch",
+      "date": "2026-09-15",
+      "changes": [
+        {
+          "kind": "fix",
+          "fa": "اگر در اتاق انتظار قطع شوید و تا پانزده ثانیه برنگردید، جایتان خالی می‌شود.",
+          "en": "If you drop in the waiting room and do not come back within fifteen seconds, your seat is freed; you can sit again."
+        }
+      ]
+    },
+    {
       "version": "0.1.0",
       "bump": "minor",
       "date": "2026-09-15",
