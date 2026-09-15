@@ -74,8 +74,8 @@ When `docs/changelog.md` says this commit is player-facing:
 
 1. Prepend one release (newest first) with `bump`, `date` (`YYYY-MM-DD`), and
    `changes` whose `fa` and `en` are written independently — never translated
-   from the commit subject or from each other. Formal, friendly, of the table
-   (see `docs/changelog.md`).
+   from the commit subject or from each other. Native, meaning first: what
+   they can do now, or what stopped going wrong (see `docs/changelog.md`).
 2. Bump `client/package.json` to match that release's `version`.
 3. Stage those two files with the rest of the work.
 

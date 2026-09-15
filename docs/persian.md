@@ -34,7 +34,7 @@ One language. Four places it sits. Do not mix them in one string.
 |---|---|---|---|
 | **میز** | Spoken Iranian Persian (گفتاری). Short. Warm. | «شما» | Game UI, rules, tips, Ravi subtitles, logs, dialogs |
 | **لوح** | Written Persian, dry, ironic, museum-plaque. Not chat. Not a textbook. | Third person (او) | Splash biography and attributed Hitler lines |
-| **اعلامیه** | Formal, friendly, of the table. | «شما» / «می‌توانید» | Changelog `fa` |
+| **اعلامیه** | Formal, friendly. You tell them what changed. | «شما» / «می‌توانید» | Changelog `fa` |
 | **بله** | Spoken, one-to-one with the bot. | «تو» | Bot replies in Bale and Telegram |
 
 Settings labels, phase names, and error titles can be a bit tighter than

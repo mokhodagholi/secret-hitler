@@ -75,26 +75,43 @@ Prepend the new object at the top of `releases`. Then stage
 `client/src/changelog/releases.json` and `client/package.json` with the rest
 of the commit.
 
-## Voice — write twice, never translate
+## Voice — tell them, like a native
 
 `fa` and `en` are two originals. Do not translate the commit subject. Do not
 translate one locale from the other.
 
-Tone: **formal, friendly, of the table**. Like a briefing after a session —
-warm and clear, never slang, never a press-release or an engineer’s note.
+Write the line you would **say to a player** after the sitting. They should
+know what they can do now, or what stopped going wrong. Model the shipped
+notes in [`releases.json`](../client/src/changelog/releases.json), not
+[`preview.ts`](../client/src/changelog/preview.ts).
+
 This is the **اعلامیه** register in [`persian.md`](./persian.md): «شما» /
-«می‌توانید», not table-talk «می‌تونی / یه». English is composed, not
-chatty. Both may speak of the table, the archive, a briefing, an
-announcement — never of files, tickets, or refactors.
+«می‌توانید», not table-talk «می‌تونی / یه». English is a native telling you —
+direct, not chatty, not a poem.
+
+1. What can they do now, or what stopped biting them?
+2. Forget the commit. Say that in that language. Cut it.
+3. Read it aloud. If a native would not tell a friend that way, rewrite.
+
+Drop: how it was built (browser, webview, tap timing, “announced three
+times”, a field kept above the keyboard). Drop metaphor that hides the fact
+(“the table does not fold”, «میز سخن می‌گوید»). Skip chrome so small you
+would not mention it when telling someone what changed.
+
+Seats, votes, the host, Ravi — name those when that is what changed. Do not
+personify the table to sound warm.
 
 ### Don't / Do
 
 | Don't | Do |
 |---|---|
-| fa: «بهبود مدیریت اتصال مجدد» (translated, technical) | fa: «اگر ارتباط لحظه‌ای قطع شود، میز برجا می‌ماند.» |
-| en: «Improves reconnection handling» | en: «A brief loss of connection no longer clears the table.» |
-| fa: «بعد از هر آپدیت می‌فهمی چی عوض شده.» (slang) | fa: «پس از هر به‌روزرسانی، اعلامیهٔ تغییرات روی میز گذاشته می‌شود.» |
-| en: «Updates now tell you what landed.» (chatty) | en: «Each update now arrives with a briefing of what changed at the table.» |
+| fa: «بهبود مدیریت اتصال مجدد» (engineer) | fa: «اگر ارتباط قطع شود، بازی ادامه می‌یابد.» |
+| en: «Improves reconnection handling» | en: «If the connection drops, the game keeps going.» |
+| fa: «اتاق انتظار دیگر خاموش نیست؛ می‌توان با میز سخن گفت.» (literary) | fa: «پیش از شروع بازی می‌توانید در اتاق انتظار با بقیه گفتگو کنید.» |
+| en: «Should the host leave, the table does not fold.» (empty) | en: «If the host leaves, the game keeps going and another player becomes host.» |
+| en: «The microphone now asks to be heard the moment it is touched.» | en: «Tapping the microphone asks for permission right away.» |
+| fa: «بعد از هر آپدیت می‌فهمی چی عوض شده.» (slang) | fa: «پس از هر به‌روزرسانی، اعلامیهٔ تغییرات نشان داده می‌شود.» |
+| en: «Updates now tell you what landed.» (chatty) | en: «After an update, a short note of what changed is shown.» |
 
 One sentence per change. No file names, no ticket ids, no “we refactored”.
 If it needs a second sentence, it is two changes.

@@ -7,53 +7,48 @@
       "changes": [
         {
           "kind": "feat",
-          "fa": "در اتاق انتظار می‌توانید پیش از شروع بازی با بقیه گفتگو کنید.",
-          "en": "You can talk with the table in the waiting room before the game starts."
+          "fa": "پیش از شروع بازی می‌توانید در اتاق انتظار با بقیه گفتگو کنید.",
+          "en": "You can talk with the others in the waiting room, before the game starts."
         },
         {
           "kind": "feat",
-          "fa": "پس از ورود، راهنما سه بار به‌صورت اعلامیه نمایش داده می‌شود؛ ویدیو و متن کنار هم در صفحهٔ راهنما هستند.",
-          "en": "After the first opening, the guide is announced three times, with a video lesson and the written rules at the top of the page."
+          "fa": "چند بار اول که وارد می‌شوید، راهنما به شما نشان داده می‌شود؛ هم ویدیو هست، هم متن قوانین.",
+          "en": "The first times you open the app, the guide is shown: a video, and the written rules."
         },
         {
           "kind": "feat",
-          "fa": "اگر میزبان میز را ترک کند، بازی ادامه می‌یابد و میزبانی به صندلی دیگری می‌رسد.",
-          "en": "If the host leaves, the table stays in play and another seat takes the host."
+          "fa": "اگر میزبان برود، بازی ادامه می‌یابد و میزبانی به بازیکن دیگری می‌رسد.",
+          "en": "If the host leaves, the game keeps going and another player becomes host."
         },
         {
           "kind": "feat",
-          "fa": "پس از پیروزی یک جناح، هر نفر می‌تواند بماند و گفتگو کند، یا میز را ترک کند.",
-          "en": "When a side wins, each player may stay to talk, or leave the table."
+          "fa": "وقتی یک جناح برنده می‌شود، می‌توانید بمانید و گفتگو کنید، یا میز را ترک کنید.",
+          "en": "When a side wins, you can stay and talk, or leave the table."
         },
         {
           "kind": "feat",
-          "fa": "رأی هر بازیکن ابتدا پشت کارت روی صندلی اوست؛ پس از پایان وقت، روی کارت آشکار می‌شود و کمی بعد جمع می‌شود.",
-          "en": "Each vote first sits face-down on that seat; when time ends the ja or nein is shown, then the cards are taken away."
+          "fa": "رأی هر بازیکن روی صندلی خودش می‌آید؛ اول پشت کارت، بعد از تمام شدن وقت رو می‌شود، و کمی بعد جمع می‌شود.",
+          "en": "Each player's vote sits on their seat, face down; when time is up it turns over, then it is taken away."
         },
         {
           "kind": "feat",
-          "fa": "پنجره‌های بازی را می‌توان از هر جای سطح آن جابه‌جا کرد، نه فقط از دستگیرهٔ بالا.",
-          "en": "In-game panels can be moved from the surface itself, not only from the handle at the top."
+          "fa": "پنجره‌های بازی را از هر جایشان می‌توانید جابه‌جا کنید، نه فقط از نوار بالا.",
+          "en": "You can drag a game window from anywhere on it, not only from the top."
         },
         {
           "kind": "fix",
-          "fa": "در وب‌ویو اندروید بله، صفحهٔ کلید دیگر با بالا آمدن فیلد بسته نمی‌شود.",
-          "en": "On Android in Bale, the keyboard no longer closes when the field is kept above it."
+          "fa": "در بله روی اندروید، صفحهٔ کلید هنگام نوشتن دیگر بسته نمی‌شود.",
+          "en": "On Android in Bale, the keyboard no longer closes while you type."
         },
         {
           "kind": "fix",
-          "fa": "با زدن میکروفون، همان لحظه از مرورگر اجازهٔ صدا خواسته می‌شود.",
-          "en": "Tapping the microphone now asks the browser for access on that same tap."
+          "fa": "با زدن میکروفون، همان لحظه اجازهٔ صدا خواسته می‌شود.",
+          "en": "Tapping the microphone asks for permission right away."
         },
         {
           "kind": "fix",
-          "fa": "اگر کاری در این لحظه ممکن نباشد، پیام کوتاه است و پس از چند ثانیه کنار می‌رود.",
-          "en": "If an action is not available, the notice is brief and clears after a few seconds."
-        },
-        {
-          "kind": "fix",
-          "fa": "اگر صدای راوی قطع شود، با روشن کردن دوباره از همان خط شنیده می‌شود.",
-          "en": "If Ravi’s voice goes silent, turning it back on plays the current line again."
+          "fa": "اگر صدای راوی قطع شود، با روشن کردن دوباره همان جمله پخش می‌شود.",
+          "en": "If Ravi's voice cuts out, turning it back on plays the same line again."
         }
       ]
     }
