@@ -426,7 +426,8 @@ Same admin gate as `/play-game`. Anyone else gets no reply.
 
 1. Type `/broadcast`.
 2. Bot: «متن پیام رو بفرست.»
-3. Send the text.
+3. Send the text (a `ble.ir/…` path or `/start` is still the body, not a
+   command).
 
 Sends that text to every private chat that has talked to this bot (`/start` or
 any later private command). Mini-app login also adds that messenger id.
@@ -452,7 +453,7 @@ While sending, then when done:
 
 (If some DMs fail: `M تا نرسید.` on the second line.)
 
-The admin's own chat is skipped so they only get these status replies.
+The admin gets the same player DM, plus these status replies.
 
 ---
 

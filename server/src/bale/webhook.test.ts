@@ -734,14 +734,18 @@ describe('Bale webhook — broadcast', () => {
     });
 
     expect(status).toBe(200);
-    expect(sent[0]?.text).toContain('2 نفر');
+    expect(sent[0]?.text).toContain('3 نفر');
     const blasts = sent.filter((row) => row.text.includes('میز عمومیه'));
-    expect(blasts).toHaveLength(2);
-    expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
+    expect(blasts).toHaveLength(3);
+    expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([
+      9,
+      11,
+      DEFAULT_ADMIN_USER_ID,
+    ]);
     expect(JSON.stringify(blasts[0]?.reply_markup)).toContain(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
-    expect(sent.at(-1)?.text).toContain('رسید به 2 نفر');
+    expect(sent.at(-1)?.text).toContain('رسید به 3 نفر');
   });
 
   it('Should ignore /broadcast from anyone but the admin', async () => {
@@ -842,6 +846,53 @@ describe('Bale webhook — broadcast', () => {
       message: { message_id: 2, date: 0, text: 'امشب بیا', ...admin },
     });
     expect(sent.some((row) => row.chat_id === 9 && row.text.includes('امشب بیا'))).toBe(true);
+    expect(
+      sent.some(
+        (row) => row.chat_id === DEFAULT_ADMIN_USER_ID && row.text.includes('امشب بیا'),
+      ),
+    ).toBe(true);
+  });
+
+  it('Should broadcast a body that looks like a ble.ir path, not the start greeting', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const admin = {
+      from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+      chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+    };
+    const body = [
+      'شناسه اشتباه بود دوستان.',
+      'شناسه درست: ble.ir/secret_hitler_official',
+    ].join('\n');
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: { message_id: 1, date: 0, text: '/broadcast', ...admin },
+    });
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 2,
+      message: { message_id: 2, date: 0, text: body, ...admin },
+    });
+
+    const blasts = sent.filter((row) => row.text.includes('شناسه درست'));
+    expect(blasts.length).toBeGreaterThan(0);
+    expect(sent.some((row) => row.text.includes('خوش اومدید'))).toBe(false);
   });
 
   it('Should drop a subscriber who can no longer receive the broadcast', async () => {
@@ -1031,7 +1082,11 @@ describe('Bale webhook — broadcast', () => {
       message: { message_id: 2, date: 0, text: '/unsend', ...admin },
     });
 
-    expect(deleted.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
+    expect(deleted.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([
+      9,
+      11,
+      DEFAULT_ADMIN_USER_ID,
+    ]);
     expect(sent.at(-1)?.text).toContain('پاک شد');
     expect(await subscribers.listLastBlast('bale')).toEqual([]);
   });

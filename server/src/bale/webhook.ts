@@ -272,13 +272,11 @@ export async function handleMessengerWebhook(
     return handleUnsend(req, reply, messenger, table, chat.id);
   }
 
-  if (table && isAdminUser(seatedId, table.adminUserIds) && !parsed?.command) {
+  // A draft owns the next private text, even if it looks like /start or a
+  // ble.ir/… path. Only the admin commands above cancel it.
+  if (table && isAdminUser(seatedId, table.adminUserIds)) {
     const continued = await continueAdminDraft(req, reply, messenger, table, chat.id, text);
     if (continued) return;
-  }
-
-  if (table && isAdminUser(seatedId, table.adminUserIds)) {
-    adminDrafts.delete(adminDraftKey(kind, chat.id));
   }
 
   // Heal a missing evergreen lobby (e.g. wiped after reconnect grace).
@@ -450,7 +448,7 @@ async function sendBroadcastToSubscribers(
     return sendBotReply(req, reply, messenger, adminChatId, broadcastEmptyReply());
   }
   const kind = messengerKindOf(messenger);
-  const targets = (await subscribers.list(kind)).filter((chatId) => chatId !== String(adminChatId));
+  const targets = await subscribers.list(kind);
   if (targets.length === 0) {
     return sendBotReply(req, reply, messenger, adminChatId, broadcastEmptyReply());
   }
