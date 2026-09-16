@@ -29,6 +29,7 @@ export type {
   SocialListRequest,
   SocialListResponse,
   SocialPerson,
+  SocialRequestStatus,
   SocialRequestView,
   SocialTieStatus,
   TableInviteNoteId,
