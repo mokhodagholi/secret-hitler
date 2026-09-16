@@ -37,7 +37,7 @@ export interface VotingOverlayProps {
  */
 export function VotingOverlay(props: VotingOverlayProps) {
   const { formatMessage } = props;
-  const { animation, ravi, sound } = useApp();
+  const { animation, ravi, sound, tutorial } = useApp();
   const drag = useDialogDrag();
   const [picked, setPicked] = createSignal<Vote | null>(null);
   const chosen = () => props.yourVote ?? picked();
@@ -55,7 +55,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
       : { width: `${Math.max(0, 1 - elapsedMs / totalMs) * 100}%` };
 
   onMount(() => {
-    if (props.canVote) void ravi.speak('private.vote');
+    if (props.canVote && !tutorial.looking()) void ravi.speak('private.vote');
   });
 
   function choose(vote: Vote): void {
@@ -93,6 +93,7 @@ export function VotingOverlay(props: VotingOverlayProps) {
             class={styles.dialog}
             role="dialog"
             aria-modal="true"
+            data-tutorial-target="vote"
             ref={(element) => void animation.play(element, 'pop-in')}
             {...drag.surfaceProps}
           >

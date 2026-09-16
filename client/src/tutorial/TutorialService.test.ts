@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
+import { Phase } from '@secret-hitler/shared';
 import { NavigationService } from '../services/NavigationService';
 import { LOOK_BEATS, LOOK_SEAT, buildLookView } from './lookView';
 import {
@@ -105,8 +106,8 @@ describe('TutorialService — first-run sit', () => {
 });
 
 describe('TutorialService — look', () => {
-  it('Should stage five named seats with a government and one Ja', () => {
-    const view = buildLookView({ name: 'You', avatar: 0 });
+  it('Should stage five named seats without offices on the first beat', () => {
+    const view = buildLookView({ name: 'You', avatar: 0 }, 0);
     expect(view.players.map((player) => player.name)).toEqual([
       'You',
       'Nima',
@@ -114,11 +115,26 @@ describe('TutorialService — look', () => {
       'Reza',
       'Omid',
     ]);
+    expect(view.phase).toBe(Phase.Nomination);
+    expect(view.board.president).toBeNull();
+    expect(view.board.chancellor).toBeNull();
+  });
+
+  it('Should stage the vote dialog with a president and chancellor', () => {
+    const voteBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'vote');
+    const view = buildLookView({ name: 'You', avatar: 0 }, voteBeat);
+    expect(view.phase).toBe(Phase.Voting);
     expect(view.board.president).toBe(LOOK_SEAT.you);
     expect(view.board.chancellor).toBe(LOOK_SEAT.nima);
-    expect(view.players.find((player) => player.id === LOOK_SEAT.sara)?.vote).toBe(
-      'ja',
-    );
+    expect(view.voteDeadline).not.toBeNull();
+    expect(view.you.vote).toBeNull();
+  });
+
+  it('Should stage three policy tiles for the laws beat', () => {
+    const lawsBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'laws');
+    const view = buildLookView({ name: 'You', avatar: 0 }, lawsBeat);
+    expect(view.phase).toBe(Phase.PresidentLegislative);
+    expect(view.you.policies).toEqual(['liberal', 'fascist', 'liberal']);
   });
 
   it('Should walk every look beat then remember the step', () => {
@@ -130,6 +146,7 @@ describe('TutorialService — look', () => {
     for (let index = 1; index < LOOK_BEATS.length; index++) {
       expect(tutorial.advanceLook()).toBe(false);
       expect(tutorial.headlineKey()).toBe(LOOK_BEATS[index].headline);
+      expect(tutorial.target()).toBe(LOOK_BEATS[index].target);
     }
 
     expect(tutorial.advanceLook()).toBe(true);

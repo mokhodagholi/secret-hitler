@@ -57,6 +57,21 @@ describe('GameScreen — look', () => {
     }
   });
 
+  it('Should show Ja / Nein and the government ticket on the vote beat', () => {
+    const harness = buildHarness();
+    openLook(harness);
+    renderWithApp(() => <LookRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+
+    expect(screen.getByText(en.onboard.idea.vote)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.voteJa })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.voteNein })).toBeTruthy();
+    expect(screen.getByText(en.game.you)).toBeTruthy();
+    expect(screen.getByText('Nima')).toBeTruthy();
+  });
+
   it('Should go home when Skip is pressed', () => {
     const harness = buildHarness();
     openLook(harness);

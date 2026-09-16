@@ -13,6 +13,7 @@ const KNOWN_COMMANDS = new Set([
   'invite',
   'create',
   'play_game',
+  'delete',
 ]);
 
 export interface BotCommandContext {
@@ -312,6 +313,22 @@ export function isDirectMessageCommand(command: string | undefined): boolean {
 
 export function isUnsendCommand(command: string | undefined): boolean {
   return command === 'unsend' || command === 'undo' || command === 'retract';
+}
+
+export function isDeleteRoomCommand(command: string | undefined): boolean {
+  return command === 'delete';
+}
+
+export function deleteRoomHelpReply(): BotReply {
+  return { text: 'کد اتاق رو بعد از دستور بنویس، مثلاً:\n/delete ABC123' };
+}
+
+export function deleteRoomMissingReply(code: string): BotReply {
+  return { text: `اتاقی با کد ${code} پیدا نشد.` };
+}
+
+export function deleteRoomDoneReply(params: { name: string; code: string }): BotReply {
+  return { text: `اتاق ${params.name} (${params.code}) پاک شد.` };
 }
 
 export function broadcastHelpReply(): BotReply {

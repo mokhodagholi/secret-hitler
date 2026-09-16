@@ -1,4 +1,10 @@
-import { AVATAR_COUNT, Phase, type GameStateView, type PublicPlayer } from '@secret-hitler/shared';
+import {
+  AVATAR_COUNT,
+  Phase,
+  type GameStateView,
+  type Policy,
+  type PublicPlayer,
+} from '@secret-hitler/shared';
 import type { MessageKey } from '../i18n';
 
 export const LOOK_ROOM_ID = 'look';
@@ -11,12 +17,16 @@ export const LOOK_SEAT = {
   omid: 'look-omid',
 } as const;
 
+/**
+ * Punch-outs follow the real widgets: seats → boards → vote dialog (Ja/Nein
+ * + government ticket) → office seats → three-law hand → seats again.
+ */
 export const LOOK_BEATS = [
   { target: 'seats', headline: 'onboard.idea.table' },
   { target: 'boards', headline: 'onboard.idea.boards' },
   { target: 'vote', headline: 'onboard.idea.vote' },
   { target: 'government', headline: 'onboard.idea.government' },
-  { target: 'deck', headline: 'onboard.idea.laws' },
+  { target: 'laws', headline: 'onboard.idea.laws' },
   { target: 'seats', headline: 'onboard.letsSit' },
 ] as const satisfies ReadonlyArray<{
   target: string;
@@ -36,17 +46,22 @@ const COMPANIONS: ReadonlyArray<{
   { id: LOOK_SEAT.omid, name: 'Omid', seat: 4 },
 ];
 
+const LOOK_DEADLINE_MS = 60_000;
+
 export interface LookYou {
   name: string;
   avatar: number;
 }
 
 /**
- * Frozen Nomination table so Game-screen chrome (boards, deck, offices,
- * a revealed ballot) is on screen. The match itself is not running.
+ * Frozen table staged for the current look beat. No server room — GameScreen
+ * paints the same chrome a live match would.
  */
-export function buildLookView(you: LookYou): GameStateView {
+export function buildLookView(you: LookYou, beatIndex = 0): GameStateView {
+  const beat = LOOK_BEATS[Math.max(0, Math.min(beatIndex, LOOK_BEATS.length - 1))];
   const avatars = companionAvatars(you.avatar);
+  const withOffices = beat.target === 'vote' || beat.target === 'government' || beat.target === 'laws';
+
   const players: PublicPlayer[] = [
     seat({
       id: LOOK_SEAT.you,
@@ -54,22 +69,20 @@ export function buildLookView(you: LookYou): GameStateView {
       avatar: you.avatar,
       seat: 0,
       isHost: true,
-      isPresident: true,
+      isPresident: withOffices,
     }),
     seat({
       id: LOOK_SEAT.nima,
       name: COMPANIONS[0].name,
       avatar: avatars[0],
       seat: COMPANIONS[0].seat,
-      isChancellor: true,
+      isChancellor: withOffices,
     }),
     seat({
       id: LOOK_SEAT.sara,
       name: COMPANIONS[1].name,
       avatar: avatars[1],
       seat: COMPANIONS[1].seat,
-      hasVoted: true,
-      vote: 'ja',
     }),
     seat({
       id: LOOK_SEAT.reza,
@@ -85,6 +98,14 @@ export function buildLookView(you: LookYou): GameStateView {
     }),
   ];
 
+  const base = emptyView(players, withOffices);
+
+  if (beat.target === 'vote') return votingStage(base);
+  if (beat.target === 'laws') return lawsStage(base);
+  return base;
+}
+
+function emptyView(players: PublicPlayer[], withOffices: boolean): GameStateView {
   return {
     roomId: LOOK_ROOM_ID,
     code: 'LOOK',
@@ -102,8 +123,8 @@ export function buildLookView(you: LookYou): GameStateView {
       electionTracker: 0,
       drawPile: 17,
       discardPile: 0,
-      president: LOOK_SEAT.you,
-      chancellor: LOOK_SEAT.nima,
+      president: withOffices ? LOOK_SEAT.you : null,
+      chancellor: withOffices ? LOOK_SEAT.nima : null,
       lastEnacted: [],
     },
     winner: null,
@@ -127,6 +148,33 @@ export function buildLookView(you: LookYou): GameStateView {
       canRequestKick: false,
       wantStartCooldownUntil: null,
     },
+  };
+}
+
+/** Real vote dialog: Ja / Nein plus the president → chancellor ticket. */
+function votingStage(base: GameStateView): GameStateView {
+  const now = Date.now();
+  return {
+    ...base,
+    phase: Phase.Voting,
+    voteDeadline: { startedAt: now, endsAt: now + LOOK_DEADLINE_MS },
+    you: { ...base.you, vote: null },
+  };
+}
+
+/** Three policy tiles in the president's hand — same LegislativeModal as a live deal. */
+function lawsStage(base: GameStateView): GameStateView {
+  const now = Date.now();
+  const policies: Policy[] = ['liberal', 'fascist', 'liberal'];
+  return {
+    ...base,
+    phase: Phase.PresidentLegislative,
+    board: {
+      ...base.board,
+      drawPile: 14,
+    },
+    legislativeDeadline: { startedAt: now, endsAt: now + LOOK_DEADLINE_MS },
+    you: { ...base.you, policies },
   };
 }
 

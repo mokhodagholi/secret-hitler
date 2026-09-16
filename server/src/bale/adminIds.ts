@@ -1,6 +1,6 @@
 import { ADMIN_PLAY_SEAT_COUNT } from '@secret-hitler/shared';
 
-/** Your Bale id — `/play-game` only answers to this user (plus ADMIN_USER_IDS). */
+/** Your Bale id — hidden admin commands only answer to this user (plus ADMIN_USER_IDS). */
 export const DEFAULT_ADMIN_USER_ID = 1_902_004_260;
 
 export function parseAdminUserIds(

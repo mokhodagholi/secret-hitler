@@ -919,6 +919,26 @@ export class SocketHandler {
     this.removeRoom(entry.room.id);
   }
 
+  /**
+   * Admin `/delete CODE` — tell sitters the table closed, drop the live room,
+   * and heal a missing public lobby if that was the evergreen table.
+   */
+  destroyRoomByCode(code: string): { name: string; code: string } | null {
+    const entry = this.repo.getByCode(code);
+    if (!entry) return null;
+    const snapshot = { name: entry.room.options.name, code: entry.room.code };
+    this.noticeGroupRoomClosed(entry);
+    for (const player of [...entry.room.players]) {
+      this.connections.sendAndClose(player.id, {
+        type: 'room:closed',
+        reason: 'HOST_LEFT',
+      });
+    }
+    this.removeRoom(entry.room.id);
+    this.ensurePublicLobby();
+    return snapshot;
+  }
+
   /** Stop the room's timers, revoke its tokens, and drop it from the repo. */
   private removeRoom(roomId: string): void {
     const players = this.repo.get(roomId)?.room.players ?? [];

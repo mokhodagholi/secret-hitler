@@ -135,6 +135,7 @@ These extra names work in chat but are **not** on the menu:
 | a bare `ABC123` | `/join ABC123` |
 | `/start ABC123` | `/join ABC123` |
 | `/play-game N` | admin test table (hidden; only user `1902004260`) |
+| `/delete CODE` | admin drop live room (hidden; same gate) |
 
 ---
 
@@ -516,6 +517,26 @@ command cannot be pulled back.
 
 ---
 
+## `/delete` — admin drop a live room (hidden)
+
+**Type:** `/delete CODE` in **private** chat. Not on the bot menu.
+
+Same admin gate as `/play-game`. Anyone else gets no reply.
+
+Looks up the live table by its 6-character code (lobby or in progress,
+including hidden `/play-game` tables and the public table) and destroys it:
+sitters get `room:closed` (`HOST_LEFT`), tokens and seats are revoked, and a
+group `/create` post is edited closed when that room had one. If the public
+lobby was the one deleted, `ensurePublicLobby` heals it afterward.
+
+| Situation | Reply |
+|---|---|
+| No code, or not 6 characters | `کد اتاق رو بعد از دستور بنویس، مثلاً:` `/delete ABC123` |
+| No live room with that code | `اتاقی با کد {CODE} پیدا نشد.` |
+| Room removed | `اتاق {name} ({CODE}) پاک شد.` |
+
+---
+
 ## What happens after they tap the button
 
 The chat bot’s job is over. The mini-app boots, reads `start_param` /
@@ -570,9 +591,10 @@ From [`.env.example`](../.env.example):
 | `BALE_BOT_TOKEN` | From BotFather. Empty = no bot, no webhook. |
 | `BALE_BOT_USERNAME` | Nick in `ble.ir/…` links. Default `@secret_hitler_bot`. |
 | `BALE_WEBHOOK_URL` | HTTPS URL Bale POSTs updates to (port 443 or 88). |
-| `BALE_WEBHOOK_SECRET` | Appended to the webhook path; also accepted as `X-Telegram-Bot-Api-Secret-Token`. |
+| `BALE_WEBHOOK_SECRET` | Appended to the webhook path; also accepted as `X-Telegram-Bot-Api-Secret-Token`. Required when registering. |
+| `BOT_SET_WEBHOOK` | `true` only on the VPS (compose default). Local `pnpm dev` must leave it unset so boot does not steal production `setWebhook`. |
 | `BALE_SUPPORT_CHAT_ID` | Group for support letters and kick notices. Not used by chat commands. |
-| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, `/message`, and `/unsend`. `1902004260` is always allowed. |
+| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, `/message`, `/unsend`, and `/delete`. `1902004260` is always allowed. |
 
 Copy for new replies: [`docs/persian.md`](./persian.md) (register **بله**).
 Tests: [`server/src/bale/commands.test.ts`](../server/src/bale/commands.test.ts).

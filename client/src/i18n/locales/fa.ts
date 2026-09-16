@@ -46,6 +46,7 @@ export const fa = {
     rank: 'تازه‌کار',
     live: 'زنده',
     events: 'رویدادها',
+    checkOnboarding: 'میز راهنما',
   },
   playerCards: {
     title: 'کارت بازیکن',

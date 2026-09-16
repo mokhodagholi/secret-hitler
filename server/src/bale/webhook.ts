@@ -20,8 +20,12 @@ import {
   createPasswordDm,
   createPasswordFallbackReply,
   createRateLimitedReply,
+  deleteRoomDoneReply,
+  deleteRoomHelpReply,
+  deleteRoomMissingReply,
   handleBotText,
   isBroadcastCommand,
+  isDeleteRoomCommand,
   isDirectMessageCommand,
   isUnsendCommand,
   messageAskTextReply,
@@ -153,6 +157,45 @@ function adminDraftKey(kind: MessengerKind, chatId: number): string {
 
 function cancelsAdminDraft(command: string | undefined): boolean {
   return command != null && DRAFT_CANCEL_COMMANDS.has(command);
+}
+
+/**
+ * Local `pnpm dev` often shares production `BALE_WEBHOOK_URL` + token. Calling
+ * setWebhook on every boot used to point Bale at a URL without the secret and
+ * kill chat replies until someone fixed registration by hand.
+ */
+export type BotWebhookRegistrationDecision =
+  | { action: 'register' }
+  | { action: 'skip'; reason: string }
+  | { action: 'refuse'; reason: string };
+
+export function decideBotWebhookRegistration(input: {
+  setWebhookEnv: string | undefined;
+  webhookUrl: string | undefined;
+  webhookSecret: string | undefined;
+}): BotWebhookRegistrationDecision {
+  const url = input.webhookUrl?.trim();
+  if (!url) return { action: 'skip', reason: 'no webhook URL' };
+
+  const flag = (input.setWebhookEnv ?? '').trim().toLowerCase();
+  const enabled = flag === '1' || flag === 'true' || flag === 'yes';
+  if (!enabled) {
+    return {
+      action: 'skip',
+      reason:
+        'BOT_SET_WEBHOOK is off — not calling setWebhook (avoids local boot stealing production)',
+    };
+  }
+
+  if (!input.webhookSecret?.trim()) {
+    return {
+      action: 'refuse',
+      reason:
+        'BOT_SET_WEBHOOK is on but the webhook secret is empty — refusing to register an open URL',
+    };
+  }
+
+  return { action: 'register' };
 }
 
 /** Append the secret as a path segment so Bale POSTs to an unguessable URL. */
@@ -306,6 +349,20 @@ export async function handleMessengerWebhook(
     return handleUnsend(req, reply, messenger, table, chat.id);
   }
 
+  if (isDeleteRoomCommand(parsed?.command)) {
+    if (!table || !isAdminUser(seatedId, table.adminUserIds)) {
+      return reply.code(200).send({ ok: true });
+    }
+    adminDrafts.delete(adminDraftKey(kind, chat.id));
+    return sendBotReply(
+      req,
+      reply,
+      messenger,
+      chat.id,
+      handleDeleteRoom(parsed?.arg ?? '', table),
+    );
+  }
+
   // Player commands cancel a stuck compose; bare text / ble.ir paths stay owned
   // by the draft so a broadcast body is not mistaken for /start.
   if (cancelsAdminDraft(parsed?.command) && table && isAdminUser(seatedId, table.adminUserIds)) {
@@ -356,6 +413,16 @@ function handlePlayGame(
     botUsername: messenger.botUsername,
     startLink: startLinkFor(messenger),
   });
+}
+
+const DELETE_ROOM_CODE = /^[A-Za-z0-9]{6}$/;
+
+function handleDeleteRoom(arg: string, table: BaleTableHooks): BotReply {
+  const code = arg.trim().toUpperCase();
+  if (!DELETE_ROOM_CODE.test(code)) return deleteRoomHelpReply();
+  const removed = table.sockets.destroyRoomByCode(code);
+  if (!removed) return deleteRoomMissingReply(code);
+  return deleteRoomDoneReply(removed);
 }
 
 async function handleBroadcast(

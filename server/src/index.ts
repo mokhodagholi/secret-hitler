@@ -10,7 +10,12 @@ import { DrizzleSocialStore } from './social/DrizzleSocialStore';
 import { SocialBook } from './social/SocialBook';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import { parseAdminUserIds } from './bale/adminIds';
-import { registerBaleCommands, webhookListenUrl, type BaleRuntime } from './bale/webhook';
+import {
+  decideBotWebhookRegistration,
+  registerBaleCommands,
+  webhookListenUrl,
+  type BaleRuntime,
+} from './bale/webhook';
 import { parseSupportChatId } from './bale/support';
 import { connectDatabase } from './db/connection';
 import { drizzleFolder, migrateDatabase } from './db/migrate';
@@ -32,6 +37,29 @@ for (const name of ['.env', '.env.example']) {
 
 const PORT = Number(process.env.PORT ?? 3001);
 
+async function maybeRegisterBotWebhook(
+  label: 'Bale' | 'Telegram',
+  webhookUrl: string | undefined,
+  webhookSecret: string | undefined,
+  register: () => Promise<unknown>,
+): Promise<void> {
+  const decision = decideBotWebhookRegistration({
+    setWebhookEnv: process.env.BOT_SET_WEBHOOK,
+    webhookUrl,
+    webhookSecret,
+  });
+  if (decision.action === 'refuse') {
+    throw new Error(`${label}: ${decision.reason}`);
+  }
+  if (decision.action === 'skip') {
+    if (webhookUrl?.trim()) {
+      console.info(`${label}: ${decision.reason}`);
+    }
+    return;
+  }
+  await register();
+}
+
 async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
   const botToken = process.env.BALE_BOT_TOKEN?.trim();
   if (!botToken) return undefined;
@@ -43,10 +71,10 @@ async function createBaleRuntime(): Promise<BaleRuntime | undefined> {
   const botUsername = process.env.BALE_BOT_USERNAME?.trim() || '@secret_hitler_bot';
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
 
-  if (webhookUrl) {
-    // Bale's setWebhook only documents `url`. The secret lives in the path.
-    await bot.setWebhook({ url: webhookListenUrl(webhookUrl, webhookSecret) });
-  }
+  // Bale's setWebhook only documents `url`. The secret lives in the path.
+  await maybeRegisterBotWebhook('Bale', webhookUrl, webhookSecret, () =>
+    bot.setWebhook({ url: webhookListenUrl(webhookUrl!, webhookSecret) }),
+  );
   await registerBaleCommands(bot);
 
   if (botToken && !webhookSecret) {
@@ -82,12 +110,12 @@ async function createTelegramRuntime(): Promise<BaleRuntime | undefined> {
   const webAppShortName = process.env.TELEGRAM_WEBAPP_SHORT_NAME?.trim() || 'game';
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
 
-  if (webhookUrl) {
-    await bot.setWebhook({
-      url: webhookListenUrl(webhookUrl, webhookSecret),
+  await maybeRegisterBotWebhook('Telegram', webhookUrl, webhookSecret, () =>
+    bot.setWebhook({
+      url: webhookListenUrl(webhookUrl!, webhookSecret),
       secret_token: webhookSecret,
-    });
-  }
+    }),
+  );
   await registerBaleCommands(bot);
 
   if (!webhookSecret) {

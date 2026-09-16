@@ -48,6 +48,7 @@ export const en = {
     rank: 'Rookie',
     live: 'Live',
     events: 'Events',
+    checkOnboarding: 'Onboarding',
   },
   playerCards: {
     title: 'Player Cards',

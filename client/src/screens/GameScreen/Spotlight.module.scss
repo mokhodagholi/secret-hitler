@@ -7,7 +7,8 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  z-index: 40;
+  /* Above vote (30) and legislative (90) so the mask / chrome stay on top. */
+  z-index: 100;
   pointer-events: none;
 }
 
@@ -42,6 +43,7 @@
   animation: spotlight-pulse 1.8s ease-in-out infinite;
 }
 
+// Height budget is mirrored by GameScreen --look-chrome-height / .lookChromeSpacer.
 .chrome {
   position: absolute;
   left: 16px;

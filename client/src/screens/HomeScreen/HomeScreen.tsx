@@ -36,10 +36,21 @@ const MATCH_POLL_MS =
  * own return button above Find Match.
  */
 export function HomeScreen() {
-  const { nav, game, i18n, prefetch, animation, settings, miniApp, social, flags } =
-    useApp();
+  const {
+    nav,
+    game,
+    i18n,
+    prefetch,
+    animation,
+    settings,
+    miniApp,
+    social,
+    flags,
+    tutorial,
+  } = useApp();
   const { formatMessage } = i18n;
   const matchmaking = () => flags.ready() && flags.flags.publicTable;
+  const showDevOnboarding = import.meta.env.DEV;
 
   const publicLobby = () => {
     const view = game.view();
@@ -133,6 +144,14 @@ export function HomeScreen() {
   function rejoinMatch(): void {
     const phase = game.view()?.phase;
     nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
+  }
+
+  function openDevOnboarding(): void {
+    tutorial.startLook({
+      name: resolvedName() || formatMessage('game.you'),
+      avatar: settings.settings.avatar,
+    });
+    nav.navigate('game');
   }
 
   const startChoiceSeconds = () => {
@@ -250,6 +269,19 @@ export function HomeScreen() {
                 {formatMessage('home.history')}
               </span>
             </button>
+            <Show when={showDevOnboarding}>
+              <button
+                type="button"
+                class={styles.guideChip}
+                aria-label={formatMessage('home.checkOnboarding')}
+                onClick={openDevOnboarding}
+              >
+                <Icon name="hand" size={16} />
+                <span class={styles.guideLabel} dir="auto">
+                  {formatMessage('home.checkOnboarding')}
+                </span>
+              </button>
+            </Show>
           </div>
         </div>
 

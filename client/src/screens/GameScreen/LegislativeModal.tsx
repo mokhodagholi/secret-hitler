@@ -49,7 +49,7 @@ type Beat = 'deal' | 'burn' | 'pass' | 'choose';
  */
 export function LegislativeModal(props: LegislativeModalProps) {
   const { formatMessage } = props;
-  const { animation, ravi, sound } = useApp();
+  const { animation, ravi, sound, tutorial } = useApp();
   const drag = useDialogDrag();
   const [picking, setPicking] = createSignal(false);
   const [beat, setBeat] = createSignal<Beat>(
@@ -148,7 +148,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
   }
 
   function speakIfHolder(): void {
-    if (closed || props.policies.length === 0) return;
+    if (closed || props.policies.length === 0 || tutorial.looking()) return;
     sound.play('card-flip');
     void ravi.speak(props.mode === 'discard' ? 'private.discard' : 'private.enact');
   }
@@ -217,6 +217,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title()}
+        data-tutorial-target="laws"
         ref={(element) => void animation.play(element, 'pop-in')}
         {...drag.surfaceProps}
       >

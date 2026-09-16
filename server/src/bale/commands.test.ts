@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, handleBotText, isBroadcastCommand, isDirectMessageCommand, isUnsendCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply } from './commands';
+import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -53,6 +53,10 @@ describe('parseBotCommand', () => {
     expect(parseBotCommand('/unsend')).toEqual({
       command: 'unsend',
       arg: '',
+    });
+    expect(parseBotCommand('/delete ABC123')).toEqual({
+      command: 'delete',
+      arg: 'ABC123',
     });
   });
 
@@ -276,5 +280,21 @@ describe('unsend copy', () => {
 
   it('Should tell the admin when nothing was stored', () => {
     expect(unsendEmptyReply().text).toContain('نیست');
+  });
+});
+
+describe('delete room copy', () => {
+  it('Should recognize the hidden admin delete command', () => {
+    expect(isDeleteRoomCommand('delete')).toBe(true);
+    expect(isDeleteRoomCommand('unsend')).toBe(false);
+  });
+
+  it('Should tell the admin how to pass a room code', () => {
+    expect(deleteRoomHelpReply().text).toContain('/delete');
+  });
+
+  it('Should confirm the room that was removed', () => {
+    expect(deleteRoomDoneReply({ name: 'Friday', code: 'ABC123' }).text).toContain('ABC123');
+    expect(deleteRoomMissingReply('ABC123').text).toContain('پیدا نشد');
   });
 });

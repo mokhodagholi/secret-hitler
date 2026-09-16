@@ -274,6 +274,7 @@ export function GameScreen() {
     const previous = lastPhaseForReveal;
     lastPhaseForReveal = state.phase;
     if (
+      !tutorial.looking() &&
       previous === Phase.Nomination &&
       state.phase === Phase.Voting &&
       state.board.chancellor
@@ -507,6 +508,10 @@ export function GameScreen() {
     Math.max(0, Math.ceil((endsAt - clockMs()) / 1000));
 
   function castVote(vote: 'ja' | 'nein'): void {
+    if (tutorial.looking()) {
+      continueLook();
+      return;
+    }
     game.sendCommand({ kind: 'castVote', vote });
   }
 
@@ -540,6 +545,10 @@ export function GameScreen() {
   };
 
   function chooseLegislative(index: number): void {
+    if (tutorial.looking()) {
+      continueLook();
+      return;
+    }
     const phase = view()?.phase;
     if (phase === Phase.PresidentLegislative) {
       game.sendCommand({ kind: 'discardPolicy', index });
@@ -800,7 +809,10 @@ export function GameScreen() {
       <Show when={view()}>
         {(state) => (
           <div
-            class={styles.scene}
+            classList={{
+              [styles.scene]: true,
+              [styles.sceneLooking]: tutorial.looking(),
+            }}
             style={{
               '--chat-panel-height': `${tutorial.looking() ? 0 : chatHeight()}px`,
             }}
@@ -881,7 +893,10 @@ export function GameScreen() {
                 chancellorName={isolateBidi(ticketName(state().board.chancellor))}
                 presidentAvatar={playerAvatar(state().board.president)}
                 chancellorAvatar={playerAvatar(state().board.chancellor)}
-                canVote={state().you.vote == null && !!game.you()?.isAlive}
+                canVote={
+                  state().you.vote == null &&
+                  (tutorial.looking() || !!game.you()?.isAlive)
+                }
                 yourVote={state().you.vote}
                 votedCount={votedCount()}
                 totalVoters={voters().length}
@@ -959,6 +974,8 @@ export function GameScreen() {
             </Show>
 
             <Show when={tutorial.looking()}>
+              {/* Same role as ChatPanel: keep seats above the Skip / Continue bar. */}
+              <div class={styles.lookChromeSpacer} aria-hidden="true" />
               <Spotlight
                 target={tutorial.target()}
                 onContinue={continueLook}

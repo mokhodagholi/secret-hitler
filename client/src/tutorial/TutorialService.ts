@@ -39,6 +39,7 @@ export class TutorialService {
 
   private lookSettled = false;
   private sitAsked = false;
+  private lookYou: LookYou | null = null;
 
   constructor() {
     const [announcing, setAnnouncing] = createSignal(false);
@@ -129,8 +130,9 @@ export class TutorialService {
   startLook(you: LookYou): void {
     this.setOfferingSit(false);
     this.lookSettled = false;
+    this.lookYou = you;
     this.setBeat(0);
-    this.setLookView(buildLookView(you));
+    this.setLookView(buildLookView(you, 0));
     this.setLooking(true);
   }
 
@@ -151,6 +153,7 @@ export class TutorialService {
       return true;
     }
     this.setBeat(next);
+    if (this.lookYou) this.setLookView(buildLookView(this.lookYou, next));
     return false;
   }
 
@@ -178,6 +181,7 @@ export class TutorialService {
 
   private endLook(): void {
     this.lookSettled = false;
+    this.lookYou = null;
     this.setLooking(false);
     this.setLookView(null);
   }

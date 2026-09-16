@@ -13,6 +13,8 @@
   background: #2a1c14;
   padding-top: env(safe-area-inset-top, 0px);
   --chat-panel-height: 280px;
+  /* Button row (~44) + bottom inset (12) + gap above Skip / Continue (~40). */
+  --look-chrome-height: 96px;
 }
 
 .body {
@@ -22,6 +24,17 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+// Same role as ChatPanel: shrink the table so seats clear Spotlight .chrome.
+.lookChromeSpacer {
+  flex: 0 0 auto;
+  height: calc(var(--look-chrome-height) + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+
+.sceneLooking .players {
+  padding-bottom: 8px;
 }
 
 .table {

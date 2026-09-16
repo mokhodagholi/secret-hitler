@@ -7,6 +7,7 @@ import { InMemoryBotSubscriberStore } from './InMemoryBotSubscriberStore';
 import { InMemoryProductStore } from '../product/InMemoryProductStore';
 import { DEFAULT_ADMIN_USER_ID } from './adminIds';
 import {
+  decideBotWebhookRegistration,
   webhookListenUrl,
   webhookSecretMatches,
   type BaleMessenger,
@@ -568,6 +569,54 @@ describe('webhookListenUrl', () => {
     expect(webhookSecretMatches('s3cret', 's3cret')).toBe(true);
     expect(webhookSecretMatches('nope', 's3cret')).toBe(false);
     expect(webhookSecretMatches('', undefined)).toBe(true);
+  });
+});
+
+describe('decideBotWebhookRegistration', () => {
+  const url = 'https://mrfantastic.ir/api/bale/webhook';
+
+  it('Should skip when BOT_SET_WEBHOOK is off so local boot cannot steal production', () => {
+    expect(
+      decideBotWebhookRegistration({
+        setWebhookEnv: undefined,
+        webhookUrl: url,
+        webhookSecret: 's3cret',
+      }).action,
+    ).toBe('skip');
+    expect(
+      decideBotWebhookRegistration({
+        setWebhookEnv: '',
+        webhookUrl: url,
+        webhookSecret: 's3cret',
+      }).action,
+    ).toBe('skip');
+  });
+
+  it('Should refuse registration when the flag is on but the secret is missing', () => {
+    expect(
+      decideBotWebhookRegistration({
+        setWebhookEnv: 'true',
+        webhookUrl: url,
+        webhookSecret: undefined,
+      }).action,
+    ).toBe('refuse');
+  });
+
+  it('Should register only when the flag and secret are both set', () => {
+    expect(
+      decideBotWebhookRegistration({
+        setWebhookEnv: 'true',
+        webhookUrl: url,
+        webhookSecret: 's3cret',
+      }).action,
+    ).toBe('register');
+    expect(
+      decideBotWebhookRegistration({
+        setWebhookEnv: '1',
+        webhookUrl: url,
+        webhookSecret: 's3cret',
+      }).action,
+    ).toBe('register');
   });
 });
 
@@ -1218,5 +1267,120 @@ describe('Bale webhook — broadcast', () => {
 
     expect(status).toBe(200);
     expect(sent).toEqual([]);
+  });
+});
+
+describe('Bale webhook — delete room', () => {
+  it('Should destroy a live room when the admin types /delete CODE', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app, repo } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const entry = repo.create({ name: 'Friday' });
+    const code = entry.room.code;
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: `/delete ${code}`,
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent[0]?.text).toContain(code);
+    expect(sent[0]?.text).toContain('پاک شد');
+    expect(repo.getByCode(code)).toBeUndefined();
+  });
+
+  it('Should tell the admin when the code is missing or unknown', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/delete',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 2,
+      message: {
+        message_id: 2,
+        date: 0,
+        text: '/delete ZZZZZZ',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    expect(sent[0]?.text).toContain('/delete');
+    expect(sent[1]?.text).toContain('پیدا نشد');
+  });
+
+  it('Should ignore /delete from anyone but the admin', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app, repo } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const entry = repo.create({ name: 'Friday' });
+    const code = entry.room.code;
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: `/delete ${code}`,
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent).toEqual([]);
+    expect(repo.getByCode(code)).toBeDefined();
   });
 });
