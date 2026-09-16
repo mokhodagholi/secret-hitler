@@ -199,7 +199,8 @@ async function main() {
     flags,
     voice,
     adminUserIds: parseAdminUserIds(),
-    broadcastDelayMs: 40,
+    // Stay under Bale's ~3 req/s when /broadcast fans out.
+    broadcastDelayMs: 350,
   });
 
   app.log.info({ flags }, 'Feature flags');

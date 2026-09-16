@@ -103,4 +103,11 @@ export class MatchQueue {
   forEachSocket(send: (ws: WebSocket) => void): void {
     for (const ws of this.sockets.values()) send(ws);
   }
+
+  /** Join keys currently waiting in Find Match (for lobby-fill exclusions). */
+  joinKeys(): string[] {
+    return this.entries
+      .map((entry) => entry.joinKey)
+      .filter((joinKey): joinKey is string => joinKey != null);
+  }
 }

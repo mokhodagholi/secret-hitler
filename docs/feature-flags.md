@@ -15,6 +15,7 @@ for the flags themselves.
 | `gameKick` | `FEATURE_GAME_KICK` | off |
 | `onboarding` | `FEATURE_ONBOARDING` | off |
 | `roomPassword` | `FEATURE_ROOM_PASSWORD` | off |
+| `lobbyFill` | `FEATURE_LOBBY_FILL` | off |
 
 Adding a flag: one name in `FLAG_NAMES`, one default in `DEFAULT_FLAGS`, one
 `FEATURE_<NAME>` key in [`.env.example`](../.env.example). Unknown `FEATURE_*`
@@ -64,3 +65,7 @@ When `roomPassword` is off, Create hides the password field and the server
 ignores a password on HTTP create. Group `/create` opens an unlocked lobby
 (no DM / fallback password). Join still asks for a password when a room was
 locked while the flag was on.
+
+When `lobbyFill` is off, the server does not DM warm players to fill waiting
+lobbies. When on, needy 3–4 seat tables get short deep-link invites. See
+[`lobby-fill.md`](./lobby-fill.md).

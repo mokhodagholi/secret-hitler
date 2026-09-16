@@ -41,6 +41,7 @@ the Bale HTTP client the server embeds. Table voice (mediasoup) ships dark behin
 | Public / evergreen lobby | `docs/public-table.md` + `server/src/rooms/` |
 | Postgres schema / migrate | `server/src/db/` + `server/drizzle/` |
 | Product funnel / lobby / blasts | `server/src/product/` + `server/src/db/schema.ts` |
+| Lobby fill invites (warm DMs) | `docs/lobby-fill.md` + `server/src/product/LobbyFillService.ts` |
 | Screen / route | `client/src/App.tsx` + `client/src/screens/<Name>/` |
 | Game table UI | `client/src/screens/GameScreen/` |
 | Client services | `client/src/services/` (reached via `AppContext`) |

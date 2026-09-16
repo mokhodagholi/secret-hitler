@@ -50,6 +50,8 @@ describe('parseFeatureFlags', () => {
     expect(parseFeatureFlags({ FEATURE_ROOMPASSWORD: 'true' }).roomPassword).toBe(
       false,
     );
+    expect(parseFeatureFlags({ FEATURE_LOBBY_FILL: 'true' }).lobbyFill).toBe(true);
+    expect(parseFeatureFlags({ FEATURE_LOBBYFILL: 'true' }).lobbyFill).toBe(false);
   });
 });
 

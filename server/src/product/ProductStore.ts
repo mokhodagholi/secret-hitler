@@ -12,6 +12,7 @@ export const PRODUCT_EVENT_NAMES = [
   'game_finished',
   'lobby_died',
   'game_abandoned',
+  'lobby_fill_invite',
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
@@ -80,6 +81,19 @@ export interface ProductBlastRecipient {
  * Persistence for product funnel, lobby fill, blast conversion, and match
  * health. Production uses Postgres; tests inject the in-memory store.
  */
+export interface WarmInviteQuery {
+  platform: MessengerKind;
+  now: Date;
+  /** Prefer activity inside this lookback (default 90m). */
+  warmWindowMs: number;
+  /** Skip anyone who finished a game this recently (default 30m). */
+  postGameCooldownMs: number;
+  /** Skip anyone who already got a fill invite this recently (default 12h). */
+  inviteCooldownMs: number;
+  excludeUserKeys: ReadonlySet<string>;
+  limit: number;
+}
+
 export interface ProductStore {
   recordEvent(event: ProductEvent): Promise<void>;
   openLobby(lobby: {
@@ -102,6 +116,11 @@ export interface ProductStore {
   recordBlast(platform: MessengerKind, chatIds: string[], sentAt: Date): Promise<void>;
   markBlastOpened(platform: MessengerKind, chatId: string, at: Date): Promise<void>;
   markBlastSat(platform: MessengerKind, chatId: string, at: Date): Promise<void>;
+  /**
+   * Warm messenger users for lobby-fill DMs: recent mini-app / sit / find-match,
+   * not post-game exhausted, not invite-cooled, not in `excludeUserKeys`.
+   */
+  listWarmInviteTargets(query: WarmInviteQuery): Promise<string[]>;
   close(): Promise<void>;
 }
 

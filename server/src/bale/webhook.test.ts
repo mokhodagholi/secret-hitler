@@ -1047,6 +1047,53 @@ describe('Bale webhook — broadcast', () => {
     expect(remaining).not.toContain('11');
   });
 
+  it('Should keep a subscriber after a rate-limit failure on broadcast', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    await subscribers.upsert('bale', '11');
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        if (params.chat_id === 11) {
+          const error = new Error('Too Many Requests: retry after 1') as Error & {
+            errorCode: number;
+            description: string;
+          };
+          error.errorCode = 429;
+          error.description = 'Too Many Requests: retry after 1';
+          throw error;
+        }
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/broadcast بیا',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    await waitUntil(async () => {
+      // Done reply means the fan-out finished; both ids should still be listed.
+      const remaining = await subscribers.list('bale');
+      return remaining.includes('9') && remaining.includes('11');
+    });
+    expect(await subscribers.list('bale')).toEqual(expect.arrayContaining(['9', '11']));
+  });
+
   it('Should keep @username mentions unescaped in a broadcast body', async () => {
     const subscribers = new InMemoryBotSubscriberStore();
     await subscribers.upsert('bale', '9');

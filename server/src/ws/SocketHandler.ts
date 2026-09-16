@@ -159,6 +159,11 @@ export class SocketHandler {
     return this.matchQueue.status();
   }
 
+  /** Join keys in the Find Match queue — lobby fill must not DM them. */
+  queuedJoinKeys(): string[] {
+    return this.matchQueue.joinKeys();
+  }
+
   /** Drop pending timers so a Fastify close does not keep the process. */
   dispose(): void {
     clearInterval(this.idleWatch);

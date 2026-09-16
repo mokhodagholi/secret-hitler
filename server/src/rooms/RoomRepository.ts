@@ -98,6 +98,25 @@ export class RoomRepository {
     });
   }
 
+  /** Every live room entry (including public lobbies and in-progress games). */
+  listEntries(): RoomEntry[] {
+    return [...this.rooms.values()];
+  }
+
+  /**
+   * Unlocked lobbies that can still take strangers via a startapp deep link.
+   * Skips password rooms, admin `/play-game`, and full tables.
+   */
+  listFillableLobbies(): RoomEntry[] {
+    return [...this.rooms.values()].filter((entry) => {
+      if (entry.room.phase !== Phase.Lobby) return false;
+      if (entry.room.options.adminPlayUserId != null) return false;
+      if (entry.room.passwordHash != null) return false;
+      if (entry.room.players.length >= entry.room.options.maxPlayers) return false;
+      return true;
+    });
+  }
+
   /** Every live room, including games already in progress. Hidden admin `/play-game` tables stay out. */
   listAll() {
     return [...this.rooms.values()]

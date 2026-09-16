@@ -583,7 +583,7 @@ async function sendAdminBlast(
 ): Promise<void> {
   const kind = messengerKindOf(messenger);
   const started = await sendChat(req, messenger, adminChatId, broadcastStartedReply(targets.length));
-  if (!started) {
+  if (!started.ok) {
     return reply.code(500).send({ error: 'Failed to send reply' });
   }
   // Ack before the fan-out — nginx/Bale time out long webhook holds.
@@ -629,14 +629,17 @@ async function deliverAdminBlast(params: {
   const deliveries: { chatId: string; messageId: number }[] = [];
   for (const chatId of targets) {
     const posted = await sendChat(req, messenger, Number(chatId), blast);
-    if (posted) {
+    if (posted.ok) {
       sent += 1;
       if (posted.message_id != null) {
         deliveries.push({ chatId, messageId: posted.message_id });
       }
     } else {
       failed += 1;
-      if (dropFailedSubscribers) await table.subscribers?.remove(kind, chatId);
+      // Only forget real blockers — a 429 must not wipe the list.
+      if (dropFailedSubscribers && posted.permanent) {
+        await table.subscribers?.remove(kind, chatId);
+      }
     }
     if (delayMs > 0) await sleep(delayMs);
   }
@@ -664,7 +667,7 @@ async function handleUnsend(
   }
 
   const started = await sendChat(req, messenger, adminChatId, unsendStartedReply(deliveries.length));
-  if (!started) {
+  if (!started.ok) {
     return reply.code(500).send({ error: 'Failed to send reply' });
   }
   void reply.code(200).send({ ok: true });
@@ -733,7 +736,7 @@ async function handleGroupCreate(
     roomPassword: table.roomPassword === true,
   });
   const posted = await sendChat(req, bale, chat.id, created.reply);
-  if ('code' in created && posted?.message_id != null) {
+  if ('code' in created && posted.ok && posted.message_id != null) {
     const entry = repo.getByCode(created.code);
     entry?.room.bindOriginMessage(posted.message_id);
     if (entry) void table.sockets.persistRoom(entry.room.id);
@@ -753,7 +756,7 @@ async function handleGroupCreate(
     password: created.password,
   });
   const dmSent = await sendChat(req, bale, fromId, dm);
-  if (!dmSent) {
+  if (!dmSent.ok) {
     await sendChat(req, bale, chat.id, createPasswordFallbackReply(created.password));
   }
 }
@@ -766,7 +769,7 @@ async function sendBotReply(
   response: BotReply,
 ): Promise<void> {
   const sent = await sendChat(req, bale, chatId, response);
-  if (!sent) {
+  if (!sent.ok) {
     return reply.code(500).send({ error: 'Failed to send reply' });
   }
   return reply.code(200).send({ ok: true });
@@ -794,34 +797,60 @@ async function deleteChatMessage(
   }
 }
 
+type SendChatResult =
+  | { ok: true; message_id?: number }
+  | { ok: false; permanent: boolean };
+
 /** Best-effort send; retries without the keyboard if Bale rejects markup. */
 async function sendChat(
   req: FastifyRequest,
   bale: BaleRuntime,
   chatId: number,
   response: BotReply,
-): Promise<{ message_id?: number } | null> {
+): Promise<SendChatResult> {
   try {
     const sent = await bale.bot.sendMessage({
       chat_id: chatId,
       text: response.text,
       reply_markup: response.reply_markup,
     });
-    return { message_id: readMessageId(sent) };
+    return { ok: true, message_id: readMessageId(sent) };
   } catch (error) {
     req.log.error(error, 'Failed to send bot reply');
-    if (!response.reply_markup) return null;
+    if (!response.reply_markup) {
+      return { ok: false, permanent: isPermanentMessengerFailure(error) };
+    }
     try {
       const sent = await bale.bot.sendMessage({
         chat_id: chatId,
         text: response.text,
       });
-      return { message_id: readMessageId(sent) };
+      return { ok: true, message_id: readMessageId(sent) };
     } catch (retryError) {
       req.log.error(retryError, 'Failed to send bot reply without markup');
-      return null;
+      return { ok: false, permanent: isPermanentMessengerFailure(retryError) };
     }
   }
+}
+
+function isPermanentMessengerFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const errorCode =
+    'errorCode' in error && typeof (error as { errorCode: unknown }).errorCode === 'number'
+      ? (error as { errorCode: number }).errorCode
+      : null;
+  const description = (
+    ('description' in error && typeof (error as { description: unknown }).description === 'string'
+      ? (error as { description: string }).description
+      : error.message) ?? ''
+  ).toLowerCase();
+  if (errorCode === 429) return false;
+  if (errorCode != null && errorCode !== 403) return false;
+  return (
+    description.includes('blocked') ||
+    description.includes("can't initiate") ||
+    description.includes('cannot initiate')
+  );
 }
 
 export async function registerBaleCommands(bot: BaleMessenger): Promise<void> {

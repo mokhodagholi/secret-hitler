@@ -26,6 +26,7 @@ import type { VoiceHub } from './voice/VoiceHub';
 import type { ProductStore } from './product/ProductStore';
 import { InMemoryProductStore } from './product/InMemoryProductStore';
 import { ProductTracker } from './product/ProductTracker';
+import { LobbyFillService } from './product/LobbyFillService';
 import { SocialBook } from './social/SocialBook';
 import { InMemorySocialStore } from './social/SocialStore';
 
@@ -83,6 +84,7 @@ export interface BuiltServer {
   sockets: SocketHandler;
   seats: BaleSeatIndex;
   product: ProductTracker;
+  lobbyFill: LobbyFillService | null;
 }
 
 /**
@@ -115,7 +117,8 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   const history = options.history ?? new InMemoryGameHistoryStore();
   const profiles = options.profiles ?? new InMemoryProfileStore();
   const subscribers = options.subscribers ?? new InMemoryBotSubscriberStore();
-  const product = new ProductTracker(options.product ?? new InMemoryProductStore());
+  const productStore = options.product ?? new InMemoryProductStore();
+  const product = new ProductTracker(productStore);
   const recorder = new GameResultRecorder(history);
   const social =
     options.social ?? new SocialBook(new InMemorySocialStore(), history);
@@ -137,7 +140,20 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
 
   sockets.ensurePublicLobby();
 
+  const lobbyFill =
+    flags.lobbyFill && (bale || telegram)
+      ? new LobbyFillService({
+          repo,
+          sockets,
+          product: productStore,
+          subscribers,
+          bale,
+          telegram,
+        })
+      : null;
+
   app.addHook('onClose', async () => {
+    lobbyFill?.dispose();
     sockets.dispose();
   });
 
@@ -174,5 +190,5 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
-  return { app, repo, tokens, sockets, seats, product };
+  return { app, repo, tokens, sockets, seats, product, lobbyFill };
 }

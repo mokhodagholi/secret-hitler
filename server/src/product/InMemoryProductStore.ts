@@ -9,7 +9,9 @@ import {
   type ProductLobby,
   type ProductMatch,
   type ProductStore,
+  type WarmInviteQuery,
 } from './ProductStore';
+import { rankWarmInviteTargets } from './rankWarmInviteTargets';
 
 function makeId(): string {
   return `p${++InMemoryProductStore.sequence}`;
@@ -149,6 +151,10 @@ export class InMemoryProductStore implements ProductStore {
   async markBlastSat(platform: MessengerKind, chatId: string, at: Date): Promise<void> {
     const recipient = this.recentRecipient(platform, chatId, at);
     if (recipient && recipient.satAt == null) recipient.satAt = at;
+  }
+
+  async listWarmInviteTargets(query: WarmInviteQuery): Promise<string[]> {
+    return rankWarmInviteTargets(this.events, query);
   }
 
   async close(): Promise<void> {}

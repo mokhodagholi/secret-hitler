@@ -8,6 +8,7 @@ import {
   productLobbies,
   productMatches,
 } from '../db/schema';
+import { LOBBY_FILL } from './lobbyFill';
 import {
   BLAST_RETURN_WINDOW_MS,
   type LobbyDeathReason,
@@ -15,7 +16,9 @@ import {
   type MatchOutcome,
   type ProductEvent,
   type ProductStore,
+  type WarmInviteQuery,
 } from './ProductStore';
+import { rankWarmInviteTargets } from './rankWarmInviteTargets';
 
 /** Postgres-backed {@link ProductStore}. */
 export class DrizzleProductStore implements ProductStore {
@@ -195,6 +198,45 @@ export class DrizzleProductStore implements ProductStore {
       .update(productBlastRecipients)
       .set({ satAt: at })
       .where(and(eq(productBlastRecipients.id, recipientId), isNull(productBlastRecipients.satAt)));
+  }
+
+  async listWarmInviteTargets(query: WarmInviteQuery): Promise<string[]> {
+    const lookback = new Date(
+      query.now.getTime() -
+        Math.max(query.warmWindowMs, query.inviteCooldownMs, LOBBY_FILL.activityLookbackMs),
+    );
+    const rows = await this.db
+      .select({
+        name: productEvents.name,
+        at: productEvents.at,
+        platform: productEvents.platform,
+        userKey: productEvents.userKey,
+        roomCode: productEvents.roomCode,
+        payload: productEvents.payload,
+      })
+      .from(productEvents)
+      .where(
+        and(
+          eq(productEvents.platform, query.platform),
+          gt(productEvents.at, lookback),
+          sql`${productEvents.name} IN (
+            'find_match',
+            'seated',
+            'miniapp_auth',
+            'game_finished',
+            'lobby_fill_invite'
+          )`,
+        ),
+      );
+    const events: ProductEvent[] = rows.map((row) => ({
+      name: row.name as ProductEvent['name'],
+      at: row.at,
+      platform: row.platform as ProductEvent['platform'],
+      userKey: row.userKey,
+      roomCode: row.roomCode,
+      payload: row.payload,
+    }));
+    return rankWarmInviteTargets(events, query);
   }
 
   close(): Promise<void> {
