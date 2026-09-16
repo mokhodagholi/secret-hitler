@@ -98,6 +98,22 @@ function playKeyboardFor(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink
   };
 }
 
+const CHANNEL_USERNAME = 'secret_hitler_official';
+
+function channelUrl(platform?: MessengerKind): string {
+  const host = platform === 'telegram' ? 'https://t.me' : 'https://ble.ir';
+  return `${host}/${CHANNEL_USERNAME}`;
+}
+
+function startKeyboardFor(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink' | 'platform'>) {
+  return {
+    inline_keyboard: [
+      [{ text: 'بازی کن', url: linkOf(ctx) }],
+      [{ text: 'کانال', url: channelUrl(ctx.platform) }],
+    ],
+  };
+}
+
 function roomDisplayName(room: RoomSummary): string {
   return room.kind === 'public' ? 'میز عمومی' : room.name;
 }
@@ -129,19 +145,18 @@ function startReply(
     '',
     'برای پیدا کردن بازی، دکمهٔ پایین رو بزن. با یه کلیک می‌ری سر میز.',
     '',
-    'خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا:',
-    '@secret_hitler_official',
+    'خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا — دکمهٔ کانال پایینه.',
     '',
     'راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.',
   ].join('\n');
-  // Bale always Markdown-parses; `_` in the channel nick must be escaped or
-  // sendMessage fails. HTML parse_mode does not turn that off on Bale.
+  // Channel nick has `_`; Bale Markdown would show \@secret\_hitler\_official.
+  // The tap lives on the keyboard, same as Play. Telegram still gets t.me.
   if (ctx.platform === 'telegram') {
-    return { text, reply_markup: playKeyboardFor(ctx) };
+    return { text, reply_markup: startKeyboardFor(ctx) };
   }
   return {
     text: escapeBaleMarkdown(text),
-    reply_markup: playKeyboardFor(ctx),
+    reply_markup: startKeyboardFor(ctx),
   };
 }
 

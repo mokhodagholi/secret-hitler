@@ -97,7 +97,7 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('راز هیتلر');
     expect(reply.text).not.toContain('هیتلر مخفی');
     expect(reply.text).toContain('پیدا کردن بازی');
-    expect(reply.text).toContain('@secret\\_hitler\\_official');
+    expect(reply.text).not.toContain('secret_hitler_official');
     expect(reply.text).toContain('/create');
     expect(reply.text).not.toContain('/find_game');
     expect(reply.parse_mode).toBeUndefined();
@@ -107,13 +107,21 @@ describe('handleBotText', () => {
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
+    expect(reply.reply_markup?.inline_keyboard[1]?.[0]).toEqual({
+      text: 'کانال',
+      url: 'https://ble.ir/secret_hitler_official',
+    });
   });
 
-  it('Should keep Telegram /start as plain text', () => {
+  it('Should keep Telegram /start as plain text with a t.me channel button', () => {
     const reply = ctx({ text: '/start', platform: 'telegram' });
     expect(reply.parse_mode).toBeUndefined();
-    expect(reply.text).toContain('@secret_hitler_official');
     expect(reply.text).not.toContain('\\_');
+    expect(reply.text).not.toContain('secret_hitler_official');
+    expect(reply.reply_markup?.inline_keyboard[1]?.[0]).toEqual({
+      text: 'کانال',
+      url: 'https://t.me/secret_hitler_official',
+    });
   });
 
   it('Should greet a typed start the same as /start', () => {

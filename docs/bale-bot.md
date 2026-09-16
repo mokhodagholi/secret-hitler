@@ -24,11 +24,12 @@ Every useful reply is some mix of:
    Hyphens (`/find-game`) still work if typed. Telegram replies use plain
    text (no `parse_mode`).
 2. **A button** — almost always «بازی کن» or «ورود به اتاق», opening
-   `https://ble.ir/{bot}?startapp=` or `…?startapp=CODE`. The `url` is
-   unescaped. Play and join links live **only** on this keyboard — Bale
-   does not open markdown links in chat text, so the webhook never puts
-   `[بازی کن](…)` in `text`. If Bale rejects the keyboard it retries the
-   same text without buttons.
+   `https://ble.ir/{bot}?startapp=` or `…?startapp=CODE`. `/start` also
+   has **کانال** → `ble.ir/secret_hitler_official`. The `url` is
+   unescaped. Play, join, and channel links live **only** on this
+   keyboard — Bale does not open markdown links in chat text, so the
+   webhook never puts `[بازی کن](…)` in `text`. If Bale rejects the
+   keyboard it retries the same text without buttons.
 
 The bot never pastes the public website (`mrfantastic.ir`, localhost, …).
 Production invites are Bale deep links. Localhost copies
@@ -142,17 +143,15 @@ Reply:
 
 برای پیدا کردن بازی، دکمهٔ پایین رو بزن. با یه کلیک می‌ری سر میز.
 
-خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا:
-@secret_hitler_official
+خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا — دکمهٔ کانال پایینه.
 
 راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.
 ```
 
-Bale escapes the channel nick’s `_` for Markdown (`@secret\_hitler\_official`);
-Telegram keeps plain text.
-
-Button: **بازی کن** → mini-app with an empty `startapp`. The client lands on
-home (no room code).
+Buttons: **بازی کن** → mini-app with an empty `startapp` (home, no room code).
+**کانال** → `https://ble.ir/secret_hitler_official` (Telegram: `t.me/…`).
+The nick is not in the body — Bale Markdown would print `\_` and the mention
+would not open.
 
 **`/start CODE`** — if the argument is a 6-character room code, this is
 exactly `/join CODE`. That is how a classic `ble.ir/bot?start=CODE` payload
