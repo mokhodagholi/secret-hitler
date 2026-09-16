@@ -437,6 +437,27 @@
   filter: brightness(1.08);
 }
 
+.ctaFinding {
+  overflow: visible;
+}
+
+.ctaFinding::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 22px;
+  background: conic-gradient(
+    #5b9fd4,
+    #e3a53e,
+    #c44536,
+    #7c5cbf,
+    #5b9fd4
+  );
+  animation: findSpin 1.8s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .cta:disabled {
   cursor: wait;
   filter: none;
@@ -527,9 +548,19 @@
   }
 }
 
+@keyframes findSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 // Respect Reduce Motion — no idle pulsing or support label fades.
 @media (prefers-reduced-motion: reduce) {
   .cta::before {
+    animation: none;
+  }
+
+  .ctaFinding::after {
     animation: none;
   }
 

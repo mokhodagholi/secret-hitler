@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it } from '@rstest/core';
-import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
+import {
+  DEFAULT_FLAGS,
+  Phase,
+  PUBLIC_TABLE_MAX_PLAYERS,
+  type MatchOccupancy,
+  type MatchQueueResponse,
+  type RoomSummary,
+} from '@secret-hitler/shared';
 import { buildServer } from '../app';
-import { httpJson } from '../../test/test-utils';
-import type { RoomSummary } from '@secret-hitler/shared';
+import { httpJson, listenServer, TestClient } from '../../test/test-utils';
 import type { FastifyInstance } from 'fastify';
 
 describe('public table', () => {
@@ -18,21 +24,35 @@ describe('public table', () => {
     const built = await buildServer();
     app = built.app;
     expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(0);
+    const occupancy = await httpJson<MatchOccupancy>(built.app, 'GET', '/api/match');
+    expect(occupancy.body.waiting).toBe(0);
+    const queued = await httpJson(built.app, 'POST', '/api/match/queue', { name: 'Ana' });
+    expect(queued.status).toBe(404);
   });
 
-  it('Should pin an empty public lobby on the room list when the flag is on', async () => {
+  it('Should keep Find Match as a queue instead of an empty Join lobby', async () => {
     const built = await buildServer({
       flags: { ...DEFAULT_FLAGS, publicTable: true },
     });
     app = built.app;
-    const publicRooms = built.repo.listPublic().filter((room) => room.kind === 'public');
-    expect(publicRooms).toHaveLength(1);
-    expect(publicRooms[0].playerCount).toBe(0);
-    expect(publicRooms[0].maxPlayers).toBe(6);
-    expect(publicRooms[0].phase).toBe(Phase.Lobby);
+    expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(0);
 
     const { body } = await httpJson<RoomSummary[]>(built.app, 'GET', '/api/rooms');
-    expect(body[0]?.kind).toBe('public');
+    expect(body.some((room) => room.kind === 'public')).toBe(false);
+
+    const occupancy = await httpJson<MatchOccupancy>(built.app, 'GET', '/api/match');
+    expect(occupancy.body).toEqual({ waiting: 0, max: PUBLIC_TABLE_MAX_PLAYERS });
+  });
+
+  it('Should drop empty leftover public lobbies', async () => {
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+    });
+    app = built.app;
+    const leftover = built.repo.create({ name: 'میز عمومی', kind: 'public' });
+    const leftoverId = leftover.room.id;
+    built.sockets.ensurePublicLobby();
+    expect(built.repo.get(leftoverId)).toBeUndefined();
   });
 
   it('Should cap a restored public lobby to six seats', async () => {
@@ -40,108 +60,11 @@ describe('public table', () => {
       flags: { ...DEFAULT_FLAGS, publicTable: true },
     });
     app = built.app;
-    const lobby = built.repo.listPublic().find((room) => room.kind === 'public');
-    expect(lobby).toBeTruthy();
-    const entry = built.repo.get(lobby!.id)!;
+    const entry = built.repo.create({ name: 'میز عمومی', kind: 'public' });
+    entry.engine.addPlayer('Ana');
     entry.room.options.maxPlayers = 10;
     built.sockets.ensurePublicLobby();
     expect(entry.room.options.maxPlayers).toBe(6);
-  });
-
-  it('Should refuse a second public lobby while one is still waiting', async () => {
-    const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
-    });
-    app = built.app;
-    built.sockets.ensurePublicLobby();
-    expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(1);
-  });
-
-  it('Should drop an empty leftover public lobby from the room list', async () => {
-    const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
-    });
-    app = built.app;
-    const original = built.repo.listPublic().find((room) => room.kind === 'public');
-    expect(original).toBeTruthy();
-    built.repo.create({ name: 'میز عمومی', kind: 'public' });
-    expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(2);
-
-    built.sockets.ensurePublicLobby();
-    const publicRooms = built.repo.listPublic().filter((room) => room.kind === 'public');
-    expect(publicRooms).toHaveLength(1);
-    expect(publicRooms[0].id).toBe(original!.id);
-  });
-
-  it('Should keep an empty public lobby after the last sitter leaves', async () => {
-    const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
-    });
-    app = built.app;
-    const lobby = built.repo.listPublic().find((room) => room.kind === 'public');
-    expect(lobby).toBeTruthy();
-    const entry = built.repo.get(lobby!.id)!;
-    const seated = entry.engine.addPlayer('Ana');
-    expect('id' in seated).toBe(true);
-    if (!('id' in seated)) return;
-    entry.engine.removePlayer(seated.id);
-    expect(built.repo.get(lobby!.id)).toBeTruthy();
-    expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(1);
-  });
-
-  it('Should spawn a fresh public lobby when the waiting one starts', async () => {
-    const built = await buildServer({
-      minPlayers: 3,
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
-    });
-    app = built.app;
-    const waiting = built.repo.listPublic().find((room) => room.kind === 'public');
-    expect(waiting).toBeTruthy();
-    const entry = built.repo.get(waiting!.id)!;
-    const ids: string[] = [];
-    for (const name of ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay']) {
-      const player = entry.engine.addPlayer(name);
-      expect('id' in player).toBe(true);
-      if ('id' in player) ids.push(player.id);
-    }
-    expect(entry.room.startChoice).not.toBeNull();
-    for (const id of ids) expect(entry.engine.setWantStart(id, true)).toBeNull();
-    expect(entry.room.phase).toBe(Phase.Nomination);
-    const publicLobbies = built.repo.listPublic().filter((room) => room.kind === 'public');
-    expect(publicLobbies).toHaveLength(1);
-    expect(publicLobbies[0].id).not.toBe(waiting.id);
-    expect(publicLobbies[0].playerCount).toBe(0);
-  });
-
-  it('Should refuse join when that sit identity is banned from the table', async () => {
-    const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
-    });
-    app = built.app;
-    const lobby = built.repo.listPublic().find((room) => room.kind === 'public');
-    expect(lobby).toBeTruthy();
-    const clientId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-    built.repo.get(lobby!.id)!.room.bannedJoinKeys.add(`client:${clientId}`);
-
-    const joined = await httpJson(built.app, 'POST', `/api/rooms/${lobby!.code}/join`, {
-      name: 'Ben',
-      clientId,
-    });
-    expect(joined.status).toBe(403);
-    expect((joined.body as { code?: string }).code).toBe('BANNED');
-  });
-
-  it('Should recreate the public lobby when listing rooms if it is missing', async () => {
-    const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
-    });
-    app = built.app;
-    const lobby = built.repo.listPublic().find((room) => room.kind === 'public');
-    expect(lobby).toBeTruthy();
-    built.repo.remove(lobby!.id);
-
-    const { body } = await httpJson<RoomSummary[]>(built.app, 'GET', '/api/rooms');
-    expect(body.some((room) => room.kind === 'public')).toBe(true);
   });
 
   it('Should hide admin play tables from the public and /games lists', async () => {
@@ -173,5 +96,69 @@ describe('public table', () => {
     built.sockets.dropSeat(entry, seated.id);
     expect(built.repo.findAdminPlay(1_902_004_260)).toBeUndefined();
     expect(built.repo.get(entry.room.id)).toBeUndefined();
+  });
+
+  it('Should refuse joining a reserved public table by code', async () => {
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+    });
+    app = built.app;
+    const entry = built.repo.create({ name: 'میز عمومی', kind: 'public' });
+    const joined = await httpJson(built.app, 'POST', `/api/rooms/${entry.room.code}/join`, {
+      name: 'Ben',
+    });
+    expect(joined.status).toBe(403);
+    expect((joined.body as { code?: string }).code).toBe('INVALID_ACTION');
+  });
+});
+
+describe('Find Match queue', () => {
+  it('Should seat six connected waiters in a reserved room and leave leftovers queued', async () => {
+    const live = await listenServer(3, { flags: { ...DEFAULT_FLAGS, publicTable: true } });
+    const names = ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay', 'Gus'];
+    const clients: TestClient[] = [];
+    try {
+      for (const name of names) {
+        const queued = await httpJson<MatchQueueResponse>(
+          live.app,
+          'POST',
+          '/api/match/queue',
+          { name, clientId: `${name.toLowerCase()}aaa-bbbb-cccc-dddd-eeeeeeeeeeee`.slice(0, 36) },
+        );
+        expect(queued.status).toBe(200);
+        const client = await TestClient.connect(live.port);
+        await client.auth(queued.body.token);
+        clients.push(client);
+      }
+
+      const found = await clients[0].waitFor('match:found');
+      for (const client of clients.slice(1, 6)) {
+        await client.waitFor('match:found');
+      }
+
+      const occupancy = await httpJson<MatchOccupancy>(live.app, 'GET', '/api/match');
+      expect(occupancy.body.waiting).toBe(1);
+
+      const reserved = live.repo.get(found.roomId);
+      expect(reserved).toBeTruthy();
+      expect(reserved!.room.players).toHaveLength(6);
+      expect(reserved!.room.startChoice).not.toBeNull();
+
+      const leaver = reserved!.room.players[0];
+      live.sockets.dropSeat(reserved!, leaver.id);
+
+      const backfill = await clients[6].waitFor('match:found');
+      expect(backfill.playerId).toBeTruthy();
+      expect(reserved!.room.players).toHaveLength(6);
+      expect(
+        reserved!.room.players.some((player) => player.id === backfill.playerId),
+      ).toBe(true);
+
+      const after = await httpJson<MatchOccupancy>(live.app, 'GET', '/api/match');
+      expect(after.body.waiting).toBe(0);
+    } finally {
+      for (const client of clients) client.close();
+      await live.close();
+    }
   });
 });

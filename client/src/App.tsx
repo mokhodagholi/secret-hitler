@@ -90,7 +90,8 @@ function FollowMatchStart() {
     seenPhase = state.phase;
     if (state.phase === Phase.Lobby) return;
     if (previous !== Phase.Lobby) return;
-    if (!isGuideScreen(nav.screen())) return;
+    const screen = nav.screen();
+    if (!isGuideScreen(screen) && screen !== 'home' && screen !== 'settings') return;
     sound.play('room-start');
     game.clearError();
     nav.navigate('game');

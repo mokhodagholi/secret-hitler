@@ -1,7 +1,7 @@
-import { describe, expect, it } from '@rstest/core';
+import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { Show } from 'solid-js';
-import { Phase, type RoomSummary } from '@secret-hitler/shared';
+import { Phase } from '@secret-hitler/shared';
 import { HomeScreen } from './HomeScreen';
 import { RoomsScreen } from '../RoomsScreen/RoomsScreen';
 import { RulesScreen } from '../RulesScreen/RulesScreen';
@@ -10,22 +10,12 @@ import { WaitingRoomScreen } from '../WaitingRoomScreen/WaitingRoomScreen';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, makeView, renderWithApp } from '../../../test/test-utils';
 
-function publicLobby(overrides: Partial<RoomSummary> = {}): RoomSummary {
-  return {
-    id: 'public',
-    code: 'PUB001',
-    name: 'میز عمومی',
-    playerCount: 2,
-    maxPlayers: 6,
-    hasPassword: false,
-    phase: Phase.Lobby,
-    kind: 'public',
-    ...overrides,
-  };
-}
-
 describe('HomeScreen', () => {
-  it('Should send the player to Join when the public table is missing', async () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+  });
+
+  it('Should send the player to Join when Find Match is off', async () => {
     const harness = buildHarness();
     harness.services.game.listRooms = async () => [];
     renderWithApp(
@@ -45,21 +35,48 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('tab', { name: 'Join Room' })).toBeTruthy();
   });
 
-  it('Should sit Find Match at the public table', async () => {
-    const harness = buildHarness();
+  it('Should keep Find Match on home while searching', async () => {
+    const harness = buildHarness({ flags: { publicTable: true } });
     harness.services.settings.set('profileName', 'Ana');
-    harness.services.game.listRooms = async () => [publicLobby()];
-    const joined: string[] = [];
-    harness.services.game.joinRoom = async (id) => {
-      joined.push(id);
-      return { roomId: id, code: 'PUB001', token: 'token-p', playerId: 'you' };
-    };
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/api/match/queue')) {
+        return new Response(
+          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 1, max: 6 }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.includes('/api/match')) {
+        return new Response(JSON.stringify({ waiting: 1, max: 6 }), { status: 200 });
+      }
+      return new Response('[]', { status: 200 });
+    });
     renderWithApp(() => <HomeScreen />, harness);
 
-    await waitFor(() => expect(screen.getByText('2/6')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
-    await waitFor(() => expect(harness.services.nav.screen()).toBe('waiting-room'));
-    expect(joined).toEqual(['public']);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: en.home.finding })).toBeTruthy(),
+    );
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(harness.services.game.queued()).toBe(true);
+  });
+
+  it('Should ask everyone to Accept when a reserved table is full', () => {
+    const harness = buildHarness({ seated: true, flags: { publicTable: true } });
+    renderWithApp(() => <HomeScreen />, harness);
+    harness.pushState(
+      makeView({
+        kind: 'public',
+        startChoice: { startedAt: 1, endsAt: Date.now() + 15_000 },
+      }),
+    );
+
+    expect(screen.getByText(en.waiting.startChoiceHoldout)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.waiting.wantStart }));
+    expect(harness.socket.lastSent('player:wantStart')).toEqual({
+      type: 'player:wantStart',
+    });
+    expect(harness.services.nav.screen()).toBe('home');
   });
 
   it('Should hide the title and keep currency off the home screen', () => {

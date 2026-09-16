@@ -11,6 +11,9 @@ import {
   type JoinRoomRequest,
   type JoinRoomResponse,
   type LogEntry,
+  type MatchOccupancy,
+  type MatchQueueRequest,
+  type MatchQueueResponse,
   type ProfileResponse,
   type PublicPlayer,
   type Role,
@@ -99,6 +102,20 @@ export class GameStateService {
   private readonly sessionSignal = createSignal<RoomSession | null>(null);
   private readonly session = this.sessionSignal[0];
   private readonly setSession = this.sessionSignal[1];
+
+  private readonly queuedSignal = createSignal(false);
+  readonly queued = this.queuedSignal[0];
+  private readonly setQueued = this.queuedSignal[1];
+
+  private readonly matchWaitingSignal = createSignal(0);
+  readonly matchWaiting = this.matchWaitingSignal[0];
+  private readonly setMatchWaiting = this.matchWaitingSignal[1];
+
+  private readonly matchMaxSignal = createSignal(6);
+  readonly matchMax = this.matchMaxSignal[0];
+  private readonly setMatchMax = this.matchMaxSignal[1];
+
+  private queueToken: string | null = null;
 
   constructor(private readonly socket: WebSocketService) {
     const router = this.buildRouter();
@@ -207,6 +224,65 @@ export class GameStateService {
     return (await response.json()) as RoomSummary[];
   }
 
+  async loadMatchOccupancy(): Promise<MatchOccupancy> {
+    let response: Response;
+    try {
+      response = await fetch('/api/match');
+    } catch {
+      throw new RoomApiError('NETWORK', 'Could not reach the server.');
+    }
+    if (!response.ok) {
+      throw new RoomApiError('NETWORK', 'Could not load Find Match.');
+    }
+    const body = (await response.json()) as MatchOccupancy;
+    this.setMatchWaiting(body.waiting);
+    this.setMatchMax(body.max);
+    return body;
+  }
+
+  async queueMatch(request: MatchQueueRequest): Promise<MatchQueueResponse> {
+    if (this.queued() && this.queueToken) {
+      return {
+        token: this.queueToken,
+        playerId: this.session()?.playerId ?? '',
+        waiting: this.matchWaiting(),
+        max: this.matchMax(),
+      };
+    }
+    const previous = this.session();
+    if (previous) {
+      this.socket.send({ type: 'room:leave' });
+      this.socket.disconnect();
+      this.setSession(null);
+      clearStoredSession();
+      this.setView(null);
+    }
+    const response = await this.request<MatchQueueResponse>(
+      'POST',
+      '/api/match/queue',
+      request,
+    );
+    this.queueToken = response.token;
+    this.setQueued(true);
+    this.setMatchWaiting(response.waiting);
+    this.setMatchMax(response.max);
+    this.socket.connect(response.token);
+    return response;
+  }
+
+  async leaveMatchQueue(): Promise<void> {
+    const token = this.queueToken;
+    this.socket.send({ type: 'match:cancel' });
+    this.socket.disconnect();
+    this.clearQueueState();
+    if (!token) return;
+    try {
+      await this.request('POST', '/api/match/leave', { token });
+    } catch {
+      /* already left */
+    }
+  }
+
   /** Persist the chosen card. Local settings already hold it if this fails. */
   async saveProfile(request: SaveProfileRequest): Promise<void> {
     try {
@@ -274,6 +350,10 @@ export class GameStateService {
 
   /** Tell the server we're leaving, then drop the session and reset state. */
   leaveRoom(): void {
+    if (this.queueToken && !this.session()) {
+      void this.leaveMatchQueue();
+      return;
+    }
     this.socket.send({ type: 'room:leave' });
     this.socket.disconnect();
     this.setSession(null);
@@ -286,6 +366,7 @@ export class GameStateService {
     this.setLastError(null);
     this.clearErrorTimer();
     this.setChatSlowUntil(0);
+    this.clearQueueState();
   }
 
   // --- Internals -----------------------------------------------------------
@@ -321,6 +402,27 @@ export class GameStateService {
 
   private buildRouter(): MessageRouter<ServerMessage> {
     return new MessageRouter<ServerMessage>()
+      .on('match:status', (message) => {
+        this.setMatchWaiting(message.waiting);
+        this.setMatchMax(message.max);
+      })
+      .on('match:found', (message) => {
+        this.queueToken = null;
+        this.setQueued(false);
+        this.socket.replaceToken(message.token);
+        this.setSession({
+          roomId: message.roomId,
+          code: message.code,
+          token: message.token,
+          playerId: message.playerId,
+        });
+        writeStoredSession({
+          roomId: message.roomId,
+          code: message.code,
+          token: message.token,
+          playerId: message.playerId,
+        });
+      })
       .on('state', (message) => {
         this.setView(message.state);
         if (message.state.you.role) this.setRole(message.state.you.role);
@@ -355,6 +457,11 @@ export class GameStateService {
           this.armErrorClear();
         }
       });
+  }
+
+  private clearQueueState(): void {
+    this.queueToken = null;
+    this.setQueued(false);
   }
 
   private armErrorClear(): void {

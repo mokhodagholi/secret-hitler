@@ -212,7 +212,7 @@ export interface GameStateView {
   hostId: string;
   minPlayers: number;
   maxPlayers: number;
-  /** Evergreen Join lobby when `public`. */
+  /** Reserved Find Match table when `public`. */
   kind: 'public' | 'hosted';
   /** Public-table must-choose window, else null. */
   startChoice: { startedAt: number; endsAt: number } | null;

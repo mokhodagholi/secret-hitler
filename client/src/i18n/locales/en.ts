@@ -33,6 +33,7 @@ export const en = {
   home: {
     play: 'Play',
     findGame: 'Find Match',
+    finding: 'Finding…',
     playWithFriends: 'Play with friends',
     rejoin: 'Return to table',
     title: 'Secret Hitler',

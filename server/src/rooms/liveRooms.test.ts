@@ -105,19 +105,21 @@ describe('live room persistence', () => {
     await second.close();
   });
 
-  it('Should restore an empty public lobby after a process restart', async () => {
+  it('Should restore an occupied public lobby after a process restart', async () => {
     const live = new InMemoryLiveRoomStore();
     const flags = { ...DEFAULT_FLAGS, publicTable: true };
     const first = await buildServer({ live, flags });
-    const lobby = first.repo.listPublic().find((room) => room.kind === 'public');
-    expect(lobby).toBeTruthy();
-    await first.sockets.persistRoom(lobby!.id);
+    const entry = first.repo.create({ name: 'میز عمومی', kind: 'public' });
+    first.sockets.registerEngine(entry);
+    const seated = entry.engine.addPlayer('Ana');
+    expect('id' in seated).toBe(true);
+    await first.sockets.persistRoom(entry.room.id);
     await first.app.close();
 
     const second = await buildServer({ live, flags });
-    const restored = second.repo.get(lobby!.id)?.room;
+    const restored = second.repo.get(entry.room.id)?.room;
     expect(restored?.phase).toBe(Phase.Lobby);
-    expect(second.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(1);
+    expect(restored?.players).toHaveLength(1);
     await second.app.close();
   });
 

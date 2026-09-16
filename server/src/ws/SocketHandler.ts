@@ -6,6 +6,8 @@ import {
   LIVE_ROOM_RECONNECT_GRACE_MS,
   LOBBY_AFK_MS,
   LOBBY_DISCONNECT_MS,
+  PUBLIC_TABLE_MAX_PLAYERS,
+  PUBLIC_TABLE_NAME,
   Phase,
   WS_IDLE_CHECK_MS,
   WS_IDLE_MS,
@@ -36,6 +38,7 @@ import type { VoiceHub } from '../voice/VoiceHub';
 import type { BaleRuntime } from '../bale/webhook';
 import { formatKickVoteLetter } from '../bale/support';
 import { createGroupClosedReply } from '../bale/commands';
+import { MatchQueue } from '../rooms/MatchQueue';
 
 /** Resolved per-message context for an authenticated socket. */
 interface GameContext {
@@ -81,6 +84,7 @@ export class SocketHandler {
   private readonly chatLimiter = new RateLimiter(1, CHAT_SLOWMODE_MS);
   /** Last inbound traffic per live socket — silent drops never fire `close`. */
   private readonly socketLastSeen = new Map<WebSocket, number>();
+  private readonly matchQueue = new MatchQueue();
   private readonly idleWatch: ReturnType<typeof setInterval>;
   private readonly router: MessageRouter<ClientMessage, GameContext>;
 
@@ -106,17 +110,40 @@ export class SocketHandler {
   /** History attach — set after construction so the recorder can exist first. */
   onRoomCreated: ((entry: RoomEntry) => void) | null = null;
 
-  /** Create the evergreen Join lobby when the flag is on and none is waiting. */
+  /** Drop leftover empty reserved tables and cap restored ones to six. */
   ensurePublicLobby(): void {
     if (!this.flags.publicTable) return;
-    for (const extra of this.repo.extraEmptyPublicLobbies()) {
+    for (const extra of this.repo.emptyPublicLobbies()) {
       this.removeRoom(extra.room.id);
     }
-    const created = this.repo.ensurePublicLobby();
-    if (!created) return;
-    this.registerEngine(created);
-    this.onRoomCreated?.(created);
-    void this.persistRoom(created.room.id);
+    this.repo.ensurePublicLobby();
+  }
+
+  /** Sit in Find Match. Same identity may re-queue and keep their token. */
+  enqueueMatch(args: {
+    name: string;
+    avatar?: number;
+    joinKey: string | null;
+  }): { token: string; playerId: string; waiting: number; max: number } {
+    const entry = this.matchQueue.enqueue(args);
+    this.broadcastMatchStatus();
+    return {
+      token: entry.token,
+      playerId: entry.id,
+      waiting: this.matchQueue.size,
+      max: this.matchQueue.max,
+    };
+  }
+
+  leaveMatchQueue(token: string): void {
+    const entry = this.matchQueue.lookup(token);
+    if (!entry) return;
+    this.matchQueue.remove(entry.id);
+    this.broadcastMatchStatus();
+  }
+
+  matchStatus(): { waiting: number; max: number } {
+    return this.matchQueue.status();
   }
 
   /** Drop pending timers so a Fastify close does not keep the process. */
@@ -270,6 +297,7 @@ export class SocketHandler {
     engine.on('kickVoteResolved', (result) => {
       this.postKickVoteNotice(room.id, result);
       if (result.kicked) this.ejectPlayer(result.targetId);
+      this.fillReservedFromQueue(this.repo.get(room.id) ?? null);
     });
     engine.on('startChoiceTimerChanged', ({ endsAt }) => {
       this.stopStartChoiceTimer(room.id);
@@ -284,9 +312,12 @@ export class SocketHandler {
     });
     engine.on('lobbyPlayersEjected', ({ playerIds }) => {
       for (const playerId of playerIds) this.ejectPlayer(playerId, 'AFK');
+      const remaining = this.repo.get(room.id);
+      this.fillReservedFromQueue(remaining ?? null);
+      if (remaining) this.dropEmptyRoomIfUnkept(remaining.room.id);
     });
     engine.on('gameStarted', () => {
-      if (isPublicTable(room.options)) this.ensurePublicLobby();
+      this.ensurePublicLobby();
     });
   }
 
@@ -528,6 +559,14 @@ export class SocketHandler {
 
     const context = this.contextFor(ws);
     if (!context) {
+      if (msg.type === 'ping') {
+        this.sendTo(ws, { type: 'pong' });
+        return;
+      }
+      if (msg.type === 'match:cancel') {
+        this.cancelQueuedSocket(ws);
+        return;
+      }
       this.sendError(ws, 'AUTH_FAILED', 'Authenticate before sending messages.');
       return;
     }
@@ -810,6 +849,7 @@ export class SocketHandler {
       this.destroyRoom(remaining);
       return;
     }
+    this.fillReservedFromQueue(remaining);
     this.dropEmptyRoomIfUnkept(roomId);
   }
 
@@ -867,6 +907,20 @@ export class SocketHandler {
   }
 
   private onAuth(ws: WebSocket, token: string): void {
+    const queued = this.matchQueue.lookup(token);
+    if (queued) {
+      this.connections.bind(queued.id, ws);
+      this.matchQueue.bindSocket(queued.id, ws);
+      this.sendTo(ws, { type: 'authed', playerId: queued.id, flags: this.flags });
+      this.sendTo(ws, {
+        type: 'match:status',
+        waiting: this.matchQueue.size,
+        max: this.matchQueue.max,
+      });
+      this.tryFormMatch();
+      return;
+    }
+
     const claim = this.tokens.lookup(token);
     const entry = claim ? this.repo.get(claim.roomId) : undefined;
     const player = claim && entry ? entry.room.findPlayer(claim.playerId) : undefined;
@@ -895,7 +949,13 @@ export class SocketHandler {
     const playerId = this.connections.unbind(ws);
     const roomId = this.socketRoom.get(ws);
     this.socketRoom.delete(ws);
-    if (!playerId || !roomId) return;
+    if (!playerId) return;
+
+    if (!roomId) {
+      this.matchQueue.remove(playerId);
+      this.broadcastMatchStatus();
+      return;
+    }
     // Reconnect already bound a newer socket; this close is the leftover.
     if (this.connections.isConnected(playerId)) return;
     this.chatLimiter.clear(playerId);
@@ -906,6 +966,108 @@ export class SocketHandler {
     void this.voice?.applySeat(playerId, false);
     // A dropped host keeps the seat for a grace period before migration.
     if (playerId === entry.room.hostId) this.scheduleHostGrace(roomId);
+  }
+
+  private cancelQueuedSocket(ws: WebSocket): void {
+    const playerId = this.connections.playerFor(ws);
+    if (!playerId || this.socketRoom.get(ws)) return;
+    this.matchQueue.remove(playerId);
+    this.broadcastMatchStatus();
+  }
+
+  private tryFormMatch(): void {
+    if (!this.flags.publicTable) return;
+    if (this.matchQueue.connectedCount() < PUBLIC_TABLE_MAX_PLAYERS) {
+      this.broadcastMatchStatus();
+      return;
+    }
+    const taken = this.matchQueue.takeConnected(PUBLIC_TABLE_MAX_PLAYERS);
+    if (taken.length < PUBLIC_TABLE_MAX_PLAYERS) {
+      this.broadcastMatchStatus();
+      return;
+    }
+
+    const created = this.repo.create({ name: PUBLIC_TABLE_NAME, kind: 'public' });
+    this.registerEngine(created);
+    this.onRoomCreated?.(created);
+
+    const seated: Array<{
+      ws: (typeof taken)[number]['ws'];
+      playerId: string;
+      token: string;
+    }> = [];
+    for (const queued of taken) {
+      const player = created.engine.addPlayer(
+        queued.name,
+        false,
+        queued.avatar,
+        queued.joinKey,
+      );
+      if ('code' in player) continue;
+      const token = this.tokens.issue({ roomId: created.room.id, playerId: player.id });
+      seated.push({ ws: queued.ws, playerId: player.id, token });
+    }
+
+    for (const seat of seated) this.attachQueuedSocket(created, seat);
+    void this.persistRoom(created.room.id);
+    this.broadcastMatchStatus();
+    this.tryFormMatch();
+  }
+
+  /**
+   * Pull waiters into a reserved lobby that still has sitters. An empty
+   * reserved room is dropped instead of resurrecting a 1-person table.
+   */
+  private fillReservedFromQueue(entry: RoomEntry | null): void {
+    if (!entry || !this.flags.publicTable) return;
+    if (!isPublicTable(entry.room.options) || entry.room.phase !== Phase.Lobby) return;
+    if (entry.room.players.length === 0) return;
+
+    while (!entry.room.isFull) {
+      const next = this.matchQueue.takeConnected(1)[0];
+      if (!next) break;
+      const player = entry.engine.addPlayer(next.name, false, next.avatar, next.joinKey);
+      if ('code' in player) break;
+      const token = this.tokens.issue({ roomId: entry.room.id, playerId: player.id });
+      this.attachQueuedSocket(entry, { ws: next.ws, playerId: player.id, token });
+    }
+    void this.persistRoom(entry.room.id);
+    this.broadcastMatchStatus();
+    this.tryFormMatch();
+  }
+
+  private attachQueuedSocket(
+    entry: RoomEntry,
+    seat: { ws: WebSocket; playerId: string; token: string },
+  ): void {
+    this.connections.unbind(seat.ws);
+    this.connections.bind(seat.playerId, seat.ws);
+    this.socketRoom.set(seat.ws, entry.room.id);
+    this.sendTo(seat.ws, {
+      type: 'match:found',
+      roomId: entry.room.id,
+      code: entry.room.code,
+      token: seat.token,
+      playerId: seat.playerId,
+    });
+    this.sendTo(seat.ws, {
+      type: 'authed',
+      playerId: seat.playerId,
+      flags: this.flags,
+    });
+    this.sendTo(seat.ws, {
+      type: 'state',
+      state: this.viewerState(entry.room.id, seat.playerId),
+    });
+  }
+
+  private broadcastMatchStatus(): void {
+    const status: ServerMessage = {
+      type: 'match:status',
+      waiting: this.matchQueue.size,
+      max: this.matchQueue.max,
+    };
+    this.matchQueue.forEachSocket((ws) => this.sendTo(ws, status));
   }
 
   private scheduleHostGrace(roomId: string): void {

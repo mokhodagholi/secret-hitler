@@ -31,6 +31,7 @@ export const fa = {
   home: {
     play: 'بازی',
     findGame: 'پیدا کردن بازی',
+    finding: 'داریم میز پیدا می‌کنیم…',
     playWithFriends: 'بازی با دوستان',
     rejoin: 'بازگشت به میز',
     title: 'راز هیتلر',

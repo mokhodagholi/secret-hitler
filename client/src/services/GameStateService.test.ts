@@ -80,6 +80,26 @@ describe('GameStateService — seat persistence', () => {
     });
   });
 
+  it('Should adopt a reserved seat when the queue finds a table', () => {
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    socket.emit({
+      type: 'match:found',
+      roomId: 'room-9',
+      code: 'PUB001',
+      token: 'room-token',
+      playerId: 'you-9',
+    });
+    expect(game.inRoom()).toBe(true);
+    expect(game.currentSession()).toEqual({
+      roomId: 'room-9',
+      code: 'PUB001',
+      token: 'room-token',
+      playerId: 'you-9',
+    });
+    expect(game.queued()).toBe(false);
+  });
+
   it('Should keep the same-room seat when the join is a return to that table', async () => {
     localStorage.setItem('sh:session', JSON.stringify(SESSION));
     const socket = new FakeSocket();

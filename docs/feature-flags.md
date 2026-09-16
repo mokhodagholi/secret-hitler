@@ -40,9 +40,10 @@ off). Tests inject a preloaded service (or `{ flags: { voice: true } }` on
 When `voice` is off, the client hides every mic control and the server rejects
 `voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).
 
-When `publicTable` is off, the server does not create the evergreen Join lobby.
-AFK kicks in every lobby still run. A disconnected lobby seat is dropped after
-15 seconds (no ban). See [`public-table.md`](./public-table.md).
+When `publicTable` is off, the server does not run the Find Match queue and
+does not create reserved public tables. AFK kicks in every lobby still run.
+A disconnected lobby seat is dropped after 15 seconds (no ban). See
+[`public-table.md`](./public-table.md).
 
 When `lobbyKick` is off, hosted rooms hide host-kick in the waiting room and
 the server rejects lobby `player:kick` / lobby `kick:request`.

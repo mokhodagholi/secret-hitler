@@ -50,6 +50,8 @@ export class FakeSocket {
     this.statusSignal[1]('disconnected');
   }
 
+  replaceToken(): void {}
+
   setStatus(status: ConnectionStatus): void {
     this.statusSignal[1](status);
   }

@@ -37,6 +37,7 @@ describe('parseClientMessage', () => {
       'game:start',
       'game:continue',
       'room:leave',
+      'match:cancel',
       'ping',
     ]) {
       expect(parseClientMessage(JSON.stringify({ type }))).toEqual({ type });

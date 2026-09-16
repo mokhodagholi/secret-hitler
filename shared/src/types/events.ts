@@ -52,6 +52,8 @@ export type ClientMessage =
   | { type: 'kick:vote'; agree: boolean }
   /** Explicit leave — vacates the seat; the table stays up if anyone remains. */
   | { type: 'room:leave' }
+  /** Leave the Find Match queue without sitting a reserved table. */
+  | { type: 'match:cancel' }
   | { type: 'ping' }
   | { type: 'voice:join' }
   | { type: 'voice:leave' }
@@ -117,6 +119,16 @@ export type ServerMessage =
   /** The room was destroyed — everyone is kicked (e.g. the host left). */
   | { type: 'room:closed'; reason: RoomClosedReason }
   | { type: 'error'; code: ServerErrorCode; message: string }
+  /** Occupancy of the Find Match queue — sent to everyone still waiting. */
+  | { type: 'match:status'; waiting: number; max: number }
+  /** Queue filled; this socket is now a seat in the reserved public room. */
+  | {
+      type: 'match:found';
+      roomId: string;
+      code: string;
+      token: string;
+      playerId: string;
+    }
   | { type: 'pong' }
   | {
       type: 'voice:capabilities';
@@ -205,4 +217,28 @@ export interface JoinRoomResponse {
   shareLink: string;
   token: string;
   playerId: string;
+}
+
+/** Sit in the Find Match queue. Same identity fields as joining a room. */
+export interface MatchQueueRequest {
+  name: string;
+  avatar?: number;
+  clientId?: string;
+  initData?: string;
+}
+
+export interface MatchQueueResponse {
+  token: string;
+  playerId: string;
+  waiting: number;
+  max: number;
+}
+
+export interface MatchOccupancy {
+  waiting: number;
+  max: number;
+}
+
+export interface MatchLeaveRequest {
+  token: string;
 }

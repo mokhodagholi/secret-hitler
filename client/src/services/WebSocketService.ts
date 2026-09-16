@@ -59,6 +59,11 @@ export class WebSocketService {
     this.setStatus('disconnected');
   }
 
+  /** Swap the reconnect token without cycling the live socket (queue → reserved room). */
+  replaceToken(token: string): void {
+    this.token = token;
+  }
+
   send(message: ClientMessage): void {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));

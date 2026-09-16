@@ -2,7 +2,6 @@ import {
   GameEngine,
   Phase,
   PUBLIC_TABLE_MAX_PLAYERS,
-  PUBLIC_TABLE_NAME,
   Room,
   RoomFactory,
   type RoomCreateArgs,
@@ -64,6 +63,7 @@ export class RoomRepository {
   listPublic() {
     return [...this.rooms.values()]
       .filter((entry) => entry.room.options.adminPlayUserId == null)
+      .filter((entry) => entry.room.options.kind !== 'public')
       .map((e) => e.room.summary())
       .filter((s) => s.phase === 'lobby')
       .sort(pinPublicFirst);
@@ -81,32 +81,28 @@ export class RoomRepository {
   listAll() {
     return [...this.rooms.values()]
       .filter((entry) => entry.room.options.adminPlayUserId == null)
+      .filter(
+        (entry) =>
+          !(entry.room.options.kind === 'public' && entry.room.phase === Phase.Lobby),
+      )
       .map((e) => e.room.summary())
       .sort(pinPublicFirst);
   }
 
   /**
-   * Create the evergreen Join lobby if none is waiting. Returns the new
-   * entry, or null when a lobby-phase public table already exists.
+   * Cap restored public lobbies to six. Find Match is a queue, so this no
+   * longer creates an empty sit-and-wait table.
    */
   ensurePublicLobby(): RoomEntry | null {
-    const waiting = this.waitingPublicLobbies();
-    if (waiting.length > 0) {
-      waiting[0].engine.applyPublicSeatCap(PUBLIC_TABLE_MAX_PLAYERS);
-      return null;
+    for (const entry of this.waitingPublicLobbies()) {
+      entry.engine.applyPublicSeatCap(PUBLIC_TABLE_MAX_PLAYERS);
     }
-    return this.create({ name: PUBLIC_TABLE_NAME, kind: 'public' });
+    return null;
   }
 
-  /**
-   * Extra empty public lobbies left over after a restart. Keep the occupied
-   * table, or the first empty one so Join still has a row.
-   */
-  extraEmptyPublicLobbies(): RoomEntry[] {
-    const waiting = this.waitingPublicLobbies();
-    if (waiting.length <= 1) return [];
-    const kept = waiting[0];
-    return waiting.filter((entry) => entry.room.id !== kept.room.id && entry.room.isEmpty);
+  /** Public lobbies with no seats left. Disconnected sitters still count. */
+  emptyPublicLobbies(): RoomEntry[] {
+    return this.waitingPublicLobbies().filter((entry) => entry.room.players.length === 0);
   }
 
   private waitingPublicLobbies(): RoomEntry[] {

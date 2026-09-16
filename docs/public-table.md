@@ -1,26 +1,24 @@
 # Public table — one room that is always there
 
 Shipped behind `FEATURE_PUBLIC_TABLE` (default off). Hosted rooms, Join,
-`/find_game`, and `/games` still work as they did. Turn the flag on to keep
-one public lobby on Join.
+`/find_game`, and `/games` still work as they did. Turn the flag on to let
+Home **Find Match** queue players and reserve a six-seat table.
 
 Secret Hitler needs five to ten people in the **same** lobby. Today every
 table is born when someone taps Create and dies when that host leaves. With
 a small player pool that splits the room: three people in one empty lobby,
 two in another, nobody at five, Join looks dead. The product is filling a
-table ([`mini-app.md`](./mini-app.md)); this is how the lobby itself helps.
+table ([`mini-app.md`](./mini-app.md)); this is how Find Match helps.
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
-| Always-on public lobby, no host, pinned on Join | Yes. Do this. |
-| When it starts, spawn a fresh empty public lobby | Yes. Join must never lack one. |
-| Show it on Join **and** in `/games` / in-progress lists | Yes. Pin it on Join. |
-| Every sitter has a **Start** button, separate from Ready | No. The public table has no Start and no share link. |
-| When the table is full (6), everyone must Accept | Yes — 15 s. Silence is a kick (not a ban), then deal if a legal table remains. |
+| Always-on public lobby, no host, pinned on Join | No. Find Match is a queue on Home. |
+| When 6 are queued, reserve a table and ask Accept | Yes — 15 s. Silence is a kick (not a ban), then deal if a legal table remains. |
+| If someone leaves the reserved room, backfill from the queue | Yes. |
 | 5-minute lobby AFK kick on **every** room | Yes, with the host exception below. |
-| Vote to remove someone in the public lobby, same as in-game | Yes. Half yes → kick, report, and ban from **that** room. |
+| Vote to remove someone in the reserved lobby, same as in-game | Yes. Half yes → kick, report, and ban from **that** room. |
 
 The diagnosis is right. The public table fills to six, then everyone
 Accepts. There is no host gavel and no Start button. The locked chrome
@@ -41,17 +39,17 @@ table is the default place for everyone else.
 ## What a player actually does
 
 ```
-Open Join (or /find_game)
-  → public table is the first row, even at 0/6
-  → sit and wait (no Ready, no Start, no share link)
-  → when 6 connected sitters fill the table, everyone gets Accept
-  → they have 15 seconds; if they do not Accept, they are kicked (not banned)
-  → if enough seats remain, the rest deal
-  → a new empty public table appears on Join immediately
+Open Home, tap Find Match
+  → button reads Finding… (stay on Home; no waiting-room)
+  → when 6 people are queued, they are seated in a reserved public room
+  → everyone gets Accept (15 seconds); Find Match occupancy drops to whoever is still queued
+  → if they do not Accept, they are kicked (not banned)
+  → if someone leaves the reserved room, the next queued player is seated
+  → if enough seats remain and all remaining Accepted, deal
+  → the started game is an ordinary in-progress room
 ```
 
-The started game is now an ordinary in-progress room. It shows on
-`/games`. It is **not** the public table anymore. The replacement is.
+Home **Find Match** is the queue (occupancy is `n/6` waiters). **Play with friends** is Create / Join — a hosted room for a group that already has a table. There is no sit-and-wait lobby page for finding a match.
 
 ## Locked rules
 
@@ -142,13 +140,12 @@ Join always shows that row, including `0/6`. Empty state “no rooms”
 only appears if the public table is somehow missing (a bug). `/find_game`
 must not send people to Create when the public table exists.
 
-Home **Find Match** sits you at the public table (the occupancy on
-that button is `n/6`). **Play with friends** is Create / Join — a
-hosted room for a group that already has a table.
+Home **Find Match** is a queue on Home (the occupancy on that button is
+`n/6` waiters). **Play with friends** is Create / Join — a hosted room for
+a group that already has a table.
 
-The public lobby also appears in `/games` (it is a live room). When it
-starts, the in-progress match stays on `/games`; the new empty public
-lobby is pinned on Join **and** listed on `/games` as اتاق انتظار.
+Reserved public rooms do not appear on Join. When a reserved table deals, the
+in-progress match stays on `/games`.
 
 ## Lobby AFK — every room
 
@@ -220,14 +217,12 @@ those people can sit again.
 
 | Piece | Where |
 |---|---|
-| Public flag on the room | `RoomOptions` / `Room.summary()` in `shared/` |
+| Find Match queue | `server/src/rooms/MatchQueue.ts` |
+| Enqueue / occupancy | `POST /api/match/queue`, `GET /api/match` |
+| Form a reserved table at 6; backfill on leave | `SocketHandler` |
 | Never assign host; Accept set; full-table window; AFK clock | `shared/src/engine/GameEngine.ts` lobby methods |
-| Commands | `shared/src/types/events.ts` + `clientMessages.ts` (`player:wantStart` is Accept; retract stays unused on this table) |
-| Ensure-one-lobby on boot and after start | `server/src/rooms/` + `server/src/app.ts` boot (after `restoreLiveRooms`) |
-| Empty public room must persist | `SocketHandler` — do not destroy an empty public lobby |
-| Pin + always list | `RoomRepository.listPublic` / `listAll`, Join tab, `server/src/bale/commands.ts` |
-| Footer hint + Accept modal | `WaitingRoomScreen` — no Start, no share; modal is one Accept action plus a clock |
-| Public lobby kick vote | `requestKick` in lobby when `kind: public`; same overlay as the game page |
+| Commands | `shared/src/types/events.ts` + `clientMessages.ts` (`player:wantStart` is Accept; `match:cancel` leaves the queue) |
+| Finding… + Accept on Home | `HomeScreen` — stay on Home until the match deals |
 | Ban on this room | `Room.bannedJoinKeys` — set on vote-yes and host kick; checked at join |
 | Copy | `fa.ts` **and** `en.ts` — [`persian.md`](./persian.md) **میز** |
 | Flag | `publicTable` in [`flags.ts`](../shared/src/flags.ts), default off |

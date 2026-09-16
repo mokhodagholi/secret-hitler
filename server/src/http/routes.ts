@@ -5,11 +5,15 @@ import type {
   FeatureFlags,
   JoinRoomRequest,
   JoinRoomResponse,
+  MatchLeaveRequest,
+  MatchOccupancy,
+  MatchQueueRequest,
+  MatchQueueResponse,
   MessengerKind,
   ProfileResponse,
   SaveProfileRequest,
 } from '@secret-hitler/shared';
-import { ADMIN_PLAY_SEAT_COUNT, normalizeAvatar, roomInviteLink, toFlagsResponse } from '@secret-hitler/shared';
+import { ADMIN_PLAY_SEAT_COUNT, isPublicTable, normalizeAvatar, roomInviteLink, toFlagsResponse } from '@secret-hitler/shared';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
@@ -363,11 +367,55 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return reply.code(201).send(res);
   });
 
-  // List public, joinable rooms.
+  // List public, joinable hosted rooms. Find Match is a queue, not this list.
   app.get('/api/rooms', async () => {
-    // Heal a missing evergreen lobby (e.g. wiped after reconnect grace).
     sockets.ensurePublicLobby();
     return repo.listPublic();
+  });
+
+  app.get('/api/match', async (): Promise<MatchOccupancy> => {
+    if (!flags.publicTable) return { waiting: 0, max: 6 };
+    return sockets.matchStatus();
+  });
+
+  app.post('/api/match/queue', async (req, reply) => {
+    if (!flags.publicTable) {
+      return reply
+        .code(404)
+        .send({ error: 'Find Match is not enabled.', code: 'ROOM_NOT_FOUND' });
+    }
+    if (!joinLimiter.allow(req.ip)) {
+      return reply
+        .code(429)
+        .send({ error: 'Too many join attempts. Try again shortly.', code: 'RATE_LIMITED' });
+    }
+    const body = (req.body ?? {}) as MatchQueueRequest;
+    if (!body.name?.trim()) {
+      return reply.code(400).send({ error: 'name is required' });
+    }
+    const identified = identifyInitData(body.initData, messengers);
+    const joinRuntime = identified
+      ? runtimeOf(identified.kind, bale, telegram)
+      : undefined;
+    const joinKey = joinBanKey(identified, body.clientId);
+    const previous = reservedSeat(identified, joinRuntime);
+    vacatePreviousSeat(sockets, repo, previous, '');
+    const queued = sockets.enqueueMatch({
+      name: body.name,
+      avatar: body.avatar,
+      joinKey,
+    });
+    const res: MatchQueueResponse = queued;
+    return reply.send(res);
+  });
+
+  app.post('/api/match/leave', async (req, reply) => {
+    const body = (req.body ?? {}) as MatchLeaveRequest;
+    if (!body.token?.trim()) {
+      return reply.code(400).send({ error: 'token is required' });
+    }
+    sockets.leaveMatchQueue(body.token);
+    return reply.send({ ok: true });
   });
 
   // Recent finished games.
@@ -392,6 +440,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     const entry = repo.resolve(idOrCode);
     if (!entry) {
       return reply.code(404).send({ error: 'Room not found', code: 'ROOM_NOT_FOUND' });
+    }
+    if (isPublicTable(entry.room.options)) {
+      return reply
+        .code(403)
+        .send({ error: 'This table is reserved.', code: 'INVALID_ACTION' });
     }
 
     const identified = identifyInitData(body.initData, messengers);
@@ -475,7 +528,8 @@ function vacatePreviousSeat(
   previous: { roomId: string; playerId: string } | undefined,
   nextRoomId: string,
 ): void {
-  if (!previous || previous.roomId === nextRoomId) return;
+  if (!previous) return;
+  if (nextRoomId && previous.roomId === nextRoomId) return;
   const old = repo.get(previous.roomId);
   if (!old) return;
   sockets.dropSeat(old, previous.playerId);

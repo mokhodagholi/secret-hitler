@@ -1,10 +1,7 @@
-import { Show, createSignal, onCleanup, onMount } from 'solid-js';
-import {
-  Phase,
-  PUBLIC_TABLE_MAX_PLAYERS,
-  type RoomSummary,
-} from '@secret-hitler/shared';
+import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { Phase, PUBLIC_TABLE_MAX_PLAYERS } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
@@ -25,7 +22,7 @@ const SUPPORT_ROTATE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 2_800;
 const SUPPORT_FADE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 0 : 220;
-const PUBLIC_TABLE_POLL_MS =
+const MATCH_POLL_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 4_000;
 
 /**
@@ -34,59 +31,63 @@ const PUBLIC_TABLE_POLL_MS =
  * own return button above Find Match.
  */
 export function HomeScreen() {
-  const { nav, game, i18n, prefetch, animation, settings, miniApp } = useApp();
+  const { nav, game, i18n, prefetch, animation, settings, miniApp, flags } = useApp();
   const { formatMessage } = i18n;
 
-  const canRejoin = () => game.inRoom() && game.view() != null;
+  const publicLobby = () => {
+    const view = game.view();
+    return view?.kind === 'public' && view.phase === Phase.Lobby;
+  };
+  const finding = () => game.queued() || publicLobby();
+  const canRejoin = () => game.inRoom() && game.view() != null && !publicLobby();
+  const amWantStart = () => game.you()?.wantsStart ?? false;
 
-  const [publicTable, setPublicTable] = createSignal<RoomSummary | null>(null);
-  const [joining, setJoining] = createSignal(false);
+  const [nowMs, setNowMs] = createSignal(Date.now());
 
-  const seatedCount = () => publicTable()?.playerCount ?? 0;
-  const maxSeats = () => publicTable()?.maxPlayers ?? PUBLIC_TABLE_MAX_PLAYERS;
-
-  async function refreshPublicTable(): Promise<void> {
-    try {
-      const listed = await game.listRooms();
-      setPublicTable(listed.find((room) => room.kind === 'public') ?? null);
-    } catch {
-      /* keep the last occupancy we painted */
-    }
-  }
+  const seatedCount = () => game.matchWaiting();
+  const maxSeats = () => game.matchMax() || PUBLIC_TABLE_MAX_PLAYERS;
 
   function resolvedName(): string {
     return miniApp.user()?.firstName ?? settings.settings.profileName.trim();
   }
 
+  async function refreshOccupancy(): Promise<void> {
+    if (!flags.enabled('publicTable')) return;
+    try {
+      await game.loadMatchOccupancy();
+    } catch {
+      /* keep the last occupancy we painted */
+    }
+  }
+
   async function enterMatch(): Promise<void> {
-    if (joining()) return;
-    const table = publicTable();
-    if (table && game.currentSession()?.roomId === table.id) {
-      nav.navigate(game.view()?.phase === Phase.Lobby ? 'waiting-room' : 'game');
+    if (game.queued()) {
+      await game.leaveMatchQueue();
       return;
     }
-    const joinable =
-      table != null &&
-      table.phase === Phase.Lobby &&
-      table.playerCount < table.maxPlayers;
-    const name = resolvedName();
-    if (!table || !joinable || name.length === 0) {
+    if (publicLobby()) {
+      if (amWantStart()) return;
+      game.leaveRoom();
+      return;
+    }
+    if (!flags.enabled('publicTable')) {
       nav.navigate('join-game');
       return;
     }
-    setJoining(true);
+    const name = resolvedName();
+    if (name.length === 0) {
+      nav.navigate('join-game');
+      return;
+    }
     try {
-      await game.joinRoom(table.id, {
+      await game.queueMatch({
         name,
         avatar: settings.settings.avatar,
         clientId: settings.settings.profileId,
         initData: miniApp.initData(),
       });
-      nav.navigate('waiting-room');
     } catch {
       nav.navigate('join-game');
-    } finally {
-      setJoining(false);
     }
   }
 
@@ -95,14 +96,26 @@ export function HomeScreen() {
     nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
   }
 
+  const startChoiceSeconds = () => {
+    const choice = game.view()?.startChoice;
+    if (!choice) return 0;
+    return Math.max(0, Math.ceil((choice.endsAt - nowMs()) / 1000));
+  };
+
   const [supportIndex, setSupportIndex] = createSignal(0);
   const [supportFading, setSupportFading] = createSignal(false);
 
+  createEffect(() => {
+    if (!game.view()?.startChoice) return;
+    const tick = setInterval(() => setNowMs(Date.now()), 250);
+    onCleanup(() => clearInterval(tick));
+  });
+
   onMount(() => {
-    void refreshPublicTable();
+    void refreshOccupancy();
     const poll = setInterval(() => {
-      void refreshPublicTable();
-    }, PUBLIC_TABLE_POLL_MS);
+      void refreshOccupancy();
+    }, MATCH_POLL_MS);
     const tick = setInterval(() => {
       if (!animation.motionEnabled() || SUPPORT_FADE_MS === 0) {
         setSupportIndex((index) => (index + 1) % SUPPORT_LABELS.length);
@@ -207,13 +220,15 @@ export function HomeScreen() {
           </Show>
           <button
             type="button"
-            class={styles.cta}
-            aria-label={formatMessage('home.findGame')}
-            disabled={joining()}
+            classList={{
+              [styles.cta]: true,
+              [styles.ctaFinding]: finding(),
+            }}
+            aria-label={formatMessage(finding() ? 'home.finding' : 'home.findGame')}
             onClick={() => void enterMatch()}
           >
             <span class={styles.ctaLabel} dir="auto">
-              {formatMessage(joining() ? 'joinGame.joining' : 'home.findGame')}
+              {formatMessage(finding() ? 'home.finding' : 'home.findGame')}
             </span>
             <span class={styles.ctaCount} aria-hidden="true">
               {formatMessage('joinGame.playerCountShort', {
@@ -224,6 +239,25 @@ export function HomeScreen() {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={publicLobby() && game.view()?.startChoice != null && !amWantStart()}
+        message={formatMessage('waiting.startChoiceHoldout')}
+        confirmLabel={formatMessage('waiting.wantStart')}
+        onConfirm={() => game.setWantStart(true)}
+      >
+        {formatMessage('waiting.startChoiceClock', {
+          seconds: startChoiceSeconds(),
+        })}
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={publicLobby() && game.view()?.startChoice != null && amWantStart()}
+        message={formatMessage('waiting.startChoiceWaiting')}
+      >
+        {formatMessage('waiting.startChoiceClock', {
+          seconds: startChoiceSeconds(),
+        })}
+      </ConfirmDialog>
     </Screen>
   );
 }
