@@ -203,8 +203,7 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
           avatar: settings.settings.avatar,
         });
         const bootStarted = Date.now();
-        // Never lift splash on the hang timer before flags settle — publicTable
-        // defaults on, so Home would flash Find Match when the server has it off.
+        // Never lift splash on the hang timer before flags settle.
         const flagsDone = flags.load();
         hangTimer = setTimeout(() => {
           void flagsDone.finally(finish);

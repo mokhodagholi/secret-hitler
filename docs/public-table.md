@@ -1,6 +1,6 @@
 # Public table — one room that is always there
 
-Shipped behind `FEATURE_PUBLIC_TABLE` (default on). Hosted rooms, Join,
+Shipped behind `FEATURE_PUBLIC_TABLE` (default off). Hosted rooms, Join,
 `/find_game`, and `/games` still work as they did. Turn the flag on to let
 Home **Find Match** queue players and reserve a six-seat table.
 

@@ -9,7 +9,7 @@ export type FeatureFlags = Record<FlagName, boolean>;
 
 export const DEFAULT_FLAGS: FeatureFlags = {
   voice: false,
-  publicTable: true,
+  publicTable: false,
   lobbyKick: false,
   gameKick: false,
 };

@@ -11,8 +11,8 @@ import {
 /**
  * Server-owned flags, fetched once at boot. Callers use {@link enabled};
  * a failed or missing `/api/flags` keeps the catalog defaults. Find Match
- * stays dark until {@link ready} — `publicTable` defaults on, so painting
- * before the fetch would flash the queue whenever the server has it off.
+ * stays dark until {@link ready} so a late `/api/flags` cannot flash the
+ * queue; `publicTable` also defaults off.
  */
 export class FeatureFlagService {
   readonly flags: Store<FeatureFlags>;

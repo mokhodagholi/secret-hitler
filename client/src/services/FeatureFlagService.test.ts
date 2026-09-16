@@ -13,6 +13,7 @@ describe('FeatureFlagService', () => {
   it('Should start from catalog defaults', () => {
     const flags = new FeatureFlagService();
     expect(flags.enabled('voice')).toBe(false);
+    expect(flags.enabled('publicTable')).toBe(false);
     expect(flags.ready()).toBe(false);
   });
 

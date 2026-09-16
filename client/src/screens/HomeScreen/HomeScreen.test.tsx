@@ -26,7 +26,7 @@ describe('HomeScreen', () => {
   });
 
   it('Should stay on Home when Find Match cannot queue', async () => {
-    const harness = buildHarness();
+    const harness = buildHarness({ flags: { publicTable: true } });
     const fetchSpy = rs.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
     renderWithApp(
       () => (
@@ -73,7 +73,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
   });
 
-  it('Should hide Find Match until flags are ready even when publicTable defaults on', () => {
+  it('Should hide Find Match until flags are ready even when publicTable is on', () => {
     const harness = buildHarness({ flags: { publicTable: true }, flagsReady: false });
     renderWithApp(() => <HomeScreen />, harness);
 
@@ -247,7 +247,7 @@ describe('HomeScreen', () => {
   });
 
   it('Should keep the home poster to Find Match, invite friends, play with friends, support, rules, history, and settings', () => {
-    const harness = buildHarness();
+    const harness = buildHarness({ flags: { publicTable: true } });
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(findMatchButton()).toBeTruthy();
@@ -285,7 +285,7 @@ describe('HomeScreen', () => {
   });
 
   it('Should open create/join from Play with friends', () => {
-    const harness = buildHarness();
+    const harness = buildHarness({ flags: { publicTable: true } });
     renderWithApp(
       () => (
         <Show
@@ -307,7 +307,7 @@ describe('HomeScreen', () => {
   });
 
   it('Should offer a way back when a live seat is still open', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { publicTable: true } });
     renderWithApp(
       () => (
         <Show
@@ -328,7 +328,7 @@ describe('HomeScreen', () => {
   });
 
   it('Should keep Play with friends on create/join even when a live seat is open', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { publicTable: true } });
     renderWithApp(
       () => (
         <Show
@@ -360,7 +360,7 @@ describe('HomeScreen', () => {
   });
 
   it('Should hide the return button until a snapshot arrives', () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { publicTable: true } });
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(screen.queryByRole('button', { name: en.home.rejoin })).toBeNull();
