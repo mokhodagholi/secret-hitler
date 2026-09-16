@@ -39,6 +39,10 @@ export class MatchQueue {
     return this.byToken.get(token);
   }
 
+  lookupByJoinKey(joinKey: string): MatchQueueEntry | undefined {
+    return this.byJoinKey.get(joinKey);
+  }
+
   socketFor(playerId: string): WebSocket | undefined {
     return this.sockets.get(playerId);
   }

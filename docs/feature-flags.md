@@ -10,7 +10,7 @@ for the flags themselves.
 | Flag | Env | Default |
 |---|---|---|
 | `voice` | `FEATURE_VOICE` | off |
-| `publicTable` | `FEATURE_PUBLIC_TABLE` | off |
+| `publicTable` | `FEATURE_PUBLIC_TABLE` | on |
 | `lobbyKick` | `FEATURE_LOBBY_KICK` | off |
 | `gameKick` | `FEATURE_GAME_KICK` | off |
 

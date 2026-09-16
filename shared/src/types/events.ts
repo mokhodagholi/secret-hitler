@@ -103,7 +103,13 @@ export type ServerErrorCode =
   | 'PLAYERS_NOT_READY'
   | 'RATE_LIMITED'
   | 'INVALID_ACTION'
-  | 'BANNED';
+  | 'BANNED'
+  | 'SOCIAL_BLOCKED'
+  | 'SOCIAL_COOLDOWN'
+  | 'SOCIAL_LIMIT'
+  | 'SOCIAL_PENDING'
+  | 'SOCIAL_STRANGER'
+  | 'SOCIAL_ALREADY';
 
 export type RoomClosedReason = 'HOST_LEFT' | 'KICKED' | 'AFK';
 
@@ -172,6 +178,8 @@ export interface CreateRoomRequest {
   hostName: string;
   /** Illustrated player-card index; omitted seats use a seat-based default. */
   avatar?: number;
+  /** Browser profile id — binds the host seat to a social account. */
+  clientId?: string;
   options?: {
     maxPlayers?: number;
     timerEnabled?: boolean;

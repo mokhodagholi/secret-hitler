@@ -6,6 +6,8 @@ export interface GamePlayerRecord {
   role: Role;
   seat: number;
   won: boolean;
+  /** Ban / social identity when the seat had one. */
+  joinKey: string | null;
 }
 
 /** A finished game ready to persist. */
@@ -34,5 +36,7 @@ export interface SavedGame extends GameRecord {
 export interface GameHistoryStore {
   saveGame(record: GameRecord): Promise<void>;
   listRecent(limit?: number): Promise<SavedGame[]>;
+  /** True when both accounts sat in the same finished game. */
+  satTogether(leftKey: string, rightKey: string): Promise<boolean>;
   close(): Promise<void>;
 }

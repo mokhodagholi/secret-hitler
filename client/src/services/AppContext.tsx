@@ -21,6 +21,7 @@ import { FeatureFlagService } from './FeatureFlagService';
 import { VoiceService } from './VoiceService';
 import { KeyboardService } from './KeyboardService';
 import { TutorialPromptService } from './TutorialPromptService';
+import { SocialService } from './SocialService';
 import { nextMusicCheckMs, trackForScene } from './music';
 
 export interface AppServices {
@@ -38,6 +39,7 @@ export interface AppServices {
   voice: VoiceService;
   keyboard: KeyboardService;
   tutorial: TutorialPromptService;
+  social: SocialService;
 }
 
 const AppContext = createContext<AppServices>();
@@ -52,12 +54,13 @@ export function AppProvider(
   const i18n = overrides.i18n ?? new I18nService(() => settings.settings.language);
   const flags = overrides.flags ?? new FeatureFlagService();
   const prefetch = overrides.prefetch ?? new PrefetchService();
+  const game = overrides.game ?? new GameStateService(socket);
   const services: AppServices = {
     nav: overrides.nav ?? new NavigationService(),
     settings,
     i18n,
     socket,
-    game: overrides.game ?? new GameStateService(socket),
+    game,
     sound: overrides.sound ?? new SoundService(settings, prefetch),
     animation: overrides.animation ?? new AnimationService(settings),
     ravi: overrides.ravi ?? new RaviService(settings, i18n, prefetch),
@@ -67,6 +70,7 @@ export function AppProvider(
     voice: overrides.voice ?? new VoiceService(socket, flags, settings),
     keyboard: overrides.keyboard ?? new KeyboardService(),
     tutorial: overrides.tutorial ?? new TutorialPromptService(),
+    social: overrides.social ?? new SocialService(game),
   };
 
   services.keyboard.start();

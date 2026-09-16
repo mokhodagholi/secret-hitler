@@ -211,6 +211,11 @@ export class GameStateService {
     return this.beginSession(response);
   }
 
+  /** Sit from an invite or other HTTP seat without joining by code. */
+  adoptSeat(session: RoomSession): RoomSession {
+    return this.beginSession(session);
+  }
+
   async listRooms(): Promise<RoomSummary[]> {
     let response: Response;
     try {

@@ -10,7 +10,8 @@ export interface BotBlastDelivery {
  * tests inject the in-memory store.
  */
 export interface BotSubscriberStore {
-  upsert(platform: MessengerKind, chatId: string): Promise<void>;
+  /** True when this chat was not already on the list. */
+  upsert(platform: MessengerKind, chatId: string): Promise<boolean>;
   list(platform: MessengerKind): Promise<string[]>;
   remove(platform: MessengerKind, chatId: string): Promise<void>;
   /** Last /broadcast or /message DMs, so /unsend can delete them. */

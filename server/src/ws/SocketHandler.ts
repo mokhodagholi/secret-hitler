@@ -39,6 +39,8 @@ import type { BaleRuntime } from '../bale/webhook';
 import { formatKickVoteLetter } from '../bale/support';
 import { createGroupClosedReply } from '../bale/commands';
 import { MatchQueue } from '../rooms/MatchQueue';
+import { ProductTracker } from '../product/ProductTracker';
+import type { LobbyDeathReason } from '../product/ProductStore';
 
 /** Resolved per-message context for an authenticated socket. */
 interface GameContext {
@@ -87,6 +89,13 @@ export class SocketHandler {
   private readonly matchQueue = new MatchQueue();
   private readonly idleWatch: ReturnType<typeof setInterval>;
   private readonly router: MessageRouter<ClientMessage, GameContext>;
+  /** Why the current empty-lobby drop happened, if we already know. */
+  private readonly lobbyDeathReason = new Map<string, LobbyDeathReason>();
+
+  /** History attach — set after construction so the recorder can exist first. */
+  onRoomCreated: ((entry: RoomEntry) => void) | null = null;
+  /** Product funnel; tests leave the default no-op tracker. */
+  product = new ProductTracker();
 
   constructor(
     private readonly repo: RoomRepository,
@@ -106,9 +115,6 @@ export class SocketHandler {
       this.idleWatch.unref();
     }
   }
-
-  /** History attach — set after construction so the recorder can exist first. */
-  onRoomCreated: ((entry: RoomEntry) => void) | null = null;
 
   /** Drop leftover empty reserved tables and cap restored ones to six. */
   ensurePublicLobby(): void {
@@ -137,6 +143,13 @@ export class SocketHandler {
 
   leaveMatchQueue(token: string): void {
     const entry = this.matchQueue.lookup(token);
+    if (!entry) return;
+    this.matchQueue.remove(entry.id);
+    this.broadcastMatchStatus();
+  }
+
+  leaveMatchQueueByJoinKey(joinKey: string): void {
+    const entry = this.matchQueue.lookupByJoinKey(joinKey);
     if (!entry) return;
     this.matchQueue.remove(entry.id);
     this.broadcastMatchStatus();
@@ -232,6 +245,7 @@ export class SocketHandler {
         }
       }
       void this.persistRoom(room.id);
+      this.product.lobbySeatsChanged(room);
       this.dropEmptyRoomIfUnkept(room.id);
     });
 
@@ -295,6 +309,7 @@ export class SocketHandler {
       this.kickVoteTimers.set(room.id, timer);
     });
     engine.on('kickVoteResolved', (result) => {
+      this.product.kickVoteResolved(room);
       this.postKickVoteNotice(room.id, result);
       if (result.kicked) this.ejectPlayer(result.targetId);
       this.fillReservedFromQueue(this.repo.get(room.id) ?? null);
@@ -303,7 +318,9 @@ export class SocketHandler {
       this.stopStartChoiceTimer(room.id);
       if (endsAt == null) return;
       const timer = setTimeout(() => {
-        this.repo.get(room.id)?.engine.resolveStartChoiceTimeout();
+        this.withLobbyDeath(room.id, 'afk_kick', () => {
+          this.repo.get(room.id)?.engine.resolveStartChoiceTimeout();
+        });
       }, Math.max(0, endsAt - Date.now()));
       this.startChoiceTimers.set(room.id, timer);
     });
@@ -311,13 +328,18 @@ export class SocketHandler {
       this.armLobbyAfk(room.id, playerId, dueAt);
     });
     engine.on('lobbyPlayersEjected', ({ playerIds }) => {
+      this.product.afkKicked(room, playerIds.length);
       for (const playerId of playerIds) this.ejectPlayer(playerId, 'AFK');
       const remaining = this.repo.get(room.id);
       this.fillReservedFromQueue(remaining ?? null);
       if (remaining) this.dropEmptyRoomIfUnkept(remaining.room.id);
     });
     engine.on('gameStarted', () => {
+      this.product.tableDealt(room);
       this.ensurePublicLobby();
+    });
+    engine.on('gameOver', () => {
+      this.product.gameFinished(room);
     });
   }
 
@@ -378,6 +400,15 @@ export class SocketHandler {
     this.removeRoom(roomId);
     this.ensurePublicLobby();
     return true;
+  }
+
+  private withLobbyDeath(roomId: string, reason: LobbyDeathReason, work: () => void): void {
+    this.lobbyDeathReason.set(roomId, reason);
+    try {
+      work();
+    } finally {
+      this.lobbyDeathReason.delete(roomId);
+    }
   }
 
   private restoreDeadlines(entry: RoomEntry): void {
@@ -523,7 +554,9 @@ export class SocketHandler {
     if (dueAt == null) return;
     const timer = setTimeout(() => {
       this.lobbyAfkTimers.delete(playerId);
-      this.repo.get(roomId)?.engine.resolveLobbyAfkTimeout(playerId);
+      this.withLobbyDeath(roomId, 'afk_kick', () => {
+        this.repo.get(roomId)?.engine.resolveLobbyAfkTimeout(playerId);
+      });
     }, Math.max(0, dueAt - Date.now()));
     if (typeof timer === 'object' && 'unref' in timer) timer.unref();
     this.lobbyAfkTimers.set(playerId, timer);
@@ -836,21 +869,23 @@ export class SocketHandler {
     const player = entry.room.findPlayer(playerId);
     if (!player) return;
     const roomId = entry.room.id;
-    void this.voice?.removePlayer(playerId);
-    entry.engine.removePlayer(playerId);
-    this.tokens.revokePlayer(playerId);
-    this.seats?.releasePlayer(playerId);
-    this.connections.close(playerId);
-    const remaining = this.repo.get(roomId);
-    if (!remaining) return;
-    // Dummy seats stay connected, so this table is never empty — drop it
-    // when a real device leaves (back / خروج), not on seat-claim within it.
-    if (remaining.room.options.adminPlayUserId != null) {
-      this.destroyRoom(remaining);
-      return;
-    }
-    this.fillReservedFromQueue(remaining);
-    this.dropEmptyRoomIfUnkept(roomId);
+    const death: LobbyDeathReason =
+      player.isHost || player.id === entry.room.hostId ? 'host_left' : 'never_started';
+    this.withLobbyDeath(roomId, death, () => {
+      void this.voice?.removePlayer(playerId);
+      entry.engine.removePlayer(playerId);
+      this.tokens.revokePlayer(playerId);
+      this.seats?.releasePlayer(playerId);
+      this.connections.close(playerId);
+      const remaining = this.repo.get(roomId);
+      if (!remaining) return;
+      if (remaining.room.options.adminPlayUserId != null) {
+        this.destroyRoom(remaining);
+        return;
+      }
+      this.fillReservedFromQueue(remaining);
+      this.dropEmptyRoomIfUnkept(roomId);
+    });
   }
 
   private leaveRoom(context: GameContext): void {
@@ -899,7 +934,10 @@ export class SocketHandler {
     this.clearReconnectGrace(roomId);
     this.tokens.revokeRoom(roomId);
     this.seats?.releaseRoom(roomId);
+    const removed = this.repo.get(roomId)?.room;
+    const death = this.lobbyDeathReason.get(roomId);
     this.repo.remove(roomId);
+    if (removed) this.product.onRoomRemoved(removed, death);
     void this.voice?.removeRoom(roomId);
     if (this.live) {
       void this.enqueuePersist(roomId, () => this.live!.remove(roomId));
@@ -964,6 +1002,7 @@ export class SocketHandler {
     if (!entry) return;
     entry.engine.setConnected(playerId, false);
     void this.voice?.applySeat(playerId, false);
+    this.product.disconnectedInGame(entry.room);
     // A dropped host keeps the seat for a grace period before migration.
     if (playerId === entry.room.hostId) this.scheduleHostGrace(roomId);
   }
@@ -1008,7 +1047,11 @@ export class SocketHandler {
       seated.push({ ws: queued.ws, playerId: player.id, token });
     }
 
-    for (const seat of seated) this.attachQueuedSocket(created, seat);
+    for (const seat of seated) {
+      const player = created.room.findPlayer(seat.playerId);
+      this.product.seated(created.room, player?.joinKey ?? null);
+      this.attachQueuedSocket(created, seat);
+    }
     void this.persistRoom(created.room.id);
     this.broadcastMatchStatus();
     this.tryFormMatch();
@@ -1029,6 +1072,7 @@ export class SocketHandler {
       const player = entry.engine.addPlayer(next.name, false, next.avatar, next.joinKey);
       if ('code' in player) break;
       const token = this.tokens.issue({ roomId: entry.room.id, playerId: player.id });
+      this.product.seated(entry.room, next.joinKey);
       this.attachQueuedSocket(entry, { ws: next.ws, playerId: player.id, token });
     }
     void this.persistRoom(entry.room.id);

@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Faction, Role } from '@secret-hitler/shared';
 import { connectDatabase, type Database, type DbConnection } from '../db/connection';
 import { gamePlayers, games } from '../db/schema';
@@ -41,6 +41,7 @@ export class DrizzleGameHistoryStore implements GameHistoryStore {
             role: player.role,
             seat: player.seat,
             won: player.won,
+            joinKey: player.joinKey,
           })),
         );
       }
@@ -75,10 +76,23 @@ export class DrizzleGameHistoryStore implements GameHistoryStore {
             role: seat.role as Role,
             seat: seat.seat,
             won: seat.won,
+            joinKey: seat.joinKey ?? null,
           })),
         };
       }),
     );
+  }
+
+  async satTogether(leftKey: string, rightKey: string): Promise<boolean> {
+    if (!leftKey || !rightKey || leftKey === rightKey) return false;
+    const rows = await this.db
+      .select({ gameId: gamePlayers.gameId })
+      .from(gamePlayers)
+      .where(inArray(gamePlayers.joinKey, [leftKey, rightKey]))
+      .groupBy(gamePlayers.gameId)
+      .having(sql`count(distinct ${gamePlayers.joinKey}) = 2`)
+      .limit(1);
+    return rows.length > 0;
   }
 
   close(): Promise<void> {

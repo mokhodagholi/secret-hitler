@@ -5,6 +5,9 @@ import { DrizzleGameHistoryStore } from './history/DrizzleGameHistoryStore';
 import { DrizzleProfileStore } from './profiles/DrizzleProfileStore';
 import { DrizzleBotSubscriberStore } from './bale/DrizzleBotSubscriberStore';
 import { DrizzleLiveRoomStore } from './rooms/DrizzleLiveRoomStore';
+import { DrizzleProductStore } from './product/DrizzleProductStore';
+import { DrizzleSocialStore } from './social/DrizzleSocialStore';
+import { SocialBook } from './social/SocialBook';
 import { BaleSeatIndex } from './bale/BaleSeatIndex';
 import { parseAdminUserIds } from './bale/adminIds';
 import { registerBaleCommands, webhookListenUrl, type BaleRuntime } from './bale/webhook';
@@ -126,6 +129,8 @@ async function main() {
   const profiles = new DrizzleProfileStore(connection);
   const subscribers = new DrizzleBotSubscriberStore(connection);
   const live = new DrizzleLiveRoomStore(connection);
+  const product = new DrizzleProductStore(connection);
+  const social = new SocialBook(new DrizzleSocialStore(connection), history);
   const publicUrl = process.env.PUBLIC_URL?.trim() || undefined;
   const bale = await createBaleRuntime();
   const telegram = await createTelegramRuntime();
@@ -158,6 +163,8 @@ async function main() {
     profiles,
     subscribers,
     live,
+    product,
+    social,
     publicUrl,
     bale,
     telegram,

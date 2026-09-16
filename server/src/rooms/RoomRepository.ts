@@ -77,6 +77,27 @@ export class RoomRepository {
     });
   }
 
+  findByPlayerId(playerId: string): RoomEntry | undefined {
+    return [...this.rooms.values()].find((entry) => entry.room.findPlayer(playerId) != null);
+  }
+
+  findSeatByJoinKey(joinKey: string): { entry: RoomEntry; playerId: string } | undefined {
+    for (const entry of this.rooms.values()) {
+      const player = entry.room.players.find((seat) => seat.joinKey === joinKey);
+      if (player) return { entry, playerId: player.id };
+    }
+    return undefined;
+  }
+
+  findHostedLobbyByJoinKey(joinKey: string): RoomEntry | undefined {
+    return [...this.rooms.values()].find((entry) => {
+      if (entry.room.phase !== Phase.Lobby) return false;
+      if (entry.room.options.kind === 'public') return false;
+      if (entry.room.options.adminPlayUserId != null) return false;
+      return entry.room.players.some((player) => player.joinKey === joinKey);
+    });
+  }
+
   /** Every live room, including games already in progress. Hidden admin `/play-game` tables stay out. */
   listAll() {
     return [...this.rooms.values()]

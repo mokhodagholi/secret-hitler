@@ -11,6 +11,7 @@ describe('parseFeatureFlags', () => {
     expect(parseFeatureFlags({})).toEqual(DEFAULT_FLAGS);
     expect(parseFeatureFlags({ FEATURE_VOICE: '' }).voice).toBe(false);
     expect(parseFeatureFlags({ FEATURE_VOICE: '   ' }).voice).toBe(false);
+    expect(parseFeatureFlags({ FEATURE_PUBLIC_TABLE: '' }).publicTable).toBe(true);
   });
 
   it('Should turn a flag on only for true or 1', () => {

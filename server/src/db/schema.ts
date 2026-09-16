@@ -49,6 +49,7 @@ export const gamePlayers = pgTable('game_players', {
   role: text('role').notNull(),
   seat: integer('seat').notNull(),
   won: boolean('won').notNull(),
+  joinKey: text('join_key'),
 });
 
 /**
@@ -88,3 +89,125 @@ export const botBlastDeliveries = pgTable('bot_blast_deliveries', {
   messageId: integer('message_id').notNull(),
   sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const friendships = pgTable(
+  'friendships',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountLow: text('account_low').notNull(),
+    accountHigh: text('account_high').notNull(),
+    lowName: text('low_name').notNull(),
+    lowAvatar: integer('low_avatar').notNull(),
+    highName: text('high_name').notNull(),
+    highAvatar: integer('high_avatar').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique('friendships_pair').on(table.accountLow, table.accountHigh)],
+);
+
+export const friendRequests = pgTable('friend_requests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  fromAccount: text('from_account').notNull(),
+  toAccount: text('to_account').notNull(),
+  fromName: text('from_name').notNull(),
+  fromAvatar: integer('from_avatar').notNull(),
+  toName: text('to_name').notNull(),
+  toAvatar: integer('to_avatar').notNull(),
+  status: text('status').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  cooldownUntil: timestamp('cooldown_until', { withTimezone: true }),
+});
+
+export const tableInvites = pgTable('table_invites', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  fromAccount: text('from_account').notNull(),
+  toAccount: text('to_account').notNull(),
+  fromName: text('from_name').notNull(),
+  fromAvatar: integer('from_avatar').notNull(),
+  toName: text('to_name').notNull(),
+  toAvatar: integer('to_avatar').notNull(),
+  noteId: text('note_id').notNull(),
+  roomId: text('room_id').notNull(),
+  roomCode: text('room_code').notNull(),
+  status: text('status').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  cooldownUntil: timestamp('cooldown_until', { withTimezone: true }),
+});
+
+export const socialBlocks = pgTable(
+  'social_blocks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    blocker: text('blocker').notNull(),
+    blocked: text('blocked').notNull(),
+    blockedName: text('blocked_name').notNull(),
+    blockedAvatar: integer('blocked_avatar').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique('social_blocks_pair').on(table.blocker, table.blocked)],
+);
+
+/**
+ * Funnel crumbs for product decisions: bot start → mini-app → sit → deal →
+ * finish. Not player-facing; no chat text.
+ */
+export const productEvents = pgTable('product_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  at: timestamp('at', { withTimezone: true }).defaultNow().notNull(),
+  platform: text('platform'),
+  userKey: text('user_key'),
+  roomCode: text('room_code'),
+  payload: jsonb('payload').$type<Record<string, unknown>>(),
+});
+
+/** One lobby from first sit until it deals or dies empty. */
+export const productLobbies = pgTable('product_lobbies', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  roomCode: text('room_code').notNull(),
+  source: text('source').notNull(),
+  openedAt: timestamp('opened_at', { withTimezone: true }).defaultNow().notNull(),
+  hourIran: integer('hour_iran').notNull(),
+  peakSeats: integer('peak_seats').notNull().default(0),
+  reached5At: timestamp('reached_5_at', { withTimezone: true }),
+  dealtAt: timestamp('dealt_at', { withTimezone: true }),
+  diedAt: timestamp('died_at', { withTimezone: true }),
+  deathReason: text('death_reason'),
+  afkKicks: integer('afk_kicks').notNull().default(0),
+});
+
+/** Live-game health from deal until finish or abandon. */
+export const productMatches = pgTable('product_matches', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  roomCode: text('room_code').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  outcome: text('outcome'),
+  disconnects: integer('disconnects').notNull().default(0),
+  kickVotes: integer('kick_votes').notNull().default(0),
+  afkKicks: integer('afk_kicks').notNull().default(0),
+});
+
+/** Admin /broadcast or /message, so we can tell if anyone came back. */
+export const productBlasts = pgTable('product_blasts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  platform: text('platform').notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+  reached: integer('reached').notNull(),
+});
+
+export const productBlastRecipients = pgTable(
+  'product_blast_recipients',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    blastId: uuid('blast_id')
+      .notNull()
+      .references(() => productBlasts.id, { onDelete: 'cascade' }),
+    chatId: text('chat_id').notNull(),
+    openedAt: timestamp('opened_at', { withTimezone: true }),
+    satAt: timestamp('sat_at', { withTimezone: true }),
+  },
+  (table) => [unique('product_blast_recipients_blast_chat').on(table.blastId, table.chatId)],
+);

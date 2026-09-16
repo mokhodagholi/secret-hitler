@@ -21,7 +21,9 @@ describe('public table', () => {
   });
 
   it('Should not create a public lobby when the flag is off', async () => {
-    const built = await buildServer();
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: false },
+    });
     app = built.app;
     expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(0);
     const occupancy = await httpJson<MatchOccupancy>(built.app, 'GET', '/api/match');

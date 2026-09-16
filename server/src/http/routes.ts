@@ -22,6 +22,7 @@ import type { GameResultRecorder } from '../history/GameResultRecorder';
 import type { GameHistoryStore } from '../history/GameHistoryStore';
 import type { ProfileStore } from '../profiles/ProfileStore';
 import type { BotSubscriberStore } from '../bale/BotSubscriberStore';
+import type { ProductTracker } from '../product/ProductTracker';
 import { hashPassword, verifyPassword } from './password';
 import { identifyInitData } from '../bale/initData';
 import { baleUserInOriginChat } from '../bale/groupMember';
@@ -34,6 +35,8 @@ import {
 import { formatSupportLetter, isSupportTopic } from '../bale/support';
 import { isAdminUser, parseAdminUserIds } from '../bale/adminIds';
 import { ensureAdminPlayTable } from '../bale/adminPlay';
+import { registerSocialRoutes } from './social.routes';
+import type { SocialBook } from '../social/SocialBook';
 
 export interface RouteDeps {
   repo: RoomRepository;
@@ -53,6 +56,9 @@ export interface RouteDeps {
   flags: FeatureFlags;
   adminUserIds?: ReadonlySet<number>;
   broadcastDelayMs?: number;
+  /** Funnel / lobby / blast / match health. */
+  product: ProductTracker;
+  social: SocialBook;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -101,7 +107,7 @@ function inviteRuntime(
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, profiles, subscribers, bale, telegram, flags } =
+  const { repo, tokens, sockets, recorder, history, profiles, subscribers, bale, telegram, flags, product } =
     deps;
   const adminUserIds = deps.adminUserIds ?? parseAdminUserIds();
   const tableHooks = {
@@ -110,6 +116,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     adminUserIds,
     subscribers,
     broadcastDelayMs: deps.broadcastDelayMs,
+    product,
   };
   const messengers = configuredMessengers(bale, telegram);
   registerBaleBodyParser(app);
@@ -133,6 +140,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       return reply.code(401).send({ error: 'Invalid mini-app login', code: 'AUTH_FAILED' });
     }
     await subscribers.upsert(identified.kind, String(identified.user.id));
+    product.miniappOpened(identified.kind, identified.user.id);
     const avatar = await profiles.get(
       identified.kind === 'telegram'
         ? { telegramUserId: String(identified.user.id) }
@@ -348,7 +356,12 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     sockets.registerEngine(entry);
     recorder.attach(entry);
 
-    const host = entry.engine.addPlayer(body.hostName, true, body.avatar);
+    const host = entry.engine.addPlayer(
+      body.hostName,
+      true,
+      body.avatar,
+      joinBanKey(identified, body.clientId),
+    );
     if ('code' in host) {
       return reply.code(400).send({ error: host.message });
     }
@@ -357,6 +370,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     void sockets.persistRoom(entry.room.id);
     vacatePreviousSeat(sockets, repo, previousSeat, entry.room.id);
     bindMessengerSeat(hostRuntime, identified, host.id, entry.room.id, entry.room.code, entry.room.options.name);
+    product.hostedRoomCreated(entry.room, joinBanKey(identified, body.clientId));
     const res: CreateRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
@@ -405,6 +419,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       avatar: body.avatar,
       joinKey,
     });
+    product.findMatchQueued(joinKey);
     const res: MatchQueueResponse = queued;
     return reply.send(res);
   });
@@ -502,6 +517,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       entry.room.code,
       entry.room.options.name,
     );
+    product.hostedRoomJoined(entry.room, joinKey);
     const res: JoinRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
@@ -510,6 +526,16 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       playerId: player.id,
     };
     return reply.send(res);
+  });
+
+  registerSocialRoutes(app, {
+    repo,
+    tokens,
+    sockets,
+    recorder,
+    social: deps.social,
+    bale,
+    telegram,
   });
 }
 

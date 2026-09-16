@@ -12,6 +12,27 @@ export {
 } from './flags';
 export type { FeatureFlags, FlagName, FlagsResponse } from './flags';
 export { AVATAR_COUNT, normalizeAvatar } from './avatars';
+export {
+  SOCIAL_IGNORE_COOLDOWN_MS,
+  SOCIAL_INVITE_DAILY_LIMIT,
+  SOCIAL_REQUEST_DAILY_LIMIT,
+  TABLE_INVITE_NOTE_IDS,
+  HOME_TABLE_INVITE_NOTE,
+  isTableInviteNoteId,
+} from './social';
+export type {
+  SocialAccountActionBody,
+  SocialFriendRequestBody,
+  SocialInviteRequestBody,
+  SocialInviteSendResponse,
+  SocialInviteView,
+  SocialListRequest,
+  SocialListResponse,
+  SocialPerson,
+  SocialRequestView,
+  SocialTieStatus,
+  TableInviteNoteId,
+} from './social';
 
 // Domain model
 export { Room } from './domain/Room';
@@ -30,6 +51,7 @@ export { powerForFascistPolicy } from './rules/boardPowers';
 // Engine
 export { GameEngine } from './engine/GameEngine';
 export type { EngineEvents } from './engine/GameEngine';
+export { err } from './engine/errors';
 export type { EngineError } from './engine/errors';
 export type { GamePhase, PhaseHost } from './engine/phases/GamePhase';
 

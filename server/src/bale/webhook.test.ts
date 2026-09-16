@@ -4,6 +4,7 @@ import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
 import { BaleSeatIndex } from './BaleSeatIndex';
 import { InMemoryBotSubscriberStore } from './InMemoryBotSubscriberStore';
+import { InMemoryProductStore } from '../product/InMemoryProductStore';
 import { DEFAULT_ADMIN_USER_ID } from './adminIds';
 import {
   webhookListenUrl,
@@ -673,11 +674,13 @@ describe('Telegram webhook', () => {
 describe('Bale webhook — broadcast', () => {
   it('Should remember a private /start so an admin can broadcast later', async () => {
     const subscribers = new InMemoryBotSubscriberStore();
+    const product = new InMemoryProductStore();
     const bot: BaleMessenger = {
       sendMessage: async () => ({}),
     };
-    const { app } = await buildServer({
+    const { app, product: tracker } = await buildServer({
       subscribers,
+      product,
       bale: {
         bot,
         botToken: TOKEN,
@@ -696,8 +699,11 @@ describe('Bale webhook — broadcast', () => {
         chat: { id: 9, type: 'private' },
       },
     });
+    await tracker.flush();
 
     expect(await subscribers.list('bale')).toEqual(['9']);
+    expect(product.events.map((event) => event.name)).toEqual(['bot_start']);
+    expect(product.events[0]).toMatchObject({ platform: 'bale', userKey: 'bale:9' });
   });
 
   it('Should send a retention broadcast to everyone who started, with Play', async () => {

@@ -6,9 +6,12 @@ export class InMemoryBotSubscriberStore implements BotSubscriberStore {
   private readonly keys = new Set<string>();
   private readonly blasts = new Map<MessengerKind, BotBlastDelivery[]>();
 
-  async upsert(platform: MessengerKind, chatId: string): Promise<void> {
-    if (!chatId) return;
-    this.keys.add(`${platform}:${chatId}`);
+  async upsert(platform: MessengerKind, chatId: string): Promise<boolean> {
+    if (!chatId) return false;
+    const key = `${platform}:${chatId}`;
+    if (this.keys.has(key)) return false;
+    this.keys.add(key);
+    return true;
   }
 
   async list(platform: MessengerKind): Promise<string[]> {

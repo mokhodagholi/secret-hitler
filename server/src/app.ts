@@ -23,6 +23,11 @@ import type { BaleRuntime } from './bale/webhook';
 import type { LiveRoomStore } from './rooms/LiveRoomStore';
 import { restoreLiveRooms } from './rooms/restoreLiveRooms';
 import type { VoiceHub } from './voice/VoiceHub';
+import type { ProductStore } from './product/ProductStore';
+import { InMemoryProductStore } from './product/InMemoryProductStore';
+import { ProductTracker } from './product/ProductTracker';
+import { SocialBook } from './social/SocialBook';
+import { InMemorySocialStore } from './social/SocialStore';
 
 const WS_PATH = '/ws';
 
@@ -65,6 +70,10 @@ export interface ServerOptions {
   voice?: VoiceHub | null;
   /** Who may run `/play-game`. Defaults to ADMIN_USER_IDS + your Bale id. */
   adminUserIds?: ReadonlySet<number>;
+  /** Funnel / lobby / blast / match health. Tests default to in-memory. */
+  product?: ProductStore;
+  /** Friend requests and table invites. Tests default to in-memory. */
+  social?: SocialBook;
 }
 
 export interface BuiltServer {
@@ -73,6 +82,7 @@ export interface BuiltServer {
   tokens: TokenStore;
   sockets: SocketHandler;
   seats: BaleSeatIndex;
+  product: ProductTracker;
 }
 
 /**
@@ -105,7 +115,11 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   const history = options.history ?? new InMemoryGameHistoryStore();
   const profiles = options.profiles ?? new InMemoryProfileStore();
   const subscribers = options.subscribers ?? new InMemoryBotSubscriberStore();
+  const product = new ProductTracker(options.product ?? new InMemoryProductStore());
   const recorder = new GameResultRecorder(history);
+  const social =
+    options.social ?? new SocialBook(new InMemorySocialStore(), history);
+  sockets.product = product;
   sockets.onRoomCreated = (entry) => recorder.attach(entry);
 
   if (options.live) {
@@ -142,6 +156,8 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     flags,
     adminUserIds: options.adminUserIds,
     broadcastDelayMs: options.broadcastDelayMs,
+    product,
+    social,
   });
 
   await app.ready();
@@ -158,5 +174,5 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
-  return { app, repo, tokens, sockets, seats };
+  return { app, repo, tokens, sockets, seats, product };
 }

@@ -22,6 +22,7 @@ import { FeatureFlagService } from '../src/services/FeatureFlagService';
 import { VoiceService } from '../src/services/VoiceService';
 import { KeyboardService } from '../src/services/KeyboardService';
 import { TutorialPromptService } from '../src/services/TutorialPromptService';
+import { SocialService } from '../src/services/SocialService';
 import type {
   ConnectionStatus,
   WebSocketService,
@@ -134,6 +135,7 @@ export function buildHarness(
     ),
     keyboard: new KeyboardService(),
     tutorial: new TutorialPromptService(),
+    social: new SocialService(game),
   };
   return {
     services,

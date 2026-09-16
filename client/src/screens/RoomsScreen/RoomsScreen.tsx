@@ -129,6 +129,7 @@ function CreateRoomPanel() {
         password: password().trim() || undefined,
         hostName: resolvedName(),
         avatar: settings.settings.avatar,
+        clientId: settings.settings.profileId,
         initData: miniApp.initData(),
         options: {
           timerEnabled: true,

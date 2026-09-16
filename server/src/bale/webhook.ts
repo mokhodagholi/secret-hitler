@@ -38,6 +38,7 @@ import {
 import { createGroupRoom } from './createGroupRoom';
 import type { BaleSeatIndex } from './BaleSeatIndex';
 import type { BotSubscriberStore } from './BotSubscriberStore';
+import type { ProductTracker } from '../product/ProductTracker';
 import { isAdminUser, parsePlayGameSeat } from './adminIds';
 import {
   ensureAdminPlayTable,
@@ -109,6 +110,7 @@ export interface BaleTableHooks {
   subscribers?: BotSubscriberStore;
   /** Pause between broadcast DMs. Tests leave this at 0. */
   broadcastDelayMs?: number;
+  product?: ProductTracker;
 }
 
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
@@ -238,7 +240,10 @@ export async function handleMessengerWebhook(
   }
 
   const chatId = String(chat.id);
-  if (chatId) await table?.subscribers?.upsert(kind, chatId);
+  if (chatId) {
+    const inserted = await table?.subscribers?.upsert(kind, chatId);
+    if (inserted) table?.product?.botStarted(kind, chatId);
+  }
 
   const parsed = parseBotCommand(text);
   if (parsed?.command === 'play_game') {
@@ -498,6 +503,10 @@ async function sendAdminBlast(
     if (delayMs > 0) await sleep(delayMs);
   }
   await table.subscribers?.replaceLastBlast(kind, deliveries);
+  table.product?.blastSent(
+    kind,
+    deliveries.map((row) => row.chatId),
+  );
   await sendChat(req, messenger, adminChatId, broadcastDoneReply(sent, failed));
   return reply.code(200).send({ ok: true });
 }
@@ -577,6 +586,11 @@ async function handleGroupCreate(
     if (entry) void table.sockets.persistRoom(entry.room.id);
   }
   if (!('password' in created)) return;
+
+  const entry = repo.getByCode(created.code);
+  if (entry) {
+    table.product?.groupRoomCreated(entry.room, `${messengerKindOf(bale)}:${fromId}`);
+  }
 
   const dm = createPasswordDm({
     name: firstName?.trim() || 'میزبان',

@@ -10,6 +10,7 @@ import {
 import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
 import { BaleSeatIndex } from '../bale/BaleSeatIndex';
+import { InMemoryProductStore } from '../product/InMemoryProductStore';
 
 const BALE_TOKEN = '123456:test-token';
 
@@ -101,6 +102,27 @@ describe('room HTTP endpoints', () => {
     expect(joined.status).toBe(200);
     expect(joined.body.roomId).toBe(created.roomId);
     expect(joined.body.playerId).not.toBe(created.playerId);
+  });
+
+  it('Should record create and join on the product funnel', async () => {
+    const product = new InMemoryProductStore();
+    const { app, product: tracker } = await buildServer({ product });
+    const created = (await createRoom(app, { clientId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }))
+      .body;
+    await httpJson<JoinRoomResponse>(app, 'POST', `/api/rooms/${created.code}/join`, {
+      name: 'Ben',
+      clientId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    });
+    await tracker.flush();
+
+    expect(product.events.map((event) => event.name)).toEqual([
+      'room_create',
+      'seated',
+      'room_join',
+      'seated',
+    ]);
+    expect(product.lobbies).toHaveLength(1);
+    expect(product.lobbies[0]).toMatchObject({ source: 'hosted', peakSeats: 2 });
   });
 
   it('Should reject a wrong password but accept the right one', async () => {

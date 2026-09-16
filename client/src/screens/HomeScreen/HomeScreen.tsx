@@ -1,14 +1,16 @@
 import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
-import { Phase } from '@secret-hitler/shared';
+import { Phase, type SocialPerson } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
+import type { SocialIdentity } from '../../services/SocialService';
 import heroImage from '../../assets/home/hero.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
+import { InviteFriendsSheet } from './InviteFriendsSheet';
 import styles from './HomeScreen.module.scss';
 
 /** Cycles on the home support chip — same topics as the support letter form. */
@@ -29,7 +31,7 @@ const SUPPORT_FADE_MS =
  * own return button above Find Match.
  */
 export function HomeScreen() {
-  const { nav, game, i18n, prefetch, animation, settings, miniApp, flags } = useApp();
+  const { nav, game, i18n, prefetch, animation, settings, miniApp, social } = useApp();
   const { formatMessage } = i18n;
 
   const publicLobby = () => {
@@ -41,9 +43,49 @@ export function HomeScreen() {
   const amWantStart = () => game.you()?.wantsStart ?? false;
 
   const [nowMs, setNowMs] = createSignal(Date.now());
+  const [inviteOpen, setInviteOpen] = createSignal(false);
 
   function resolvedName(): string {
     return miniApp.user()?.firstName ?? settings.settings.profileName.trim();
+  }
+
+  function socialIdentity(): SocialIdentity {
+    return {
+      clientId: settings.settings.profileId,
+      initData: miniApp.initData(),
+      name: resolvedName() || formatMessage('home.guest'),
+      avatar: settings.settings.avatar,
+      token: game.currentSession()?.token,
+    };
+  }
+
+  async function openInvites(): Promise<void> {
+    setInviteOpen(true);
+    try {
+      await social.load(socialIdentity());
+    } catch {
+      // Empty list + server error toast from fetch; sheet still opens.
+    }
+  }
+
+  async function inviteFriend(friend: SocialPerson): Promise<void> {
+    try {
+      await social.inviteFriend(friend.accountId, socialIdentity());
+      setInviteOpen(false);
+      nav.navigate('waiting-room');
+    } catch {
+      // Stay on the sheet; the list reload or a later tap is enough.
+    }
+  }
+
+  async function acceptInvite(id: string): Promise<void> {
+    try {
+      await social.acceptInvite(id, socialIdentity());
+      setInviteOpen(false);
+      nav.navigate('waiting-room');
+    } catch {
+      /* Keep the sheet open. */
+    }
   }
 
   async function enterMatch(): Promise<void> {
@@ -56,15 +98,7 @@ export function HomeScreen() {
       game.leaveRoom();
       return;
     }
-    if (!flags.enabled('publicTable')) {
-      nav.navigate('join-game');
-      return;
-    }
-    const name = resolvedName();
-    if (name.length === 0) {
-      nav.navigate('join-game');
-      return;
-    }
+    const name = resolvedName() || formatMessage('home.guest');
     try {
       await game.queueMatch({
         name,
@@ -73,7 +107,7 @@ export function HomeScreen() {
         initData: miniApp.initData(),
       });
     } catch {
-      nav.navigate('join-game');
+      /* Stay on Home — Join/Create is Play with friends, not Find Match. */
     }
   }
 
@@ -197,6 +231,16 @@ export function HomeScreen() {
               </span>
             </button>
           </Show>
+          <button
+            type="button"
+            class={styles.ctaInvite}
+            aria-label={formatMessage('home.inviteFriends')}
+            onClick={() => void openInvites()}
+          >
+            <span class={styles.ctaInviteLabel} dir="auto">
+              {formatMessage('home.inviteFriends')}
+            </span>
+          </button>
           <div
             classList={{
               [styles.ctaFind]: true,
@@ -220,6 +264,15 @@ export function HomeScreen() {
         </div>
       </div>
 
+      <InviteFriendsSheet
+        open={inviteOpen()}
+        onClose={() => setInviteOpen(false)}
+        onInvite={(friend) => void inviteFriend(friend)}
+        onAcceptInvite={(id) => void acceptInvite(id)}
+        onIgnoreInvite={(id) => void social.ignoreInvite(id, socialIdentity())}
+        onAcceptRequest={(id) => void social.acceptFriendRequest(id, socialIdentity())}
+        onIgnoreRequest={(id) => void social.ignoreFriendRequest(id, socialIdentity())}
+      />
       <ConfirmDialog
         open={publicLobby() && game.view()?.startChoice != null && !amWantStart()}
         message={formatMessage('waiting.startChoiceHoldout')}

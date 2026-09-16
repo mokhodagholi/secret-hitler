@@ -12,7 +12,7 @@ const SAMPLE: SavedGame = {
   liberalPolicies: 3,
   fascistPolicies: 6,
   endedAt: '2026-01-01T00:00:00.000Z',
-  players: [{ name: 'Ana', role: 'hitler', seat: 0, won: true }],
+  players: [{ name: 'Ana', role: 'hitler', seat: 0, won: true, joinKey: null }],
 };
 
 /** Read-only stub store returning a canned recent-games list. */
@@ -20,6 +20,7 @@ function stubHistory(recent: SavedGame[]): GameHistoryStore {
   return {
     saveGame: async () => {},
     listRecent: async (limit) => recent.slice(0, limit),
+    satTogether: async () => false,
     close: async () => {},
   };
 }

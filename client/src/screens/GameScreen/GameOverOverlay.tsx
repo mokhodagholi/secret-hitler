@@ -1,8 +1,9 @@
-import { For, Show } from 'solid-js';
+import { For, Show, onMount } from 'solid-js';
 import type { Faction, PublicPlayer } from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
 import { playerLabel } from '../../i18n/perspective';
 import { useApp } from '../../services/AppContext';
+import type { SocialIdentity } from '../../services/SocialService';
 import styles from './GameOverOverlay.module.scss';
 
 /** Stagger between role reveals — the "I knew it!" cascade. */
@@ -25,7 +26,23 @@ export interface GameOverOverlayProps {
 /** End-of-game screen: the winning faction, then every player's revealed role. */
 export function GameOverOverlay(props: GameOverOverlayProps) {
   const { formatMessage } = props;
-  const { animation } = useApp();
+  const { animation, social, settings, miniApp, game } = useApp();
+
+  function identity(): SocialIdentity {
+    return {
+      clientId: settings.settings.profileId,
+      initData: miniApp.initData(),
+      name:
+        (miniApp.user()?.firstName ?? settings.settings.profileName.trim()) ||
+        formatMessage('home.guest'),
+      avatar: settings.settings.avatar,
+      token: game.currentSession()?.token,
+    };
+  }
+
+  onMount(() => {
+    void social.load(identity()).catch(() => {});
+  });
   return (
     <div
       class={styles.backdrop}
@@ -80,6 +97,26 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
                   >
                     {player.role ? formatMessage(`role.${player.role}`) : '—'}
                   </span>
+                  <Show when={player.id !== props.youId}>
+                    <Show when={social.mateStatus(player.id) === 'none'}>
+                      <button
+                        type="button"
+                        class={styles.add}
+                        onClick={() => void social.requestFriend(player.id, identity())}
+                      >
+                        {formatMessage('game.over.addFriend')}
+                      </button>
+                    </Show>
+                    <Show when={social.mateStatus(player.id) === 'outgoing'}>
+                      <span class={styles.added}>{formatMessage('game.over.sent')}</span>
+                    </Show>
+                    <Show when={social.mateStatus(player.id) === 'friends'}>
+                      <span class={styles.added}>{formatMessage('game.over.friends')}</span>
+                    </Show>
+                    <Show when={social.mateStatus(player.id) === 'incoming'}>
+                      <span class={styles.added}>{formatMessage('social.incomingRequests')}</span>
+                    </Show>
+                  </Show>
                 </li>
               )}
             </For>

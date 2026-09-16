@@ -71,6 +71,22 @@
   color: $red-bright;
 }
 
+.add {
+  @include pressable;
+  margin-inline-start: 8px;
+  padding: 4px 8px;
+  border-radius: $radius-sm;
+  font-size: 0.72rem;
+  color: $navy-950;
+  background: linear-gradient(180deg, $gold-bright, $gold-dark);
+}
+
+.added {
+  margin-inline-start: 8px;
+  font-size: 0.72rem;
+  color: $gold;
+}
+
 .actions {
   display: flex;
   flex-direction: column;

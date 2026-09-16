@@ -15,9 +15,9 @@ describe('HomeScreen', () => {
     rs.restoreAllMocks();
   });
 
-  it('Should send the player to Join when Find Match is off', async () => {
+  it('Should stay on Home when Find Match cannot queue', async () => {
     const harness = buildHarness();
-    harness.services.game.listRooms = async () => [];
+    const fetchSpy = rs.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
     renderWithApp(
       () => (
         <Show
@@ -31,8 +31,56 @@ describe('HomeScreen', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
-    await waitFor(() => expect(harness.services.nav.screen()).toBe('join-game'));
-    expect(screen.getByRole('tab', { name: 'Join Room' })).toBeTruthy();
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Join Room' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Create Room' })).toBeNull();
+  });
+
+  it('Should queue Find Match on home even when the client catalog still has it off', async () => {
+    const harness = buildHarness();
+    harness.services.settings.set('profileName', 'Ana');
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/api/match/queue')) {
+        return new Response(
+          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 1, max: 6 }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response('[]', { status: 200 });
+    });
+    renderWithApp(() => <HomeScreen />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: en.home.finding })).toBeTruthy(),
+    );
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(harness.services.game.queued()).toBe(true);
+  });
+
+  it('Should queue Find Match as Guest when the profile has no name', async () => {
+    const harness = buildHarness({ flags: { publicTable: true } });
+    let queuedName = '';
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes('/api/match/queue')) {
+        queuedName = JSON.parse(String(init?.body ?? '{}')).name;
+        return new Response(
+          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 1, max: 6 }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response('[]', { status: 200 });
+    });
+    renderWithApp(() => <HomeScreen />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
+    await waitFor(() => expect(harness.services.game.queued()).toBe(true));
+    expect(queuedName).toBe(en.home.guest);
+    expect(harness.services.nav.screen()).toBe('home');
   });
 
   it('Should keep Find Match on home while searching', async () => {
@@ -128,17 +176,18 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: en.rules.title })).toBeTruthy();
   });
 
-  it('Should keep the home poster to Find Match, play with friends, support, rules, and settings', () => {
+  it('Should keep the home poster to Find Match, invite friends, play with friends, support, rules, and settings', () => {
     const harness = buildHarness();
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.home.inviteFriends })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.home.playWithFriends })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.support.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
     expect(screen.getByText(en.nav.rules)).toBeTruthy();
-    expect(screen.getAllByRole('button')).toHaveLength(5);
+    expect(screen.getAllByRole('button')).toHaveLength(6);
     expect(screen.queryByText('0/6')).toBeNull();
   });
 
@@ -237,5 +286,67 @@ describe('HomeScreen', () => {
 
     expect(screen.queryByRole('button', { name: en.home.rejoin })).toBeNull();
     expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy();
+  });
+
+  it('Should list friends above Find Match and invite one with a tap', async () => {
+    const harness = buildHarness();
+    harness.services.settings.set('profileName', 'Ana');
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/api/social/list')) {
+        return new Response(
+          JSON.stringify({
+            friends: [{ accountId: 'client:ben', name: 'Ben', avatar: 1 }],
+            incomingRequests: [],
+            outgoingRequests: [],
+            incomingInvites: [],
+            outgoingInvites: [],
+            blocked: [],
+            mates: {},
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.includes('/api/social/invites')) {
+        return new Response(
+          JSON.stringify({
+            invite: {
+              id: 'inv-1',
+              from: { accountId: 'client:ana', name: 'Ana', avatar: 0 },
+              to: { accountId: 'client:ben', name: 'Ben', avatar: 1 },
+              noteId: 'emptySeat',
+              roomCode: 'ABC123',
+              createdAt: 1,
+            },
+            seat: {
+              roomId: 'room-9',
+              code: 'ABC123',
+              shareLink: 'http://localhost/join/ABC123',
+              token: 't-9',
+              playerId: 'p-ana',
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response('[]', { status: 200 });
+    });
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<WaitingRoomScreen />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: en.home.inviteFriends }));
+    await waitFor(() => expect(screen.getByText('Ben')).toBeTruthy());
+    expect(screen.getByText(en.social.notes.emptySeat)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Ben/ }));
+    await waitFor(() => expect(harness.services.nav.screen()).toBe('waiting-room'));
   });
 });

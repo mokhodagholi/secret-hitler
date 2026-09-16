@@ -40,6 +40,7 @@ the Bale HTTP client the server embeds. Table voice (mediasoup) ships dark behin
 | Mini App host / Telegram / one table | `docs/mini-app.md` + `client/src/services/miniapp.ts` + `server/src/bale/` |
 | Public / evergreen lobby | `docs/public-table.md` + `server/src/rooms/` |
 | Postgres schema / migrate | `server/src/db/` + `server/drizzle/` |
+| Product funnel / lobby / blasts | `server/src/product/` + `server/src/db/schema.ts` |
 | Screen / route | `client/src/App.tsx` + `client/src/screens/<Name>/` |
 | Game table UI | `client/src/screens/GameScreen/` |
 | Client services | `client/src/services/` (reached via `AppContext`) |

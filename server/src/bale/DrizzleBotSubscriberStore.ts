@@ -18,14 +18,16 @@ export class DrizzleBotSubscriberStore implements BotSubscriberStore {
     return new DrizzleBotSubscriberStore(connectDatabase(connectionString));
   }
 
-  async upsert(platform: MessengerKind, chatId: string): Promise<void> {
-    if (!chatId) return;
-    await this.db
+  async upsert(platform: MessengerKind, chatId: string): Promise<boolean> {
+    if (!chatId) return false;
+    const inserted = await this.db
       .insert(botSubscribers)
       .values({ platform, chatId })
       .onConflictDoNothing({
         target: [botSubscribers.platform, botSubscribers.chatId],
-      });
+      })
+      .returning({ id: botSubscribers.id });
+    return inserted.length > 0;
   }
 
   async list(platform: MessengerKind): Promise<string[]> {

@@ -21,5 +21,15 @@ export class InMemoryGameHistoryStore implements GameHistoryStore {
     return this.games.slice(0, limit);
   }
 
+  async satTogether(leftKey: string, rightKey: string): Promise<boolean> {
+    if (!leftKey || !rightKey || leftKey === rightKey) return false;
+    return this.games.some((game) => {
+      const keys = new Set(
+        game.players.map((player) => player.joinKey).filter((key): key is string => Boolean(key)),
+      );
+      return keys.has(leftKey) && keys.has(rightKey);
+    });
+  }
+
   async close(): Promise<void> {}
 }

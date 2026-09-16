@@ -43,6 +43,7 @@ function toRecord(room: Room, winner: Faction): GameRecord {
         role: player.role,
         seat: player.seat,
         won: factionOf(player.role) === winner,
+        joinKey: player.joinKey ?? null,
       })),
   };
 }
