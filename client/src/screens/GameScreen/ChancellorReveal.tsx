@@ -40,6 +40,7 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
             ? 'game.chancellorRevealTitleYou'
             : 'game.chancellorRevealTitle',
         )}
+        data-tutorial-target="government"
         ref={(element) => void animation.play(element, 'pop-in')}
         {...drag.surfaceProps}
       >

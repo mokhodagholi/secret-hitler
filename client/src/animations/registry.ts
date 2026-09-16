@@ -133,6 +133,16 @@ export const ANIMATIONS = {
     options: { duration: 280, easing: 'ease-out' },
   },
 
+  /** Election-tracker mark lighting up after a failed government. */
+  'tracker-fill': {
+    keyframes: [
+      { transform: 'scale(0.45)', opacity: 0.35 },
+      { transform: 'scale(1.4)', opacity: 1, offset: 0.55 },
+      { transform: 'scale(1)', opacity: 1 },
+    ],
+    options: { duration: 420, easing: 'ease-out' },
+  },
+
   // --- Attention ---------------------------------------------------------------
   /** Horizontal jolt for failures (failed election, rejected action). */
   shake: {

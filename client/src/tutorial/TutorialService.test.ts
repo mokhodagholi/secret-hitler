@@ -106,7 +106,7 @@ describe('TutorialService — first-run sit', () => {
 });
 
 describe('TutorialService — look', () => {
-  it('Should stage five named seats without offices on the first beat', () => {
+  it('Should stage the government ticket on the first look beat', () => {
     const view = buildLookView({ name: 'You', avatar: 0 }, 0);
     expect(view.players.map((player) => player.name)).toEqual([
       'You',
@@ -116,8 +116,8 @@ describe('TutorialService — look', () => {
       'Omid',
     ]);
     expect(view.phase).toBe(Phase.Nomination);
-    expect(view.board.president).toBeNull();
-    expect(view.board.chancellor).toBeNull();
+    expect(view.board.president).toBe(LOOK_SEAT.you);
+    expect(view.board.chancellor).toBe(LOOK_SEAT.nima);
   });
 
   it('Should stage the vote dialog with a president and chancellor', () => {
@@ -128,6 +128,46 @@ describe('TutorialService — look', () => {
     expect(view.board.chancellor).toBe(LOOK_SEAT.nima);
     expect(view.voteDeadline).not.toBeNull();
     expect(view.you.vote).toBeNull();
+  });
+
+  it('Should stage face-up ballots for the ballots beat', () => {
+    const ballotsBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'ballots');
+    const view = buildLookView({ name: 'You', avatar: 0 }, ballotsBeat);
+    expect(view.players.every((player) => player.vote != null)).toBe(true);
+    expect(view.players.find((player) => player.id === LOOK_SEAT.reza)?.vote).toBe(
+      'nein',
+    );
+  });
+
+  it('Should stage a failed majority and light tracker marks across the fail beats', () => {
+    const fail1 = LOOK_BEATS.findIndex(
+      (beat) => beat.headline === 'onboard.idea.trackerFail1',
+    );
+    const next = LOOK_BEATS.findIndex(
+      (beat) => beat.headline === 'onboard.idea.nextPresident',
+    );
+    const fail2 = LOOK_BEATS.findIndex(
+      (beat) => beat.headline === 'onboard.idea.trackerFail2',
+    );
+    const chaos = LOOK_BEATS.findIndex(
+      (beat) => beat.headline === 'onboard.idea.trackerChaos',
+    );
+
+    const fail1View = buildLookView({ name: 'You', avatar: 0 }, fail1);
+    expect(fail1View.board.electionTracker).toBe(1);
+    expect(
+      fail1View.players.filter((player) => player.vote === 'nein').length,
+    ).toBe(3);
+
+    const nextView = buildLookView({ name: 'You', avatar: 0 }, next);
+    expect(nextView.board.electionTracker).toBe(1);
+    expect(nextView.board.president).toBe(LOOK_SEAT.nima);
+    expect(nextView.players.find((player) => player.id === LOOK_SEAT.nima)?.isPresident).toBe(
+      true,
+    );
+
+    expect(buildLookView({ name: 'You', avatar: 0 }, fail2).board.electionTracker).toBe(2);
+    expect(buildLookView({ name: 'You', avatar: 0 }, chaos).board.electionTracker).toBe(3);
   });
 
   it('Should stage three policy tiles for the laws beat', () => {
@@ -152,9 +192,26 @@ describe('TutorialService — look', () => {
     expect(tutorial.advanceLook()).toBe(true);
     expect(tutorial.looking()).toBe(true);
     expect(localStorage.getItem(ONBOARDING_STEP_KEY)).toBe('1');
-    tutorial.closeLook();
+    tutorial.startFive({ name: 'You', avatar: 0 });
     expect(tutorial.looking()).toBe(false);
+    expect(tutorial.playing()).toBe(true);
+    tutorial.skipFive();
+    expect(tutorial.playing()).toBe(false);
     expect(new TutorialService().shouldOffer()).toBe(false);
+  });
+
+  it('Should retreat to the previous look beat', () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    expect(tutorial.beat()).toBe(0);
+    tutorial.retreatLook();
+    expect(tutorial.beat()).toBe(0);
+    expect(tutorial.advanceLook()).toBe(false);
+    expect(tutorial.beat()).toBe(1);
+    expect(tutorial.target()).toBe(LOOK_BEATS[1].target);
+    tutorial.retreatLook();
+    expect(tutorial.beat()).toBe(0);
+    expect(tutorial.target()).toBe(LOOK_BEATS[0].target);
   });
 
   it('Should skip without marking the look complete', () => {

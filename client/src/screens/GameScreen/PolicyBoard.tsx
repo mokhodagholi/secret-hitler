@@ -23,61 +23,63 @@ const FASCIST_SLOTS = 5;
 export function PolicyBoard(props: PolicyBoardProps) {
   const { formatMessage } = props;
 
-    return (
-      <div class={styles.board} data-tutorial-target="boards">
-      <div class={`${styles.track} ${styles.trackLiberal}`}>
-        <WarmImg
-          class={styles.art}
-          src={liberalBoard}
-          alt={formatMessage('game.liberal')}
-        />
-        <div class={styles.slots}>
-          <Index each={Array.from({ length: LIBERAL_SLOTS })}>
-            {(_slot, index) => (
-              <span
-                class={styles.slot}
-                data-policy-party="liberal"
-                data-policy-well={`liberal-${index}`}
-                data-filled={index < props.board.liberalPolicies ? '' : undefined}
-              >
-                <Show when={index < props.board.liberalPolicies}>
-                  <WarmImg
-                    class={styles.slotCard}
-                    src={POLICY_FACE.liberal}
-                    alt=""
-                  />
-                </Show>
-              </span>
-            )}
-          </Index>
+  return (
+    <div class={styles.board}>
+      <div class={styles.boardArt} data-tutorial-target="boards">
+        <div class={`${styles.track} ${styles.trackLiberal}`}>
+          <WarmImg
+            class={styles.art}
+            src={liberalBoard}
+            alt={formatMessage('game.liberal')}
+          />
+          <div class={styles.slots}>
+            <Index each={Array.from({ length: LIBERAL_SLOTS })}>
+              {(_slot, index) => (
+                <span
+                  class={styles.slot}
+                  data-policy-party="liberal"
+                  data-policy-well={`liberal-${index}`}
+                  data-filled={index < props.board.liberalPolicies ? '' : undefined}
+                >
+                  <Show when={index < props.board.liberalPolicies}>
+                    <WarmImg
+                      class={styles.slotCard}
+                      src={POLICY_FACE.liberal}
+                      alt=""
+                    />
+                  </Show>
+                </span>
+              )}
+            </Index>
+          </div>
         </div>
-      </div>
 
-      <div class={`${styles.track} ${styles.trackFascist}`}>
-        <WarmImg
-          class={styles.art}
-          src={fascistBoard}
-          alt={formatMessage('game.fascist')}
-        />
-        <div class={styles.slots}>
-          <Index each={Array.from({ length: FASCIST_SLOTS })}>
-            {(_slot, index) => (
-              <span
-                class={styles.slot}
-                data-policy-party="fascist"
-                data-policy-well={`fascist-${index}`}
-                data-filled={index < props.board.fascistPolicies ? '' : undefined}
-              >
-                <Show when={index < props.board.fascistPolicies}>
-                  <WarmImg
-                    class={styles.slotCard}
-                    src={POLICY_FACE.fascist}
-                    alt=""
-                  />
-                </Show>
-              </span>
-            )}
-          </Index>
+        <div class={`${styles.track} ${styles.trackFascist}`}>
+          <WarmImg
+            class={styles.art}
+            src={fascistBoard}
+            alt={formatMessage('game.fascist')}
+          />
+          <div class={styles.slots}>
+            <Index each={Array.from({ length: FASCIST_SLOTS })}>
+              {(_slot, index) => (
+                <span
+                  class={styles.slot}
+                  data-policy-party="fascist"
+                  data-policy-well={`fascist-${index}`}
+                  data-filled={index < props.board.fascistPolicies ? '' : undefined}
+                >
+                  <Show when={index < props.board.fascistPolicies}>
+                    <WarmImg
+                      class={styles.slotCard}
+                      src={POLICY_FACE.fascist}
+                      alt=""
+                    />
+                  </Show>
+                </span>
+              )}
+            </Index>
+          </div>
         </div>
       </div>
     </div>

@@ -103,13 +103,15 @@ export function VotingOverlay(props: VotingOverlayProps) {
               handleProps={drag.handleProps}
             />
             <span class={styles.title}>{formatMessage('game.voteTitle')}</span>
-            <GovernmentTicket
-              formatMessage={formatMessage}
-              presidentName={props.presidentName}
-              chancellorName={props.chancellorName}
-              presidentAvatar={props.presidentAvatar}
-              chancellorAvatar={props.chancellorAvatar}
-            />
+            <Show when={!tutorial.looking()}>
+              <GovernmentTicket
+                formatMessage={formatMessage}
+                presidentName={props.presidentName}
+                chancellorName={props.chancellorName}
+                presidentAvatar={props.presidentAvatar}
+                chancellorAvatar={props.chancellorAvatar}
+              />
+            </Show>
             <p class={styles.prompt}>{props.prompt}</p>
             {timer}
             <div class={styles.buttons}>

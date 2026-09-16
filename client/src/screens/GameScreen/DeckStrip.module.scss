@@ -106,7 +106,9 @@
 }
 
 .marks {
+  direction: ltr;
   display: flex;
+  flex-direction: row;
   gap: 5px;
 }
 
@@ -116,9 +118,11 @@
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.22);
+  transform-origin: center;
 }
 
 .markFilled {
   background: linear-gradient(180deg, $gold-bright, $gold-dark);
-  border-color: rgba($gold, 0.7);
+  border-color: rgba($gold, 0.85);
+  box-shadow: 0 0 6px rgba($gold, 0.55);
 }

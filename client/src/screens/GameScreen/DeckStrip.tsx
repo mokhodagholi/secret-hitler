@@ -20,13 +20,32 @@ const TRACKER_SLOTS = 3;
  */
 export function DeckStrip(props: DeckStripProps) {
   const { formatMessage } = props;
+  const { animation, sound } = useApp();
+  const markEls: Array<HTMLSpanElement | undefined> = [];
+  let seenTracker: number | null = null;
+
+  createEffect(() => {
+    const next = props.electionTracker;
+    if (seenTracker == null) {
+      seenTracker = next;
+      return;
+    }
+    if (next > seenTracker) {
+      for (let index = seenTracker; index < next && index < TRACKER_SLOTS; index++) {
+        const element = markEls[index];
+        if (element) void animation.play(element, 'tracker-fill');
+      }
+      sound.play('tracker-tick');
+    }
+    seenTracker = next;
+  });
+
   return (
     <section
       class={styles.strip}
       aria-label={formatMessage('game.infoTitle')}
-      data-tutorial-target="deck"
     >
-      <div class={styles.piles}>
+      <div class={styles.piles} data-tutorial-target="deck">
         <Pile
           count={props.drawCount}
           label={formatMessage('game.drawPile')}
@@ -47,6 +66,7 @@ export function DeckStrip(props: DeckStripProps) {
       <div
         class={styles.tracker}
         aria-label={`${formatMessage('game.electionTracker')}: ${props.electionTracker}/3`}
+        data-tutorial-target="tracker"
       >
         <span class={styles.trackerLabel}>
           {formatMessage('game.electionTracker')}
@@ -58,6 +78,9 @@ export function DeckStrip(props: DeckStripProps) {
                 classList={{
                   [styles.mark]: true,
                   [styles.markFilled]: index < props.electionTracker,
+                }}
+                ref={(element) => {
+                  markEls[index] = element;
                 }}
               />
             )}

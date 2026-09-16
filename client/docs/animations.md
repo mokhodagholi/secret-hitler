@@ -59,6 +59,9 @@ await animation.play(badgeElement, 'tracker-tick');
 beats compose with `await`. Per-call overrides merge over the registry options:
 `animation.play(el, 'fade-in', { duration: 400 })`.
 
+Election-tracker marks use `tracker-fill` from `DeckStrip` whenever
+`electionTracker` increases (live fails and look onboarding).
+
 ## Sequencing multi-beat events
 
 The policy-enactment reveal in

@@ -116,11 +116,11 @@ export function HomeScreen() {
   }
 
   function openDevOnboarding(): void {
-    tutorial.startLook({
+    tutorial.startIntro({
       name: resolvedName() || formatMessage('game.you'),
       avatar: settings.settings.avatar,
     });
-    nav.navigate('game');
+    nav.navigate('onboarding');
   }
 
   const startChoiceSeconds = () => {

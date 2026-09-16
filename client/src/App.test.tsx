@@ -17,15 +17,16 @@ describe('App — first-run look', () => {
     expect(screen.getByRole('button', { name: en.onboard.notNow })).toBeTruthy();
   });
 
-  it('Should sit onto the look table', async () => {
+  it('Should sit onto the intro pages', async () => {
     const harness = buildHarness({ flags: { onboarding: true } });
     render(() => <App services={harness.services} />);
     await waitFor(() => expect(screen.getByRole('button', { name: en.onboard.sit })).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.sit }));
-    expect(harness.services.nav.screen()).toBe('game');
-    expect(harness.services.tutorial.looking()).toBe(true);
-    expect(screen.getByText(en.onboard.idea.table)).toBeTruthy();
+    expect(harness.services.nav.screen()).toBe('onboarding');
+    expect(harness.services.tutorial.introducing()).toBe(true);
+    expect(screen.getByText(en.onboard.piece.rolesTitle)).toBeTruthy();
+    expect(screen.getByText(en.onboard.piece.roles)).toBeTruthy();
   });
 
   it('Should stay home after Not now and count it', async () => {

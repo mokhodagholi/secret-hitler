@@ -4,9 +4,10 @@ A hands-on first table. Video and written rules stay on the guide hub.
 This is Daniel walking the player through the **real board**, then
 through live matches at every size.
 
-This file is the plan. Step 1 (look) is in the client; Daniel is header
-text only — no `onboard.*` clips yet. Step 2 and later counts are not
-implemented. Ships dark behind `FEATURE_ONBOARDING` (default off).
+This file is the plan. Steps 0–2 are in the client (intro slides → look
+→ five). Daniel is header text only — no `onboard.*` clips yet. Counts
+6–10 are not implemented. Ships dark behind `FEATURE_ONBOARDING`
+(default off).
 
 **The table must feel like a table.** The other seats are scripted, but
 the player is never told that. No “practice”, no “ربات”, no “these are
@@ -27,7 +28,8 @@ the whole thing, any time.
 
 | Step | Table | What they learn |
 |---|---|---|
-| **1. Look** | Frozen 5-seat table | Everything they will *see*: seats, boards, votes, government, the deck. Images of the real UI, one region lit, Daniel talks. |
+| **0. Pieces** | Full-page slides | What each thing *is* — role cards, boards, offices, vote cards, tracker, deck, laws. Short labels only. |
+| **1. How to play** | Frozen 5-seat table | How a hand moves: propose government, vote, failed tracker, deck, three laws. |
 | **2. Five** | 5-player match | The whole small table: night, nominate, vote, tracker, laws, peek, execute, how each side wins. Easy script, player is Liberal. |
 | **3. Six** | 6-player match | Same board as five. Extra Liberal. Term limits when five remain. |
 | **4. Seven** | 7-player match | Hitler does **not** see the Fascists. Investigate. Special election. |
@@ -35,7 +37,7 @@ the whole thing, any time.
 | **6. Nine** | 9-player match | Two investigates. Fascists are three + Hitler. |
 | **7. Ten** | 10-player match | Full table. Same large board. Chaos and talk. |
 
-Ship **step 1 + step 2** first. 6–10 are more scripts on the same
+Ship **step 0 + 1 + 2** first. 6–10 are more scripts on the same
 machine, not a second system.
 
 After a match: next step, or Home / Find Match. Remember progress in
@@ -71,12 +73,28 @@ A live join link or a restored seat still wins over this, same as today.
 
 ---
 
-## Step 1 — what you will see
+## Step 0 — what the pieces are
+
+Full-screen pages before the table. One subject per page: real game art
+plus a short name (not how to play). Continue / Previous / Skip.
+
+The election tracker is three pages in a row (first fail → second → chaos),
+each filling one more mark from the left.
+
+Last page asks «گرفتید؟». Yes → «بریم سر میز». No → «مشکلی نیست» then
+still open the look table. Either answer goes to step 1.
+
+Slides live in `client/src/tutorial/introSlides.ts`. Copy under
+`onboard.piece.*` in both locales.
+
+---
+
+## Step 1 — how to play
 
 Not a slideshow of posters. A **staged 5-seat table** (the real
-Game-screen chrome, snapshot built on the client) with the match not
-started. Daniel talks. A mask. One piece of UI is punched out and
-slightly scaled / ringed so it is the only thing you can look at.
+Game-screen chrome, snapshot built on the client). Daniel walks the
+moves. A mask. One piece of UI is punched out so it is the only thing
+you can look at.
 
 Each beat: Daniel’s line → they tap the lit thing **or** Continue →
 mask moves to the next piece.
@@ -88,11 +106,15 @@ real UI — still not a separate painting.
 
 | # | Punch-out | They learn | Daniel FA | Daniel EN | Tone |
 |---|---|---|---|---|---|
-| 1 | Five seats | Two teams, one Hitler, you do not know who | پنج نفر سر این میز. لیبرال‌ها بیشترن، ولی همدیگه رو نمی‌شناسن. یه فاشیست هست، هیتلر هم هست. | Five people at this table. Liberals are the majority, but they do not know each other. One Fascist, and Hitler. | `[warmly]` |
-| 2 | Liberal + Fascist boards | 5 Liberal laws or 6 Fascist laws | این دو تا تخته‌ست. پنج قانون لیبرال، لیبرال‌ها می‌برن. شش قانون فاشیست، اونا می‌برن. | These two boards. Five Liberal laws and the Liberals win. Six Fascist laws and they win. | `[calm]` |
-| 3 | Ja / Nein on a seat | Every hand votes | هر دست یه دولت پیشنهاد می‌شه. همه رأی می‌دن: آره یا نه. | Each round someone proposes a government. Everyone votes Ja or Nein. | `[calm]` |
-| 4 | President → chancellor slot | President picks, then a vote | رئیس‌جمهور یکی رو صدراعظم می‌کنه. اگه رأی بیاره، همون دو نفر قانون می‌ذارن. | The President names a Chancellor. If the vote passes, those two put a law on the board. | `[announce]` |
-| 5 | Deck / three policy tiles | 3 → burn 1 → chancellor picks 1 | رئیس‌جمهور سه کارت می‌کشه، یکی رو می‌سوزونه. صدراعظم از اون دوتای باقی‌مونده یکی رو می‌ذاره رو تخته. کسی حق نداره کارت رو نشون بده. | The President draws three, burns one. The Chancellor enacts one of the two that remain. Nobody may show the cards. | `[calm]` |
+| 1 | Government ticket | Propose a government; President picks Chancellor | هر دست یه دولت پیشنهاد می‌شه. رئیس‌جمهور صدراعظم رو انتخاب می‌کنه. | Each hand a government is proposed. The President picks the Chancellor. | `[announce]` |
+| 2 | Ja / Nein vote cards | Everyone votes | همه رأی می‌دن: آره یا نه. | Everyone votes Ja or Nein. | `[calm]` |
+| 3 | Face-up ballots on seats | Remember who said no | رأی‌ها می‌ره روی هر صندلی. کی نه داده یادتون بمونه — بعداً به کارتون می‌آد. | Votes land on each seat. Remember who said Nein — it matters later. | `[calm]` |
+| 4 | Election tracker (1) | Half + 1 Nein fails; tracker fills from the left | اگه نصف به‌علاوهٔ یک نه بدن، دولت رأی نمیاره. شمارنده یکی می‌ره بالا. | If half plus one say Nein, the government fails. The tracker moves up one. | `[down]` |
+| 5 | Next president seat | Presidency rotates | رئیس‌جمهور می‌ره نفر بعدی. | The presidency moves to the next seat. | `[announce]` |
+| 6 | Election tracker (2) | Second fail | باز هم رأی نیاورد. شمارنده دو تا شد. | It failed again. The tracker is at two. | `[down]` |
+| 7 | Election tracker (3) | Third fail → chaos law | سومین بار که بخوابه، قانون بالای دسته خودش می‌ره رو تخته — بدون رئیس‌جمهور و صدراعظم. | A third fail in a row and the top law enacts itself — no President, no Chancellor. | `[down]` |
+| 8 | Draw / discard piles | Where laws come from | قانون‌ها از این دسته میان. سوخته‌ها می‌رن رو توده دورریز. | Laws come from this deck. Burned laws go on the discard pile. | `[calm]` |
+| 9 | Three policy tiles | 3 → burn 1 (or timeout) → chancellor enacts 1 | رئیس‌جمهور سه تا قانون از بالای دسته می‌کشه و فقط خودش می‌بینه چی اومده. یکی رو می‌سوزونه؛ اگه وقت تموم بشه، یکی شانسی می‌سوزه. دو تای باقی‌مونده می‌ره دست صدراعظم؛ اون یکی رو تصویب می‌کنه. | The President draws three laws from the top of the deck and only they see what came. They burn one — if time runs out, one burns at random. The two that remain go to the Chancellor, who enacts one. | `[calm]` |
 
 Then Daniel `onboard.letsSit`: `بریم سر میز.` / `Let's sit.` The other
 four sit (slow), lobby chat, ready, start → **step 2**.
@@ -107,10 +129,12 @@ Not a black dimmer and not a tutorial cartoon.
 
 - Fill: warm smoke, roughly `rgba(12, 8, 5, 0.55)` — dark enough to
   kill contrast on the rest, still the same room.
-- Hole: the target rect, 8–12 px feather, optional 1px gold ring.
+- Hole: one bounding rect for all matches (~8 px pad, 12 px radius),
+  optional gold ring. President + chancellor share a single hole.
 - The punched-out control is the only pressable hit target.
 - Ravi / Daniel plaque sits **above** the mask (never covered).
-- Continue / Skip sit in the safe area, also above the mask.
+- Continue / Skip / Previous sit in the safe area, also above the mask.
+  Previous is hidden on the first beat.
 - Reduce-motion: no pulse; hole still moves.
 
 Same overlay for step 1 and for teaching beats inside a match. When
@@ -295,7 +319,7 @@ Do not use the word تمرین / practice / bot / ربات in any of these.
 | `onboard.draw` | whispering | سه تا قانون اومد دستتون. فاشیسته رو بسوزونید. دوتای لیبرال می‌ره برای نیما. | Three laws in your hand. Burn the Fascist. The two Liberals go to Nima. |
 | `onboard.watch` | calm | این دست شما نیستید. ببینید کی با کی می‌شینه. | This hand is not yours. Watch who sits with whom. |
 | `onboard.refuse` | firm | رضا امید رو گذاشت. خیلی زود با هم کنار اومدن. نه بدید. | Reza named Omid. They lined up too fast. Vote Nein. |
-| `onboard.tracker` | down | دولت نیاورد. اون شُمارَنده یکی رفت بالا. سه بار پشت هم نشه، از رو دسته قانون می‌آد. | The government failed. The tracker moved up. Three in a row and a law comes off the top of the deck. |
+| `onboard.tracker` | down | *(five-table fail — same idea as look fail beats)* | |
 | `onboard.chancellor` | whispering | حالا صدراعظمید. از این دوتا یکی رو می‌ذارید رو تخته. لیبرال رو بذارید. | You are Chancellor now. You enact one of these two. Put the Liberal down. |
 | `onboard.peek` | whispering | سه تای بالای دسته رو ببینید. سر جاشون برگردونید. به میز دروغ بگید اگه لازم شد. | Look at the top three. Put them back. Lie to the table if you have to. |
 | `onboard.execute` | grave | یه نفر رو از میز بردارید. اگه هیتلر باشه، لیبرال‌ها می‌برن. نقشش رو کسی نمی‌بینه مگر اینکه هیتلر باشه. | Take someone off the table. If it is Hitler, the Liberals win. Nobody sees the role unless it is Hitler. |
@@ -318,7 +342,7 @@ First-run plaque (if we ask before sitting) — still no bots:
   bar. Boards filling is the progress.
 - Mask as above. Pulse on the punched-out control (`transform` /
   `opacity` only).
-- Continue: brass chip. Skip: quiet cream, not a second primary.
+- Continue: brass chip. Previous / Skip: quiet cream, not a second primary.
 - **No Practice pill.** No robot badge on seats.
 - Phone 430 px. Overlay must not cover the punched-out control.
 - Press, not hover.
@@ -401,6 +425,12 @@ happens, …).
 
 ## Build order
 
+### Step 0 — intro pages
+
+- [x] `INTRO_SLIDES` + `OnboardingIntroScreen` (one idea per page).
+- [x] Sit / Dev → `onboarding` screen → last Continue opens look.
+- [x] Titles + bodies in fa/en; Skip / Previous / progress.
+
 ### Step 1 + plumbing
 
 - [x] `TutorialService` holds an in-memory snapshot; `lookView()` matches
@@ -408,17 +438,19 @@ happens, …).
 - [x] Spotlight / mask; punch-out from the current beat.
 - [x] Step 1 beat list + Daniel lines in i18n (header text; no clips yet).
 - [x] First-run: Sit / Not now. Skip. `sh:onboarding-step`.
-- [x] Tests: five punch-outs in order; Skip leaves.
+- [x] Tests: punch-outs in order; Skip leaves.
+- [x] Staged UI per beat: seats, boards, government, vote dialog, ballots,
+      tracker, deck, laws.
 
 ### Step 2
 
-- [ ] `scripts/five.ts`: roles, stack, beats, chat, delays.
-- [ ] Director: sit, chat, nominate, vote, legislate, powers — all
-      with 1.5–5 s jitter. No 0.2 s.
-- [ ] Teaching locks; off-script taps ignored + retry line.
-- [ ] Peek + execute happen once; Liberal win.
-- [ ] No “bot/practice” copy anywhere in fa/en.
-- [ ] Tests for the scripted ticket, the failed Reza government, win.
+- [x] `fiveTable.ts` + `StackedDeck`: roles, stack, skip night.
+- [x] Director: nominate → vote → burn → refuse → enact → auto toward win.
+- [x] Teaching locks; off-script taps ignored + retry line.
+- [ ] Peek + execute happen once; Liberal win (director path exists; needs
+      playtest polish).
+- [x] No “bot/practice” copy anywhere in fa/en.
+- [x] Tests for five table cast and first chancellor lock.
 
 ### Voice
 

@@ -35,7 +35,7 @@ export interface TableSeatProps {
  */
 export function TableSeat(props: TableSeatProps) {
   const { formatMessage } = props;
-  const { flags, voice, sound } = useApp();
+  const { flags, voice, sound, tutorial } = useApp();
   let lastBallot: Vote | 'back' | null = null;
 
   createEffect(() => {
@@ -69,6 +69,23 @@ export function TableSeat(props: TableSeatProps) {
   const interactive = () =>
     props.selectable || props.termLocked || props.reportable === true;
 
+  /** Seat offices yield to the ticket dialog on the look government beat. */
+  const tutorialTarget = () => {
+    if (props.ballot === 'ja' || props.ballot === 'nein') return 'ballots';
+    if (tutorial.looking() && tutorial.target() === 'government') {
+      return undefined;
+    }
+    if (
+      tutorial.looking() &&
+      tutorial.target() === 'nextPresident' &&
+      props.player.isPresident
+    ) {
+      return 'nextPresident';
+    }
+    if (props.player.isPresident || props.player.isChancellor) return 'government';
+    return undefined;
+  };
+
   return (
     <button
       type="button"
@@ -87,13 +104,7 @@ export function TableSeat(props: TableSeatProps) {
       }}
       aria-label={playerLabel(props.isYou, props.player.name, formatMessage)}
       data-seat-id={props.player.id}
-      data-tutorial-target={
-        props.ballot === 'ja' || props.ballot === 'nein'
-          ? 'vote'
-          : props.player.isPresident || props.player.isChancellor
-            ? 'government'
-            : undefined
-      }
+      data-tutorial-target={tutorialTarget()}
       data-speaking={speaking() ? 'true' : undefined}
       data-mic={voiceOn() ? (tableMuted() ? 'off' : 'live') : undefined}
       data-local-mute={locallyMuted() ? 'true' : undefined}

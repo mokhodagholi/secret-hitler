@@ -46,11 +46,16 @@ import styles from './GameScreen.module.scss';
  * docked chat panel. Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
-  const { nav, game, i18n, animation, ravi, sound, flags, voice, tutorial } =
+  const { nav, game, i18n, animation, ravi, sound, flags, voice, tutorial, settings } =
     useApp();
   const { formatMessage } = i18n;
 
-  const view = () => (tutorial.looking() ? tutorial.lookView() : game.view());
+  const view = () => {
+    if (tutorial.looking()) return tutorial.lookView();
+    if (tutorial.playing()) return tutorial.playView();
+    return game.view();
+  };
+  const onboarding = () => tutorial.active();
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
@@ -75,13 +80,13 @@ export function GameScreen() {
 
   // Session dropped (left / expired) → back to the play menu.
   createEffect(() => {
-    if (tutorial.looking()) return;
+    if (tutorial.looking() || tutorial.playing()) return;
     if (!game.inRoom()) nav.returnTo('play');
   });
 
   // After a win, Continue returns this room to lobby — sit there for another game.
   createEffect(() => {
-    if (tutorial.looking()) return;
+    if (tutorial.looking() || tutorial.playing()) return;
     const state = view();
     if (!state || !game.inRoom()) return;
     if (state.phase === Phase.Lobby) nav.returnTo('waiting-room');
@@ -89,7 +94,7 @@ export function GameScreen() {
 
   const VOTE_REVEAL_HOLD_MS = 5_000;
   createEffect(() => {
-    if (tutorial.looking()) {
+    if (onboarding()) {
       setHideRevealedVotes(false);
       return;
     }
@@ -105,7 +110,7 @@ export function GameScreen() {
 
   onMount(() => {
     const handleBack = () => {
-      if (tutorial.looking()) {
+      if (onboarding()) {
         leaveLook();
         return;
       }
@@ -132,7 +137,7 @@ export function GameScreen() {
     onCleanup(() => {
       nav.clearBackHandler(handleBack);
       clearInterval(ticker);
-      tutorial.closeLook();
+      tutorial.closeActive();
     });
   });
 
@@ -160,7 +165,7 @@ export function GameScreen() {
   });
 
   createEffect(() => {
-    if (tutorial.looking()) return;
+    if (onboarding()) return;
     const state = view();
     if (!state) return;
     if (state.roomId !== ceremonyRoomId) {
@@ -274,7 +279,7 @@ export function GameScreen() {
     const previous = lastPhaseForReveal;
     lastPhaseForReveal = state.phase;
     if (
-      !tutorial.looking() &&
+      !onboarding() &&
       previous === Phase.Nomination &&
       state.phase === Phase.Voting &&
       state.board.chancellor
@@ -459,14 +464,23 @@ export function GameScreen() {
     );
   };
 
-  const seatSelectable = (player: PublicPlayer) =>
-    !tutorial.looking() && (canNominate(player) || canPowerTarget(player));
+  const seatSelectable = (player: PublicPlayer) => {
+    if (tutorial.looking()) return false;
+    if (tutorial.playing()) return tutorial.canNominate(player.id);
+    return canNominate(player) || canPowerTarget(player);
+  };
 
   function continueLook(): void {
-    if (tutorial.advanceLook()) nav.returnTo('home');
+    if (tutorial.advanceLook()) {
+      tutorial.startFive({
+        name: settings.settings.profileName.trim() || formatMessage('game.you'),
+        avatar: settings.settings.avatar,
+      });
+    }
   }
 
   function leaveLook(): void {
+    tutorial.closeActive();
     nav.returnTo('home');
   }
 
@@ -512,6 +526,10 @@ export function GameScreen() {
       continueLook();
       return;
     }
+    if (tutorial.playing()) {
+      tutorial.handlePlay({ kind: 'castVote', vote });
+      return;
+    }
     game.sendCommand({ kind: 'castVote', vote });
   }
 
@@ -549,6 +567,15 @@ export function GameScreen() {
       continueLook();
       return;
     }
+    if (tutorial.playing()) {
+      const phase = view()?.phase;
+      if (phase === Phase.PresidentLegislative) {
+        tutorial.handlePlay({ kind: 'discardPolicy', index });
+      } else if (phase === Phase.ChancellorLegislative) {
+        tutorial.handlePlay({ kind: 'enactPolicy', index });
+      }
+      return;
+    }
     const phase = view()?.phase;
     if (phase === Phase.PresidentLegislative) {
       game.sendCommand({ kind: 'discardPolicy', index });
@@ -564,8 +591,13 @@ export function GameScreen() {
   const proposeVeto = () => game.sendCommand({ kind: 'vetoRequest' });
   const respondVeto = (agree: boolean) =>
     game.sendCommand({ kind: 'vetoConsent', agree });
-  const usePower = (targetId: string) =>
+  const usePower = (targetId: string) => {
+    if (tutorial.playing()) {
+      tutorial.handlePlay({ kind: 'useSpecialPower', targetId });
+      return;
+    }
     game.sendCommand({ kind: 'useSpecialPower', targetId });
+  };
 
   type TableOverlay =
     | 'killed'
@@ -594,6 +626,10 @@ export function GameScreen() {
     if (menuOpen()) return 'menu';
     if (playersOpen()) return 'players';
     if (loyaltyCheck()) return 'investigate';
+    // Look step: proposed government ticket, then the Ja / Nein cards.
+    if (tutorial.looking() && tutorial.target() === 'government') {
+      return 'chancellorReveal';
+    }
     if (chancellorReveal()) return 'chancellorReveal';
     if (state?.phase === Phase.Voting) return 'vote';
     if (isLegislative() && state?.vetoRequested) return 'veto';
@@ -741,6 +777,14 @@ export function GameScreen() {
       continueLook();
       return;
     }
+    if (tutorial.playing()) {
+      if (tutorial.lock() === 'nominate') {
+        tutorial.handlePlay({ kind: 'nominateChancellor', targetId: player.id });
+      } else if (tutorial.lock() === 'execute') {
+        tutorial.handlePlay({ kind: 'useSpecialPower', targetId: player.id });
+      }
+      return;
+    }
     if (canNominate(player)) {
       sound.play('player-ready');
       nominate(player);
@@ -811,15 +855,15 @@ export function GameScreen() {
           <div
             classList={{
               [styles.scene]: true,
-              [styles.sceneLooking]: tutorial.looking(),
+              [styles.sceneLooking]: onboarding(),
             }}
             style={{
-              '--chat-panel-height': `${tutorial.looking() ? 0 : chatHeight()}px`,
+              '--chat-panel-height': `${onboarding() ? 0 : chatHeight()}px`,
             }}
           >
             <GameEventHeader
               headline={
-                tutorial.looking()
+                onboarding()
                   ? formatMessage(tutorial.headlineKey())
                   : (ravi.line() ?? helpMessage())
               }
@@ -847,8 +891,8 @@ export function GameScreen() {
                 formatMessage={formatMessage}
               />
 
-              <div class={styles.players} data-tutorial-target="seats">
-                <div class={styles.seats} role="list">
+              <div class={styles.players}>
+                <div class={styles.seats} role="list" data-tutorial-target="seats">
                   <For each={seatedPlayers()}>
                     {(player) => (
                       <TableSeat
@@ -895,7 +939,7 @@ export function GameScreen() {
                 chancellorAvatar={playerAvatar(state().board.chancellor)}
                 canVote={
                   state().you.vote == null &&
-                  (tutorial.looking() || !!game.you()?.isAlive)
+                  (onboarding() || !!game.you()?.isAlive)
                 }
                 yourVote={state().you.vote}
                 votedCount={votedCount()}
@@ -947,7 +991,7 @@ export function GameScreen() {
 
             </div>
 
-            <Show when={!tutorial.looking()}>
+            <Show when={!onboarding()}>
             <ChatPanel
               talkingAllowed={!ceremonyOpen()}
               actionLabel={
@@ -973,18 +1017,27 @@ export function GameScreen() {
             />
             </Show>
 
-            <Show when={tutorial.looking()}>
+            <Show when={onboarding()}>
               {/* Same role as ChatPanel: keep seats above the Skip / Continue bar. */}
               <div class={styles.lookChromeSpacer} aria-hidden="true" />
               <Spotlight
                 target={tutorial.target()}
-                onContinue={continueLook}
+                showContinue={
+                  tutorial.looking() ||
+                  (tutorial.playing() && view()?.winner != null)
+                }
+                showPrevious={tutorial.looking() && tutorial.beat() > 0}
+                onPrevious={() => tutorial.retreatLook()}
+                onContinue={() => {
+                  if (tutorial.looking()) continueLook();
+                  else if (tutorial.playing() && view()?.winner) leaveLook();
+                }}
                 onSkip={leaveLook}
                 formatMessage={formatMessage}
               />
             </Show>
 
-            <Show when={!tutorial.looking()}>
+            <Show when={!onboarding()}>
             <RaviNarrator
               ceremonyOpen={ceremonyOpen()}
               now={clockMs()}
@@ -992,7 +1045,7 @@ export function GameScreen() {
             />
             </Show>
 
-            <Show when={tableOverlay() === 'night' && game.role()}>
+            <Show when={tableOverlay() === 'night' && (tutorial.role() ?? game.role())}>
               {(role) => (
                 <NightOverlay
                   role={role()}

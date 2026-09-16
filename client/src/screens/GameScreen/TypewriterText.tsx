@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup, untrack } from 'solid-js';
 import { useApp } from '../../services/AppContext';
-import { deleteDelayMs, typeDelayMs } from './typewriter';
+import { typeDelayMs } from './typewriter';
 
 export interface TypewriterTextProps {
   text: string;
@@ -10,8 +10,9 @@ const INSTANT =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test';
 
 /**
- * Types the Ravi line on, then rubs it out before the next one. Motion-off
- * and tests jump to the finished string so the header never lags the table.
+ * Types the Ravi line on. Motion-off and tests jump to the finished string
+ * so the header never lags the table. Line changes clear instantly — no
+ * rub-out exit — then type the next line.
  */
 export function TypewriterText(props: TypewriterTextProps) {
   const { animation } = useApp();
@@ -30,14 +31,7 @@ export function TypewriterText(props: TypewriterTextProps) {
     const from = untrack(shown);
     void (async () => {
       if (from === target) return;
-      const outgoing = Array.from(from);
-      const totalOut = outgoing.length;
-      while (outgoing.length > 0 && !cancelled) {
-        outgoing.pop();
-        setShown(outgoing.join(''));
-        await animation.hold(deleteDelayMs(outgoing.length, totalOut));
-      }
-      if (cancelled) return;
+      setShown('');
       const incoming = Array.from(target);
       const built: string[] = [];
       for (let index = 0; index < incoming.length; index++) {

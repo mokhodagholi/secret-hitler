@@ -233,18 +233,88 @@ export const en = {
     sit: 'Sit',
     notNow: 'Not now',
     continue: 'Continue',
+    previous: 'Previous',
     skip: 'Skip',
     letsSit: "Let's sit.",
+    pick: 'Pick a Chancellor. Nima is calm. Start there.',
+    pickRetry: 'Not that one for this hand. Someone else.',
+    vote: 'Tap your vote. You want this government — Ja.',
+    votesRead: 'Reza said Nein. Remember who keeps saying no.',
+    draw: 'Three laws in your hand. Burn the Fascist. The two Liberals go to Nima.',
+    watch: 'This hand is not yours. Watch who sits with whom.',
+    refuse: 'Reza named Omid. They lined up too fast. Vote Nein.',
+    tracker:
+      'The government failed. The tracker moved up. Three in a row and a law comes off the top of the deck.',
+    chancellor:
+      'You are Chancellor now. You enact one of these two. Put the Liberal down.',
+    peek: 'Look at the top three. Put them back. Lie to the table if you have to.',
+    execute:
+      'Take someone off the table. If it is Hitler, the Liberals win. Nobody sees the role unless it is Hitler.',
+    win: 'The Liberals win. Next hand nobody tells you who is lying. Listen to who talks.',
     idea: {
+      tableTitle: 'Who sits',
       table:
-        'Five people at this table. Liberals are the majority, but they do not know each other. One Fascist, and Hitler.',
+        'A few people around the table, ready to play together. Two teams: Liberal and Fascist. And one special seat — Hitler.',
+      boardsTitle: 'The boards',
       boards:
-        'These two boards. Five Liberal laws and the Liberals win. Six Fascist laws and they win.',
-      vote: 'Each round someone proposes a government. Everyone votes Ja or Nein.',
+        'The game has two boards. Red for the Fascists, blue for the Liberals.',
+      governmentTitle: 'The government',
       government:
-        'The President names a Chancellor. If the vote passes, those two put a law on the board.',
+        'Each hand a government is proposed. The President picks the Chancellor.',
+      voteTitle: 'The vote',
+      vote: 'Everyone votes Ja or Nein.',
+      ballotsTitle: 'Votes on seats',
+      ballots:
+        'Votes land on each seat. Remember who said Nein — it matters later.',
+      trackerTitle: 'Election tracker',
+      trackerFail1:
+        'If half plus one say Nein, the government fails. The tracker moves up one.',
+      nextPresidentTitle: 'Next president',
+      nextPresident: 'The presidency moves to the next seat.',
+      trackerFail2Title: 'Second fail',
+      trackerFail2: 'It failed again. The tracker is at two.',
+      trackerChaosTitle: 'Third fail',
+      trackerChaos:
+        'A third fail in a row and the top law enacts itself — no President, no Chancellor.',
+      deckTitle: 'The deck',
+      deck: 'Laws come from this deck. Burned laws go on the discard pile.',
+      lawsTitle: 'Three laws',
       laws:
-        'The President draws three, burns one. The Chancellor enacts one of the two that remain. Nobody may show the cards.',
+        'The President draws three laws from the top of the deck and only they see what came. They burn one — if time runs out, one burns at random. The two that remain go to the Chancellor, who enacts one.',
+      letsSitBody: 'You have seen the table. Now sit — the hand starts from here.',
+    },
+    piece: {
+      rolesTitle: 'Roles',
+      roles: 'Liberal, Fascist, and Hitler.',
+      boardsTitle: 'Boards',
+      boards: 'Blue for Liberals, red for Fascists.',
+      officesTitle: 'President and Chancellor',
+      offices: 'The two seats that form a government.',
+      voteTitle: 'Vote cards',
+      vote:
+        'Ja or Nein. Every hand, these cards decide whether the proposed government takes power.',
+      trackerFail1Title: 'First fail',
+      trackerFail1:
+        'The government failed. The tracker fills one mark from the left.',
+      trackerFail2Title: 'Second fail',
+      trackerFail2: 'Failed again. The second mark lights up.',
+      trackerChaosTitle: 'Third fail',
+      trackerChaos:
+        'Three fails in a row and the top law enacts itself — no government.',
+      deckTitle: 'Deck and discard',
+      deck: 'Fresh laws come from the deck; burned ones go on the discard pile.',
+      deckDraw: 'Draw pile',
+      deckDiscard: 'Discard',
+      lawsTitle: 'Policy cards',
+      laws:
+        'Liberal or Fascist. They go on the board — enough of one color and that side wins.',
+      checkTitle: 'Got it?',
+      check: 'You have seen the pieces. Ready for the table?',
+      checkYes: 'Yes, got it',
+      checkNo: 'Not yet',
+      checkReady: "Let's go to the table.",
+      checkReassure: "No problem. We'll go over it again.",
+      letsPlayBody: 'Those are the pieces. Next, the table shows how a hand plays.',
     },
   },
   settings: {

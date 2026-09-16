@@ -20,6 +20,7 @@ import { UpdateModal } from './components/UpdateModal/UpdateModal';
 import { WhatsNewModal } from './components/WhatsNewModal/WhatsNewModal';
 import { ChangelogScreen } from './screens/ChangelogScreen/ChangelogScreen';
 import { SupportScreen } from './screens/SupportScreen/SupportScreen';
+import { OnboardingIntroScreen } from './screens/OnboardingIntroScreen/OnboardingIntroScreen';
 import { criticalBootUrls } from './services/prefetch';
 import { waitForOnline } from './services/online';
 
@@ -147,6 +148,9 @@ function Router() {
       <Match when={nav.screen() === 'waiting-room'}>
         <WaitingRoomScreen />
       </Match>
+      <Match when={nav.screen() === 'onboarding'}>
+        <OnboardingIntroScreen />
+      </Match>
       <Match when={nav.screen() === 'game'}>
         <GameScreen />
       </Match>
@@ -266,11 +270,11 @@ function SitOffer() {
       confirmLabel={formatMessage('onboard.sit')}
       cancelLabel={formatMessage('onboard.notNow')}
       onConfirm={() => {
-        tutorial.startLook({
+        tutorial.startIntro({
           name: settings.settings.profileName.trim() || formatMessage('game.you'),
           avatar: settings.settings.avatar,
         });
-        nav.navigate('game');
+        nav.navigate('onboarding');
       }}
       onCancel={() => tutorial.declineSit()}
     />
