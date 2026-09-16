@@ -300,13 +300,6 @@
   white-space: nowrap;
 }
 
-.nameNumber {
-  flex-shrink: 0;
-  min-width: 14px;
-  font-weight: 800;
-  color: $gold;
-}
-
 .name > span[dir] {
   overflow: hidden;
   text-overflow: ellipsis;

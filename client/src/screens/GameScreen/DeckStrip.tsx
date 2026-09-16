@@ -1,8 +1,7 @@
-import { Index, Show, createEffect } from 'solid-js';
-import type { Role } from '@secret-hitler/shared';
+import { Index, createEffect } from 'solid-js';
 import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
-import { CARD_BACK, roleFace } from '../../assets/cards';
+import { CARD_BACK } from '../../assets/cards';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './DeckStrip.module.scss';
 
@@ -10,22 +9,17 @@ export interface DeckStripProps {
   drawCount: number;
   discardCount: number;
   electionTracker: number;
-  role: Role | null;
-  playerId: string;
-  onInspectRole: () => void;
   formatMessage: FormatMessage;
 }
 
 const TRACKER_SLOTS = 3;
 
 /**
- * Compact rules strip: remaining policies, burned laws, your secret role,
- * and failed-government marks.
+ * Compact rules strip: remaining policies, burned laws, and
+ * failed-government marks.
  */
 export function DeckStrip(props: DeckStripProps) {
   const { formatMessage } = props;
-  const roleName = () =>
-    props.role ? formatMessage(`role.${props.role}`) : '';
   return (
     <section class={styles.strip} aria-label={formatMessage('game.infoTitle')}>
       <div class={styles.piles}>
@@ -45,24 +39,6 @@ export function DeckStrip(props: DeckStripProps) {
           pile="discard"
         />
       </div>
-
-      <Show when={props.role}>
-        {(role) => (
-          <button
-            type="button"
-            class={styles.role}
-            aria-label={formatMessage('game.youAreRole', { role: roleName() })}
-            onClick={props.onInspectRole}
-          >
-            <WarmImg
-              class={styles.roleFace}
-              src={roleFace(role(), props.playerId)}
-              alt=""
-            />
-            <span class={styles.roleName}>{roleName()}</span>
-          </button>
-        )}
-      </Show>
 
       <div
         class={styles.tracker}

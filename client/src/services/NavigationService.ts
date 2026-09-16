@@ -1,6 +1,5 @@
 import { createSignal, type Accessor, type Setter } from 'solid-js';
 import { joinCodeFromStartApp, parsePlayGameStartApp } from './startApp';
-import { isMessengerWebView } from './miniAppHost';
 
 export type ScreenName =
   | 'home'
@@ -28,8 +27,8 @@ export type ScreenName =
 const JOIN_LINK_PATTERN = /^\/join\/([A-Za-z0-9]+)\/?$/;
 
 /**
- * Signal-based screen switcher — no router library.
- * Keeps a history stack so headers can offer a back button.
+ * In-memory screen switcher — no router library, no browser history.
+ * Keeps a stack so headers can offer a back button.
  * A `/join/CODE` share link boots the join screen, which seats by code.
  */
 export class NavigationService {
@@ -59,11 +58,6 @@ export class NavigationService {
     this.setScreen = setScreen;
     // Deep links boot off home with an empty stack; back still returns home.
     this.canGoBack = () => this.screen() !== 'home';
-    // Share links in the browser drop /join/CODE. Bale web BackButton
-    // needs in-memory routing — do not touch history inside the WebView.
-    if (this.pendingJoinCode && !isMessengerWebView()) {
-      history.replaceState(null, '', '/');
-    }
   }
 
   /** Leave-confirm / sheet intercept — native chrome and the in-app arrow share this. */

@@ -28,7 +28,7 @@
     linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 38%, transparent 58%);
 }
 
-// Support + Play with friends on the start; rules + settings as a brass pair.
+// Support + Play with friends on the start; settings then guide on the end.
 .tools {
   direction: ltr;
   position: relative;
@@ -50,9 +50,10 @@
   flex-shrink: 1;
 }
 
-.toolPair {
+.toolEnd {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 8px;
   flex-shrink: 0;
 }
@@ -139,6 +140,46 @@
     0 2px 4px rgba(0, 0, 0, 0.45),
     inset 0 2px 1px rgba(255, 250, 232, 0.7),
     inset 0 -3px 5px rgba(120, 68, 18, 0.5);
+}
+
+.guideChip {
+  @include pressable;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  color: #3a2410;
+  background: linear-gradient(180deg, #f3d089 0%, #d4a24a 46%, #9a6a22 100%);
+  border: 1px solid rgba(255, 244, 214, 0.55);
+  box-shadow:
+    0 5px 10px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 250, 220, 0.35),
+    inset 0 2px 1px rgba(255, 250, 232, 0.9),
+    inset 0 -4px 6px rgba(120, 68, 18, 0.55);
+  cursor: pointer;
+}
+
+.guideChip:hover {
+  filter: brightness(1.07);
+}
+
+.guideChip:active {
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    inset 0 2px 1px rgba(255, 250, 232, 0.7),
+    inset 0 -3px 5px rgba(120, 68, 18, 0.5);
+}
+
+.guideLabel {
+  font-family: $font-display;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 // --- Stage: hero seated at the desk with the boards on it -------------------

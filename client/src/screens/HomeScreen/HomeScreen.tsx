@@ -152,15 +152,7 @@ export function HomeScreen() {
               </span>
             </button>
           </div>
-          <div class={styles.toolPair}>
-            <button
-              type="button"
-              class={styles.tool}
-              aria-label={formatMessage('nav.rules')}
-              onClick={() => nav.navigate('rules')}
-            >
-              <Icon name="book" size={22} />
-            </button>
+          <div class={styles.toolEnd}>
             <button
               type="button"
               class={styles.tool}
@@ -168,6 +160,17 @@ export function HomeScreen() {
               onClick={() => nav.navigate('settings')}
             >
               <Icon name="gear" size={22} />
+            </button>
+            <button
+              type="button"
+              class={styles.guideChip}
+              aria-label={formatMessage('nav.rules')}
+              onClick={() => nav.navigate('rules')}
+            >
+              <Icon name="book" size={16} />
+              <span class={styles.guideLabel} dir="auto">
+                {formatMessage('nav.rules')}
+              </span>
             </button>
           </div>
         </div>

@@ -7,6 +7,7 @@ export interface GameMenuProps {
   open: boolean;
   roomName: string;
   onClose: () => void;
+  onInspectRole: () => void;
   onViewRules: () => void;
   onLeave: () => void;
 }
@@ -80,6 +81,11 @@ export function GameMenu(props: GameMenuProps) {
                 onClick={() => settings.set('voiceEnabled', !state.voiceEnabled)}
               />
             </Show>
+            <MenuIcon
+              icon="masks"
+              label={formatMessage('game.yourRole')}
+              onClick={() => props.onInspectRole()}
+            />
             <MenuIcon
               icon="book"
               label={formatMessage('gameMenu.viewRules')}

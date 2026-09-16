@@ -8,12 +8,13 @@ import {
 import { useApp } from '../../services/AppContext';
 import { ERROR_MESSAGE_KEYS } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
+import { playerLabel } from '../../i18n/perspective';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import { Screen } from '../../components/Screen/Screen';
 import { Toast } from '../../components/Toast/Toast';
-import { GameEventHeader, governmentLabel } from './GameEventHeader';
+import { GameEventHeader } from './GameEventHeader';
 import { DeckStrip } from './DeckStrip';
 import { TableSeat } from './TableSeat';
 import { ChatPanel } from './ChatPanel';
@@ -585,6 +586,14 @@ export function GameScreen() {
 
   const playerName = (playerId: string | null) =>
     view()?.players.find((player) => player.id === playerId)?.name ?? '—';
+  const ticketName = (playerId: string | null) => {
+    const state = view();
+    const player = state?.players.find((seat) => seat.id === playerId);
+    if (!player || !state) return '—';
+    return playerLabel(player.id === state.you.id, player.name, formatMessage);
+  };
+  const playerAvatar = (playerId: string | null) =>
+    view()?.players.find((player) => player.id === playerId)?.avatar ?? 0;
   const playerSeat = (playerId: string) => {
     const player = view()?.players.find((player) => player.id === playerId);
     return player != null ? player.seat + 1 : 0;
@@ -766,23 +775,13 @@ export function GameScreen() {
             class={styles.scene}
             style={{ '--chat-panel-height': `${chatHeight()}px` }}
           >
-            <GameEventHeader
-              headline={ravi.line() ?? helpMessage()}
-              governmentLabel={governmentLabel(
-                state().board.liberalPolicies + state().board.fascistPolicies,
-                formatMessage,
-              )}
-              fullWidth={ceremonyOpen()}
-            />
+            <GameEventHeader headline={ravi.line() ?? helpMessage()} />
 
             <div class={styles.body}>
             <DeckStrip
               drawCount={state().board.drawPile + drawHold()}
               discardCount={state().board.discardPile}
               electionTracker={state().board.electionTracker}
-              role={game.role() ?? state().you.role}
-              playerId={state().you.id}
-              onInspectRole={() => setInspectingRole(true)}
               formatMessage={formatMessage}
             />
 
@@ -832,11 +831,20 @@ export function GameScreen() {
               <VotingOverlay
                 formatMessage={formatMessage}
                 prompt={formatMessage(
-                  iAmChancellor() ? 'game.votePromptYou' : 'game.votePrompt',
+                  iAmChancellor()
+                    ? 'game.votePromptYou'
+                    : iAmPresident()
+                      ? 'game.votePromptYouPresident'
+                      : 'game.votePrompt',
                   {
-                    name: isolateBidi(playerName(state().board.chancellor)),
+                    president: isolateBidi(ticketName(state().board.president)),
+                    chancellor: isolateBidi(ticketName(state().board.chancellor)),
                   },
                 )}
+                presidentName={isolateBidi(ticketName(state().board.president))}
+                chancellorName={isolateBidi(ticketName(state().board.chancellor))}
+                presidentAvatar={playerAvatar(state().board.president)}
+                chancellorAvatar={playerAvatar(state().board.chancellor)}
                 canVote={state().you.vote == null && !!game.you()?.isAlive}
                 yourVote={state().you.vote}
                 votedCount={votedCount()}
@@ -964,12 +972,12 @@ export function GameScreen() {
             <Show when={tableOverlay() === 'chancellorReveal'}>
               <ChancellorReveal
                 formatMessage={formatMessage}
-                isYou={iAmChancellor()}
-                chancellorName={isolateBidi(playerName(state().board.chancellor))}
-                chancellorAvatar={
-                  state().players.find((player) => player.id === state().board.chancellor)
-                    ?.avatar ?? 0
-                }
+                presidentIsYou={iAmPresident()}
+                chancellorIsYou={iAmChancellor()}
+                presidentName={isolateBidi(ticketName(state().board.president))}
+                chancellorName={isolateBidi(ticketName(state().board.chancellor))}
+                presidentAvatar={playerAvatar(state().board.president)}
+                chancellorAvatar={playerAvatar(state().board.chancellor)}
               />
             </Show>
 
@@ -1148,6 +1156,10 @@ export function GameScreen() {
               open={tableOverlay() === 'menu'}
               roomName={state().name}
               onClose={() => setMenuOpen(false)}
+              onInspectRole={() => {
+                setMenuOpen(false);
+                setInspectingRole(true);
+              }}
               onViewRules={() => nav.navigate('rules')}
               onLeave={() => {
                 setMenuOpen(false);

@@ -265,29 +265,25 @@ describe('GameScreen — voting', () => {
     expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
-  it('Should show the secret role on the deck strip after the opening look', () => {
+  it('Should keep the secret role off the deck strip after the opening look', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
     harness.socket.emit({ type: 'private', role: 'liberal' });
 
     expect(
-      screen.getByLabelText(en.game.youAreRole.replace('{role}', en.role.liberal)),
-    ).toBeTruthy();
-    expect(screen.getByText(en.role.liberal)).toBeTruthy();
+      screen.queryByLabelText(en.game.youAreRole.replace('{role}', en.role.liberal)),
+    ).toBeNull();
     expect(screen.queryByText(en.ravi.private.youLiberal)).toBeNull();
   });
 
-  it('Should open the role card when the player taps their role', () => {
+  it('Should open the role card from the in-game menu', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(nominationView());
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: en.game.youAreRole.replace('{role}', en.role.liberal),
-      }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
+    fireEvent.click(screen.getByRole('button', { name: en.game.yourRole }));
     expect(screen.getByText(en.roleDescription.liberal)).toBeTruthy();
     expect(screen.getByRole('dialog', { name: en.game.yourRole })).toBeTruthy();
 
@@ -385,7 +381,13 @@ describe('GameScreen — voting', () => {
     expect(screen.queryByRole('dialog', { name: en.ravi.deal.start })).toBeNull();
     expect(screen.queryByRole('dialog', { name: en.game.yourRole })).toBeNull();
     expect(screen.getByText(en.game.chancellorRevealTitleYou)).toBeTruthy();
-    expect(screen.getByText(en.game.chancellorRevealYou)).toBeTruthy();
+    expect(
+      screen.getByText(
+        en.game.chancellorRevealYou.replace('{president}', isolateBidi('Ana')),
+      ),
+    ).toBeTruthy();
+    expect(screen.getAllByText(en.game.president).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(en.game.chancellor).length).toBeGreaterThan(0);
   });
 
   it('Should reveal seat numbers and the President after night', () => {
@@ -431,7 +433,18 @@ describe('GameScreen — voting', () => {
     });
 
     expect(screen.getByText(en.game.chancellorRevealTitle)).toBeTruthy();
-    expect(screen.queryByText(en.game.chancellorRevealYou)).toBeNull();
+    expect(
+      screen.getByText(
+        en.game.chancellorReveal
+          .replace('{president}', isolateBidi('Ana'))
+          .replace('{chancellor}', isolateBidi('Cal')),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        en.game.chancellorRevealYou.replace('{president}', isolateBidi('Ana')),
+      ),
+    ).toBeNull();
   });
 
   it('Should ask the nominated chancellor to vote in the first person', () => {
@@ -439,7 +452,14 @@ describe('GameScreen — voting', () => {
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
-    expect(screen.getByText(en.game.votePromptYou)).toBeTruthy();
+    expect(
+      screen.getByText(
+        en.game.votePromptYou.replace('{president}', isolateBidi('Ana')),
+      ),
+    ).toBeTruthy();
+    expect(screen.getAllByText(en.game.president).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(en.game.chancellor).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
   });
 
   it(
@@ -1027,11 +1047,11 @@ describe('GameScreen — government', () => {
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
-    expect(screen.getByText(en.game.president)).toBeTruthy();
-    expect(screen.getByText(en.game.chancellor)).toBeTruthy();
+    expect(screen.getAllByText(en.game.president).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(en.game.chancellor).length).toBeGreaterThan(0);
     expect(screen.getByText(en.game.electionTracker)).toBeTruthy();
     expect(screen.getByLabelText(`${en.game.drawPile}: 17`)).toBeTruthy();
-    expect(screen.getByText(en.role.liberal)).toBeTruthy();
+    expect(screen.queryByText(en.role.liberal)).toBeNull();
     expect(screen.queryByText(en.game.presidentialCandidate)).toBeNull();
     // The seated president's name is surfaced, no info panel to open.
     expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
@@ -1081,6 +1101,7 @@ describe('GameScreen — in-game menu', () => {
     expect(screen.getByRole('button', { name: en.gameMenu.music })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.effects })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.ravi })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.yourRole })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.gameMenu.viewRules })).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.gameMenu.tableVoice })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
@@ -1291,10 +1312,10 @@ describe('GameScreen — event header', () => {
     harness.pushState(votingView());
 
     expect(screen.getByText(en.game.help.voteYou)).toBeTruthy();
-    expect(screen.getByText(en.game.government.first)).toBeTruthy();
+    expect(screen.queryByText(en.game.government.first)).toBeNull();
   });
 
-  it('Should advance the government label after a fascist policy is enacted', () => {
+  it('Should keep the government count out of the header after a policy is enacted', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     const view = votingView();
@@ -1308,7 +1329,7 @@ describe('GameScreen — event header', () => {
     });
 
     expect(screen.getByText(en.game.help.voteYou)).toBeTruthy();
-    expect(screen.getByText(en.game.government.second)).toBeTruthy();
+    expect(screen.queryByText(en.game.government.second)).toBeNull();
   });
 
   it('Should keep the enacted well empty until the card finishes flying', async () => {

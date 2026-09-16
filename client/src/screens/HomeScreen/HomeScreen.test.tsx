@@ -69,7 +69,6 @@ describe('HomeScreen', () => {
     expect(screen.queryByRole('heading', { name: 'Secret Hitler' })).toBeNull();
     expect(screen.queryByText('3.3K')).toBeNull();
     expect(screen.queryByText('Guest')).toBeNull();
-    expect(screen.queryByText('How to Play')).toBeNull();
   });
 
   it('Should open Settings from the gear', () => {
@@ -91,7 +90,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy();
   });
 
-  it('Should open Rules from the brass pair', () => {
+  it('Should open the guide from the labeled chip under Settings', () => {
     const harness = buildHarness();
     renderWithApp(
       () => (
@@ -119,6 +118,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('button', { name: en.support.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
+    expect(screen.getByText(en.nav.rules)).toBeTruthy();
     expect(screen.getAllByRole('button')).toHaveLength(5);
     expect(screen.getByText('0/6')).toBeTruthy();
   });

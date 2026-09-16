@@ -21,12 +21,18 @@ bit them, a change in how the table plays.
 Skip: refactors, tests, docs, Docker/VPS, types, internal wiring, copy
 tweaks nobody asked for.
 
+**Skip chrome and polish.** If you would not mention it when telling a friend
+what landed, it is not a changelog line. Layout, typewriter, icon labels,
+header height, a button that moved, a number shown twice — those stay in the
+commit. The briefing is for play, not for the shell.
+
 | Commit | Changelog? | `bump` |
 |---|---|---|
 | `feat` they can notice | yes | `minor` |
 | `feat` that breaks how they already play | yes | `major` |
 | `fix` they can notice | yes | `patch` |
 | `fix` only servers/Docker/types would notice | no | — |
+| chrome / polish / animation on copy they already had | no | — |
 | `chore` `docs` `test` `style` `refactor` | no | — |
 
 One commit → at most one new release. Several player-facing bits in that
@@ -96,7 +102,8 @@ direct, not chatty, not a poem.
 Drop: how it was built (browser, webview, tap timing, “announced three
 times”, a field kept above the keyboard). Drop metaphor that hides the fact
 (“the table does not fold”, «میز سخن می‌گوید»). Skip chrome so small you
-would not mention it when telling someone what changed.
+would not mention it when telling someone what changed — a typing header,
+a labeled icon, a shorter bar, a seat number that was already on the portrait.
 
 Seats, votes, the host, Ravi — name those when that is what changed. Do not
 personify the table to sound warm.
@@ -112,6 +119,8 @@ personify the table to sound warm.
 | en: «The microphone now asks to be heard the moment it is touched.» | en: «Tapping the microphone asks for permission right away.» |
 | fa: «بعد از هر آپدیت می‌فهمی چی عوض شده.» (slang) | fa: «پس از هر به‌روزرسانی، اعلامیهٔ تغییرات نشان داده می‌شود.» |
 | en: «Updates now tell you what landed.» (chatty) | en: «After an update, a short note of what changed is shown.» |
+| fa: «جملهٔ راوی با حروف‌چینی می‌آید.» (chrome) | (no entry — they already heard Ravi) |
+| en: «How to Play is labeled and sits under Settings.» (chrome) | (no entry — they already knew the book) |
 
 One sentence per change. No file names, no ticket ids, no “we refactored”.
 If it needs a second sentence, it is two changes.

@@ -6,12 +6,17 @@ import { VOTE_FACE } from '../../assets/cards';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
+import { GovernmentTicket } from './GovernmentTicket';
 import styles from './VotingOverlay.module.scss';
 
 export interface VotingOverlayProps {
   formatMessage: FormatMessage;
-  /** Already-formatted "Elect X as Chancellor?" prompt. */
+  /** Already-formatted "Elect this government?" prompt. */
   prompt: string;
+  presidentName: string;
+  chancellorName: string;
+  presidentAvatar: number;
+  chancellorAvatar: number;
   /** Living voter who hasn't voted yet — show the Ja/Nein buttons. */
   canVote: boolean;
   yourVote: Vote | null;
@@ -97,6 +102,13 @@ export function VotingOverlay(props: VotingOverlayProps) {
               handleProps={drag.handleProps}
             />
             <span class={styles.title}>{formatMessage('game.voteTitle')}</span>
+            <GovernmentTicket
+              formatMessage={formatMessage}
+              presidentName={props.presidentName}
+              chancellorName={props.chancellorName}
+              presidentAvatar={props.presidentAvatar}
+              chancellorAvatar={props.chancellorAvatar}
+            />
             <p class={styles.prompt}>{props.prompt}</p>
             {timer}
             <div class={styles.buttons}>

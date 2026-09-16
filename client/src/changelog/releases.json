@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.4.0",
+      "bump": "minor",
+      "date": "2026-09-16",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "هنگام رأی، هم رئیس‌جمهور را می‌بینید هم صدراعظم را.",
+          "en": "The vote now shows both the President and the Chancellor."
+        }
+      ]
+    },
+    {
       "version": "0.3.0",
       "bump": "minor",
       "date": "2026-09-15",

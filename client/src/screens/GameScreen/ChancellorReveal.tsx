@@ -1,26 +1,29 @@
 import { onMount } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import type { FormatMessage } from '../../i18n';
-import { avatarImage } from '../../assets/avatars';
-import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
+import { GovernmentTicket } from './GovernmentTicket';
 import styles from './ChancellorReveal.module.scss';
 
 export interface ChancellorRevealProps {
+  presidentName: string;
   chancellorName: string;
+  presidentAvatar: number;
   chancellorAvatar: number;
-  isYou: boolean;
+  presidentIsYou: boolean;
+  chancellorIsYou: boolean;
   formatMessage: FormatMessage;
 }
 
 /**
- * Beat between nomination and the vote: a short notice of who was named.
+ * Beat between nomination and the vote: both offices on the proposed ticket.
  */
 export function ChancellorReveal(props: ChancellorRevealProps) {
   const { formatMessage } = props;
   const { animation, sound } = useApp();
   const drag = useDialogDrag();
+  const youOnTicket = () => props.presidentIsYou || props.chancellorIsYou;
   onMount(() => sound.play('chancellor-seal'));
   return (
     <div
@@ -33,7 +36,7 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
         role="dialog"
         aria-modal="true"
         aria-label={formatMessage(
-          props.isYou
+          youOnTicket()
             ? 'game.chancellorRevealTitleYou'
             : 'game.chancellorRevealTitle',
         )}
@@ -47,22 +50,30 @@ export function ChancellorReveal(props: ChancellorRevealProps) {
         />
         <span class={styles.title}>
           {formatMessage(
-            props.isYou
+            youOnTicket()
               ? 'game.chancellorRevealTitleYou'
               : 'game.chancellorRevealTitle',
           )}
         </span>
-        <WarmImg
-          class={styles.face}
-          src={avatarImage(props.chancellorAvatar)}
-          alt=""
+        <GovernmentTicket
+          formatMessage={formatMessage}
+          presidentName={props.presidentName}
+          chancellorName={props.chancellorName}
+          presidentAvatar={props.presidentAvatar}
+          chancellorAvatar={props.chancellorAvatar}
         />
         <p class={styles.prompt}>
-          {props.isYou
-            ? formatMessage('game.chancellorRevealYou')
-            : formatMessage('game.chancellorReveal', {
-                name: props.chancellorName,
-              })}
+          {formatMessage(
+            props.presidentIsYou
+              ? 'game.chancellorRevealYouPresident'
+              : props.chancellorIsYou
+                ? 'game.chancellorRevealYou'
+                : 'game.chancellorReveal',
+            {
+              president: props.presidentName,
+              chancellor: props.chancellorName,
+            },
+          )}
         </p>
       </div>
       </div>

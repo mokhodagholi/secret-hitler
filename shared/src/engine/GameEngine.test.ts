@@ -282,9 +282,9 @@ describe('GameEngine — nomination and voting', () => {
     const deck = new StackedDeck(['fascist', 'liberal', 'liberal']);
     const { engine, room, players } = startGame(['Ana', 'Ben', 'Cal'], deck);
 
-    for (let round = 0; round < 3; round++) {
+    const failVote = () => {
       const president = room.findPlayer(room.presidentId ?? '')!;
-      const target = players.find((p) => p.id !== president.id)!;
+      const target = players.find((player) => player.id !== president.id)!;
       engine.handleCommand(president.id, {
         kind: 'nominateChancellor',
         targetId: target.id,
@@ -292,11 +292,26 @@ describe('GameEngine — nomination and voting', () => {
       for (const player of players) {
         engine.handleCommand(player.id, { kind: 'castVote', vote: 'nein' });
       }
-    }
+    };
 
+    failVote();
+    failVote();
+    expect(room.electionTracker).toBe(2);
+    expect(room.fascistPolicies).toBe(0);
+    expect(deck.peekTop(1)).toEqual(['fascist']);
+
+    failVote();
     expect(room.fascistPolicies).toBe(1);
     expect(room.electionTracker).toBe(0);
     expect(room.lastEnacted).toEqual(['fascist']);
+    expect(deck.peekTop(1)).toEqual(['liberal']);
+
+    failVote();
+    failVote();
+    expect(room.electionTracker).toBe(2);
+    expect(room.fascistPolicies).toBe(1);
+    expect(room.liberalPolicies).toBe(0);
+    expect(deck.peekTop(1)).toEqual(['liberal']);
   });
 
   it('Should hand the Fascists victory when Hitler takes the chancellorship after three fascist policies', () => {
@@ -544,15 +559,44 @@ describe('GameEngine — nomination and voting', () => {
   });
 
   it('Should enact the top policy after three failed nominations', () => {
-    const deck = new StackedDeck(['liberal']);
+    const deck = new StackedDeck(['liberal', 'fascist']);
     const game = startGame(['Ana', 'Ben', 'Cal'], deck);
 
     game.engine.resolveNominationTimeout();
     game.engine.resolveNominationTimeout();
+    expect(game.room.liberalPolicies).toBe(0);
+    expect(deck.peekTop(1)).toEqual(['liberal']);
+
     game.engine.resolveNominationTimeout();
 
     expect(game.room.liberalPolicies).toBe(1);
     expect(game.room.electionTracker).toBe(0);
+    expect(deck.peekTop(1)).toEqual(['fascist']);
+
+    game.engine.resolveNominationTimeout();
+    game.engine.resolveNominationTimeout();
+    expect(game.room.electionTracker).toBe(2);
+    expect(game.room.liberalPolicies).toBe(1);
+    expect(deck.peekTop(1)).toEqual(['fascist']);
+  });
+
+  it('Should take only one policy from the draw pile on chaos', () => {
+    const { engine, room } = startGame(['Ana', 'Ben', 'Cal']);
+    const before = room.deck.drawCount;
+
+    engine.resolveNominationTimeout();
+    engine.resolveNominationTimeout();
+    expect(room.deck.drawCount).toBe(before);
+    expect(room.electionTracker).toBe(2);
+
+    engine.resolveNominationTimeout();
+    expect(room.deck.drawCount).toBe(before - 1);
+    expect(room.electionTracker).toBe(0);
+
+    engine.resolveNominationTimeout();
+    engine.resolveNominationTimeout();
+    expect(room.deck.drawCount).toBe(before - 1);
+    expect(room.electionTracker).toBe(2);
   });
 
   it('Should close discussion during the legislative session', () => {

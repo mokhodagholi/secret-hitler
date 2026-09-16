@@ -90,7 +90,7 @@ Open the doc; do not invent a parallel rule.
 | Persian copy | `docs/persian.md` — native fa, never a translation of en |
 | Scrollbars | `client/docs/scroll.md` — one mixin, theme via `--scroll-*` |
 | Native feel | `client/docs/native-feel.md` — app chrome, not a web page |
-| Player-visible feat/fix | `docs/changelog.md` before commit |
+| Player-visible feat/fix | `docs/changelog.md` before commit — skip chrome / polish |
 
 `.agents/rules/` files are thin pointers to those docs.
 

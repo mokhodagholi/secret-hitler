@@ -188,11 +188,6 @@ export function TableSeat(props: TableSeatProps) {
         </Show>
       </span>
       <span class={styles.name}>
-        <Show when={showPublicMarks()}>
-          <span class={styles.nameNumber} data-seat-number>
-            {formatMessage('game.seatNumber', { n: props.player.seat + 1 })}
-          </span>
-        </Show>
         <span dir="auto">
           {playerLabel(props.isYou, props.player.name, formatMessage)}
         </span>

@@ -36,18 +36,6 @@
   color: $gold;
 }
 
-.face {
-  width: 88px;
-  height: 88px;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 2px solid rgba($gold, 0.55);
-  display: block;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
 .prompt {
   margin: 0;
   font-size: 1.02rem;
