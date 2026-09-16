@@ -13,12 +13,11 @@ describe('NavigationService', () => {
     expect(nav.consumeJoinCode()).toBe('ABC123');
   });
 
-  it('Should keep a share-link path out of browser history', () => {
+  it('Should drop a share-link path from the browser address bar', () => {
     window.history.replaceState(null, '', '/join/ABC123');
     const nav = new NavigationService('/join/ABC123');
     expect(nav.screen()).toBe('join-game');
-    expect(location.pathname).toBe('/join/ABC123');
-    window.history.replaceState(null, '', '/');
+    expect(location.pathname).toBe('/');
   });
 
   it('Should uppercase a /join/CODE share link so it matches the room', () => {
