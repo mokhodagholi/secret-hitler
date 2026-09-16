@@ -123,8 +123,36 @@ type AdminDraft =
 
 const adminDrafts = new Map<string, AdminDraft>();
 
+/** Serializes fan-out so /unsend sees the last blast's stored message ids. */
+let adminFanOut: Promise<void> = Promise.resolve();
+
+function enqueueAdminFanOut(req: FastifyRequest, work: () => Promise<void>): void {
+  adminFanOut = adminFanOut
+    .then(work, work)
+    .catch((error) => {
+      req.log.error(error, 'Admin fan-out failed after webhook ack');
+    });
+}
+
+/** Menu / help commands — not draft bodies. */
+const DRAFT_CANCEL_COMMANDS = new Set([
+  'start',
+  'help',
+  'find_game',
+  'findgame',
+  'games',
+  'game',
+  'join',
+  'invite',
+  'create',
+]);
+
 function adminDraftKey(kind: MessengerKind, chatId: number): string {
   return `${kind}:${chatId}`;
+}
+
+function cancelsAdminDraft(command: string | undefined): boolean {
+  return command != null && DRAFT_CANCEL_COMMANDS.has(command);
 }
 
 /** Append the secret as a path segment so Bale POSTs to an unguessable URL. */
@@ -278,9 +306,11 @@ export async function handleMessengerWebhook(
     return handleUnsend(req, reply, messenger, table, chat.id);
   }
 
-  // A draft owns the next private text, even if it looks like /start or a
-  // ble.ir/… path. Only the admin commands above cancel it.
-  if (table && isAdminUser(seatedId, table.adminUserIds)) {
+  // Player commands cancel a stuck compose; bare text / ble.ir paths stay owned
+  // by the draft so a broadcast body is not mistaken for /start.
+  if (cancelsAdminDraft(parsed?.command) && table && isAdminUser(seatedId, table.adminUserIds)) {
+    adminDrafts.delete(adminDraftKey(kind, chat.id));
+  } else if (table && isAdminUser(seatedId, table.adminUserIds)) {
     const continued = await continueAdminDraft(req, reply, messenger, table, chat.id, text);
     if (continued) return;
   }
@@ -476,6 +506,8 @@ async function sendAdminBlast(
   if (!started) {
     return reply.code(500).send({ error: 'Failed to send reply' });
   }
+  // Ack before the fan-out — nginx/Bale time out long webhook holds.
+  void reply.code(200).send({ ok: true });
 
   const blast = broadcastPlayerReply(
     {
@@ -485,6 +517,32 @@ async function sendAdminBlast(
     },
     body,
   );
+  enqueueAdminFanOut(req, () =>
+    deliverAdminBlast({
+      req,
+      messenger,
+      table,
+      kind,
+      adminChatId,
+      targets,
+      blast,
+      dropFailedSubscribers,
+    }),
+  );
+}
+
+async function deliverAdminBlast(params: {
+  req: FastifyRequest;
+  messenger: BaleRuntime;
+  table: BaleTableHooks;
+  kind: MessengerKind;
+  adminChatId: number;
+  targets: string[];
+  blast: BotReply;
+  dropFailedSubscribers: boolean;
+}): Promise<void> {
+  const { req, messenger, table, kind, adminChatId, targets, blast, dropFailedSubscribers } =
+    params;
   const delayMs = table.broadcastDelayMs ?? 0;
   let sent = 0;
   let failed = 0;
@@ -508,7 +566,6 @@ async function sendAdminBlast(
     deliveries.map((row) => row.chatId),
   );
   await sendChat(req, messenger, adminChatId, broadcastDoneReply(sent, failed));
-  return reply.code(200).send({ ok: true });
 }
 
 async function handleUnsend(
@@ -519,6 +576,8 @@ async function handleUnsend(
   adminChatId: number,
 ): Promise<void> {
   const kind = messengerKindOf(messenger);
+  // Prior /broadcast|/message may still be writing message ids.
+  await adminFanOut;
   const deliveries = (await table.subscribers?.listLastBlast(kind)) ?? [];
   if (deliveries.length === 0) {
     return sendBotReply(req, reply, messenger, adminChatId, unsendEmptyReply());
@@ -528,7 +587,21 @@ async function handleUnsend(
   if (!started) {
     return reply.code(500).send({ error: 'Failed to send reply' });
   }
+  void reply.code(200).send({ ok: true });
 
+  enqueueAdminFanOut(req, () =>
+    deliverAdminUnsend(req, messenger, table, kind, adminChatId, deliveries),
+  );
+}
+
+async function deliverAdminUnsend(
+  req: FastifyRequest,
+  messenger: BaleRuntime,
+  table: BaleTableHooks,
+  kind: MessengerKind,
+  adminChatId: number,
+  deliveries: { chatId: string; messageId: number }[],
+): Promise<void> {
   const delayMs = table.broadcastDelayMs ?? 0;
   let deleted = 0;
   let failed = 0;
@@ -544,7 +617,6 @@ async function handleUnsend(
   }
   await table.subscribers?.replaceLastBlast(kind, remaining);
   await sendChat(req, messenger, adminChatId, unsendDoneReply(deleted, failed));
-  return reply.code(200).send({ ok: true });
 }
 
 function sleep(ms: number): Promise<void> {

@@ -65,6 +65,15 @@ Bale's Bot API does not document that method and still returns HTTP 501;
 the menu may be empty even though the commands work when typed. Telegram
 accepts `setMyCommands`.
 
+`/broadcast`, `/message`, and `/unsend` ack the webhook as soon as the admin
+gets the “started” line, then fan out in the background. Holding the HTTP
+request open for every DM used to time out nginx/Bale and make later
+commands look dead until the container restarted.
+
+An admin `/message` or `/broadcast` compose draft is cancelled by `/start`
+(and the other menu commands). Bare text and `ble.ir/…` paths stay in the
+draft so a broadcast body is not mistaken for a greeting.
+
 Source: [`server/src/bale/webhook.ts`](../server/src/bale/webhook.ts),
 [`server/src/index.ts`](../server/src/index.ts).
 

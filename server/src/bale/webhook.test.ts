@@ -14,6 +14,19 @@ import {
 
 const TOKEN = '123456:test-token';
 
+async function waitUntil(
+  predicate: () => boolean | Promise<boolean>,
+  timeoutMs = 2000,
+): Promise<void> {
+  const started = Date.now();
+  while (!(await predicate())) {
+    if (Date.now() - started > timeoutMs) {
+      throw new Error('waitUntil timed out');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 function signInitData(userId: number, firstName: string): string {
   const fields = {
     auth_date: String(Math.floor(Date.now() / 1000)),
@@ -741,6 +754,7 @@ describe('Bale webhook — broadcast', () => {
 
     expect(status).toBe(200);
     expect(sent[0]?.text).toContain('3 نفر');
+    await waitUntil(() => sent.some((row) => row.text.includes('رسید به 3 نفر')));
     const blasts = sent.filter((row) => row.text.includes('میز عمومیه'));
     expect(blasts).toHaveLength(3);
     expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([
@@ -851,12 +865,49 @@ describe('Bale webhook — broadcast', () => {
       update_id: 2,
       message: { message_id: 2, date: 0, text: 'امشب بیا', ...admin },
     });
+    await waitUntil(() =>
+      sent.some((row) => row.chat_id === 9 && row.text.includes('امشب بیا')),
+    );
     expect(sent.some((row) => row.chat_id === 9 && row.text.includes('امشب بیا'))).toBe(true);
     expect(
       sent.some(
         (row) => row.chat_id === DEFAULT_ADMIN_USER_ID && row.text.includes('امشب بیا'),
       ),
     ).toBe(true);
+  });
+
+  it('Should cancel a /message draft when the admin sends /start', async () => {
+    const sent: Array<{ text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const admin = {
+      from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+      chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+    };
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: { message_id: 1, date: 0, text: '/message', ...admin },
+    });
+    expect(sent.at(-1)?.text).toContain('آیدی');
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 2,
+      message: { message_id: 2, date: 0, text: '/start', ...admin },
+    });
+    expect(sent.at(-1)?.text).toContain('خوش اومدید');
   });
 
   it('Should broadcast a body that looks like a ble.ir path, not the start greeting', async () => {
@@ -896,6 +947,7 @@ describe('Bale webhook — broadcast', () => {
       message: { message_id: 2, date: 0, text: body, ...admin },
     });
 
+    await waitUntil(() => sent.some((row) => row.text.includes('شناسه درست')));
     const blasts = sent.filter((row) => row.text.includes('شناسه درست'));
     expect(blasts.length).toBeGreaterThan(0);
     expect(sent.some((row) => row.text.includes('خوش اومدید'))).toBe(false);
@@ -932,6 +984,10 @@ describe('Bale webhook — broadcast', () => {
       },
     });
 
+    await waitUntil(async () => {
+      const remaining = await subscribers.list('bale');
+      return remaining.includes('9') && !remaining.includes('11');
+    });
     const remaining = await subscribers.list('bale');
     expect(remaining).toContain('9');
     expect(remaining).not.toContain('11');
@@ -967,9 +1023,10 @@ describe('Bale webhook — broadcast', () => {
     });
 
     expect(status).toBe(200);
-    const blasts = sent.filter((row) => row.text.includes('امشب بیا'));
-    expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
-    expect(JSON.stringify(blasts[0]?.reply_markup)).toContain(
+    await waitUntil(() => sent.filter((row) => row.text.includes('امشب بیا')).length >= 2);
+    const delivered = sent.filter((row) => row.text.includes('امشب بیا'));
+    expect(delivered.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
+    expect(JSON.stringify(delivered[0]?.reply_markup)).toContain(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
   });
@@ -1011,6 +1068,7 @@ describe('Bale webhook — broadcast', () => {
       update_id: 3,
       message: { message_id: 3, date: 0, text: 'امشب بیا', ...admin },
     });
+    await waitUntil(() => sent.filter((row) => row.text.includes('امشب بیا')).length >= 2);
     const blasts = sent.filter((row) => row.text.includes('امشب بیا'));
     expect(blasts.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([9, 11]);
   });
@@ -1083,10 +1141,12 @@ describe('Bale webhook — broadcast', () => {
       update_id: 1,
       message: { message_id: 1, date: 0, text: '/broadcast بیا کانال', ...admin },
     });
+    await waitUntil(() => sent.some((row) => row.text.includes('رسید به')));
     await httpJson(app, 'POST', '/api/bale/webhook', {
       update_id: 2,
       message: { message_id: 2, date: 0, text: '/unsend', ...admin },
     });
+    await waitUntil(() => sent.some((row) => row.text.includes('پاک شد')));
 
     expect(deleted.map((row) => Number(row.chat_id)).sort((a, b) => a - b)).toEqual([
       9,
