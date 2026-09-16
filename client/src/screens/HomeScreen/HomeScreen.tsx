@@ -30,13 +30,16 @@ const MATCH_POLL_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 4_000;
 
 /**
- * Lobby splash: Hitler at the desk, Find Match on the table, Play with
- * friends under Support. A live seat that can still be claimed gets its
+ * Lobby splash: Hitler at the desk, Find Match on the table when the
+ * public table is on, otherwise Play (create/join). Play with friends
+ * sits under Support. A live seat that can still be claimed gets its
  * own return button above Find Match.
  */
 export function HomeScreen() {
-  const { nav, game, i18n, prefetch, animation, settings, miniApp, social } = useApp();
+  const { nav, game, i18n, prefetch, animation, settings, miniApp, social, flags } =
+    useApp();
   const { formatMessage } = i18n;
+  const matchmaking = () => flags.flags.publicTable;
 
   const publicLobby = () => {
     const view = game.view();
@@ -156,7 +159,8 @@ export function HomeScreen() {
     onCleanup(() => clearInterval(tick));
   });
 
-  onMount(() => {
+  createEffect(() => {
+    if (!matchmaking()) return;
     void game.loadMatchOccupancy().catch(() => undefined);
     const poll = setInterval(() => {
       // Queued seats already get match:status on the socket.
@@ -164,7 +168,9 @@ export function HomeScreen() {
       void game.loadMatchOccupancy().catch(() => undefined);
     }, MATCH_POLL_MS);
     onCleanup(() => clearInterval(poll));
+  });
 
+  onMount(() => {
     const tick = setInterval(() => {
       if (!animation.motionEnabled() || SUPPORT_FADE_MS === 0) {
         setSupportIndex((index) => (index + 1) % SUPPORT_LABELS.length);
@@ -200,16 +206,18 @@ export function HomeScreen() {
                 {formatMessage(SUPPORT_LABELS[supportIndex()])}
               </span>
             </button>
-            <button
-              type="button"
-              class={styles.friendsChip}
-              aria-label={formatMessage('home.playWithFriends')}
-              onClick={() => nav.navigate('play')}
-            >
-              <span class={styles.supportLabel} dir="auto">
-                {formatMessage('home.playWithFriends')}
-              </span>
-            </button>
+            <Show when={matchmaking()}>
+              <button
+                type="button"
+                class={styles.friendsChip}
+                aria-label={formatMessage('home.playWithFriends')}
+                onClick={() => nav.navigate('play')}
+              >
+                <span class={styles.supportLabel} dir="auto">
+                  {formatMessage('home.playWithFriends')}
+                </span>
+              </button>
+            </Show>
           </div>
           <div class={styles.toolEnd}>
             <button
@@ -298,42 +306,60 @@ export function HomeScreen() {
               </span>
             </button>
           </Show>
-          <div
-            classList={{
-              [styles.ctaFind]: true,
-              [styles.ctaFinding]: finding(),
-            }}
+          <Show
+            when={matchmaking()}
+            fallback={
+              <div class={styles.ctaFind}>
+                <button
+                  type="button"
+                  class={styles.cta}
+                  aria-label={formatMessage('home.play')}
+                  onClick={() => nav.navigate('join-game')}
+                >
+                  <span class={styles.ctaLabel} dir="auto">
+                    {formatMessage('home.play')}
+                  </span>
+                </button>
+              </div>
+            }
           >
-            <button
-              type="button"
+            <div
               classList={{
-                [styles.cta]: true,
+                [styles.ctaFind]: true,
                 [styles.ctaFinding]: finding(),
               }}
-              aria-label={`${findMatchLabel()} ${matchOccupancy()}`}
-              onClick={() => void enterMatch()}
             >
-              <span
+              <button
+                type="button"
                 classList={{
-                  [styles.ctaLabel]: true,
-                  [styles.ctaLabelFinding]: finding(),
+                  [styles.cta]: true,
+                  [styles.ctaFinding]: finding(),
                 }}
-                dir="auto"
+                aria-label={`${findMatchLabel()} ${matchOccupancy()}`}
+                onClick={() => void enterMatch()}
               >
-                {findMatchLabel()}
-                <Show when={finding()}>
-                  <span class={styles.ctaDots} aria-hidden="true">
-                    <span>.</span>
-                    <span>.</span>
-                    <span>.</span>
-                  </span>
-                </Show>
-              </span>
-              <span class={styles.ctaOccupancy} dir="ltr">
-                {matchOccupancy()}
-              </span>
-            </button>
-          </div>
+                <span
+                  classList={{
+                    [styles.ctaLabel]: true,
+                    [styles.ctaLabelFinding]: finding(),
+                  }}
+                  dir="auto"
+                >
+                  {findMatchLabel()}
+                  <Show when={finding()}>
+                    <span class={styles.ctaDots} aria-hidden="true">
+                      <span>.</span>
+                      <span>.</span>
+                      <span>.</span>
+                    </span>
+                  </Show>
+                </span>
+                <span class={styles.ctaOccupancy} dir="ltr">
+                  {matchOccupancy()}
+                </span>
+              </button>
+            </div>
+          </Show>
         </div>
       </div>
 

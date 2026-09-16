@@ -33,6 +33,18 @@ describe('RoomsScreen', () => {
     expect(password.getAttribute('spellcheck')).toBe('false');
   });
 
+  it('Should open Join before Create when no tab is asked for', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <RoomsScreen />, harness);
+
+    expect(screen.getByRole('tab', { name: en.rooms.joinTab }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: en.rooms.createTab }).getAttribute('aria-selected')).toBe(
+      'false',
+    );
+  });
+
   it('Should put the back action in the page header', () => {
     const harness = buildHarness();
     harness.services.nav.navigate('play');

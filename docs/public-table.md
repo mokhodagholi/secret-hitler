@@ -222,7 +222,7 @@ those people can sit again.
 | Form a reserved table at 6; backfill on leave | `SocketHandler` |
 | Never assign host; Accept set; full-table window; AFK clock | `shared/src/engine/GameEngine.ts` lobby methods |
 | Commands | `shared/src/types/events.ts` + `clientMessages.ts` (`player:wantStart` is Accept; `match:cancel` leaves the queue) |
-| Finding… + Accept on Home | `HomeScreen` — stay on Home until the match deals |
+| Finding… + Accept on Home | `HomeScreen` — stay on Home until the match deals; hide Find Match when `publicTable` is off |
 | Ban on this room | `Room.bannedJoinKeys` — set on vote-yes and host kick; checked at join |
 | Copy | `fa.ts` **and** `en.ts` — [`persian.md`](./persian.md) **میز** |
 | Flag | `publicTable` in [`flags.ts`](../shared/src/flags.ts), default off |

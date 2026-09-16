@@ -13,6 +13,7 @@ for the flags themselves.
 | `publicTable` | `FEATURE_PUBLIC_TABLE` | on |
 | `lobbyKick` | `FEATURE_LOBBY_KICK` | off |
 | `gameKick` | `FEATURE_GAME_KICK` | off |
+| `onboarding` | `FEATURE_ONBOARDING` | off |
 
 Adding a flag: one name in `FLAG_NAMES`, one default in `DEFAULT_FLAGS`, one
 `FEATURE_<NAME>` key in [`.env.example`](../.env.example). Unknown `FEATURE_*`
@@ -41,7 +42,8 @@ When `voice` is off, the client hides every mic control and the server rejects
 `voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).
 
 When `publicTable` is off, the server does not run the Find Match queue and
-does not create reserved public tables. AFK kicks in every lobby still run.
+does not create reserved public tables. Home hides Find Match and shows Play,
+which opens create/join on the Join tab. AFK kicks in every lobby still run.
 A disconnected lobby seat is dropped after 15 seconds (no ban). See
 [`public-table.md`](./public-table.md).
 
@@ -50,3 +52,7 @@ the server rejects lobby `player:kick` / lobby `kick:request`.
 
 When `gameKick` is off, in-game kick votes and mid-game host kick stay dark;
 the server rejects those frames too.
+
+When `onboarding` is off, the first-run Sit offer and look table stay dark.
+The table itself is client-only (no tutorial HTTP or room). See
+[`onboarding.md`](./onboarding.md).

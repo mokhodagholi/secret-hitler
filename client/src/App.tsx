@@ -136,7 +136,7 @@ function Router() {
         <SupportScreen />
       </Match>
       <Match when={nav.screen() === 'play'}>
-        <RoomsScreen initialTab="create" />
+        <RoomsScreen initialTab="join" />
       </Match>
       <Match when={nav.screen() === 'create-room'}>
         <RoomsScreen initialTab="create" />

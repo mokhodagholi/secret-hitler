@@ -48,27 +48,29 @@ describe('HomeScreen', () => {
     expect(screen.queryByRole('tab', { name: 'Create Room' })).toBeNull();
   });
 
-  it('Should queue Find Match on home even when the client catalog still has it off', async () => {
-    const harness = buildHarness();
-    harness.services.settings.set('profileName', 'Ana');
-    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input);
-      if (url.includes('/api/match/queue')) {
-        return new Response(
-          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 1, max: 6 }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-      return new Response('[]', { status: 200 });
-    });
-    renderWithApp(() => <HomeScreen />, harness);
-
-    fireEvent.click(findMatchButton());
-    await waitFor(() =>
-      expect(findingButton()).toBeTruthy(),
+  it('Should open create/join on the Join tab when Find Match is off', () => {
+    const harness = buildHarness({ flags: { publicTable: false } });
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<RoomsScreen initialTab="join" />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
     );
-    expect(harness.services.nav.screen()).toBe('home');
-    expect(harness.services.game.queued()).toBe(true);
+
+    expect(screen.queryByRole('button', { name: new RegExp(en.home.findGame) })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.home.playWithFriends })).toBeNull();
+    expect(screen.queryByText('0/6')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: en.home.play }));
+    expect(harness.services.nav.screen()).toBe('join-game');
+    expect(screen.getByRole('tab', { name: en.rooms.joinTab }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
   });
 
   it('Should queue Find Match as Guest when the profile has no name', async () => {
@@ -261,7 +263,7 @@ describe('HomeScreen', () => {
       () => (
         <Show
           when={harness.services.nav.screen() === 'home'}
-          fallback={<RoomsScreen initialTab="create" />}
+          fallback={<RoomsScreen initialTab="join" />}
         >
           <HomeScreen />
         </Show>
@@ -271,8 +273,10 @@ describe('HomeScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.home.playWithFriends }));
     expect(harness.services.nav.screen()).toBe('play');
-    expect(screen.getByRole('tab', { name: 'Create Room' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: en.rooms.joinTab })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: en.rooms.joinTab }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
   });
 
   it('Should offer a way back when a live seat is still open', () => {
@@ -302,7 +306,7 @@ describe('HomeScreen', () => {
       () => (
         <Show
           when={harness.services.nav.screen() === 'home'}
-          fallback={<RoomsScreen initialTab="create" />}
+          fallback={<RoomsScreen initialTab="join" />}
         >
           <HomeScreen />
         </Show>
@@ -313,8 +317,10 @@ describe('HomeScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.home.playWithFriends }));
     expect(harness.services.nav.screen()).toBe('play');
-    expect(screen.getByRole('tab', { name: 'Create Room' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: en.rooms.joinTab })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: en.rooms.joinTab }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
   });
 
   it('Should send an in-game seat back to the table', () => {

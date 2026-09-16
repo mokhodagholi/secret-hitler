@@ -25,7 +25,7 @@ export interface RoomsScreenProps {
 export function RoomsScreen(props: RoomsScreenProps) {
   const { i18n } = useApp();
   const { formatMessage } = i18n;
-  const [tab, setTab] = createSignal<RoomsTab>(props.initialTab ?? 'create');
+  const [tab, setTab] = createSignal<RoomsTab>(props.initialTab ?? 'join');
 
   return (
     <Screen>
