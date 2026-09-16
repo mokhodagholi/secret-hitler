@@ -59,6 +59,8 @@ describe('HomeScreen', () => {
     );
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.game.queued()).toBe(true);
+    expect(screen.queryByText('1/6')).toBeNull();
+    expect(screen.queryByText('0/6')).toBeNull();
   });
 
   it('Should ask everyone to Accept when a reserved table is full', () => {
@@ -137,7 +139,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
     expect(screen.getByText(en.nav.rules)).toBeTruthy();
     expect(screen.getAllByRole('button')).toHaveLength(5);
-    expect(screen.getByText('0/6')).toBeTruthy();
+    expect(screen.queryByText('0/6')).toBeNull();
   });
 
   it('Should open Support from the cycling text chip', () => {

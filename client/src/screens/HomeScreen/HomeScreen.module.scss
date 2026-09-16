@@ -408,16 +408,20 @@
   z-index: -1;
 }
 
+.ctaFind {
+  position: relative;
+  isolation: isolate;
+}
+
 .cta {
   position: relative;
-  z-index: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
   width: 100%;
   height: 58px;
-  padding: 0 16px 0 22px;
+  padding: 0 22px;
   border-radius: 18px;
   border: 1.5px solid #e3a53e;
   // Warm orange paper/leather gradient.
@@ -437,25 +441,40 @@
   filter: brightness(1.08);
 }
 
-.ctaFinding {
-  overflow: visible;
+.cta.ctaFinding {
+  border-color: #7ec8e3;
+  background: linear-gradient(180deg, #4a7fa3 0%, #2f5a7a 52%, #1c3d58 100%);
+  box-shadow:
+    0 9px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(190, 230, 255, 0.45),
+    inset 0 -2px 6px rgba(8, 28, 48, 0.55);
 }
 
-.ctaFinding::after {
+.ctaFind.ctaFinding .cta::before {
+  opacity: 0;
+  animation: none;
+}
+
+// Color wash on the wrap so the button fill stays on top. Oval + blur reads
+// as a shifting aura; a tight rounded-rect conic fill looked like a second button.
+.ctaFind.ctaFinding::after {
   content: '';
   position: absolute;
-  inset: -4px;
-  border-radius: 22px;
+  inset: -30px -22px;
+  border-radius: 42% 58% 48% 52% / 52% 42% 58% 48%;
   background: conic-gradient(
+    from 0deg,
     #5b9fd4,
     #e3a53e,
     #c44536,
     #7c5cbf,
     #5b9fd4
   );
-  animation: findSpin 1.8s linear infinite;
+  filter: blur(22px);
+  opacity: 0.72;
+  animation: findSpin 2.6s linear infinite;
   pointer-events: none;
-  z-index: -1;
+  z-index: 0;
 }
 
 .cta:disabled {
@@ -481,20 +500,6 @@
   text-shadow:
     0 1px 0 rgba(255, 226, 188, 0.45),
     0 -1px 1px rgba(95, 32, 10, 0.55);
-}
-
-.ctaCount {
-  flex-shrink: 0;
-  font-family: $font-display;
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #fff4e3;
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 244, 214, 0.38);
-  background: rgba(80, 28, 8, 0.32);
-  text-shadow: 0 -1px 1px rgba(95, 32, 10, 0.5);
 }
 
 // Live seat still waiting — brass, quieter than Find Match.
@@ -549,8 +554,14 @@
 }
 
 @keyframes findSpin {
-  to {
-    transform: rotate(360deg);
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.08);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
   }
 }
 
@@ -560,8 +571,9 @@
     animation: none;
   }
 
-  .ctaFinding::after {
+  .ctaFind.ctaFinding::after {
     animation: none;
+    opacity: 0.4;
   }
 
   .supportLabel {

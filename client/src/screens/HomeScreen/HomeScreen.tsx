@@ -1,5 +1,5 @@
 import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
-import { Phase, PUBLIC_TABLE_MAX_PLAYERS } from '@secret-hitler/shared';
+import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
@@ -22,8 +22,6 @@ const SUPPORT_ROTATE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 2_800;
 const SUPPORT_FADE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 0 : 220;
-const MATCH_POLL_MS =
-  import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 4_000;
 
 /**
  * Lobby splash: Hitler at the desk, Find Match on the table, Play with
@@ -44,20 +42,8 @@ export function HomeScreen() {
 
   const [nowMs, setNowMs] = createSignal(Date.now());
 
-  const seatedCount = () => game.matchWaiting();
-  const maxSeats = () => game.matchMax() || PUBLIC_TABLE_MAX_PLAYERS;
-
   function resolvedName(): string {
     return miniApp.user()?.firstName ?? settings.settings.profileName.trim();
-  }
-
-  async function refreshOccupancy(): Promise<void> {
-    if (!flags.enabled('publicTable')) return;
-    try {
-      await game.loadMatchOccupancy();
-    } catch {
-      /* keep the last occupancy we painted */
-    }
   }
 
   async function enterMatch(): Promise<void> {
@@ -112,10 +98,6 @@ export function HomeScreen() {
   });
 
   onMount(() => {
-    void refreshOccupancy();
-    const poll = setInterval(() => {
-      void refreshOccupancy();
-    }, MATCH_POLL_MS);
     const tick = setInterval(() => {
       if (!animation.motionEnabled() || SUPPORT_FADE_MS === 0) {
         setSupportIndex((index) => (index + 1) % SUPPORT_LABELS.length);
@@ -127,10 +109,7 @@ export function HomeScreen() {
         setSupportFading(false);
       }, SUPPORT_FADE_MS);
     }, SUPPORT_ROTATE_MS);
-    onCleanup(() => {
-      clearInterval(poll);
-      clearInterval(tick);
-    });
+    onCleanup(() => clearInterval(tick));
   });
 
   return (
@@ -218,25 +197,26 @@ export function HomeScreen() {
               </span>
             </button>
           </Show>
-          <button
-            type="button"
+          <div
             classList={{
-              [styles.cta]: true,
+              [styles.ctaFind]: true,
               [styles.ctaFinding]: finding(),
             }}
-            aria-label={formatMessage(finding() ? 'home.finding' : 'home.findGame')}
-            onClick={() => void enterMatch()}
           >
-            <span class={styles.ctaLabel} dir="auto">
-              {formatMessage(finding() ? 'home.finding' : 'home.findGame')}
-            </span>
-            <span class={styles.ctaCount} aria-hidden="true">
-              {formatMessage('joinGame.playerCountShort', {
-                count: seatedCount(),
-                max: maxSeats(),
-              })}
-            </span>
-          </button>
+            <button
+              type="button"
+              classList={{
+                [styles.cta]: true,
+                [styles.ctaFinding]: finding(),
+              }}
+              aria-label={formatMessage(finding() ? 'home.finding' : 'home.findGame')}
+              onClick={() => void enterMatch()}
+            >
+              <span class={styles.ctaLabel} dir="auto">
+                {formatMessage(finding() ? 'home.finding' : 'home.findGame')}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
