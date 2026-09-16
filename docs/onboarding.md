@@ -1,512 +1,447 @@
-# Onboarding — learn by sitting
+# Onboarding — learn at the table
 
-A hands-on first table. Not the video, not the written guide. Those stay
-on the guide hub for people who want them. This is the path a new player
-walks **once**, on the real board, with Daniel talking.
+A hands-on first table. Video and written rules stay on the guide hub.
+This is Daniel walking the player through the **real board**, then
+through live matches at every size.
 
 This file is the plan. It is not implemented yet.
 
-## Why this, not more pages
+**The table must feel like a table.** The other seats are scripted, but
+the player is never told that. No “practice”, no “ربات”, no “these are
+not real”. They have names, they sit down slowly, they chat, they
+hesitate before a vote. Daniel is the only one who sounds like a guide,
+and he talks **to you**, not about the others being fake.
 
-The first five launches already dump people on **Watch the tutorial** and
-**Read the rules**. Most skip. The ones who read still freeze on the first
-nomination: they know there is a Hitler, they do not know which button is
-theirs.
+## Why
 
-Secret Hitler is learned with thumbs. Roles, votes, three cards — those
-only stick when the player has done them. Reading “the President discards
-one” is not the same as burning a tile.
-
-So: **spotlight the real UI, one idea at a time, then play a short 5-seat
-match against scripted bots.** About seven minutes. Skip any time.
+The first five launches dump people on a video and a rulebook. They skip,
+then freeze on the first nomination. Roles and three-card laws only stick
+when a thumb has done them.
 
 ## Shape
 
-Two acts, one sitting. No extra “lesson world” art. Same waiting room,
-same table, same Ravi dock.
+A **ladder of steps**. Each step unlocks the next. Skip a step, or skip
+the whole thing, any time.
 
-| Act | Where | Time | What |
-|---|---|---|---|
-| **1. Museum** | Frozen table, dimmed, one thing lit | ~90 s | Five ideas. Tap to continue. |
-| **2. Hand** | Live 5-player match, 4 bots | ~5–6 min | Player is a Liberal. Real commands. Stacked deck. Scripted bot talk and votes. Liberals win on five Liberal laws. |
+| Step | Table | What they learn |
+|---|---|---|
+| **1. Look** | Frozen 5-seat table | Everything they will *see*: seats, boards, votes, government, the deck. Images of the real UI, one region lit, Daniel talks. |
+| **2. Five** | 5-player match | The whole small table: night, nominate, vote, tracker, laws, peek, execute, how each side wins. Easy script, player is Liberal. |
+| **3. Six** | 6-player match | Same board as five. Extra Liberal. Term limits when five remain. |
+| **4. Seven** | 7-player match | Hitler does **not** see the Fascists. Investigate. Special election. |
+| **5. Eight** | 8-player match | Same band as seven; more bodies, noisier votes. |
+| **6. Nine** | 9-player match | Two investigates. Fascists are three + Hitler. |
+| **7. Ten** | 10-player match | Full table. Same large board. Chaos and talk. |
 
-After the win overlay: “You can sit at a real table now.” Home, Find
-Match, or Play with friends.
+Ship **step 1 + step 2** first. 6–10 are more scripts on the same
+machine, not a second system.
 
-Do **not** teach Fascist night, Hitler-as-Chancellor, peek, execute,
-veto, or 7–10 “Hitler keeps eyes closed” in v1. One honest Liberal seat
-is the whole first lesson. A second sitting (“the other side”) can come
-later.
+After a match: next step, or Home / Find Match. Remember progress in
+`localStorage` (`sh:onboarding-step`). A live join link or a restored
+seat still wins over this, same as today.
 
 ## Principles
 
-- **Server still owns the match.** Act 2 is a real room and a real
-  `GameEngine`. Bots send the same `ClientMessage`s a person would. The
-  Game screen does not grow a tutorial mode full of fake snapshots.
-- **The script owns the bots.** No LLM at the table. Same lines every
-  run, like Ravi. Chat, votes, nominees, discards are a beat list.
-- **Player is always Liberal, seat 0, first President.** Fixed roles so
-  the night card and the first pick never surprise the lesson.
-- **Daniel talks. Bots type.** Ravi explains the rule. Bot chat is
-  table colour (“this one is eager”, “this one is quiet”) — not a second
-  narrator.
-- **One lit control.** During a teaching pause the rest of the table is
-  dim. Only the thing they must tap is pressable. Wrong taps do nothing.
-- **Skip is always there.** Skip Act 1 → sit at the practice table.
-  Skip Act 2 → home. Leaving the room counts as skip. Remember
-  completion in `localStorage` (`sh:onboarding-done`). First-run still
-  offers this **before** the video/text hub, once.
-- **Copy is میز.** Spoken Iranian Persian, «شما», same as the table.
-  Night whispers stay close (`نقشت رو`). English is a second original.
-  Daniel clips follow [`ravi-script.md`](./ravi-script.md) (TTS
-  spellings, one breath, no jokes).
-
-## Entry
-
-Replace the first-run dump onto the guide hub.
-
-1. Splash.
-2. If onboarding is not done, and they are not joining a live seat:
-   start Act 1 (or a one-line “A practice table is waiting. Sit?” with
-   **Sit** / **Not now**).
-3. Guide hub keeps video + written rules. Add a third card later:
-   **Practice table** — replays this flow.
-4. Home does not need a new chip in v1. Replays live on the guide hub.
-
-A live join link or a restored seat still wins over this, same as today.
+- **Client only.** No tutorial HTTP, no tutorial room on the server, no
+  bots in Postgres. The shared `GameEngine` already has no I/O — the
+  client constructs a `Room`, runs the engine in memory, and paints the
+  same Game / Waiting-room screens off that snapshot. Live games stay
+  server-sourced. This path never touches the wire.
+- **Natural seats.** Other players have names, avatars, typing pauses.
+  Chat is table talk, never “this is a lesson”. They never mention
+  Daniel, the guide, or that they are scripted.
+- **Daniel is the guide.** He speaks only to the viewer. While he
+  teaches, a **mask** covers the rest of the table (warm smoke, not
+  black) and one region stays clear and tappable.
+- **One lit thing.** During a teaching beat, only the highlighted
+  control works. Wrong taps do nothing; Daniel repeats. When it is an
+  ordinary bot turn, the mask lifts and the table just plays.
+- **Human timing.** Nothing important happens in 0.2 s. Joins, chat,
+  nominations, votes, and discards sit in the **1.5–5 s** range, with
+  jitter, so it feels like people thinking. See [Timing](#timing).
+- **Skip is quiet.** A small cream control, not a confession that the
+  table is fake. Leaving goes Home. Progress stays.
+- **Copy is میز.** Spoken Iranian Persian, «شما». Night whispers stay
+  close (`نقشت رو`). English is a second original. Daniel follows
+  [`ravi-script.md`](./ravi-script.md).
 
 ---
 
-## Act 1 — five spotlights
+## Step 1 — what you will see
 
-Stage a 5-seat table in lobby (bots already seated, not started). Dim
-the shell. A gold plaque + Daniel. After each line, **Continue** or tap
-the highlighted thing.
+Not a slideshow of posters. A **staged 5-seat table** (the real
+Game-screen chrome, snapshot built on the client) with the match not
+started. Daniel talks. A mask. One piece of UI is punched out and
+slightly scaled / ringed so it is the only thing you can look at.
 
-Do not invent a new screen. Overlay on `WaitingRoomScreen` / a parked
-`GameScreen` snapshot — whichever already shows seats + both boards.
-Prefer the **game table chrome** so the lights land on the real
-widgets.
+Each beat: Daniel’s line → they tap the lit thing **or** Continue →
+mask moves to the next piece.
 
-| # | Light | They learn | Daniel (FA) | Daniel (EN) | Tone |
+Use the **actual widgets** (seats, boards, vote cards, deck). Do not
+commission a second set of illustrations. If a beat is clearer as a
+still (for example a vote card in flight), freeze that frame of the
+real UI — still not a separate painting.
+
+| # | Punch-out | They learn | Daniel FA | Daniel EN | Tone |
 |---|---|---|---|---|---|
-| 1 | Whole table, five seats | Two teams, one Hitler, you do not know who | این یه میز تمرینه. پنج نفر. لیبرال‌ها بیشترن، ولی همدیگه رو نمی‌شناسن. یه فاشیست هست، هیتلر هم هست. | This is a practice table. Five people. Liberals are the majority, but they do not know each other. One Fascist, and Hitler. | `[warmly]` |
+| 1 | Five seats | Two teams, one Hitler, you do not know who | پنج نفر سر این میز. لیبرال‌ها بیشترن، ولی همدیگه رو نمی‌شناسن. یه فاشیست هست، هیتلر هم هست. | Five people at this table. Liberals are the majority, but they do not know each other. One Fascist, and Hitler. | `[warmly]` |
 | 2 | Liberal + Fascist boards | 5 Liberal laws or 6 Fascist laws | این دو تا تخته‌ست. پنج قانون لیبرال، لیبرال‌ها می‌برن. شش قانون فاشیست، اونا می‌برن. | These two boards. Five Liberal laws and the Liberals win. Six Fascist laws and they win. | `[calm]` |
-| 3 | A Ja / Nein on one seat | Every hand votes | هر دست یه دولت پیشنهاد می‌شه. همه رأی می‌دن: آره یا نه. | Each round someone proposes a government. Everyone votes Ja or Nein. | `[calm]` |
-| 4 | President placard → empty chancellor slot | President picks a chancellor | رئیس‌جمهور یکی رو صدراعظم می‌کنه. اگه رأی بیاره، همون دو نفر قانون می‌ذارن. | The President names a Chancellor. If the vote passes, those two put a law on the board. | `[announce]` |
-| 5 | Policy tiles / deck strip | 3 cards → burn 1 → chancellor picks 1 | رئیس‌جمهور سه کارت می‌کشه، یکی رو می‌سوزونه. صدراعظم از اون دوتای باقی‌مونده یکی رو می‌ذاره رو تخته. کسی حق نداره کارت رو به بقیه نشون بده. | The President draws three, burns one. The Chancellor enacts one of the two that remain. Nobody may show the cards. | `[calm]` |
+| 3 | Ja / Nein on a seat | Every hand votes | هر دست یه دولت پیشنهاد می‌شه. همه رأی می‌دن: آره یا نه. | Each round someone proposes a government. Everyone votes Ja or Nein. | `[calm]` |
+| 4 | President → chancellor slot | President picks, then a vote | رئیس‌جمهور یکی رو صدراعظم می‌کنه. اگه رأی بیاره، همون دو نفر قانون می‌ذارن. | The President names a Chancellor. If the vote passes, those two put a law on the board. | `[announce]` |
+| 5 | Deck / three policy tiles | 3 → burn 1 → chancellor picks 1 | رئیس‌جمهور سه کارت می‌کشه، یکی رو می‌سوزونه. صدراعظم از اون دوتای باقی‌مونده یکی رو می‌ذاره رو تخته. کسی حق نداره کارت رو نشون بده. | The President draws three, burns one. The Chancellor enacts one of the two that remain. Nobody may show the cards. | `[calm]` |
 
-Then Daniel: `بریم سر میز.` / `Let's sit.` Start the match (Act 2).
+Then Daniel `onboard.letsSit`: `بریم سر میز.` / `Let's sit.` The other
+four sit (slow), lobby chat, ready, start → **step 2**.
 
-Act 1 has **no new illustrations**. Highlight existing seats, boards,
-deck. A CSS spotlight (radial hole in a dim overlay) + the existing
-Ravi plaque is enough.
+No “this is a lesson table” in these lines.
 
 ---
 
-## Act 2 — the practice match
+## Mask
 
-### Table
+Not a black dimmer and not a tutorial cartoon.
 
-| Seat | Name (fa) | Name (en) | Role | How they play |
+- Fill: warm smoke, roughly `rgba(12, 8, 5, 0.55)` — dark enough to
+  kill contrast on the rest, still the same room.
+- Hole: the target rect, 8–12 px feather, optional 1px gold ring.
+- The punched-out control is the only pressable hit target.
+- Ravi / Daniel plaque sits **above** the mask (never covered).
+- Continue / Skip sit in the safe area, also above the mask.
+- Reduce-motion: no pulse; hole still moves.
+
+Same overlay for step 1 and for teaching beats inside a match. When
+the table is just playing (a bot nominates, votes flip), **lift the
+mask**.
+
+---
+
+## Timing
+
+Floor for anything the player can see. Jitter so two bots never move
+on the same frame.
+
+| Event | Delay |
+|---|---|
+| Next player sits in lobby | 1.8–4.5 s after the previous |
+| First lobby chat after sitting | 2–5 s |
+| Chat after a public event (law, failed vote) | 1.8–3.8 s |
+| Bot nominates | 2.5–5 s “thinking” |
+| Bot vote (stagger per seat) | 1.6–4.5 s, each seat different |
+| Bot burns / enacts | 2–4 s |
+| After Daniel finishes, before they must tap | ~0.4 s so the clip is not cut |
+| Teaching lock | Until they tap. Timers paused. |
+
+Never 0.2 s, never a cascade of four chats in one second. If two bots
+would speak, the second waits until the first line has been on screen
+a beat (~1.2 s) plus their own delay.
+
+---
+
+## The other players
+
+They play like people. Scripted, not an LLM. They never break character.
+
+### Five-player cast (steps 1–2)
+
+| Seat | Name (fa) | Name (en) | Role (step 2) | Manner |
 |---|---|---|---|---|
 | 0 | (player) | (player) | Liberal | Only human. First President. |
-| 1 | نیما | Nima | Liberal | Calm. Picks other Liberals. Votes Ja on honest governments. |
-| 2 | سارا | Sara | Liberal | Asks in chat. Follows Nima. |
-| 3 | رضا | Reza | Fascist | Too sure. Nominates Omid too early. Votes Nein on Liberal tickets. |
-| 4 | امید | Omid | Hitler | Quiet. Agrees. Never explains. |
+| 1 | نیما | Nima | Liberal | Calm. Short lines. Picks Liberals. |
+| 2 | سارا | Sara | Liberal | Asks. Follows Nima. |
+| 3 | رضا | Reza | Fascist | Sure of himself. Moves too early. |
+| 4 | امید | Omid | Hitler | Quiet. Agrees. Almost never explains. |
 
-Avatars: reuse four existing portraits. Do not draw new faces. Names
-are fixed so Daniel and chat stay in sync.
+Reuse existing avatars, fixed mapping. Later steps add seats from a
+name pool (مریم, کیان, آرش, هدا, بهراد, الناز) — still real first
+names, still existing portraits.
 
-Show a small **Practice** pill in the waiting-room header so they never
-think these are live people. When the match starts, the pill can stay
-on the table chrome.
+### Lobby chat (step 2) — natural, not a disclaimer
 
-### Engine
+Staggered as they sit.
 
-- Room option `tutorial: true` (not a public table, not listed on Join,
-  not written to history as a ranked game — or write it tagged so it
-  does not pollute match history).
-- `minPlayers: 5`, timers **on** but generous, or paused during a
-  teaching lock.
-- **Stacked deck** so the first governments can enact Liberal laws when
-  the script needs them, and so Reza cannot accidentally win.
-- Role deal is forced: seat 0 Liberal, 1 Liberal, 2 Liberal, 3 Fascist,
-  4 Hitler. Night for 5–6: Fascist and Hitler see each other — the
-  player is Liberal so they only see their own card. That is the
-  lesson: *you do not see the others.*
-- A `TutorialDirector` on the server: on each engine event, if the next
-  beat is a bot action, send it after a short delay (600–1200 ms). If
-  the next beat is the player, lock everyone else and wait. If they
-  pick the wrong nominee / wrong vote, Ravi repeats, command is
-  rejected until they tap the scripted one — **except** where the
-  script says “any Liberal” (first chancellor: Nima or Sara).
-
-Wrong first chancellor: if they pick Reza or Omid, Daniel:
-`این یکی رو برای دست اول نه. یکی دیگه.` / `Not that one for the first
-hand. Someone else.` Engine ignores the command.
-
-### Teaching locks
-
-While Daniel is speaking a new idea, freeze inputs except **Continue**.
-Then unlock only the highlighted control. Bot chat can still appear so
-the table feels alive.
-
-### Beats
-
-Player-touch beats are **bold**. Bot-only beats are fast: votes flip,
-a law lands, Daniel says one line, next.
-
-#### Waiting room (before start)
-
-Bots sit one by one (~0.4 s apart). Chat, then auto-ready, then start.
-
-| Who | Chat FA | Chat EN |
+| Who | FA | EN |
 |---|---|---|
-| نیما | سلام. این دست تمرینه، نگران نباشید. | Hi. This hand is practice, don't worry. |
-| سارا | پس رأی‌ها جدی نیست؟ | So the votes aren't for real? |
-| نیما | جدی‌یه. فقط آدم‌ها رباتن. | They're real. Only the people are bots. |
-| رضا | من که برنده‌م. بزنید بریم. | I'm winning this. Let's go. |
-| امید | …باشه. | …Alright. |
+| نیما | سلام. | Hi. |
+| سارا | چند نفریم؟ | How many are we? |
+| نیما | پنج. بزنید بریم. | Five. Let's go. |
+| رضا | این دست من می‌برم. | I'm winning this hand. |
+| امید | باشه. | Alright. |
 
-Daniel `onboard.lobby`:
-- FA: چهار نفر دیگه سر میزن. اینا بازیکن واقعی نیستن. حرفاشون نوشته شده. شما لیبرالید — نقشتون رو که دیدید، قایمش کنید.
-- EN: Four others at the table. They are not real players. Their lines are written. You are a Liberal — when you see your role, hide it.
-- Tone: `[warmly]`
+No one says تمرین, ربات, درس, آموزش.
 
-#### Night
+### In-match chat
 
-Reuse `deal.start`, `night.start` / `deal.look`, `night.end`. After
-hide: extra line `onboard.night.done`.
+Table colour only. If a line teaches a rule, cut it — that is Daniel.
 
-- FA: شما لیبرالید. بقیه رو نمی‌بینید. همین درسته.
-- EN: You are a Liberal. You do not see the others. That is the point.
-- Tone: `[whispering]`
-
-#### Round 1 — you are President **(player)**
-
-1. `president.first` (existing). Spotlight your seat.
-2. `onboard.pick`:
-   - FA: یه صدراعظم انتخاب کنید. نیما آرومه. از اونجا شروع کنید.
-   - EN: Pick a Chancellor. Nima is calm. Start there.
-   - Tone: `[calm]`
-3. Player nominates **نیما** (سارا allowed). Reza/Omid blocked with the
-   retry line above.
-4. Vote lock. `onboard.vote`:
-   - FA: کارت رأی‌تون رو بزنید. این دولت رو می‌خواید — آره.
-   - EN: Tap your vote. You want this government — Ja.
-   - Tone: `[calm]`
-5. Player must vote Ja. Bots: Nima Ja, Sara Ja, Reza Nein, Omid Ja.
-6. After reveal, `onboard.votes.read`:
-   - FA: رضا نه گفت. یکی که هی نه می‌ده، یادتون بمونه.
-   - EN: Reza said Nein. Remember who keeps saying no.
-   - Tone: `[firm]`
-7. Legislative. Stack: Liberal, Liberal, Fascist. `onboard.draw`:
-   - FA: سه تا قانون اومد دستتون. فاشیسته رو بسوزونید. دوتای لیبرال می‌ره برای نیما.
-   - EN: Three laws in your hand. Burn the Fascist. The two Liberals go to Nima.
-   - Tone: `[whispering]`
-8. Player discards the Fascist. Nima enacts a Liberal (bot, short
-   delay). Board: 1 Liberal.
-
-Sara chat: `نیما لیبرال گذاشت؟` / `Did Nima put a Liberal down?`
-Nima chat: `آره.` / `Yes.`
-
-#### Round 2 — watch **(bots)**
-
-Nima President, nominates Sara, all Ja except Reza Nein, Liberal
-enacted. Daniel `onboard.watch`:
-
-- FA: این دست شما نیستید. فقط ببینید کی با کی می‌شینه.
-- EN: This hand is not yours. Just watch who sits with whom.
-- Tone: `[calm]`
-
-Board: 2 Liberal.
-
-#### Round 3 — refuse a bad ticket **(player votes)**
-
-Reza President, nominates Omid. `onboard.refuse`:
-
-- FA: رضا، امید رو گذاشت. خیلی زود با هم کنار اومدن. نه بدید.
-- EN: Reza named Omid. They lined up too fast. Vote Nein.
-- Tone: `[firm]`
-
-Player must Nein. Bots: Nima Nein, Sara Nein, Reza Ja, Omid Ja. Vote
-fails. Tracker 1. Existing `vote.failed` / tracker Ravi. Extra
-`onboard.tracker`:
-
-- FA: دولت نیاورد. اون شُمارَنده یکی رفت بالا. سه بار پشت هم نشه، وگرنه از رو دسته قانون می‌آد.
-- EN: The government failed. The tracker moved up. Three in a row and a law comes off the top of the deck.
-- Tone: `[down]`
-- Audio: use the TTS spelling `شُمارَنده` from the Ravi script.
-
-Reza chat: `بی‌خود نه دادید.` / `You voted no for nothing.`
-Nima chat: `زود بود.` / `Too soon.`
-
-#### Round 4 — you are Chancellor **(player)**
-
-Presidency lands on Sara, she nominates **you**. Auto-pass (player
-Ja). Stack: Liberal, Fascist. `onboard.chancellor`:
-
-- FA: حالا صدراعظمید. از این دوتا یکی رو می‌ذارید رو تخته. لیبرال رو بذارید.
-- EN: You are Chancellor now. You enact one of these two. Put the Liberal down.
-- Tone: `[whispering]`
-
-Player enacts Liberal. Board: 3 Liberal.
-
-#### Round 5 — finish **(bots, then you if needed)**
-
-Keep it short: Nima President, nominates Sara, Liberal. Board: 4.
-Then you President again, pick Nima, stacked two Liberals + one
-Fascist, burn Fascist, Nima enacts Liberal. **Liberals win.**
-
-If that is too many taps, collapse round 5 to one watched Liberal and
-one player enact. The win must be **five Liberal policies**, so they
-see the board fill. Do not execute Hitler in v1 — that is a different
-lesson.
-
-Game-over overlay, then `onboard.win`:
-
-- FA: لیبرال‌ها بردن. سر میز واقعی، کسی بهتون نمی‌گه کی دروغ می‌گه. گوش کنید کی حرف می‌زنه.
-- EN: The Liberals win. At a real table nobody tells you who is lying. Listen to who talks.
-- Tone: `[warmly]`
-
-Buttons: **Find Match** / **Home**. Mark onboarding done.
+| When | Who | FA | EN |
+|---|---|---|---|
+| After first Liberal law | سارا | لیبرال بود؟ | Was that a Liberal? |
+| | نیما | به نظرم آره. | I think so. |
+| Reza names Omid | رضا | به این اعتماد دارم. | I trust this one. |
+| After that vote fails | رضا | بی‌خود نه دادید. | You voted no for nothing. |
+| | نیما | زود بود. | Too soon. |
+| Before you enact as chancellor | امید | موفق باشید. | Good luck. |
 
 ---
 
-## Daniel clip list (new)
+## Step 2 — five players, the whole small table
 
-Existing night / president / vote / law / win lines stay. New ids are
-`onboard.*` so the live table never speaks them.
+Easy on the player (always Liberal, first President). Complete for
+**5–6 rules**: election, vote, tracker, three cards, peek (3rd Fascist
+law), execute (4th), veto unlock (5th, show it exists — do not force a
+veto puzzle), Liberal win **or** “Hitler chancellor after 3 Fascist
+laws” as a scare they vote down.
 
-Record in **Daniel** only (current table voice). Subtitles in both
-locales; audio is the FA take, same as the rest of Ravi.
+Force roles: 3 Liberal, 1 Fascist, Hitler. Night is 5–6: Fascist and
+Hitler see each other. The player only sees their own card. Daniel
+does not say “you are safe because this is a tutorial.” He says look,
+then hide.
 
-| Id | Tone | FA (one breath unless noted) | EN |
+Stacked deck so the scripted laws land. Timers paused during a teaching
+lock; otherwise they run, generous.
+
+### Teaching beats (mask on)
+
+Player-touch is **bold**. Between them the mask lifts and the others
+play like a normal table (slow).
+
+1. Night — reuse `deal.start`, `night.start`, `night.end`. Then
+   `onboard.night.done` (whisper): you are Liberal; you do not see the
+   others; that is how this game is.
+2. **Nominate.** `onboard.pick` — pick a chancellor. Hint Nima (Sara
+   allowed). Reza / Omid: retry line, command ignored.
+3. **Vote Ja.** `onboard.vote`. Others vote staggered. Reza Nein, rest
+   Ja. After reveal, `onboard.votes.read` — remember who keeps saying
+   no.
+4. **Burn the Fascist, pass two Liberals.** `onboard.draw` (whisper).
+   Nima enacts Liberal.
+5. Watch a bot government (mask off). Another Liberal. Daniel
+   `onboard.watch` once: this hand is not yours; watch who sits with
+   whom.
+6. **Vote Nein** on Reza → Omid. `onboard.refuse`. Fails. Tracker.
+   `onboard.tracker`.
+7. **You are Chancellor.** Enact the Liberal. `onboard.chancellor`.
+8. A Fascist law lands on a bot government (stacked) until **peek**
+   comes up (3rd Fascist on the 5–6 board). If the player is President
+   then, `onboard.peek` — look, put them back, say nothing true you
+   do not want to. If a bot is President, Daniel still names the power
+   while the mask lights the power UI.
+9. **Execute** (4th Fascist). `onboard.execute` — you may shoot. The
+   script can have the player execute Reza (Fascist, game continues) so
+   they see a role stay hidden, **or** skip shooting Hitler until they
+   have seen a non-Hitler death. Do not end the lesson in one tap
+   unless the step is already complete.
+10. Fill Liberal laws to a Liberal win, or one more watched round.
+    `onboard.win` — Liberals win; at the next table nobody narrates the
+    lie. Listen to who talks.
+
+Wrong tap: Daniel repeats, state does not advance.
+
+Exact tile order and who is President on the peek/execute hands can
+move during implementation; the **list of mechanics** for five must
+all happen once.
+
+---
+
+## Steps 3–7 — six through ten
+
+Same client machine, new script. Each step only **adds what that count
+changes**. Do not replay the five-player lecture.
+
+| Step | Count | Mix | Night | Board (Fascist slots 1→5) | Teach |
+|---|---|---|---|---|---|
+| 3 | 6 | 4 Lib, 1 Fas, Hitler | Same as 5: Fascists + Hitler open eyes | — — peek, execute, execute+veto | Extra Liberal. When five remain, only last chancellor is ineligible. |
+| 4 | 7 | 4 Lib, 2 Fas, Hitler | Fascists see Hitler; **Hitler does not see them** | — investigate, special election, execute, execute+veto | Closed-eye Hitler. Investigate = party card, not role. Special election. |
+| 5 | 8 | 5 Lib, 2 Fas, Hitler | Same as 7 | Same as 7 | Bigger vote. Two Fascists talking around a blind Hitler. |
+| 6 | 9 | 5 Lib, 3 Fas, Hitler | Same as 7 | investigate, investigate, special election, execute, execute+veto | Two investigates. Three Fascists. |
+| 7 | 10 | 6 Lib, 3 Fas, Hitler | Same as 7 | Same as 9 | Full table. Noise. Same powers, more seats. |
+
+Player role can stay Liberal for the easy path. A later “other side”
+sitting (you are Fascist / Hitler) is a separate ladder, not mixed
+into these steps.
+
+Write full beat lists for 6–10 when step 2 is playable. Until then this
+table is the contract.
+
+---
+
+## Daniel — new clips
+
+Live-table lines (`deal.start`, `vote.passed`, …) stay. Guide lines are
+`onboard.*` so a real server game never speaks them.
+
+Audio: Daniel, FA takes. EN is subtitle until we record it.
+
+Do not use the word تمرین / practice / bot / ربات in any of these.
+
+| Id | Tone | FA | EN |
 |---|---|---|---|
-| `onboard.sit` | warmly | یه میز تمرین منتظره. بشینید، نشون می‌دم. | A practice table is waiting. Sit, I'll show you. |
-| `onboard.skip` | calm | *(no clip — UI only)* | |
-| `onboard.idea.table` | warmly | *(Act 1 #1)* | |
-| `onboard.idea.boards` | calm | *(Act 1 #2)* | |
-| `onboard.idea.vote` | calm | *(Act 1 #3)* | |
-| `onboard.idea.government` | announcing | *(Act 1 #4)* | |
-| `onboard.idea.laws` | calm | *(Act 1 #5)* | |
+| `onboard.sit` | warmly | بشینید. از روی میز نشون می‌دم. | Sit. I'll show you from the table. |
+| `onboard.idea.table` | warmly | *(step 1 #1)* | |
+| `onboard.idea.boards` | calm | *(step 1 #2)* | |
+| `onboard.idea.vote` | calm | *(step 1 #3)* | |
+| `onboard.idea.government` | announcing | *(step 1 #4)* | |
+| `onboard.idea.laws` | calm | *(step 1 #5)* | |
 | `onboard.letsSit` | warmly | بریم سر میز. | Let's sit. |
-| `onboard.lobby` | warmly | *(waiting room)* | |
 | `onboard.night.done` | whispering | شما لیبرالید. بقیه رو نمی‌بینید. همین درسته. | You are a Liberal. You do not see the others. That is the point. |
 | `onboard.pick` | calm | یه صدراعظم انتخاب کنید. نیما آرومه. از اونجا شروع کنید. | Pick a Chancellor. Nima is calm. Start there. |
-| `onboard.pick.retry` | down | این یکی رو برای دست اول نه. یکی دیگه. | Not that one for the first hand. Someone else. |
+| `onboard.pick.retry` | down | این یکی رو برای این دست نه. یکی دیگه. | Not that one for this hand. Someone else. |
 | `onboard.vote` | calm | کارت رأی‌تون رو بزنید. این دولت رو می‌خواید — آره. | Tap your vote. You want this government — Ja. |
 | `onboard.votes.read` | firm | رضا نه گفت. یکی که هی نه می‌ده، یادتون بمونه. | Reza said Nein. Remember who keeps saying no. |
 | `onboard.draw` | whispering | سه تا قانون اومد دستتون. فاشیسته رو بسوزونید. دوتای لیبرال می‌ره برای نیما. | Three laws in your hand. Burn the Fascist. The two Liberals go to Nima. |
-| `onboard.watch` | calm | این دست شما نیستید. فقط ببینید کی با کی می‌شینه. | This hand is not yours. Just watch who sits with whom. |
-| `onboard.refuse` | firm | رضا، امید رو گذاشت. خیلی زود با هم کنار اومدن. نه بدید. | Reza named Omid. They lined up too fast. Vote Nein. |
-| `onboard.tracker` | down | دولت نیاورد. اون شُمارَنده یکی رفت بالا. سه بار پشت هم نشه، وگرنه از رو دسته قانون می‌آد. | The government failed. The tracker moved up. Three in a row and a law comes off the top of the deck. |
+| `onboard.watch` | calm | این دست شما نیستید. ببینید کی با کی می‌شینه. | This hand is not yours. Watch who sits with whom. |
+| `onboard.refuse` | firm | رضا امید رو گذاشت. خیلی زود با هم کنار اومدن. نه بدید. | Reza named Omid. They lined up too fast. Vote Nein. |
+| `onboard.tracker` | down | دولت نیاورد. اون شُمارَنده یکی رفت بالا. سه بار پشت هم نشه، از رو دسته قانون می‌آد. | The government failed. The tracker moved up. Three in a row and a law comes off the top of the deck. |
 | `onboard.chancellor` | whispering | حالا صدراعظمید. از این دوتا یکی رو می‌ذارید رو تخته. لیبرال رو بذارید. | You are Chancellor now. You enact one of these two. Put the Liberal down. |
-| `onboard.win` | warmly | لیبرال‌ها بردن. سر میز واقعی، کسی بهتون نمی‌گه کی دروغ می‌گه. گوش کنید کی حرف می‌زنه. | The Liberals win. At a real table nobody tells you who is lying. Listen to who talks. |
+| `onboard.peek` | whispering | سه تای بالای دسته رو ببینید. سر جاشون برگردونید. به میز دروغ بگید اگه لازم شد. | Look at the top three. Put them back. Lie to the table if you have to. |
+| `onboard.execute` | grave | یه نفر رو از میز بردارید. اگه هیتلر باشه، لیبرال‌ها می‌برن. نقشش رو کسی نمی‌بینه مگر اینکه هیتلر باشه. | Take someone off the table. If it is Hitler, the Liberals win. Nobody sees the role unless it is Hitler. |
+| `onboard.win` | warmly | لیبرال‌ها بردن. دست بعد کسی بهتون نمی‌گه کی دروغ می‌گه. گوش کنید کی حرف می‌زنه. | The Liberals win. Next hand nobody tells you who is lying. Listen to who talks. |
+| `onboard.nextSix` | calmly | … | *(write when step 3 is designed)* |
 
-~18 new clips. Bake like the rest of the catalog. Until audio exists,
-subtitles still play (same as missing Ravi files today).
+Add these to [`ravi-script.md`](./ravi-script.md) when we implement. No
+second script file.
 
-Add the FA/EN strings to [`ravi-script.md`](./ravi-script.md) when
-implementation starts — do not fork a second script file.
+First-run plaque (if we ask before sitting) — still no bots:
 
-## Bot chat pack
-
-Short. Table talk. No teaching. If a line explains a rule, it is
-Daniel’s job; cut the chat.
-
-Waiting-room lines are above. In-match extras (optional, one per beat
-max):
-
-| Beat | Who | FA | EN |
-|---|---|---|---|
-| After round 1 law | سارا | نیما لیبرال گذاشت؟ | Did Nima put a Liberal down? |
-| | نیما | آره. | Yes. |
-| After failed Reza ticket | رضا | بی‌خود نه دادید. | You voted no for nothing. |
-| | نیما | زود بود. | Too soon. |
-| Before player chancellor | امید | …موفق باشید. | …Good luck. |
-
-No voice for bots. Text in the existing table chat. Do not add bubble
-art.
+- FA: قبل از میز، یه دست بزنید. از روی همون تخته نشون می‌دم.
+- EN: Before you sit down for real, play a hand. I'll show you from that same board.
 
 ---
 
 ## Design
 
-### Spotlight overlay
-
-- Full-screen dim (`rgba(4, 12, 22, 0.72)`), hole cut with a radial
-  gradient or a masked rect around the target (seat, board, vote card,
-  Continue).
-- Gold 1px ring on the target. `pressable` pulse on the control
-  (opacity / scale, no new keyframe language — `transform` + `opacity`
-  only).
-- Ravi plaque stays where it already lives. Do not build a second
-  speech bubble.
-- **Continue** is the same brass chip language as Home’s guide chip.
-  **Skip** is quiet, cream, under it — not a second primary.
-
-### Practice pill
-
-Tiny brass label: `تمرین` / `Practice`. Waiting-room header, and once
-on the table so a screenshot cannot be mistaken for a live ranked
-match.
-
-### First-run card (pre Act 1)
-
-If we keep a confirm before sitting: one plaque, Hitler-desk lighting,
-two actions. No video thumbnail. Copy:
-
-- FA: قبل از میز واقعی، یه دست تمرین بزنید. چهار ربات هستن، دانیال نشون می‌ده چی کار کنید.
-- EN: Before a real table, play one practice hand. Four bots, Daniel shows you what to do.
-
-### What not to design
-
-- A cartoon classroom.
-- Bot nameplates that look like a ninth UI.
-- A progress bar of “step 3/12”. The table *is* the progress (boards
-  filling).
-- Hover tooltips. Thumbs only.
-
-Phone column 430 px. Overlay must not cover the highlighted control.
-Safe-area on Skip / Continue.
+- Same Game screen and Waiting room. No classroom chrome, no “step 3/12”
+  bar. Boards filling is the progress.
+- Mask as above. Pulse on the punched-out control (`transform` /
+  `opacity` only).
+- Continue: brass chip. Skip: quiet cream, not a second primary.
+- **No Practice pill.** No robot badge on seats.
+- Phone 430 px. Overlay must not cover the punched-out control.
+- Press, not hover.
 
 ---
 
 ## Assets
 
-Almost nothing new. That is the point.
-
 | Need | New? | Notes |
 |---|---|---|
-| Seat portraits | No | Four existing avatars, fixed mapping. |
-| Boards, cards, votes, deck | No | Real table art. |
-| Ravi / Daniel portrait | No | Current cameo. |
-| Spotlight, dim, gold ring | CSS | No PNG. |
-| Practice pill | CSS + i18n | |
+| Seats, boards, cards, votes, deck | No | Real table. Step 1 *is* those widgets. |
+| Portraits | No | Existing avatars, fixed names. |
+| Daniel cameo | No | Current Ravi dock. |
+| Mask + hole + gold ring | CSS | Not a PNG. Not `#000`. |
 | Continue / Skip | Existing buttons | |
-| Daniel `onboard.*` mp3 | **Yes** | ~18 FA takes. EN is subtitle-only until we record EN. |
-| Waiting-room sit animation | No | Seats already appear. Stagger bot joins. |
-| Finger / hand pointer | **Maybe** | Skip in v1; the pulse on the control is enough. Add a small hand only if playtests miss the vote card. |
-| Win stinger | No | Existing Liberal-win overlay + `onboard.win`. |
-| History / ELO | No | Do not record this table as a normal match, or tag `tutorial`. |
+| Daniel `onboard.*` mp3 | **Yes** | FA takes. ~20 for steps 1–2; more per later count. |
+| Hand pointer | Maybe later | Pulse first. |
+| Separate “UI photos” | **No** unless a beat cannot freeze a real widget. |
 
-No DALL·E pass. If a hand pointer is needed later, one small ink PNG,
-no letters in the file ([`assets-brief.md`](./assets-brief.md)).
+No DALL·E pass for v1.
 
 ---
 
-## Architecture (when we build)
+## Architecture — client only
 
-Keep it boring and on the existing rails.
+Live matches stay on the server. Onboarding never opens a socket and
+never `POST`s a room.
 
 ```
-shared/   TutorialScript (beats, forced roles, stacked tiles, bot lines)
-server/   TutorialDirector — sits on the room, feeds bot ClientMessages
-          POST /api/tutorial/start  → create room, seat player + 4 bots
-client/   Spotlight overlay on Game / Waiting room
-          TutorialPromptService offers this instead of (or before) the hub
-i18n      onboard.* plaques + bot chat keys (fa + en)
-ravi      onboard.* ids in ravi-script.md → fa.ts/en.ts → mp3
-flag      flags.tutorial  (ship dark, then on)
+client/src/tutorial/
+  TutorialService.ts     owns Room + GameEngine, drives the director
+  TutorialDirector.ts    timed seat actions + chat, human delays
+  Spotlight.tsx          mask + hole + lock
+  scripts/look.ts        step 1 beats
+  scripts/five.ts        step 2
+  scripts/six.ts … ten.ts  later
+
+shared/                  GameEngine, Room.viewFor, stacked deck — unchanged
+                         (optional: a TutorialScript type if it stays pure)
+
+GameStateService         tutorial path feeds the same view() the live
+                         socket would; GameScreen does not know
 ```
 
-- Bots are server-side. They never open a WebSocket as a browser. The
-  director calls `engine.handle(botId, command)` on a timer.
-- Chat: director appends scripted chat messages onto the room log the
-  same way a player would.
-- Client only knows `room.options.tutorial` so it can show the pill,
-  the spotlight target (`tutorialBeat` on the snapshot — **or** a
-  parallel `tutorial:highlight` field on `viewFor`). Prefer a small
-  field on the snapshot over a second channel.
-- Do not run the engine on the client.
+- Construct `Room` + `GameEngine` in the client with a stacked deck and
+  a seeded role bag.
+- Local player commands go `engine.handle(youId, command)` directly.
+- Director calls `engine.handle(botId, command)` after the delays
+  above.
+- `Room.viewFor(youId)` is the snapshot. Role hiding still works:
+  the player must not see Fascist night.
+- Chat is appended on the room the same way the engine already logs
+  talk — or a small parallel list on the tutorial service if chat is
+  socket-only today. Do not invent a server chat HTTP for this.
+- GameOver, night overlay, vote cards: the real components.
+- `flags.tutorial` ships dark, then on. First-run in
+  `TutorialPromptService` offers step 1 instead of only the video hub.
 
-Tests: director beat list vs a stacked deck (server), overlay lock
-(client), “wrong nominee is ignored” (server).
+This is the one place the client mutates a `Room`. It is a closed box.
+A tutorial table is never published, never in match history, never a
+friend-request source.
+
+Tests live next to the director and scripts (`it('Should …')`). Engine
+rules stay covered by existing shared tests; tutorial tests lock the
+script (Nima/Sara for the first chancellor, Reza ticket fails, peek
+happens, …).
 
 ---
 
-## Out of v1
+## Out of the first ship
 
-- Play as Fascist / Hitler.
-- Investigate, peek, execute, special election, veto.
-- 7–10 night (Hitler does not know the Fascists).
+- Steps 6–10 scripts (stubs + the table above are enough until five
+  plays well).
+- Playing as Fascist / Hitler.
 - Voice chat.
-- Adaptive bots (they always do the script).
-- Saving a mid-lesson and restoring after kill-app — nice, not needed
-  if the lesson is seven minutes. Crash → start over from Act 1 or
-  skip.
-
-## Second sitting (later)
-
-A second script: player is the Fascist, night they see Hitler, they
-must lie on a vote and burn a Liberal. Only after v1 completion. Do
-not merge it into the first seven minutes.
+- LLM seats.
+- Mid-step crash resume (seven minutes; start the step over).
 
 ---
 
-## Build order (todo)
+## Build order
 
-Work top to bottom. Each line is a shippable slice.
+### Step 1 + plumbing
 
-### Copy and script
+- [ ] `TutorialService` holds an in-memory engine; `view()` matches
+      what GameScreen already reads.
+- [ ] Spotlight / mask; punch-out from the current beat.
+- [ ] Step 1 beat list + Daniel lines in i18n + `ravi-script.md`.
+- [ ] First-run: Sit / Not now. Skip. `sh:onboarding-step`.
+- [ ] Tests: five punch-outs in order; Skip leaves.
 
-- [ ] Lock Act 1 lines and Act 2 beats in this file (edit here first).
-- [ ] Add `onboard.*` to `docs/ravi-script.md` (FA + EN + tone).
-- [ ] Bot chat keys in `fa.ts` / `en.ts` (میز, not a translation).
-- [ ] First-run plaque + Practice pill + Skip / Continue / Sit.
+### Step 2
 
-### Table script (shared + server)
-
-- [ ] `TutorialScript`: forced roles, stacked tiles, beat list.
-- [ ] `POST /api/tutorial/start` seats 5, `tutorial: true`, not public.
-- [ ] `TutorialDirector`: bot joins, ready, start, timed commands.
-- [ ] Reject off-script player commands with a Ravi retry, not a toast
-      soup.
-- [ ] Do not persist this game into normal match history (or tag it).
-- [ ] Tests: first chancellor must be Nima/Sara; Reza ticket fails;
-      five Liberal laws win.
-
-### Client UI
-
-- [ ] First-run: offer practice table instead of only video/text.
-- [ ] Spotlight overlay + highlight target from snapshot.
-- [ ] Freeze unrelated controls during a lock.
-- [ ] Practice pill on waiting room and table.
-- [ ] Guide hub card to replay.
-- [ ] `sh:onboarding-done` after win or skip.
-- [ ] Tests: Sit starts the room; Skip goes home; highlight is on the
-      nominate control in beat `pick`.
+- [ ] `scripts/five.ts`: roles, stack, beats, chat, delays.
+- [ ] Director: sit, chat, nominate, vote, legislate, powers — all
+      with 1.5–5 s jitter. No 0.2 s.
+- [ ] Teaching locks; off-script taps ignored + retry line.
+- [ ] Peek + execute happen once; Liberal win.
+- [ ] No “bot/practice” copy anywhere in fa/en.
+- [ ] Tests for the scripted ticket, the failed Reza government, win.
 
 ### Voice
 
-- [ ] Record Daniel `onboard.*` FA clips.
-- [ ] Wire through `RaviService` / SoundService the same as live lines.
+- [ ] Record Daniel `onboard.*` FA.
 - [ ] Subtitles work with voice off.
 
-### Flag and ship
+### Later counts
 
-- [ ] `flags.tutorial` default off.
-- [ ] Playtest on a 430 px phone in Bale: seven minutes, no stuck lock.
-- [ ] Changelog line when it is on for players.
-- [ ] Flip the flag.
+- [ ] `six.ts` … `ten.ts` as in the table.
+- [ ] Guide hub: continue from last unfinished step.
+
+### Ship
+
+- [ ] `flags.tutorial` off, then playtest on 430 px in Bale.
+- [ ] Changelog when players can see it. Flip the flag.
 
 ---
 
 ## Open questions
 
-1. **First-run confirm, or straight into Act 1?** Straight in is
-   braver. A Sit / Not now plaque is kinder on repeat installs. Lean
+1. Sit / Not now before step 1, or straight onto the masked table?
    Sit / Not now.
-2. **Record EN audio?** Live table is FA-first. Subtitles are enough
-   for v1 EN.
-3. **Match history:** hide tutorial games. They are not “your tables”
-   for friend requests.
-4. **Timers:** pause during Daniel, or 60 s so a slow reader is not
-   kicked. Pause is better.
-5. **Name the bots in settings?** No. Fixed cast.
+2. EN audio in v1? Subtitles only.
+3. First chancellor: force Nima, or allow Sara too? Allow Sara.
+4. Execute in step 2: shoot a Fascist (game continues) vs shoot Hitler
+   (instant Liberal win). Prefer Fascist first so execute is a lesson,
+   not the ending.
 
-When this ships, the video and the written guide stay. They become the
-appendix. The practice table is the lesson.
+When this ships, video and written rules stay as the appendix. The
+table is the lesson — and it should feel like a table.
