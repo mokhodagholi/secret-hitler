@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, friendTableInviteReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, isUsersCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply, usersEmptyReply, usersListReply } from './commands';
+import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, friendTableInviteReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, isUsersCommand, lobbyFillInviteReply, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply, usersEmptyReply, usersListReply } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -105,9 +105,9 @@ describe('handleBotText', () => {
     expect(JSON.stringify(reply.reply_markup)).toContain(
       'https://t.me/secret_hitler_bot/game?startapp=',
     );
-    expect(JSON.stringify(reply)).not.toContain('ble.ir');
+    expect(JSON.stringify(reply.reply_markup)).not.toContain('ble.ir');
     expect(reply.text).not.toContain('بازی کن');
-    expect(reply.text).not.toContain('t.me');
+    expect(reply.text).toContain('t.me/secret_hitler_official');
   });
 
   it('Should greet /start in natural Persian and never mention the public domain', () => {
@@ -115,13 +115,12 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('راز هیتلر');
     expect(reply.text).not.toContain('هیتلر مخفی');
     expect(reply.text).toContain('پیدا کردن بازی');
-    expect(reply.text).not.toContain('secret_hitler_official');
+    expect(reply.text).toContain('ble.ir/secret\\_hitler\\_official');
     expect(reply.text).toContain('/create');
     expect(reply.text).not.toContain('/find_game');
     expect(reply.parse_mode).toBeUndefined();
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
     expect(reply.text).not.toContain('بازی کن');
-    expect(reply.text).not.toContain('ble.ir');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
@@ -131,11 +130,11 @@ describe('handleBotText', () => {
     });
   });
 
-  it('Should keep Telegram /start as plain text with a t.me channel button', () => {
+  it('Should keep Telegram /start as plain text with a t.me channel path and button', () => {
     const reply = ctx({ text: '/start', platform: 'telegram' });
     expect(reply.parse_mode).toBeUndefined();
     expect(reply.text).not.toContain('\\_');
-    expect(reply.text).not.toContain('secret_hitler_official');
+    expect(reply.text).toContain('t.me/secret_hitler_official');
     expect(reply.reply_markup?.inline_keyboard[1]?.[0]).toEqual({
       text: 'کانال',
       url: 'https://t.me/secret_hitler_official',
@@ -285,6 +284,20 @@ describe('broadcast copy', () => {
     );
     expect(reply.text).toContain('@secret_hitler_official');
     expect(reply.text).not.toContain('\\_');
+  });
+});
+
+describe('lobby fill copy', () => {
+  it('Should deep-link the waiting room on the invite button', () => {
+    const reply = lobbyFillInviteReply({
+      seats: 3,
+      code: 'ABC123',
+      botUsername: BOT,
+      platform: 'bale',
+    });
+    expect(reply.text).toContain('3 نفره');
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.text).toBe('ورود به اتاق');
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toContain('ABC123');
   });
 });
 

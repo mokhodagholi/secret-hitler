@@ -25,10 +25,10 @@ Every useful reply is some mix of:
    text (no `parse_mode`).
 2. **A button** — almost always «بازی کن» or «ورود به اتاق», opening
    `https://ble.ir/{bot}?startapp=` or `…?startapp=CODE`. `/start` also
-   has **کانال** → `ble.ir/secret_hitler_official`. The `url` is
-   unescaped. Play, join, and channel links live **only** on this
-   keyboard — Bale does not open markdown links in chat text, so the
-   webhook never puts `[بازی کن](…)` in `text`. If Bale rejects the
+   has **کانال** → `ble.ir/secret_hitler_official` (and the same path in
+   the body). The `url` is unescaped. Play and join links live **only**
+   on this keyboard — Bale does not open markdown links in chat text, so
+   the webhook never puts `[بازی کن](…)` in `text`. If Bale rejects the
    keyboard it retries the same text without buttons.
 
 The bot never pastes the public website (`mrfantastic.ir`, localhost, …).
@@ -153,15 +153,16 @@ Reply:
 
 برای پیدا کردن بازی، دکمهٔ پایین رو بزن. با یه کلیک می‌ری سر میز.
 
-خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا — دکمهٔ کانال پایینه.
+خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا — ble.ir/secret_hitler_official — دکمهٔ کانال پایینه.
 
 راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.
 ```
 
 Buttons: **بازی کن** → mini-app with an empty `startapp` (home, no room code).
 **کانال** → `https://ble.ir/secret_hitler_official` (Telegram: `t.me/…`).
-The nick is not in the body — Bale Markdown would print `\_` and the mention
-would not open.
+The body also shows the path (`ble.ir/…`, Telegram: `t.me/…`); underscores are
+Markdown-escaped on Bale so `sendMessage` does not fail. The button stays the
+tap target.
 
 **`/start CODE`** — if the argument is a 6-character room code, this is
 exactly `/join CODE`. That is how a classic `ble.ir/bot?start=CODE` payload
@@ -454,7 +455,8 @@ Each player DM has the same **بازی کن** button as `/start`. On Bale the bo
 is Markdown-escaped so a `ble.ir/secret_hitler_official` path does not make
 `sendMessage` fail (underscores become `\_` in the wire text). `@username`
 mentions stay raw — escaping them prints `\_` and the mention dies. People who
-blocked the bot are dropped from the list.
+blocked the bot are dropped from the list. Transient failures (rate limits)
+are **not** drops — only hard 403 block / “can’t initiate” remove a chat.
 
 Empty list:
 

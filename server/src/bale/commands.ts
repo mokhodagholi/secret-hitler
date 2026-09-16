@@ -159,6 +159,10 @@ function roomButtons(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>, 
   };
 }
 
+function channelPath(platform?: MessengerKind): string {
+  return channelUrl(platform).replace(/^https:\/\//, '');
+}
+
 function startReply(
   ctx: Pick<BotCommandContext, 'botUsername' | 'startLink' | 'platform'>,
 ): BotReply {
@@ -167,12 +171,11 @@ function startReply(
     '',
     'برای پیدا کردن بازی، دکمهٔ پایین رو بزن. با یه کلیک می‌ری سر میز.',
     '',
-    'خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا — دکمهٔ کانال پایینه.',
+    `خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا — ${channelPath(ctx.platform)} — دکمهٔ کانال پایینه.`,
     '',
     'راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.',
   ].join('\n');
-  // Channel nick has `_`; Bale Markdown would show \@secret\_hitler\_official.
-  // The tap lives on the keyboard, same as Play. Telegram still gets t.me.
+  // Path underscores must be escaped for Bale Markdown; button stays the tap target.
   if (ctx.platform === 'telegram') {
     return { text, reply_markup: startKeyboardFor(ctx) };
   }
@@ -274,6 +277,29 @@ export function friendTableInviteReply(params: {
   const raw = [
     `${params.fromName} دعوتت کرده بیای سر میزش.`,
     `کد اتاق: ${params.code}`,
+  ].join('\n');
+  return {
+    text: params.platform === 'telegram' ? raw : escapeBaleMarkdown(raw),
+    reply_markup: {
+      inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
+    },
+  };
+}
+
+/**
+ * DM when a waiting lobby needs seats. Button opens the mini-app on that code.
+ */
+export function lobbyFillInviteReply(params: {
+  seats: number;
+  code: string;
+  botUsername: string;
+  startLink?: (startApp?: string) => string;
+  platform?: MessengerKind;
+}): BotReply {
+  const link = linkOf(params, params.code);
+  const raw = [
+    `میز ${params.seats} نفره منتظره.`,
+    'بیا صندلی بگیر تا بازی شروع بشه.',
   ].join('\n');
   return {
     text: params.platform === 'telegram' ? raw : escapeBaleMarkdown(raw),
