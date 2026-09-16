@@ -21,10 +21,11 @@ describe('FeatureFlagService', () => {
     const flags = new FeatureFlagService(DEFAULT_FLAGS, async (url, init) => {
       expect(url).toBe('/api/flags');
       expect(init).toEqual({ cache: 'no-store' });
-      return jsonResponse({ flags: { voice: true } });
+      return jsonResponse({ flags: { voice: true, onboarding: true } });
     });
     await flags.load();
     expect(flags.enabled('voice')).toBe(true);
+    expect(flags.enabled('onboarding')).toBe(true);
     expect(flags.ready()).toBe(true);
   });
 
@@ -34,6 +35,20 @@ describe('FeatureFlagService', () => {
     });
     await flags.load();
     expect(flags.enabled('voice')).toBe(false);
+    expect(flags.ready()).toBe(true);
+  });
+
+  it('Should apply flags on a later attempt after the first fetch fails', async () => {
+    let calls = 0;
+    const flags = new FeatureFlagService(DEFAULT_FLAGS, async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('offline');
+      return jsonResponse({ flags: { onboarding: true, publicTable: true } });
+    });
+    await flags.load();
+    expect(calls).toBe(2);
+    expect(flags.enabled('onboarding')).toBe(true);
+    expect(flags.enabled('publicTable')).toBe(true);
     expect(flags.ready()).toBe(true);
   });
 

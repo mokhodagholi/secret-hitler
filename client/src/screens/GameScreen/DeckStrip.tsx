@@ -21,7 +21,11 @@ const TRACKER_SLOTS = 3;
 export function DeckStrip(props: DeckStripProps) {
   const { formatMessage } = props;
   return (
-    <section class={styles.strip} aria-label={formatMessage('game.infoTitle')}>
+    <section
+      class={styles.strip}
+      aria-label={formatMessage('game.infoTitle')}
+      data-tutorial-target="deck"
+    >
       <div class={styles.piles}>
         <Pile
           count={props.drawCount}

@@ -21,7 +21,7 @@ import { PrefetchService } from '../src/services/prefetch';
 import { FeatureFlagService } from '../src/services/FeatureFlagService';
 import { VoiceService } from '../src/services/VoiceService';
 import { KeyboardService } from '../src/services/KeyboardService';
-import { TutorialPromptService } from '../src/services/TutorialPromptService';
+import { TutorialService } from '../src/tutorial/TutorialService';
 import { SocialService } from '../src/services/SocialService';
 import type {
   ConnectionStatus,
@@ -138,7 +138,7 @@ export function buildHarness(
       settings,
     ),
     keyboard: new KeyboardService(),
-    tutorial: new TutorialPromptService(),
+    tutorial: new TutorialService(),
     social: new SocialService(game),
   };
   return {

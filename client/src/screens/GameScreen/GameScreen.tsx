@@ -35,6 +35,7 @@ import { InvestigateOverlay } from './InvestigateOverlay';
 import { PeekOverlay } from './PeekOverlay';
 import { YouDiedOverlay } from './YouDiedOverlay';
 import { RaviNarrator } from './RaviNarrator';
+import { Spotlight } from './Spotlight';
 import { tableSeatOrder } from './tableSeats';
 import { emptyWell, flyToTarget } from './cardFlight';
 import styles from './GameScreen.module.scss';
@@ -45,10 +46,11 @@ import styles from './GameScreen.module.scss';
  * docked chat panel. Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
-  const { nav, game, i18n, animation, ravi, sound, flags, voice } = useApp();
+  const { nav, game, i18n, animation, ravi, sound, flags, voice, tutorial } =
+    useApp();
   const { formatMessage } = i18n;
 
-  const view = game.view;
+  const view = () => (tutorial.looking() ? tutorial.lookView() : game.view());
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
@@ -73,11 +75,13 @@ export function GameScreen() {
 
   // Session dropped (left / expired) → back to the play menu.
   createEffect(() => {
+    if (tutorial.looking()) return;
     if (!game.inRoom()) nav.returnTo('play');
   });
 
   // After a win, Continue returns this room to lobby — sit there for another game.
   createEffect(() => {
+    if (tutorial.looking()) return;
     const state = view();
     if (!state || !game.inRoom()) return;
     if (state.phase === Phase.Lobby) nav.returnTo('waiting-room');
@@ -85,6 +89,10 @@ export function GameScreen() {
 
   const VOTE_REVEAL_HOLD_MS = 5_000;
   createEffect(() => {
+    if (tutorial.looking()) {
+      setHideRevealedVotes(false);
+      return;
+    }
     const revealed = view()?.players.some((player) => player.vote != null) === true;
     if (!revealed) {
       setHideRevealedVotes(false);
@@ -97,6 +105,10 @@ export function GameScreen() {
 
   onMount(() => {
     const handleBack = () => {
+      if (tutorial.looking()) {
+        leaveLook();
+        return;
+      }
       if (playerMenu()) {
         setPlayerMenu(null);
         return;
@@ -120,6 +132,7 @@ export function GameScreen() {
     onCleanup(() => {
       nav.clearBackHandler(handleBack);
       clearInterval(ticker);
+      tutorial.closeLook();
     });
   });
 
@@ -147,6 +160,7 @@ export function GameScreen() {
   });
 
   createEffect(() => {
+    if (tutorial.looking()) return;
     const state = view();
     if (!state) return;
     if (state.roomId !== ceremonyRoomId) {
@@ -445,9 +459,18 @@ export function GameScreen() {
   };
 
   const seatSelectable = (player: PublicPlayer) =>
-    canNominate(player) || canPowerTarget(player);
+    !tutorial.looking() && (canNominate(player) || canPowerTarget(player));
+
+  function continueLook(): void {
+    if (tutorial.advanceLook()) nav.returnTo('home');
+  }
+
+  function leaveLook(): void {
+    nav.returnTo('home');
+  }
 
   const canReport = (player: PublicPlayer) => {
+    if (tutorial.looking()) return false;
     const state = view();
     const you = game.you();
     if (!flags.enabled('gameKick')) return false;
@@ -459,6 +482,7 @@ export function GameScreen() {
   };
 
   const canMuteOther = (player: PublicPlayer) => {
+    if (tutorial.looking()) return false;
     const state = view();
     return flags.enabled('voice') && state != null && player.id !== state.you.id;
   };
@@ -704,6 +728,10 @@ export function GameScreen() {
   }
 
   function onSeat(player: PublicPlayer): void {
+    if (tutorial.looking()) {
+      continueLook();
+      return;
+    }
     if (canNominate(player)) {
       sound.play('player-ready');
       nominate(player);
@@ -773,9 +801,17 @@ export function GameScreen() {
         {(state) => (
           <div
             class={styles.scene}
-            style={{ '--chat-panel-height': `${chatHeight()}px` }}
+            style={{
+              '--chat-panel-height': `${tutorial.looking() ? 0 : chatHeight()}px`,
+            }}
           >
-            <GameEventHeader headline={ravi.line() ?? helpMessage()} />
+            <GameEventHeader
+              headline={
+                tutorial.looking()
+                  ? formatMessage(tutorial.headlineKey())
+                  : (ravi.line() ?? helpMessage())
+              }
+            />
 
             <div class={styles.body}>
             <DeckStrip
@@ -799,7 +835,7 @@ export function GameScreen() {
                 formatMessage={formatMessage}
               />
 
-              <div class={styles.players}>
+              <div class={styles.players} data-tutorial-target="seats">
                 <div class={styles.seats} role="list">
                   <For each={seatedPlayers()}>
                     {(player) => (
@@ -896,6 +932,7 @@ export function GameScreen() {
 
             </div>
 
+            <Show when={!tutorial.looking()}>
             <ChatPanel
               talkingAllowed={!ceremonyOpen()}
               actionLabel={
@@ -919,12 +956,24 @@ export function GameScreen() {
               onOpenMenu={() => setMenuOpen(true)}
               onHeightChange={setChatHeight}
             />
+            </Show>
 
+            <Show when={tutorial.looking()}>
+              <Spotlight
+                target={tutorial.target()}
+                onContinue={continueLook}
+                onSkip={leaveLook}
+                formatMessage={formatMessage}
+              />
+            </Show>
+
+            <Show when={!tutorial.looking()}>
             <RaviNarrator
               ceremonyOpen={ceremonyOpen()}
               now={clockMs()}
               chancellorReveal={chancellorReveal()}
             />
+            </Show>
 
             <Show when={tableOverlay() === 'night' && game.role()}>
               {(role) => (

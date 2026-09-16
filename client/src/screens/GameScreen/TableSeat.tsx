@@ -87,6 +87,13 @@ export function TableSeat(props: TableSeatProps) {
       }}
       aria-label={playerLabel(props.isYou, props.player.name, formatMessage)}
       data-seat-id={props.player.id}
+      data-tutorial-target={
+        props.ballot === 'ja' || props.ballot === 'nein'
+          ? 'vote'
+          : props.player.isPresident || props.player.isChancellor
+            ? 'government'
+            : undefined
+      }
       data-speaking={speaking() ? 'true' : undefined}
       data-mic={voiceOn() ? (tableMuted() ? 'off' : 'live') : undefined}
       data-local-mute={locallyMuted() ? 'true' : undefined}

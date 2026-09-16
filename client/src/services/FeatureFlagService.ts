@@ -37,6 +37,9 @@ export class FeatureFlagService {
     this.ready = ready;
     this.setReady = setReady;
     this.fetchImpl = fetchImpl;
+    if (import.meta.env.DEV) {
+      (window as unknown as { __flags?: FeatureFlagService }).__flags = this;
+    }
   }
 
   enabled(name: FlagName): boolean {
@@ -61,12 +64,19 @@ export class FeatureFlagService {
 
   private async pull(): Promise<void> {
     try {
-      const response = await this.fetchImpl('/api/flags', { cache: 'no-store' });
-      if (!response.ok) return;
-      const parsed = parseFlagsResponse(await response.json());
-      if (parsed) this.apply(parsed);
-    } catch {
-      /* keep whatever we already hold — usually defaults */
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await this.fetchImpl('/api/flags', { cache: 'no-store' });
+          if (!response.ok) continue;
+          const parsed = parseFlagsResponse(await response.json());
+          if (parsed) {
+            this.apply(parsed);
+            return;
+          }
+        } catch {
+          /* proxy not up yet — try again */
+        }
+      }
     } finally {
       this.setReady(true);
     }

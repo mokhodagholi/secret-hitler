@@ -156,41 +156,34 @@ function Router() {
 
 function BootGate(props: ParentProps<{ skip?: boolean }>) {
   const skip = props.skip || process.env.NODE_ENV === 'test';
-  const { prefetch, settings, nav, flags, game, tutorial } = useApp();
+  const { prefetch, settings, nav, flags } = useApp();
   const [booting, setBooting] = createSignal(!skip);
   const [offline, setOffline] = createSignal(false);
   let startBoot = () => {};
 
-  const offerGuide = () => {
-    tutorial.offerAfterSplash(nav, game.inRoom() || nav.peekPlaySeat() != null);
-  };
-
   onMount(() => {
     if (skip) {
       void prefetch.boot([]);
-      offerGuide();
       return;
     }
     let cancelled = false;
-    let finished = false;
+    let revealed = false;
     let running = false;
     let hangTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const finish = () => {
-      if (finished || cancelled) return;
-      finished = true;
-      // Route before the lectern lifts so the first paint is the guide, not home.
-      offerGuide();
+    const reveal = () => {
+      if (revealed || cancelled) return;
+      revealed = true;
       setBooting(false);
     };
 
     const run = async () => {
-      if (running || finished || cancelled) return;
+      if (running || cancelled) return;
       running = true;
       setOffline(false);
       try {
         const online = await waitForOnline();
-        if (cancelled || finished) return;
+        if (cancelled) return;
         if (!online) {
           setOffline(true);
           return;
@@ -206,17 +199,17 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
         // Never lift splash on the hang timer before flags settle.
         const flagsDone = flags.load();
         hangTimer = setTimeout(() => {
-          void flagsDone.finally(finish);
+          void flagsDone.finally(reveal);
         }, 15_000);
         await Promise.all([
           prefetch.boot(urls).catch(() => undefined),
           flagsDone,
         ]);
-        if (cancelled || finished) return;
-        // Cached files finish in one tick; keep the lectern until the bar can count 0 → 100.
+        if (cancelled) return;
+        if (revealed) return;
         const wait = SPLASH_PROGRESS_MS - (Date.now() - bootStarted);
         if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-        finish();
+        reveal();
       } finally {
         running = false;
         if (hangTimer !== undefined) clearTimeout(hangTimer);
@@ -248,6 +241,42 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
   );
 }
 
+function SitOffer() {
+  const { tutorial, nav, i18n, settings, flags, game } = useApp();
+  const { formatMessage } = i18n;
+
+  // Offer after this dialog exists. Asking during splash leaves offeringSit
+  // true with no subscriber, and ConfirmDialog never sees a closed → open flip.
+  createEffect(() => {
+    if (!flags.ready() || !flags.flags.onboarding) return;
+    tutorial.offerAfterSplash(
+      nav,
+      game.inRoom() || nav.peekPlaySeat() != null,
+      true,
+    );
+  });
+
+  const sitOpen = () =>
+    tutorial.offeringSit() && flags.ready() && flags.flags.onboarding;
+
+  return (
+    <ConfirmDialog
+      open={sitOpen()}
+      message={formatMessage('onboard.invite')}
+      confirmLabel={formatMessage('onboard.sit')}
+      cancelLabel={formatMessage('onboard.notNow')}
+      onConfirm={() => {
+        tutorial.startLook({
+          name: settings.settings.profileName.trim() || formatMessage('game.you'),
+          avatar: settings.settings.avatar,
+        });
+        nav.navigate('game');
+      }}
+      onCancel={() => tutorial.declineSit()}
+    />
+  );
+}
+
 export function App(props: { services?: Partial<AppServices> }) {
   return (
     <AppProvider services={props.services}>
@@ -255,6 +284,7 @@ export function App(props: { services?: Partial<AppServices> }) {
         <PlayGameClaimer />
         <FollowMatchStart />
         <Router />
+        <SitOffer />
         <RoomClosedNotice />
         <ConnectionNotice />
         <UpdateModal />
@@ -263,3 +293,4 @@ export function App(props: { services?: Partial<AppServices> }) {
     </AppProvider>
   );
 }
+

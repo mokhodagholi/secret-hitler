@@ -227,6 +227,25 @@ export const en = {
     continue: 'Got it',
     videoOpen: 'Open in Aparat',
   },
+  onboard: {
+    invite: "Before you sit down for real, play a hand. I'll show you from that same board.",
+    sit: 'Sit',
+    notNow: 'Not now',
+    continue: 'Continue',
+    skip: 'Skip',
+    letsSit: "Let's sit.",
+    idea: {
+      table:
+        'Five people at this table. Liberals are the majority, but they do not know each other. One Fascist, and Hitler.',
+      boards:
+        'These two boards. Five Liberal laws and the Liberals win. Six Fascist laws and they win.',
+      vote: 'Each round someone proposes a government. Everyone votes Ja or Nein.',
+      government:
+        'The President names a Chancellor. If the vote passes, those two put a law on the board.',
+      laws:
+        'The President draws three, burns one. The Chancellor enacts one of the two that remain. Nobody may show the cards.',
+    },
+  },
   settings: {
     title: 'Settings',
     headerLabel: 'Settings',

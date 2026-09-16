@@ -1,0 +1,101 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.root {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.blockDim {
+  background: rgba(12, 8, 5, 0.55);
+}
+
+.dim {
+  position: absolute;
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow: 0 0 0 100vmax rgba(12, 8, 5, 0.55);
+}
+
+.hole {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgba($gold, 0.85);
+  pointer-events: auto;
+  animation: spotlight-pulse 1.8s ease-in-out infinite;
+}
+
+.chrome {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.skip,
+.continue {
+  @include pressable;
+  flex: 0 0 auto;
+  min-width: 7.5rem;
+  padding: 10px 18px;
+  border-radius: $radius;
+  font-family: $font-body;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.skip {
+  color: $cream;
+  background: rgba(243, 231, 201, 0.12);
+  border: 1.5px solid rgba(243, 231, 201, 0.45);
+}
+
+.continue {
+  color: $navy-950;
+  background: linear-gradient(180deg, $gold-bright, $gold-dark);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 3px 0 $gold-deep;
+}
+
+@keyframes spotlight-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.88;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hole {
+    animation: none;
+  }
+}

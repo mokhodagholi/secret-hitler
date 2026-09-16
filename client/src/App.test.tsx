@@ -1,74 +1,102 @@
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
-import { Phase } from '@secret-hitler/shared';
+import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
 import { App } from './App';
 import { en } from './i18n/locales/en';
-import { TUTORIAL_ANNOUNCE_LIMIT, TUTORIAL_SEEN_COUNT_KEY } from './services/TutorialPromptService';
+import { TUTORIAL_ANNOUNCE_LIMIT, ONBOARDING_DECLINE_KEY } from './tutorial/TutorialService';
 import { buildHarness, makeView } from '../test/test-utils';
 
-describe('App — first-run guide', () => {
-  it('Should open the guide after splash on a first visit', async () => {
-    const harness = buildHarness();
+describe('App — first-run look', () => {
+  it('Should offer Sit after splash on a first visit', async () => {
+    const harness = buildHarness({ flags: { onboarding: true } });
     render(() => <App services={harness.services} />);
 
-    await waitFor(() => expect(harness.services.nav.screen()).toBe('rules'));
-    expect(screen.getByRole('heading', { name: en.rules.title })).toBeTruthy();
-    expect(screen.getByText(en.tutorial.announce)).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.tutorial.continue })).toBeTruthy();
-  });
-
-  it('Should remember a dismissed announcement and stay on the guide', async () => {
-    const harness = buildHarness();
-    render(() => <App services={harness.services} />);
-    await waitFor(() => expect(harness.services.nav.screen()).toBe('rules'));
-
-    fireEvent.click(screen.getByRole('button', { name: en.tutorial.continue }));
-    expect(localStorage.getItem(TUTORIAL_SEEN_COUNT_KEY)).toBe('1');
-    expect(harness.services.nav.screen()).toBe('rules');
-    expect(screen.queryByText(en.tutorial.announce)).toBeNull();
-  });
-
-  it('Should count leaving the guide as seeing the announcement', async () => {
-    const harness = buildHarness();
-    render(() => <App services={harness.services} />);
-    await waitFor(() => expect(harness.services.nav.screen()).toBe('rules'));
-
-    fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
+    await waitFor(() => expect(screen.getByText(en.onboard.invite)).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
-    expect(localStorage.getItem(TUTORIAL_SEEN_COUNT_KEY)).toBe('1');
+    expect(screen.getByRole('button', { name: en.onboard.sit })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.onboard.notNow })).toBeTruthy();
   });
 
-  it('Should go home after splash once the guide has been seen five times', async () => {
-    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
-    const harness = buildHarness();
+  it('Should sit onto the look table', async () => {
+    const harness = buildHarness({ flags: { onboarding: true } });
+    render(() => <App services={harness.services} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: en.onboard.sit })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.sit }));
+    expect(harness.services.nav.screen()).toBe('game');
+    expect(harness.services.tutorial.looking()).toBe(true);
+    expect(screen.getByText(en.onboard.idea.table)).toBeTruthy();
+  });
+
+  it('Should stay home after Not now and count it', async () => {
+    const harness = buildHarness({ flags: { onboarding: true } });
+    render(() => <App services={harness.services} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: en.onboard.notNow })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.notNow }));
+    expect(localStorage.getItem(ONBOARDING_DECLINE_KEY)).toBe('1');
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(screen.queryByText(en.onboard.invite)).toBeNull();
+  });
+
+  it('Should go home after splash once the sit offer has been seen five times', async () => {
+    localStorage.setItem(ONBOARDING_DECLINE_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
+    const harness = buildHarness({ flags: { onboarding: true } });
     render(() => <App services={harness.services} />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
-    expect(screen.queryByText(en.tutorial.announce)).toBeNull();
+    expect(screen.queryByText(en.onboard.invite)).toBeNull();
   });
 
   it('Should not steal a restored live seat away from home', async () => {
-    const harness = buildHarness({ seated: true });
+    const harness = buildHarness({ seated: true, flags: { onboarding: true } });
     render(() => <App services={harness.services} />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
-    expect(harness.services.tutorial.announcing()).toBe(false);
+    expect(harness.services.tutorial.offeringSit()).toBe(false);
   });
 
   it('Should not steal a join deep link', async () => {
-    const harness = buildHarness({ initialPath: '/join/ABC123' });
+    const harness = buildHarness({
+      initialPath: '/join/ABC123',
+      flags: { onboarding: true },
+    });
     render(() => <App services={harness.services} />);
 
     await waitFor(() => expect(harness.services.nav.screen()).toBe('join-game'));
-    expect(harness.services.tutorial.announcing()).toBe(false);
+    expect(harness.services.tutorial.offeringSit()).toBe(false);
+  });
+
+  it('Should offer Sit once the onboarding flag arrives', async () => {
+    const harness = buildHarness({ flags: { onboarding: false } });
+    render(() => <App services={harness.services} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy(),
+    );
+    expect(screen.queryByText(en.onboard.invite)).toBeNull();
+
+    harness.services.flags.apply({ ...DEFAULT_FLAGS, onboarding: true });
+    await waitFor(() => expect(screen.getByText(en.onboard.invite)).toBeTruthy());
+  });
+
+  it('Should not offer Sit when onboarding is off', async () => {
+    const harness = buildHarness();
+    render(() => <App services={harness.services} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy(),
+    );
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(screen.queryByText(en.onboard.invite)).toBeNull();
+    expect(harness.services.tutorial.offeringSit()).toBe(false);
   });
 });
 
 describe('App — guide while seated', () => {
   it('Should pull a waiting player off the guide when the match starts', async () => {
-    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
     const harness = buildHarness({ seated: true });
     render(() => <App services={harness.services} />);
     await waitFor(() => expect(harness.services.nav.screen()).toBe('home'));
@@ -83,7 +111,6 @@ describe('App — guide while seated', () => {
   });
 
   it('Should leave the in-game guide open until the player goes back', async () => {
-    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
     const harness = buildHarness({ seated: true });
     render(() => <App services={harness.services} />);
     await waitFor(() => expect(harness.services.nav.screen()).toBe('home'));

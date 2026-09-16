@@ -23,8 +23,8 @@ const FASCIST_SLOTS = 5;
 export function PolicyBoard(props: PolicyBoardProps) {
   const { formatMessage } = props;
 
-  return (
-    <div class={styles.board}>
+    return (
+      <div class={styles.board} data-tutorial-target="boards">
       <div class={`${styles.track} ${styles.trackLiberal}`}>
         <WarmImg
           class={styles.art}

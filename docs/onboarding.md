@@ -4,7 +4,9 @@ A hands-on first table. Video and written rules stay on the guide hub.
 This is Daniel walking the player through the **real board**, then
 through live matches at every size.
 
-This file is the plan. It is not implemented yet.
+This file is the plan. Step 1 (look) is in the client; Daniel is header
+text only — no `onboard.*` clips yet. Step 2 and later counts are not
+implemented. Ships dark behind `FEATURE_ONBOARDING` (default off).
 
 **The table must feel like a table.** The other seats are scripted, but
 the player is never told that. No “practice”, no “ربات”, no “these are
@@ -37,8 +39,9 @@ Ship **step 1 + step 2** first. 6–10 are more scripts on the same
 machine, not a second system.
 
 After a match: next step, or Home / Find Match. Remember progress in
-`localStorage` (`sh:onboarding-step`). A live join link or a restored
-seat still wins over this, same as today.
+`localStorage` (`sh:onboarding-step`). Sit / Skip declines live in
+`sh:onboarding-declines` — not the old rules-hub `sh:tutorial-seen-count`.
+A live join link or a restored seat still wins over this, same as today.
 
 ## Principles
 
@@ -46,7 +49,8 @@ seat still wins over this, same as today.
   bots in Postgres. The shared `GameEngine` already has no I/O — the
   client constructs a `Room`, runs the engine in memory, and paints the
   same Game / Waiting-room screens off that snapshot. Live games stay
-  server-sourced. This path never touches the wire.
+  server-sourced. This path never touches the wire. Showing it is still
+  gated by `FEATURE_ONBOARDING` so production can stay dark.
 - **Natural seats.** Other players have names, avatars, typing pauses.
   Chat is table talk, never “this is a lesson”. They never mention
   Daniel, the guide, or that they are scripted.
@@ -399,12 +403,12 @@ happens, …).
 
 ### Step 1 + plumbing
 
-- [ ] `TutorialService` holds an in-memory engine; `view()` matches
+- [x] `TutorialService` holds an in-memory snapshot; `lookView()` matches
       what GameScreen already reads.
-- [ ] Spotlight / mask; punch-out from the current beat.
-- [ ] Step 1 beat list + Daniel lines in i18n + `ravi-script.md`.
-- [ ] First-run: Sit / Not now. Skip. `sh:onboarding-step`.
-- [ ] Tests: five punch-outs in order; Skip leaves.
+- [x] Spotlight / mask; punch-out from the current beat.
+- [x] Step 1 beat list + Daniel lines in i18n (header text; no clips yet).
+- [x] First-run: Sit / Not now. Skip. `sh:onboarding-step`.
+- [x] Tests: five punch-outs in order; Skip leaves.
 
 ### Step 2
 

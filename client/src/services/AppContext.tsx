@@ -20,7 +20,7 @@ import { PrefetchService, urlsForNextStep } from './prefetch';
 import { FeatureFlagService } from './FeatureFlagService';
 import { VoiceService } from './VoiceService';
 import { KeyboardService } from './KeyboardService';
-import { TutorialPromptService } from './TutorialPromptService';
+import { TutorialService } from '../tutorial/TutorialService';
 import { SocialService } from './SocialService';
 import { nextMusicCheckMs, trackForScene } from './music';
 
@@ -38,7 +38,7 @@ export interface AppServices {
   flags: FeatureFlagService;
   voice: VoiceService;
   keyboard: KeyboardService;
-  tutorial: TutorialPromptService;
+  tutorial: TutorialService;
   social: SocialService;
 }
 
@@ -69,7 +69,7 @@ export function AppProvider(
     flags,
     voice: overrides.voice ?? new VoiceService(socket, flags, settings),
     keyboard: overrides.keyboard ?? new KeyboardService(),
-    tutorial: overrides.tutorial ?? new TutorialPromptService(),
+    tutorial: overrides.tutorial ?? new TutorialService(),
     social: overrides.social ?? new SocialService(game),
   };
 
