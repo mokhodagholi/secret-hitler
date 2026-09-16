@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply } from './commands';
+import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, isUsersCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply, usersEmptyReply, usersListReply } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -248,6 +248,30 @@ describe('broadcast copy', () => {
     );
     expect(reply.text).toContain('secret\\_hitler\\_official');
     expect(reply.parse_mode).toBeUndefined();
+  });
+
+  it('Should leave @username mentions unescaped so the tap stays alive', () => {
+    const reply = broadcastPlayerReply(
+      { botUsername: BOT, platform: 'bale' },
+      'بیا کانال @secret_hitler_official',
+    );
+    expect(reply.text).toContain('@secret_hitler_official');
+    expect(reply.text).not.toContain('\\_');
+  });
+});
+
+describe('users copy', () => {
+  it('Should recognize the hidden admin users aliases', () => {
+    expect(isUsersCommand('users')).toBe(true);
+    expect(isUsersCommand('user')).toBe(true);
+    expect(isUsersCommand('broadcast')).toBe(false);
+  });
+
+  it('Should list chat ids that can still receive DMs', () => {
+    expect(usersEmptyReply().text).toContain('بلاک');
+    expect(usersListReply(['9', '11']).text).toBe(
+      ['کسایی که بلاک نکردن (2 نفر):', '', '9', '11'].join('\n'),
+    );
   });
 });
 

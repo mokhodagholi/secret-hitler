@@ -448,7 +448,8 @@ reach Telegram sitters.
 
 Each player DM has the same **بازی کن** button as `/start`. On Bale the body
 is Markdown-escaped so a `ble.ir/secret_hitler_official` path does not make
-`sendMessage` fail (underscores become `\_` in the wire text). People who
+`sendMessage` fail (underscores become `\_` in the wire text). `@username`
+mentions stay raw — escaping them prints `\_` and the mention dies. People who
 blocked the bot are dropped from the list.
 
 Empty list:
@@ -514,6 +515,36 @@ While deleting, then when done:
 
 Only the latest blast is kept. An older round that went out before this
 command cannot be pulled back.
+
+---
+
+## `/users` — admin list of reachable DMs (hidden)
+
+**Type:** `/users` · `/user` in **private** chat. Not on the bot menu.
+
+Same admin gate as `/play-game`. Anyone else gets no reply.
+
+Lists every private chat still on the `/start` subscriber list for this bot —
+the same set `/broadcast` would DM. Failed broadcasts drop blockers, so this is
+“who has not blocked” as far as the bot knows (chat ids only, no names).
+
+Empty list:
+
+```
+کسی نیست که بلاک نکرده باشه. هر کی تو چت خصوصی /start بزنه، می‌مونه تو لیست.
+```
+
+With people:
+
+```
+کسایی که بلاک نکردن (N نفر):
+
+123
+456
+```
+
+If the list is too long for one message, trailing ids are omitted with
+`… و M نفر دیگه`.
 
 ---
 
@@ -594,7 +625,7 @@ From [`.env.example`](../.env.example):
 | `BALE_WEBHOOK_SECRET` | Appended to the webhook path; also accepted as `X-Telegram-Bot-Api-Secret-Token`. Required when registering. |
 | `BOT_SET_WEBHOOK` | `true` only on the VPS (compose default). Local `pnpm dev` must leave it unset so boot does not steal production `setWebhook`. |
 | `BALE_SUPPORT_CHAT_ID` | Group for support letters and kick notices. Not used by chat commands. |
-| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, `/message`, `/unsend`, and `/delete`. `1902004260` is always allowed. |
+| `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, `/message`, `/unsend`, `/users`, and `/delete`. `1902004260` is always allowed. |
 
 Copy for new replies: [`docs/persian.md`](./persian.md) (register **بله**).
 Tests: [`server/src/bale/commands.test.ts`](../server/src/bale/commands.test.ts).

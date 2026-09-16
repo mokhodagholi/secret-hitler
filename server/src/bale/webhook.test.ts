@@ -1042,6 +1042,116 @@ describe('Bale webhook — broadcast', () => {
     expect(remaining).not.toContain('11');
   });
 
+  it('Should keep @username mentions unescaped in a broadcast body', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/broadcast بیا @secret_hitler_official',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    await waitUntil(() => sent.some((row) => row.text.includes('@secret_hitler_official')));
+    const blasts = sent.filter((row) => row.text.includes('@secret_hitler_official'));
+    expect(blasts.length).toBeGreaterThan(0);
+    expect(blasts.every((row) => !row.text.includes('\\_'))).toBe(true);
+  });
+
+  it('Should list reachable subscriber ids on /users', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    await subscribers.upsert('bale', '11');
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/users',
+        from: { id: DEFAULT_ADMIN_USER_ID, is_bot: false, first_name: 'Admin' },
+        chat: { id: DEFAULT_ADMIN_USER_ID, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    const reply = sent.find((row) => row.text.includes('بلاک نکردن'));
+    expect(reply?.text).toContain('9');
+    expect(reply?.text).toContain('11');
+  });
+
+  it('Should ignore /users from anyone but the admin', async () => {
+    const subscribers = new InMemoryBotSubscriberStore();
+    await subscribers.upsert('bale', '9');
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
+    const bot: BaleMessenger = {
+      sendMessage: async (params) => {
+        sent.push(params);
+        return {};
+      },
+    };
+    const { app } = await buildServer({
+      subscribers,
+      bale: {
+        bot,
+        botToken: TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+
+    const { status } = await httpJson(app, 'POST', '/api/bale/webhook', {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        text: '/users',
+        from: { id: 9, is_bot: false, first_name: 'Ana' },
+        chat: { id: 9, type: 'private' },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(sent.some((row) => row.text.includes('بلاک نکردن'))).toBe(false);
+  });
+
   it('Should send /message only to the comma-separated ids', async () => {
     const sent: Array<{ chat_id: number | string; text: string; reply_markup?: unknown }> = [];
     const bot: BaleMessenger = {

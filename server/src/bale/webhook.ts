@@ -28,6 +28,7 @@ import {
   isDeleteRoomCommand,
   isDirectMessageCommand,
   isUnsendCommand,
+  isUsersCommand,
   messageAskTextReply,
   messageBadIdsReply,
   messageHelpReply,
@@ -37,6 +38,7 @@ import {
   unsendDoneReply,
   unsendEmptyReply,
   unsendStartedReply,
+  usersListReply,
   type BotReply,
 } from './commands';
 import { createGroupRoom } from './createGroupRoom';
@@ -361,6 +363,15 @@ export async function handleMessengerWebhook(
       chat.id,
       handleDeleteRoom(parsed?.arg ?? '', table),
     );
+  }
+
+  if (isUsersCommand(parsed?.command)) {
+    if (!table || !isAdminUser(seatedId, table.adminUserIds)) {
+      return reply.code(200).send({ ok: true });
+    }
+    adminDrafts.delete(adminDraftKey(kind, chat.id));
+    const chatIds = (await table.subscribers?.list(kind)) ?? [];
+    return sendBotReply(req, reply, messenger, chat.id, usersListReply(chatIds));
   }
 
   // Player commands cancel a stuck compose; bare text / ble.ir paths stay owned

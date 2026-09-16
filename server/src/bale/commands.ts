@@ -64,9 +64,20 @@ function linkOf(
   return ctx.startLink ? ctx.startLink(startApp) : baleStartLink(ctx.botUsername, startApp);
 }
 
-/** Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail. */
+/**
+ * Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail.
+ * `@username` mentions stay raw — escaping their `_` prints `\_` and kills the
+ * tap (e.g. `@secret\_hitler\_official`).
+ */
 export function escapeBaleMarkdown(text: string): string {
-  return text.replace(/([_*`\[\]])/g, '\\$1');
+  const mentions: string[] = [];
+  const withPlaceholders = text.replace(/@[A-Za-z][A-Za-z0-9_]{4,31}\b/g, (match) => {
+    const index = mentions.length;
+    mentions.push(match);
+    return `\u0000M${index}\u0000`;
+  });
+  const escaped = withPlaceholders.replace(/([_*`\[\]])/g, '\\$1');
+  return escaped.replace(/\u0000M(\d+)\u0000/g, (_, index) => mentions[Number(index)] ?? '');
 }
 
 /** Slash command as Bale Markdown. `_` must be escaped or sendMessage fails. */
@@ -317,6 +328,34 @@ export function isUnsendCommand(command: string | undefined): boolean {
 
 export function isDeleteRoomCommand(command: string | undefined): boolean {
   return command === 'delete';
+}
+
+export function isUsersCommand(command: string | undefined): boolean {
+  return command === 'users' || command === 'user';
+}
+
+export function usersEmptyReply(): BotReply {
+  return {
+    text: 'کسی نیست که بلاک نکرده باشه. هر کی تو چت خصوصی /start بزنه، می‌مونه تو لیست.',
+  };
+}
+
+/** Chat ids still on the subscriber list (dropped after a failed broadcast DM). */
+export function usersListReply(chatIds: string[]): BotReply {
+  if (chatIds.length === 0) return usersEmptyReply();
+  const header = `کسایی که بلاک نکردن (${chatIds.length} نفر):`;
+  const bodyLimit = BROADCAST_MAX - header.length - 2;
+  const lines: string[] = [];
+  let used = 0;
+  for (const chatId of chatIds) {
+    const line = chatId.length + (lines.length > 0 ? 1 : 0);
+    if (used + line > bodyLimit) break;
+    lines.push(chatId);
+    used += line;
+  }
+  const omitted = chatIds.length - lines.length;
+  const tail = omitted > 0 ? ['', `… و ${omitted} نفر دیگه`] : [];
+  return { text: [header, '', ...lines, ...tail].join('\n') };
 }
 
 export function deleteRoomHelpReply(): BotReply {
