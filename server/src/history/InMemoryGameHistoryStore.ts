@@ -21,6 +21,13 @@ export class InMemoryGameHistoryStore implements GameHistoryStore {
     return this.games.slice(0, limit);
   }
 
+  async listForAccount(accountId: string, limit = 20): Promise<SavedGame[]> {
+    if (!accountId) return [];
+    return this.games
+      .filter((game) => game.players.some((player) => player.joinKey === accountId))
+      .slice(0, limit);
+  }
+
   async satTogether(leftKey: string, rightKey: string): Promise<boolean> {
     if (!leftKey || !rightKey || leftKey === rightKey) return false;
     return this.games.some((game) => {

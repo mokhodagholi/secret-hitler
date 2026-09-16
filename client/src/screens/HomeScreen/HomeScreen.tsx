@@ -7,10 +7,12 @@ import { Screen } from '../../components/Screen/Screen';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import type { SocialIdentity } from '../../services/SocialService';
 import heroImage from '../../assets/home/hero.webp';
+import heroFindingImage from '../../assets/home/hero-finding.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
 import { InviteFriendsSheet } from './InviteFriendsSheet';
+import { MatchHistorySheet } from './MatchHistorySheet';
 import styles from './HomeScreen.module.scss';
 
 /** Cycles on the home support chip — same topics as the support letter form. */
@@ -44,6 +46,7 @@ export function HomeScreen() {
 
   const [nowMs, setNowMs] = createSignal(Date.now());
   const [inviteOpen, setInviteOpen] = createSignal(false);
+  const [historyOpen, setHistoryOpen] = createSignal(false);
 
   function resolvedName(): string {
     return miniApp.user()?.firstName ?? settings.settings.profileName.trim();
@@ -63,6 +66,16 @@ export function HomeScreen() {
     setInviteOpen(true);
     try {
       await social.load(socialIdentity());
+    } catch {
+      // Empty list + server error toast from fetch; sheet still opens.
+    }
+  }
+
+  async function openHistory(): Promise<void> {
+    setHistoryOpen(true);
+    const identity = socialIdentity();
+    try {
+      await Promise.all([social.load(identity), social.loadHistory(identity)]);
     } catch {
       // Empty list + server error toast from fetch; sheet still opens.
     }
@@ -198,14 +211,36 @@ export function HomeScreen() {
                 {formatMessage('nav.rules')}
               </span>
             </button>
+            <button
+              type="button"
+              class={styles.guideChip}
+              aria-label={formatMessage('home.history')}
+              onClick={() => void openHistory()}
+            >
+              <Icon name="scroll" size={16} />
+              <span class={styles.guideLabel} dir="auto">
+                {formatMessage('home.history')}
+              </span>
+            </button>
           </div>
         </div>
 
         <div class={styles.stage}>
           <div class={styles.deskWrap}>
-            <div class={styles.hero}>
+            <div
+              classList={{
+                [styles.hero]: true,
+                [styles.heroFinding]: finding(),
+                [styles.heroNoMotion]: !animation.motionEnabled(),
+              }}
+            >
               <span class={styles.heroHeadShade} aria-hidden="true" />
               <WarmImg class={styles.heroImage} src={heroImage} alt="" />
+              <WarmImg
+                class={styles.heroImageFinding}
+                src={heroFindingImage}
+                alt=""
+              />
               <span
                 class={styles.heroBellyShade}
                 aria-hidden="true"
@@ -231,16 +266,18 @@ export function HomeScreen() {
               </span>
             </button>
           </Show>
-          <button
-            type="button"
-            class={styles.ctaInvite}
-            aria-label={formatMessage('home.inviteFriends')}
-            onClick={() => void openInvites()}
-          >
-            <span class={styles.ctaInviteLabel} dir="auto">
-              {formatMessage('home.inviteFriends')}
-            </span>
-          </button>
+          <Show when={!finding()}>
+            <button
+              type="button"
+              class={styles.ctaInvite}
+              aria-label={formatMessage('home.inviteFriends')}
+              onClick={() => void openInvites()}
+            >
+              <span class={styles.ctaInviteLabel} dir="auto">
+                {formatMessage('home.inviteFriends')}
+              </span>
+            </button>
+          </Show>
           <div
             classList={{
               [styles.ctaFind]: true,
@@ -256,8 +293,21 @@ export function HomeScreen() {
               aria-label={formatMessage(finding() ? 'home.finding' : 'home.findGame')}
               onClick={() => void enterMatch()}
             >
-              <span class={styles.ctaLabel} dir="auto">
+              <span
+                classList={{
+                  [styles.ctaLabel]: true,
+                  [styles.ctaLabelFinding]: finding(),
+                }}
+                dir="auto"
+              >
                 {formatMessage(finding() ? 'home.finding' : 'home.findGame')}
+                <Show when={finding()}>
+                  <span class={styles.ctaDots} aria-hidden="true">
+                    <span>.</span>
+                    <span>.</span>
+                    <span>.</span>
+                  </span>
+                </Show>
               </span>
             </button>
           </div>
@@ -265,13 +315,18 @@ export function HomeScreen() {
       </div>
 
       <InviteFriendsSheet
-        open={inviteOpen()}
+        open={inviteOpen() && !finding()}
         onClose={() => setInviteOpen(false)}
         onInvite={(friend) => void inviteFriend(friend)}
         onAcceptInvite={(id) => void acceptInvite(id)}
         onIgnoreInvite={(id) => void social.ignoreInvite(id, socialIdentity())}
         onAcceptRequest={(id) => void social.acceptFriendRequest(id, socialIdentity())}
         onIgnoreRequest={(id) => void social.ignoreFriendRequest(id, socialIdentity())}
+      />
+      <MatchHistorySheet
+        open={historyOpen()}
+        identity={socialIdentity()}
+        onClose={() => setHistoryOpen(false)}
       />
       <ConfirmDialog
         open={publicLobby() && game.view()?.startChoice != null && !amWantStart()}

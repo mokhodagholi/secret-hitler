@@ -83,6 +83,48 @@ export class DrizzleGameHistoryStore implements GameHistoryStore {
     );
   }
 
+  async listForAccount(accountId: string, limit = 20): Promise<SavedGame[]> {
+    if (!accountId) return [];
+    const seats = await this.db
+      .select({ gameId: gamePlayers.gameId })
+      .from(gamePlayers)
+      .where(eq(gamePlayers.joinKey, accountId));
+    const ids = [...new Set(seats.map((seat) => seat.gameId))];
+    if (ids.length === 0) return [];
+    const rows = await this.db
+      .select()
+      .from(games)
+      .where(inArray(games.id, ids))
+      .orderBy(desc(games.endedAt))
+      .limit(limit);
+    return Promise.all(
+      rows.map(async (game): Promise<SavedGame> => {
+        const seated = await this.db
+          .select()
+          .from(gamePlayers)
+          .where(eq(gamePlayers.gameId, game.id))
+          .orderBy(gamePlayers.seat);
+        return {
+          id: game.id,
+          roomCode: game.roomCode,
+          roomName: game.roomName,
+          winner: game.winner as Faction,
+          playerCount: game.playerCount,
+          liberalPolicies: game.liberalPolicies,
+          fascistPolicies: game.fascistPolicies,
+          endedAt: game.endedAt.toISOString(),
+          players: seated.map((seat) => ({
+            name: seat.name,
+            role: seat.role as Role,
+            seat: seat.seat,
+            won: seat.won,
+            joinKey: seat.joinKey ?? null,
+          })),
+        };
+      }),
+    );
+  }
+
   async satTogether(leftKey: string, rightKey: string): Promise<boolean> {
     if (!leftKey || !rightKey || leftKey === rightKey) return false;
     const rows = await this.db

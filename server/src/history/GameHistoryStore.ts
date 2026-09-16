@@ -38,5 +38,7 @@ export interface GameHistoryStore {
   listRecent(limit?: number): Promise<SavedGame[]>;
   /** True when both accounts sat in the same finished game. */
   satTogether(leftKey: string, rightKey: string): Promise<boolean>;
+  /** Finished tables this account sat at, newest first. */
+  listForAccount(accountId: string, limit?: number): Promise<SavedGame[]>;
   close(): Promise<void>;
 }

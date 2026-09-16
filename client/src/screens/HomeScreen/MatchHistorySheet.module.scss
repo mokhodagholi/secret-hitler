@@ -1,0 +1,80 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.match {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: $radius-sm;
+  background: rgba($navy-700, 0.55);
+  border: 1px solid $line-soft;
+}
+
+.matchHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px 4px;
+}
+
+.outcome {
+  color: $gold;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.result {
+  color: $cream;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: $radius-sm;
+  background: rgba($navy-950, 0.35);
+}
+
+.name {
+  color: $text-light;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 0;
+  flex: 1;
+}
+
+.role {
+  @include display(0.7rem, 0.1em);
+  flex-shrink: 0;
+}
+
+.roleLiberal {
+  color: $blue-liberal;
+}
+
+.roleFascist {
+  color: $red-bright;
+}
+
+.add {
+  @include pressable;
+  padding: 4px 8px;
+  border-radius: $radius-sm;
+  font-size: 0.72rem;
+  color: $navy-950;
+  background: linear-gradient(180deg, $gold-bright, $gold-dark);
+}
+
+.add:disabled {
+  opacity: 0.7;
+}
+
+.added {
+  font-size: 0.72rem;
+  color: $gold;
+  flex-shrink: 0;
+}

@@ -25,6 +25,7 @@ import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { TokenStore } from '../rooms/TokenStore';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
+import type { GameHistoryStore } from '../history/GameHistoryStore';
 import { identifyInitData } from '../bale/initData';
 import { messengerKindOf, type BaleRuntime } from '../bale/webhook';
 import { isEngineError, SocialBook } from '../social/SocialBook';
@@ -39,6 +40,7 @@ export interface SocialRouteDeps {
   tokens: TokenStore;
   sockets: SocketHandler;
   recorder: GameResultRecorder;
+  history: GameHistoryStore;
   social: SocialBook;
   bale?: BaleRuntime;
   telegram?: BaleRuntime;
@@ -134,7 +136,7 @@ function engineFail(reply: FastifyReply, error: { code: string; message: string 
 }
 
 export function registerSocialRoutes(app: FastifyInstance, deps: SocialRouteDeps): void {
-  const { repo, tokens, sockets, recorder, social, bale, telegram } = deps;
+  const { repo, tokens, sockets, recorder, history, social, bale, telegram } = deps;
   const messengers = configuredMessengers(bale, telegram);
   const limiter = new RateLimiter(SOCIAL_LIMIT, LIMIT_WINDOW_MS);
 
@@ -198,26 +200,53 @@ export function registerSocialRoutes(app: FastifyInstance, deps: SocialRouteDeps
     if (!accountId || !person) {
       return fail(reply, 400, 'AUTH_FAILED', 'A profile is required.');
     }
-    if (typeof body.playerId !== 'string' || !body.playerId) {
-      return fail(reply, 400, 'INVALID_ACTION', 'playerId is required.');
+    const playerId = typeof body.playerId === 'string' ? body.playerId : '';
+    const targetAccount = typeof body.accountId === 'string' ? body.accountId : '';
+    if (Boolean(playerId) === Boolean(targetAccount)) {
+      return fail(reply, 400, 'INVALID_ACTION', 'Use playerId or accountId.');
     }
-    const entry = repo.findByPlayerId(body.playerId);
-    const you = entry?.room.players.find((player) => player.joinKey === accountId);
-    const target = entry?.room.findPlayer(body.playerId);
-    if (!entry || !you || !target || target.id === you.id) {
-      return fail(reply, 400, 'INVALID_ACTION', 'You can only add someone from this table.');
+    let to: SocialPerson | null = null;
+    if (playerId) {
+      const entry = repo.findByPlayerId(playerId);
+      const you = entry?.room.players.find((player) => player.joinKey === accountId);
+      const target = entry?.room.findPlayer(playerId);
+      if (!entry || !you || !target || target.id === you.id) {
+        return fail(reply, 400, 'INVALID_ACTION', 'You can only add someone from this table.');
+      }
+      if (entry.room.phase !== Phase.GameOver) {
+        return fail(reply, 400, 'INVALID_ACTION', 'Add friends after the match ends.');
+      }
+      if (!target.joinKey) {
+        return fail(reply, 400, 'INVALID_ACTION', 'That player has no account to add.');
+      }
+      to = {
+        accountId: target.joinKey,
+        name: target.name,
+        avatar: target.avatar,
+      };
+    } else {
+      if (targetAccount === accountId) {
+        return fail(reply, 400, 'INVALID_ACTION', 'You cannot add yourself.');
+      }
+      if (!(await history.satTogether(accountId, targetAccount))) {
+        return fail(reply, 400, 'SOCIAL_STRANGER', 'You can only add someone you sat with.');
+      }
+      const games = await history.listForAccount(accountId);
+      const mate = games
+        .flatMap((game) => game.players)
+        .find((player) => player.joinKey === targetAccount);
+      if (!mate) {
+        return fail(reply, 400, 'SOCIAL_STRANGER', 'You can only add someone you sat with.');
+      }
+      to = {
+        accountId: targetAccount,
+        name: mate.name,
+        avatar: 0,
+      };
     }
-    if (entry.room.phase !== Phase.GameOver) {
-      return fail(reply, 400, 'INVALID_ACTION', 'Add friends after the match ends.');
+    if (!to) {
+      return fail(reply, 400, 'INVALID_ACTION', 'Use playerId or accountId.');
     }
-    if (!target.joinKey) {
-      return fail(reply, 400, 'INVALID_ACTION', 'That player has no account to add.');
-    }
-    const to: SocialPerson = {
-      accountId: target.joinKey,
-      name: target.name,
-      avatar: target.avatar,
-    };
     const result = await social.requestFriend(person, to);
     if (isEngineError(result)) return engineFail(reply, result);
     return requestView(result);

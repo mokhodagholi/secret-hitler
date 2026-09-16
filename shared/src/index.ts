@@ -20,6 +20,7 @@ export {
   HOME_TABLE_INVITE_NOTE,
   isTableInviteNoteId,
 } from './social';
+export type { HistoryMatchView, HistoryMineRequest, HistorySeatView } from './matchHistory';
 export type {
   SocialAccountActionBody,
   SocialFriendRequestBody,

@@ -23,6 +23,10 @@ class FakeHistoryStore implements GameHistoryStore {
   async satTogether(): Promise<boolean> {
     return false;
   }
+
+  async listForAccount(): Promise<SavedGame[]> {
+    return [];
+  }
 }
 
 /** Seat players with fixed roles; returns the engine and room, game not yet over. */
@@ -109,6 +113,7 @@ describe('GameResultRecorder', () => {
       saveGame: () => Promise.reject(new Error('db down')),
       listRecent: async () => [],
       satTogether: async () => false,
+      listForAccount: async () => [],
       close: async () => {},
     };
     const { engine, room } = seatWithRoles(['liberal', 'fascist', 'hitler']);

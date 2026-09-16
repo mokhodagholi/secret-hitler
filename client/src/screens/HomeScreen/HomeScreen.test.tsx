@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { Show } from 'solid-js';
 import { Phase } from '@secret-hitler/shared';
+import heroImage from '../../assets/home/hero.webp';
+import heroFindingImage from '../../assets/home/hero-finding.webp';
 import { HomeScreen } from './HomeScreen';
 import { RoomsScreen } from '../RoomsScreen/RoomsScreen';
 import { RulesScreen } from '../RulesScreen/RulesScreen';
@@ -107,8 +109,14 @@ describe('HomeScreen', () => {
     );
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.game.queued()).toBe(true);
+    expect(screen.queryByRole('button', { name: en.home.inviteFriends })).toBeNull();
     expect(screen.queryByText('1/6')).toBeNull();
     expect(screen.queryByText('0/6')).toBeNull();
+    const findingPortrait = document.querySelector(`img[src="${heroFindingImage}"]`);
+    expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();
+    expect(findingPortrait).toBeTruthy();
+    expect(findingPortrait?.className).toContain('heroImageFinding');
+    expect(findingPortrait?.parentElement?.className).toContain('heroFinding');
   });
 
   it('Should ask everyone to Accept when a reserved table is full', () => {
@@ -176,7 +184,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: en.rules.title })).toBeTruthy();
   });
 
-  it('Should keep the home poster to Find Match, invite friends, play with friends, support, rules, and settings', () => {
+  it('Should keep the home poster to Find Match, invite friends, play with friends, support, rules, history, and settings', () => {
     const harness = buildHarness();
     renderWithApp(() => <HomeScreen />, harness);
 
@@ -186,9 +194,14 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('button', { name: en.support.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.home.history })).toBeTruthy();
     expect(screen.getByText(en.nav.rules)).toBeTruthy();
-    expect(screen.getAllByRole('button')).toHaveLength(6);
+    expect(screen.getAllByRole('button')).toHaveLength(7);
     expect(screen.queryByText('0/6')).toBeNull();
+    const findingPortrait = document.querySelector(`img[src="${heroFindingImage}"]`);
+    expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();
+    expect(findingPortrait).toBeTruthy();
+    expect(findingPortrait?.parentElement?.className).not.toContain('heroFinding');
   });
 
   it('Should open Support from the cycling text chip', () => {
@@ -348,5 +361,91 @@ describe('HomeScreen', () => {
     expect(screen.getByText(en.social.notes.emptySeat)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Ben/ }));
     await waitFor(() => expect(harness.services.nav.screen()).toBe('waiting-room'));
+  });
+
+  it('Should open history under the guide and send a friend request from a past table', async () => {
+    const harness = buildHarness();
+    harness.services.settings.set('profileName', 'Ana');
+    let asked = false;
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/api/history/mine')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'game-1',
+              winner: 'liberal',
+              playerCount: 3,
+              endedAt: '2026-01-01T00:00:00.000Z',
+              youWon: true,
+              players: [
+                {
+                  name: 'Ana',
+                  role: 'liberal',
+                  seat: 0,
+                  won: true,
+                  you: true,
+                  accountId: null,
+                },
+                {
+                  name: 'Ben',
+                  role: 'fascist',
+                  seat: 1,
+                  won: false,
+                  you: false,
+                  accountId: 'client:ben',
+                },
+              ],
+            },
+          ]),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.includes('/api/social/friends')) {
+        asked = true;
+        return new Response(
+          JSON.stringify({
+            id: 'req-1',
+            from: { accountId: 'client:ana', name: 'Ana', avatar: 0 },
+            to: { accountId: 'client:ben', name: 'Ben', avatar: 0 },
+            createdAt: 1,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.includes('/api/social/list')) {
+        return new Response(
+          JSON.stringify({
+            friends: [],
+            incomingRequests: [],
+            outgoingRequests: asked
+              ? [
+                  {
+                    id: 'req-1',
+                    from: { accountId: 'client:ana', name: 'Ana', avatar: 0 },
+                    to: { accountId: 'client:ben', name: 'Ben', avatar: 0 },
+                    createdAt: 1,
+                  },
+                ]
+              : [],
+            incomingInvites: [],
+            outgoingInvites: [],
+            blocked: [],
+            mates: {},
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response('[]', { status: 200 });
+    });
+    renderWithApp(() => <HomeScreen />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.home.history }));
+    await waitFor(() => expect(screen.getByText('Ben')).toBeTruthy());
+    expect(screen.getByText(en.game.over.liberalsWin)).toBeTruthy();
+    expect(screen.getByText(new RegExp(en.home.historyWon))).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.over.addFriend }));
+    await waitFor(() => expect(screen.getByText(en.game.over.sent)).toBeTruthy());
+    expect(harness.services.nav.screen()).toBe('home');
   });
 });

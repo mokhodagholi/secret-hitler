@@ -73,7 +73,10 @@ export interface SocialListResponse {
 }
 
 export interface SocialFriendRequestBody {
-  playerId: string;
+  /** Live game-over seat. Use this or `accountId`, not both. */
+  playerId?: string;
+  /** Someone you sat with in a finished match. */
+  accountId?: string;
   clientId?: string;
   initData?: string;
   name: string;

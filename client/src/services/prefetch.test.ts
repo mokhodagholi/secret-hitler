@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { Phase } from '@secret-hitler/shared';
 import heroImage from '../assets/home/hero.webp';
+import heroFindingImage from '../assets/home/hero-finding.webp';
 import deskImage from '../assets/home/desk.png';
 import { PORTRAITS } from '../assets/avatars';
 import { CARD_BACK, VOTE_BACK } from '../assets/cards';
@@ -30,6 +31,7 @@ describe('criticalBootUrls', () => {
   it('Should include splash art, the home stage, and menu music when audio is on', () => {
     const urls = criticalBootUrls({ music: true, soundEffects: true });
     expect(urls).toContain(heroImage);
+    expect(urls).toContain(heroFindingImage);
     expect(urls).toContain(deskImage);
     expect(urls).toContain(MUSIC_URLS['menu-theme']);
     expect(urls).toContain(EFFECT_URLS['swap-page']);
@@ -42,6 +44,7 @@ describe('criticalBootUrls', () => {
     expect(urls).not.toContain(MUSIC_URLS['menu-theme']);
     expect(urls).not.toContain(EFFECT_URLS['swap-page']);
     expect(urls).toContain(heroImage);
+    expect(urls).toContain(heroFindingImage);
     expect(urls).toContain(deskImage);
   });
 

@@ -1,6 +1,8 @@
 import { createSignal } from 'solid-js';
 import {
   HOME_TABLE_INVITE_NOTE,
+  type HistoryMatchView,
+  type HistoryMineRequest,
   type SocialInviteSendResponse,
   type SocialListRequest,
   type SocialListResponse,
@@ -32,14 +34,33 @@ export class SocialService {
   private readonly snapshotSignal = createSignal<SocialListResponse>(EMPTY);
   readonly snapshot = this.snapshotSignal[0];
   private readonly setSnapshot = this.snapshotSignal[1];
+  private readonly historySignal = createSignal<HistoryMatchView[]>([]);
+  readonly history = this.historySignal[0];
+  private readonly setHistory = this.historySignal[1];
   private readonly invitingSignal = createSignal<string | null>(null);
   readonly invitingId = this.invitingSignal[0];
   private readonly setInvitingId = this.invitingSignal[1];
+  private readonly requestingSignal = createSignal<string | null>(null);
+  readonly requestingId = this.requestingSignal[0];
+  private readonly setRequestingId = this.requestingSignal[1];
 
   constructor(private readonly game: GameStateService) {}
 
   mateStatus(playerId: string): SocialTieStatus {
     return this.snapshot().mates[playerId] ?? 'none';
+  }
+
+  accountTie(accountId: string): SocialTieStatus {
+    const snap = this.snapshot();
+    if (snap.friends.some((friend) => friend.accountId === accountId)) return 'friends';
+    if (snap.outgoingRequests.some((request) => request.to.accountId === accountId)) {
+      return 'outgoing';
+    }
+    if (snap.incomingRequests.some((request) => request.from.accountId === accountId)) {
+      return 'incoming';
+    }
+    if (snap.blocked.some((person) => person.accountId === accountId)) return 'blocked';
+    return 'none';
   }
 
   async load(identity: SocialIdentity): Promise<void> {
@@ -54,6 +75,15 @@ export class SocialService {
     this.setSnapshot(next);
   }
 
+  async loadHistory(identity: SocialIdentity): Promise<void> {
+    const body: HistoryMineRequest = {
+      clientId: identity.clientId,
+      initData: identity.initData,
+    };
+    const matches = await this.request<HistoryMatchView[]>('/api/history/mine', body);
+    this.setHistory(matches);
+  }
+
   async requestFriend(playerId: string, identity: SocialIdentity): Promise<void> {
     await this.request('/api/social/friends', {
       playerId,
@@ -63,6 +93,22 @@ export class SocialService {
       avatar: identity.avatar,
     });
     await this.load(identity);
+  }
+
+  async requestFriendFromHistory(accountId: string, identity: SocialIdentity): Promise<void> {
+    this.setRequestingId(accountId);
+    try {
+      await this.request('/api/social/friends', {
+        accountId,
+        clientId: identity.clientId,
+        initData: identity.initData,
+        name: identity.name,
+        avatar: identity.avatar,
+      });
+      await this.load(identity);
+    } finally {
+      this.setRequestingId(null);
+    }
   }
 
   async acceptFriendRequest(id: string, identity: SocialIdentity): Promise<void> {

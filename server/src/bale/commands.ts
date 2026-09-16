@@ -127,19 +127,26 @@ function roomButtons(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>, 
   };
 }
 
-function startReply(ctx: Pick<BotCommandContext, 'botUsername' | 'startLink'>): BotReply {
+function startReply(
+  ctx: Pick<BotCommandContext, 'botUsername' | 'startLink' | 'platform'>,
+): BotReply {
+  const text = [
+    'به راز هیتلر خوش اومدید.',
+    '',
+    'برای پیدا کردن بازی، دکمهٔ پایین رو بزن. با یه کلیک می‌ری سر میز.',
+    '',
+    'خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا:',
+    '@secret_hitler_official',
+    '',
+    'راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.',
+  ].join('\n');
+  // Bale Markdown treats `_` as italic; HTML keeps the channel nick intact.
+  if (ctx.platform === 'telegram') {
+    return { text, reply_markup: playKeyboardFor(ctx) };
+  }
   return {
-    text: [
-      'به راز هیتلر خوش اومدید.',
-      '',
-      'برای شروع، دکمهٔ پایین رو بزن. اگه لینک دعوت داری، همون رو باز کن تا مستقیم بری سر میز.',
-      '',
-      `${markdownSlashCommand('find_game')} — اتاق باز پیدا کن`,
-      '/games — بازی‌های در جریان',
-      '/join CODE — با کد اتاق بیا تو',
-      '/invite — لینک دعوت دوستات',
-      '/create — تو گروه میز باز کن',
-    ].join('\n'),
+    text: escapeHtml(text),
+    parse_mode: 'HTML',
     reply_markup: playKeyboardFor(ctx),
   };
 }

@@ -140,14 +140,16 @@ Reply:
 ```
 به راز هیتلر خوش اومدید.
 
-برای شروع، دکمهٔ پایین رو بزن. اگه لینک دعوت داری، همون رو باز کن تا مستقیم بری سر میز.
+برای پیدا کردن بازی، دکمهٔ پایین رو بزن. با یه کلیک می‌ری سر میز.
 
-/find_game — اتاق باز پیدا کن
-/games — بازی‌های در جریان
-/join CODE — با کد اتاق بیا تو
-/invite — لینک دعوت دوستات
-/create — تو گروه میز باز کن
+خبر، آموزش و چیزای بعدی همه تو کانال می‌آد. بهتره بیای اونجا:
+@secret_hitler_official
+
+راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.
 ```
+
+Bale sends this as HTML so the channel nick’s `_` is not italic Markdown.
+Telegram keeps plain text.
 
 Button: **بازی کن** → mini-app with an empty `startapp`. The client lands on
 home (no room code).

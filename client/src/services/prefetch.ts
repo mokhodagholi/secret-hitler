@@ -1,5 +1,6 @@
 import splashArt from '../assets/splash/hitler-splash.webp';
 import heroImage from '../assets/home/hero.webp';
+import heroFindingImage from '../assets/home/hero-finding.webp';
 import deskImage from '../assets/home/desk.png';
 import liberalBoard from '../assets/boards/liberal.png';
 import fascistBoard from '../assets/boards/fascist.png';
@@ -108,7 +109,14 @@ function tableKitUrls(options: NextStepOptions): string[] {
 }
 
 function homeVisualUrls(avatar: number): string[] {
-  return [heroImage, deskImage, liberalBoard, fascistBoard, avatarImage(avatar)];
+  return [
+    heroImage,
+    heroFindingImage,
+    deskImage,
+    liberalBoard,
+    fascistBoard,
+    avatarImage(avatar),
+  ];
 }
 
 function playerCardUrls(): string[] {

@@ -31,9 +31,13 @@ export const fa = {
   home: {
     play: 'بازی',
     findGame: 'پیدا کردن بازی',
-    finding: 'داریم میز پیدا می‌کنیم…',
+    finding: 'داریم میز پیدا می‌کنیم',
     inviteFriends: 'دعوت دوست',
     playWithFriends: 'بازی با دوستان',
+    history: 'تاریخچه',
+    historyEmpty: 'هنوز بازی‌ای نیست. یه دست که زدین، اینجا می‌آد.',
+    historyWon: 'بردید',
+    historyLost: 'باختید',
     rejoin: 'بازگشت به میز',
     title: 'راز هیتلر',
     tagline: 'یک شب، هزار راز و یک برنده!',
@@ -770,7 +774,7 @@ export const fa = {
   },
   social: {
     friends: 'دوست‌ها',
-    emptyFriends: 'هنوز دوستی ندارید. بعد از بازی می‌تونید از میز اضافه کنید.',
+    emptyFriends: 'هنوز دوستی ندارید. بعد از بازی از میز یا از تاریخچه اضافه کنید.',
     incomingInvites: 'دعوت به میز',
     incomingRequests: 'درخواست دوستی',
     wantsFriend: 'می‌خواد اضافه‌تون کنه.',

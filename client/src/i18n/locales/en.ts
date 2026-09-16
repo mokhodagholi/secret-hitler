@@ -33,9 +33,13 @@ export const en = {
   home: {
     play: 'Play',
     findGame: 'Find Match',
-    finding: 'Finding…',
+    finding: 'Finding',
     inviteFriends: 'Invite friends',
     playWithFriends: 'Play with friends',
+    history: 'History',
+    historyEmpty: 'No matches yet. Play a game, then they show up here.',
+    historyWon: 'You won',
+    historyLost: 'You lost',
     rejoin: 'Return to table',
     title: 'Secret Hitler',
     tagline: 'One night, a thousand secrets, one winner!',
@@ -776,7 +780,7 @@ export const en = {
   },
   social: {
     friends: 'Friends',
-    emptyFriends: 'No friends yet. After a match you can add people from the table.',
+    emptyFriends: 'No friends yet. After a match you can add people from the table, or from history.',
     incomingInvites: 'Table invites',
     incomingRequests: 'Friend requests',
     wantsFriend: 'Wants to add you.',

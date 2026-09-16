@@ -3,6 +3,8 @@ import type {
   CreateRoomRequest,
   CreateRoomResponse,
   FeatureFlags,
+  HistoryMatchView,
+  HistoryMineRequest,
   JoinRoomRequest,
   JoinRoomResponse,
   MatchLeaveRequest,
@@ -19,7 +21,7 @@ import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { TokenStore } from '../rooms/TokenStore';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
-import type { GameHistoryStore } from '../history/GameHistoryStore';
+import type { GameHistoryStore, SavedGame } from '../history/GameHistoryStore';
 import type { ProfileStore } from '../profiles/ProfileStore';
 import type { BotSubscriberStore } from '../bale/BotSubscriberStore';
 import type { ProductTracker } from '../product/ProductTracker';
@@ -439,6 +441,25 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return history.listRecent(limit);
   });
 
+  app.post('/api/history/mine', async (req, reply) => {
+    if (!profileLimiter.allow(req.ip)) {
+      return reply
+        .code(429)
+        .send({ error: 'Too many profile requests. Try again shortly.', code: 'RATE_LIMITED' });
+    }
+    const body = (req.body ?? {}) as HistoryMineRequest;
+    const identified = identifyInitData(
+      typeof body.initData === 'string' ? body.initData : undefined,
+      messengers,
+    );
+    const accountId = joinBanKey(identified, body.clientId);
+    if (!accountId) {
+      return reply.code(400).send({ error: 'A profile is required.', code: 'AUTH_FAILED' });
+    }
+    const games = await history.listForAccount(accountId);
+    return games.map((game) => historyMatchView(game, accountId));
+  });
+
   // Join an existing room by id or code.
   app.post('/api/rooms/:idOrCode/join', async (req, reply) => {
     if (!joinLimiter.allow(req.ip)) {
@@ -533,6 +554,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     tokens,
     sockets,
     recorder,
+    history,
     social: deps.social,
     bale,
     telegram,
@@ -575,6 +597,25 @@ function bindMessengerSeat(
     { roomId, code, playerId, roomName },
     identified.kind,
   );
+}
+
+function historyMatchView(game: SavedGame, accountId: string): HistoryMatchView {
+  const you = game.players.find((player) => player.joinKey === accountId);
+  return {
+    id: game.id,
+    winner: game.winner,
+    playerCount: game.playerCount,
+    endedAt: game.endedAt,
+    youWon: you?.won ?? false,
+    players: game.players.map((player) => ({
+      name: player.name,
+      role: player.role,
+      seat: player.seat,
+      won: player.won,
+      you: player.joinKey === accountId,
+      accountId: player.joinKey && player.joinKey !== accountId ? player.joinKey : null,
+    })),
+  };
 }
 
 function requestInviteLink(

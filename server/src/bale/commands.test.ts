@@ -96,14 +96,23 @@ describe('handleBotText', () => {
     const reply = ctx({ text: '/start' });
     expect(reply.text).toContain('راز هیتلر');
     expect(reply.text).not.toContain('هیتلر مخفی');
-    expect(reply.text).toContain('/find\\_game');
-    expect(reply.text).not.toContain('/find-game');
+    expect(reply.text).toContain('پیدا کردن بازی');
+    expect(reply.text).toContain('@secret_hitler_official');
+    expect(reply.text).toContain('/create');
+    expect(reply.text).not.toContain('/find_game');
+    expect(reply.parse_mode).toBe('HTML');
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
     expect(reply.text).not.toContain('بازی کن');
     expect(reply.text).not.toContain('ble.ir');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=',
     );
+  });
+
+  it('Should keep Telegram /start as plain text', () => {
+    const reply = ctx({ text: '/start', platform: 'telegram' });
+    expect(reply.parse_mode).toBeUndefined();
+    expect(reply.text).toContain('@secret_hitler_official');
   });
 
   it('Should greet a typed start the same as /start', () => {

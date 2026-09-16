@@ -9,6 +9,11 @@
           "kind": "feat",
           "fa": "از خانه می‌توانید دوستان را به میز دعوت کنید.",
           "en": "From home you can invite friends to a table."
+        },
+        {
+          "kind": "feat",
+          "fa": "از خانه می‌توانید بازی‌های قبلی‌تان را ببینید و از آنجا درخواست دوستی بفرستید.",
+          "en": "From home you can open your past matches and send a friend request from there."
         }
       ]
     },
