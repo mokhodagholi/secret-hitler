@@ -196,7 +196,6 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
           return;
         }
 
-        hangTimer = setTimeout(finish, 15_000);
         const urls = criticalBootUrls({
           music: settings.settings.music,
           soundEffects: settings.settings.soundEffects,
@@ -204,9 +203,15 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
           avatar: settings.settings.avatar,
         });
         const bootStarted = Date.now();
+        // Never lift splash on the hang timer before flags settle — publicTable
+        // defaults on, so Home would flash Find Match when the server has it off.
+        const flagsDone = flags.load();
+        hangTimer = setTimeout(() => {
+          void flagsDone.finally(finish);
+        }, 15_000);
         await Promise.all([
           prefetch.boot(urls).catch(() => undefined),
-          flags.load(),
+          flagsDone,
         ]);
         if (cancelled || finished) return;
         // Cached files finish in one tick; keep the lectern until the bar can count 0 → 100.

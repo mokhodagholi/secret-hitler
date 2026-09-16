@@ -104,6 +104,8 @@ export function buildHarness(
     initialPath?: string;
     flags?: Partial<FeatureFlags>;
     flagFetch?: typeof fetch;
+    /** False keeps Find Match dark until a test calls load/markReady. Default true. */
+    flagsReady?: boolean;
   } = {},
 ): Harness {
   if (options.seated) {
@@ -115,6 +117,8 @@ export function buildHarness(
   const game = new GameStateService(socket as unknown as WebSocketService);
   const i18n = new I18nService(() => settings.settings.language);
   const flags = new FeatureFlagService(options.flags, options.flagFetch);
+  // App tests skip BootGate's flags.load(); Home gates Find Match on ready.
+  if (options.flagsReady !== false) flags.markReady();
   const prefetch = new PrefetchService();
   const services: AppServices = {
     nav: new NavigationService(options.initialPath ?? '/'),

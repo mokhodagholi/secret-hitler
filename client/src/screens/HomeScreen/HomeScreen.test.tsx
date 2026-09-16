@@ -73,6 +73,33 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
   });
 
+  it('Should hide Find Match until flags are ready even when publicTable defaults on', () => {
+    const harness = buildHarness({ flags: { publicTable: true }, flagsReady: false });
+    renderWithApp(() => <HomeScreen />, harness);
+
+    expect(screen.queryByRole('button', { name: new RegExp(en.home.findGame) })).toBeNull();
+    expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
+  });
+
+  it('Should swap Find Match for Play when publicTable turns off after mount', async () => {
+    const harness = buildHarness({ flags: { publicTable: true } });
+    renderWithApp(() => <HomeScreen />, harness);
+    expect(findMatchButton()).toBeTruthy();
+
+    harness.services.flags.apply({
+      voice: false,
+      publicTable: false,
+      lobbyKick: false,
+      gameKick: false,
+      onboarding: false,
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: new RegExp(en.home.findGame) })).toBeNull(),
+    );
+    expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
+  });
+
   it('Should queue Find Match as Guest when the profile has no name', async () => {
     const harness = buildHarness({ flags: { publicTable: true } });
     let queuedName = '';

@@ -39,7 +39,9 @@ export function HomeScreen() {
   const { nav, game, i18n, prefetch, animation, settings, miniApp, social, flags } =
     useApp();
   const { formatMessage } = i18n;
-  const matchmaking = () => flags.flags.publicTable;
+  // ready: publicTable defaults on, so a pre-fetch paint would flash Find Match
+  // whenever the server has the queue off (navigate-away remount used to "fix" it).
+  const matchmaking = () => flags.ready() && flags.flags.publicTable;
 
   const publicLobby = () => {
     const view = game.view();

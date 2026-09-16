@@ -30,13 +30,14 @@ returns `{ flags }` rebuilt from the catalog only — never a dump of env.
 
 The client [`FeatureFlagService`](../client/src/services/FeatureFlagService.ts)
 fetches that once at boot (`cache: 'no-store'`). Splash waits for that
-response so screens never paint with a stale default-off catalog. Joining a
-room also applies `flags` from the `authed` WebSocket frame — that is the
-live switch, so a missed HTTP fetch cannot hide in-game chrome. Callers
-read `flags.flags.voice` in JSX (the store) or `flags.enabled('voice')` in
-handlers. A failed or malformed response keeps the defaults (everything
-off). Tests inject a preloaded service (or `{ flags: { voice: true } }` on
-`buildServer`) and do not set `process.env`.
+response so screens never paint with a stale catalog — and Home keeps Find
+Match dark until `ready` is true, because `publicTable` defaults on.
+Joining a room also applies `flags` from the `authed` WebSocket frame — that
+is the live switch, so a missed HTTP fetch cannot hide in-game chrome.
+Callers read `flags.flags.voice` in JSX (the store) or `flags.enabled('voice')`
+in handlers. A failed or malformed response keeps the defaults. Tests inject
+a preloaded service (or `{ flags: { voice: true } }` on `buildServer`) and do
+not set `process.env`.
 
 When `voice` is off, the client hides every mic control and the server rejects
 `voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).

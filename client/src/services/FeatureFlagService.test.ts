@@ -13,6 +13,7 @@ describe('FeatureFlagService', () => {
   it('Should start from catalog defaults', () => {
     const flags = new FeatureFlagService();
     expect(flags.enabled('voice')).toBe(false);
+    expect(flags.ready()).toBe(false);
   });
 
   it('Should apply a successful /api/flags body', async () => {
@@ -23,11 +24,21 @@ describe('FeatureFlagService', () => {
     });
     await flags.load();
     expect(flags.enabled('voice')).toBe(true);
+    expect(flags.ready()).toBe(true);
+  });
+
+  it('Should keep defaults when the request fails and still become ready', async () => {
+    const flags = new FeatureFlagService(DEFAULT_FLAGS, async () => {
+      throw new Error('offline');
+    });
+    await flags.load();
+    expect(flags.enabled('voice')).toBe(false);
+    expect(flags.ready()).toBe(true);
   });
 
   it('Should apply an incoming catalog without fetching', () => {
     const flags = new FeatureFlagService();
-    flags.apply({ voice: true });
+    flags.apply({ ...DEFAULT_FLAGS, voice: true });
     expect(flags.enabled('voice')).toBe(true);
   });
 
@@ -42,26 +53,20 @@ describe('FeatureFlagService', () => {
     expect(flags.enabled('voice')).toBe(true);
   });
 
-  it('Should keep defaults when the request fails', async () => {
-    const flags = new FeatureFlagService(DEFAULT_FLAGS, async () => {
-      throw new Error('offline');
-    });
-    await flags.load();
-    expect(flags.enabled('voice')).toBe(false);
-  });
-
   it('Should keep defaults when the response is not ok or malformed', async () => {
     const failing = new FeatureFlagService(DEFAULT_FLAGS, async () =>
       jsonResponse({ flags: { voice: true } }, 500),
     );
     await failing.load();
     expect(failing.enabled('voice')).toBe(false);
+    expect(failing.ready()).toBe(true);
 
     const malformed = new FeatureFlagService(DEFAULT_FLAGS, async () =>
       jsonResponse({ voice: true }),
     );
     await malformed.load();
     expect(malformed.enabled('voice')).toBe(false);
+    expect(malformed.ready()).toBe(true);
   });
 
   it('Should honor injected initial flags without fetching', () => {
