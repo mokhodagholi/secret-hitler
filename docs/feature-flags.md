@@ -14,6 +14,7 @@ for the flags themselves.
 | `lobbyKick` | `FEATURE_LOBBY_KICK` | off |
 | `gameKick` | `FEATURE_GAME_KICK` | off |
 | `onboarding` | `FEATURE_ONBOARDING` | off |
+| `roomPassword` | `FEATURE_ROOM_PASSWORD` | off |
 
 Adding a flag: one name in `FLAG_NAMES`, one default in `DEFAULT_FLAGS`, one
 `FEATURE_<NAME>` key in [`.env.example`](../.env.example). Unknown `FEATURE_*`
@@ -58,3 +59,8 @@ the server rejects those frames too.
 When `onboarding` is off, the first-run Sit offer and look table stay dark.
 The table itself is client-only (no tutorial HTTP or room). See
 [`onboarding.md`](./onboarding.md).
+
+When `roomPassword` is off, Create hides the password field and the server
+ignores a password on HTTP create. Group `/create` opens an unlocked lobby
+(no DM / fallback password). Join still asks for a password when a room was
+locked while the flag was on.

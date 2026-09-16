@@ -101,7 +101,7 @@ function Field(props: {
 }
 
 function CreateRoomPanel() {
-  const { nav, settings, game, i18n, miniApp } = useApp();
+  const { nav, settings, game, i18n, miniApp, flags } = useApp();
   const { formatMessage } = i18n;
 
   const [roomName, setRoomName] = createSignal('');
@@ -126,7 +126,9 @@ function CreateRoomPanel() {
     try {
       await game.createRoom({
         name: roomName().trim(),
-        password: password().trim() || undefined,
+        password: flags.enabled('roomPassword')
+          ? password().trim() || undefined
+          : undefined,
         hostName: resolvedName(),
         avatar: settings.settings.avatar,
         clientId: settings.settings.profileId,
@@ -153,14 +155,16 @@ function CreateRoomPanel() {
         onInput={setRoomName}
         onSubmit={submit}
       />
-      <Field
-        label={formatMessage('createRoom.password')}
-        placeholder={formatMessage('createRoom.passwordPlaceholder')}
-        type="password"
-        value={password()}
-        onInput={setPassword}
-        onSubmit={submit}
-      />
+      <Show when={flags.enabled('roomPassword')}>
+        <Field
+          label={formatMessage('createRoom.password')}
+          placeholder={formatMessage('createRoom.passwordPlaceholder')}
+          type="password"
+          value={password()}
+          onInput={setPassword}
+          onSubmit={submit}
+        />
+      </Show>
       <Show when={profileMissing()}>
         <Field
           label={formatMessage('createRoom.yourName')}

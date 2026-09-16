@@ -92,6 +92,7 @@ describe('HomeScreen', () => {
       lobbyKick: false,
       gameKick: false,
       onboarding: false,
+      roomPassword: false,
     });
 
     await waitFor(() =>

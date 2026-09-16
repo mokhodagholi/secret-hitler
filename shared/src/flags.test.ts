@@ -44,6 +44,12 @@ describe('parseFeatureFlags', () => {
     expect(parseFeatureFlags({ FEATURE_ONBOARDING: 'true' }).onboarding).toBe(
       true,
     );
+    expect(parseFeatureFlags({ FEATURE_ROOM_PASSWORD: 'true' }).roomPassword).toBe(
+      true,
+    );
+    expect(parseFeatureFlags({ FEATURE_ROOMPASSWORD: 'true' }).roomPassword).toBe(
+      false,
+    );
   });
 });
 

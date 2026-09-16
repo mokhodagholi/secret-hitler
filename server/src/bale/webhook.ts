@@ -117,6 +117,8 @@ export interface BaleTableHooks {
   /** Pause between broadcast DMs. Tests leave this at 0. */
   broadcastDelayMs?: number;
   product?: ProductTracker;
+  /** When false, group `/create` opens an unlocked lobby. */
+  roomPassword?: boolean;
 }
 
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
@@ -728,19 +730,22 @@ async function handleGroupCreate(
     chatId: chat.id,
     fromId,
     creatorName: firstName ?? '',
+    roomPassword: table.roomPassword === true,
   });
   const posted = await sendChat(req, bale, chat.id, created.reply);
-  if ('password' in created && posted?.message_id != null) {
+  if ('code' in created && posted?.message_id != null) {
     const entry = repo.getByCode(created.code);
     entry?.room.bindOriginMessage(posted.message_id);
     if (entry) void table.sockets.persistRoom(entry.room.id);
   }
-  if (!('password' in created)) return;
+  if (!('code' in created)) return;
 
   const entry = repo.getByCode(created.code);
   if (entry) {
     table.product?.groupRoomCreated(entry.room, `${messengerKindOf(bale)}:${fromId}`);
   }
+
+  if (!('password' in created)) return;
 
   const dm = createPasswordDm({
     name: firstName?.trim() || 'میزبان',

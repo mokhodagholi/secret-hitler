@@ -20,7 +20,7 @@ describe('RoomsScreen', () => {
     rs.restoreAllMocks();
   });
   it('Should keep create-room fields from inviting browser suggest', () => {
-    const harness = buildHarness();
+    const harness = buildHarness({ flags: { roomPassword: true } });
     renderWithApp(() => <RoomsScreen initialTab="create" />, harness);
 
     const name = screen.getByLabelText(en.createRoom.roomName);
@@ -31,6 +31,14 @@ describe('RoomsScreen', () => {
     const password = screen.getByLabelText(en.createRoom.password);
     expect(password.getAttribute('autocomplete')).toBe('new-password');
     expect(password.getAttribute('spellcheck')).toBe('false');
+  });
+
+  it('Should hide the create password field when roomPassword is off', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <RoomsScreen initialTab="create" />, harness);
+
+    expect(screen.getByLabelText(en.createRoom.roomName)).toBeTruthy();
+    expect(screen.queryByLabelText(en.createRoom.password)).toBeNull();
   });
 
   it('Should open Join before Create when no tab is asked for', () => {
@@ -137,7 +145,10 @@ describe('RoomsScreen', () => {
   });
 
   it('Should ask for a password when a share-link room is locked', async () => {
-    const harness = buildHarness({ initialPath: '/join/ABC123' });
+    const harness = buildHarness({
+      initialPath: '/join/ABC123',
+      flags: { roomPassword: true },
+    });
     harness.services.settings.set('profileName', 'Ana');
     let attempts = 0;
     harness.services.game.joinRoom = async (_idOrCode, request) => {

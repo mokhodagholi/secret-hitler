@@ -10,16 +10,21 @@ import {
   type BotReply,
 } from './commands';
 
-export interface GroupRoomCreated {
-  reply: BotReply;
-  password: string;
-  code: string;
-}
+export type GroupRoomCreated =
+  | {
+      reply: BotReply;
+      password: string;
+      code: string;
+    }
+  | {
+      reply: BotReply;
+      code: string;
+    };
 
 /**
- * Open a locked lobby named after the group sender. Members of `chatId`
- * skip the password on join; the plaintext is only returned so the bot
- * can DM it (we store the hash).
+ * Open a lobby named after the group sender. When `roomPassword` is on, the
+ * lobby is locked: members of `chatId` skip the password on join; the
+ * plaintext is only returned so the bot can DM it (we store the hash).
  */
 export function createGroupRoom(params: {
   repo: RoomRepository;
@@ -32,13 +37,15 @@ export function createGroupRoom(params: {
   chatId: number;
   fromId: number;
   creatorName: string;
+  roomPassword?: boolean;
 }): GroupRoomCreated | { reply: BotReply } {
   const creatorName = params.creatorName.trim() || 'میزبان';
-  const password = makeRoomCode();
+  const lockWithPassword = params.roomPassword === true;
+  const password = lockWithPassword ? makeRoomCode() : null;
   const platform = params.platform ?? 'bale';
   const entry = params.repo.create({
     name: creatorName,
-    passwordHash: hashPassword(password),
+    passwordHash: password ? hashPassword(password) : null,
     originChatId: params.chatId,
     originPlatform: platform,
     timerEnabled: true,
@@ -64,14 +71,18 @@ export function createGroupRoom(params: {
   );
   void params.sockets.persistRoom(entry.room.id);
 
+  const reply = createGroupPostedReply({
+    creatorName,
+    code: entry.room.code,
+    botUsername: params.botUsername,
+    startLink: params.startLink,
+    platform,
+  });
+  if (password == null) {
+    return { reply, code: entry.room.code };
+  }
   return {
-    reply: createGroupPostedReply({
-      creatorName,
-      code: entry.room.code,
-      botUsername: params.botUsername,
-      startLink: params.startLink,
-      platform,
-    }),
+    reply,
     password,
     code: entry.room.code,
   };

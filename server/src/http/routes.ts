@@ -119,6 +119,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     subscribers,
     broadcastDelayMs: deps.broadcastDelayMs,
     product,
+    roomPassword: flags.roomPassword,
   };
   const messengers = configuredMessengers(bale, telegram);
   registerBaleBodyParser(app);
@@ -338,9 +339,10 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       return reply.code(400).send({ error: 'name and hostName are required' });
     }
 
-    const passwordHash = body.password?.trim()
-      ? hashPassword(body.password.trim())
-      : null;
+    const passwordHash =
+      flags.roomPassword && body.password?.trim()
+        ? hashPassword(body.password.trim())
+        : null;
 
     const identified = identifyInitData(body.initData, messengers);
     const hostRuntime = identified

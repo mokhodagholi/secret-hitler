@@ -126,7 +126,9 @@ describe('room HTTP endpoints', () => {
   });
 
   it('Should reject a wrong password but accept the right one', async () => {
-    const { app } = await buildServer();
+    const { app } = await buildServer({
+      flags: { ...DEFAULT_FLAGS, roomPassword: true },
+    });
     const created = (await createRoom(app, { password: 'secret' })).body;
 
     const wrong = await httpJson(app, 'POST', `/api/rooms/${created.code}/join`, {

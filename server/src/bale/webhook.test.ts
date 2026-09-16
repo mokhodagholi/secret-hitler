@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { createHmac } from 'node:crypto';
+import { DEFAULT_FLAGS } from '@secret-hitler/shared';
 import { buildServer } from '../app';
 import { httpJson } from '../../test/test-utils';
 import { BaleSeatIndex } from './BaleSeatIndex';
@@ -14,6 +15,7 @@ import {
 } from './webhook';
 
 const TOKEN = '123456:test-token';
+const ROOM_PASSWORD_ON = { ...DEFAULT_FLAGS, roomPassword: true };
 
 async function waitUntil(
   predicate: () => boolean | Promise<boolean>,
@@ -350,6 +352,7 @@ describe('Bale webhook — group /create', () => {
   it('Should open a named, locked table from /create in a group', async () => {
     const sent: Array<{ chat_id: number | string; text: string; reply_markup?: unknown }> = [];
     const { app, repo } = await buildServer({
+      flags: ROOM_PASSWORD_ON,
       bale: {
         bot: {
           sendMessage: async (params) => {
@@ -404,6 +407,7 @@ describe('Bale webhook — group /create', () => {
   it('Should post the password in the group when the creator cannot be DMed', async () => {
     const sent: Array<{ chat_id: number | string; text: string }> = [];
     const { app, repo } = await buildServer({
+      flags: ROOM_PASSWORD_ON,
       bale: {
         bot: {
           sendMessage: async (params) => {
@@ -438,6 +442,7 @@ describe('Bale webhook — group /create', () => {
     const sent: Array<{ chat_id: number | string; text: string }> = [];
     const members = new Set<number>([9, 10]);
     const { app, repo, seats } = await buildServer({
+      flags: ROOM_PASSWORD_ON,
       bale: {
         bot: {
           sendMessage: async (params) => {
