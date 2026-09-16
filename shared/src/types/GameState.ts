@@ -313,7 +313,7 @@ export const WS_IDLE_MS = 40_000;
 /** How often the server looks for idle sockets. */
 export const WS_IDLE_CHECK_MS = 10_000;
 /** Pause between a player's table-chat messages — one line, then wait. */
-export const CHAT_SLOWMODE_MS = 7_000;
+export const CHAT_SLOWMODE_MS = 2_000;
 
 /** Yes votes needed to remove a player — half the living table, rounded up. */
 export function kickVoteYesNeeded(livingCount: number): number {

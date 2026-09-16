@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.7.1",
+      "bump": "patch",
+      "date": "2026-09-17",
+      "changes": [
+        {
+          "kind": "fix",
+          "fa": "فاصلهٔ بین پیام‌های چت میز کوتاه‌تر شد؛ دو ثانیه به‌جای هفت ثانیه.",
+          "en": "Table chat slowmode is shorter — two seconds between messages instead of seven."
+        }
+      ]
+    },
+    {
       "version": "0.7.0",
       "bump": "minor",
       "date": "2026-09-16",
