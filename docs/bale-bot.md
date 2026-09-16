@@ -160,9 +160,9 @@ Reply:
 
 Buttons: **بازی کن** → mini-app with an empty `startapp` (home, no room code).
 **کانال** → `https://ble.ir/secret_hitler_official` (Telegram: `t.me/…`).
-The body also shows the path (`ble.ir/…`, Telegram: `t.me/…`); underscores are
-Markdown-escaped on Bale so `sendMessage` does not fail. The button stays the
-tap target.
+The body also shows the path (`ble.ir/…`, Telegram: `t.me/…`). Bare
+`ble.ir` / `t.me` paths stay unescaped like `@username` — escaping their `_`
+prints visible `\_` on Bale. The button stays the tap target.
 
 **`/start CODE`** — if the argument is a 6-character room code, this is
 exactly `/join CODE`. That is how a classic `ble.ir/bot?start=CODE` payload
@@ -452,11 +452,11 @@ A one-time SQL backfill copies existing `profiles.bale_user_id` /
 reach Telegram sitters.
 
 Each player DM has the same **بازی کن** button as `/start`. On Bale the body
-is Markdown-escaped so a `ble.ir/secret_hitler_official` path does not make
-`sendMessage` fail (underscores become `\_` in the wire text). `@username`
-mentions stay raw — escaping them prints `\_` and the mention dies. People who
-blocked the bot are dropped from the list. Transient failures (rate limits)
-are **not** drops — only hard 403 block / “can’t initiate” remove a chat.
+is Markdown-escaped for command names and stray `_` * ` [, but `@username`
+mentions and bare `ble.ir` / `t.me` paths stay raw — escaping their `_` prints
+visible `\_`. People who blocked the bot are dropped from the list. Transient
+failures (rate limits) are **not** drops — only hard 403 block / “can’t
+initiate” remove a chat.
 
 Empty list:
 

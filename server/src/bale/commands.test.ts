@@ -115,7 +115,8 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('راز هیتلر');
     expect(reply.text).not.toContain('هیتلر مخفی');
     expect(reply.text).toContain('پیدا کردن بازی');
-    expect(reply.text).toContain('ble.ir/secret\\_hitler\\_official');
+    expect(reply.text).toContain('ble.ir/secret_hitler_official');
+    expect(reply.text).not.toContain('\\_');
     expect(reply.text).toContain('/create');
     expect(reply.text).not.toContain('/find_game');
     expect(reply.parse_mode).toBeUndefined();
@@ -268,12 +269,13 @@ describe('broadcast copy', () => {
     expect(broadcastHelpReply().text).toContain('متن');
   });
 
-  it('Should escape underscores in a ble.ir path so Bale Markdown accepts it', () => {
+  it('Should leave ble.ir paths unescaped so underscores are not shown as \\_', () => {
     const reply = broadcastPlayerReply(
       { botUsername: BOT, platform: 'bale' },
       'شناسه درست: ble.ir/secret_hitler_official',
     );
-    expect(reply.text).toContain('secret\\_hitler\\_official');
+    expect(reply.text).toContain('ble.ir/secret_hitler_official');
+    expect(reply.text).not.toContain('\\_');
     expect(reply.parse_mode).toBeUndefined();
   });
 
@@ -295,6 +297,7 @@ describe('lobby fill copy', () => {
       botUsername: BOT,
       platform: 'bale',
     });
+    expect(reply.text).toContain('منتظرته');
     expect(reply.text).toContain('3 نفره');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.text).toBe('ورود به اتاق');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toContain('ABC123');

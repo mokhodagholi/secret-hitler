@@ -76,18 +76,21 @@ function linkOf(
 
 /**
  * Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail.
- * `@username` mentions stay raw — escaping their `_` prints `\_` and kills the
- * tap (e.g. `@secret\_hitler\_official`).
+ * `@username` mentions and bare `ble.ir` / `t.me` paths stay raw — escaping
+ * their `_` prints visible `\_` (e.g. `secret\_hitler\_official`).
  */
 export function escapeBaleMarkdown(text: string): string {
-  const mentions: string[] = [];
-  const withPlaceholders = text.replace(/@[A-Za-z][A-Za-z0-9_]{4,31}\b/g, (match) => {
-    const index = mentions.length;
-    mentions.push(match);
-    return `\u0000M${index}\u0000`;
-  });
+  const kept: string[] = [];
+  const hold = (match: string) => {
+    const index = kept.length;
+    kept.push(match);
+    return `\u0000K${index}\u0000`;
+  };
+  const withPlaceholders = text
+    .replace(/@[A-Za-z][A-Za-z0-9_]{4,31}\b/g, hold)
+    .replace(/\b(?:ble\.ir|t\.me)\/[A-Za-z0-9_]+\b/g, hold);
   const escaped = withPlaceholders.replace(/([_*`\[\]])/g, '\\$1');
-  return escaped.replace(/\u0000M(\d+)\u0000/g, (_, index) => mentions[Number(index)] ?? '');
+  return escaped.replace(/\u0000K(\d+)\u0000/g, (_, index) => kept[Number(index)] ?? '');
 }
 
 /** Slash command as Bale Markdown. `_` must be escaped or sendMessage fails. */
@@ -175,7 +178,7 @@ function startReply(
     '',
     'راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.',
   ].join('\n');
-  // Path underscores must be escaped for Bale Markdown; button stays the tap target.
+  // Channel path stays raw (see escapeBaleMarkdown); button stays the tap target.
   if (ctx.platform === 'telegram') {
     return { text, reply_markup: startKeyboardFor(ctx) };
   }
@@ -298,8 +301,8 @@ export function lobbyFillInviteReply(params: {
 }): BotReply {
   const link = linkOf(params, params.code);
   const raw = [
-    `میز ${params.seats} نفره منتظره.`,
-    'بیا صندلی بگیر تا بازی شروع بشه.',
+    `یه میز ${params.seats} نفره منتظرته.`,
+    'بیا تو اتاق تا بازی زودتر شروع بشه.',
   ].join('\n');
   return {
     text: params.platform === 'telegram' ? raw : escapeBaleMarkdown(raw),
@@ -457,7 +460,7 @@ export function broadcastPlayerReply(
   if (ctx.platform === 'telegram') {
     return { text: trimmed, reply_markup: playKeyboardFor(ctx) };
   }
-  // Same Markdown rule as /start — escape `_` so ble.ir/… paths do not 500.
+  // Mentions and ble.ir / t.me paths stay raw; other Markdown specials are escaped.
   return {
     text: escapeBaleMarkdown(trimmed),
     reply_markup: playKeyboardFor(ctx),
