@@ -52,6 +52,7 @@ the Bale HTTP client the server embeds. Table voice (mediasoup) ships dark behin
 | Scrollbars | `client/docs/scroll.md` + `client/src/styles/_mixins.scss` |
 | Native feel (not a website) | `client/docs/native-feel.md` + `client/src/styles/global.scss` |
 | Ravi narrator | `docs/ravi.md` + `client/src/services/RaviService.ts` |
+| Hands-on tutorial / first table | `docs/onboarding.md` |
 | Player-facing changelog | `docs/changelog.md` + `client/src/changelog/releases.json` |
 | Tests (how to write) | `docs/testing.md` + that package's `test/` |
 

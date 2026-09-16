@@ -1,5 +1,17 @@
 {
-  "releases": [
+      "releases": [
+    {
+      "version": "0.6.0",
+      "bump": "minor",
+      "date": "2026-09-16",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "روی پیدا کردن بازی می‌توانید ببینید چند نفر در صف هستند.",
+          "en": "Find Match now shows how many people are already waiting."
+        }
+      ]
+    },
     {
       "version": "0.5.0",
       "bump": "minor",

@@ -239,10 +239,24 @@ export class GameStateService {
     if (!response.ok) {
       throw new RoomApiError('NETWORK', 'Could not load Find Match.');
     }
-    const body = (await response.json()) as MatchOccupancy;
-    this.setMatchWaiting(body.waiting);
-    this.setMatchMax(body.max);
-    return body;
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new RoomApiError('NETWORK', 'Could not load Find Match.');
+    }
+    if (
+      typeof body !== 'object' ||
+      body === null ||
+      typeof (body as MatchOccupancy).waiting !== 'number' ||
+      typeof (body as MatchOccupancy).max !== 'number'
+    ) {
+      throw new RoomApiError('NETWORK', 'Could not load Find Match.');
+    }
+    const occupancy = body as MatchOccupancy;
+    this.setMatchWaiting(occupancy.waiting);
+    this.setMatchMax(occupancy.max);
+    return occupancy;
   }
 
   async queueMatch(request: MatchQueueRequest): Promise<MatchQueueResponse> {

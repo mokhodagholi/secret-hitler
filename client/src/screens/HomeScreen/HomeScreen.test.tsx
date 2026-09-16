@@ -12,6 +12,14 @@ import { WaitingRoomScreen } from '../WaitingRoomScreen/WaitingRoomScreen';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, makeView, renderWithApp } from '../../../test/test-utils';
 
+function findMatchButton() {
+  return screen.getByRole('button', { name: new RegExp(en.home.findGame) });
+}
+
+function findingButton() {
+  return screen.getByRole('button', { name: new RegExp(en.home.finding) });
+}
+
 describe('HomeScreen', () => {
   afterEach(() => {
     rs.restoreAllMocks();
@@ -32,10 +40,10 @@ describe('HomeScreen', () => {
       harness,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
+    fireEvent.click(findMatchButton());
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     expect(harness.services.nav.screen()).toBe('home');
-    expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy();
+    expect(findMatchButton()).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Join Room' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Create Room' })).toBeNull();
   });
@@ -55,9 +63,9 @@ describe('HomeScreen', () => {
     });
     renderWithApp(() => <HomeScreen />, harness);
 
-    fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
+    fireEvent.click(findMatchButton());
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: en.home.finding })).toBeTruthy(),
+      expect(findingButton()).toBeTruthy(),
     );
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.game.queued()).toBe(true);
@@ -79,7 +87,7 @@ describe('HomeScreen', () => {
     });
     renderWithApp(() => <HomeScreen />, harness);
 
-    fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
+    fireEvent.click(findMatchButton());
     await waitFor(() => expect(harness.services.game.queued()).toBe(true));
     expect(queuedName).toBe(en.home.guest);
     expect(harness.services.nav.screen()).toBe('home');
@@ -103,20 +111,45 @@ describe('HomeScreen', () => {
     });
     renderWithApp(() => <HomeScreen />, harness);
 
-    fireEvent.click(screen.getByRole('button', { name: en.home.findGame }));
+    fireEvent.click(findMatchButton());
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: en.home.finding })).toBeTruthy(),
+      expect(findingButton()).toBeTruthy(),
     );
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.game.queued()).toBe(true);
     expect(screen.queryByRole('button', { name: en.home.inviteFriends })).toBeNull();
-    expect(screen.queryByText('1/6')).toBeNull();
-    expect(screen.queryByText('0/6')).toBeNull();
+    expect(screen.getByText('1/6')).toBeTruthy();
     const findingPortrait = document.querySelector(`img[src="${heroFindingImage}"]`);
     expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();
     expect(findingPortrait).toBeTruthy();
     expect(findingPortrait?.className).toContain('heroImageFinding');
     expect(findingPortrait?.parentElement?.className).toContain('heroFinding');
+  });
+
+  it('Should show how many people are waiting on Find Match', async () => {
+    const harness = buildHarness({ flags: { publicTable: true } });
+    harness.services.settings.set('profileName', 'Ana');
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/api/match/queue')) {
+        return new Response(
+          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 4, max: 6 }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.includes('/api/match')) {
+        return new Response(JSON.stringify({ waiting: 3, max: 6 }), { status: 200 });
+      }
+      return new Response('[]', { status: 200 });
+    });
+    renderWithApp(() => <HomeScreen />, harness);
+
+    await waitFor(() => expect(screen.getByText('3/6')).toBeTruthy());
+    fireEvent.click(findMatchButton());
+    await waitFor(() => expect(findingButton()).toBeTruthy());
+    expect(screen.getByText('4/6')).toBeTruthy();
+    harness.socket.emit({ type: 'match:status', waiting: 5, max: 6 });
+    expect(screen.getByText('5/6')).toBeTruthy();
   });
 
   it('Should ask everyone to Accept when a reserved table is full', () => {
@@ -188,7 +221,7 @@ describe('HomeScreen', () => {
     const harness = buildHarness();
     renderWithApp(() => <HomeScreen />, harness);
 
-    expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy();
+    expect(findMatchButton()).toBeTruthy();
     expect(screen.getByRole('button', { name: en.home.inviteFriends })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.home.playWithFriends })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.support.title })).toBeTruthy();
@@ -197,7 +230,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('button', { name: en.home.history })).toBeTruthy();
     expect(screen.getByText(en.nav.rules)).toBeTruthy();
     expect(screen.getAllByRole('button')).toHaveLength(7);
-    expect(screen.queryByText('0/6')).toBeNull();
+    expect(screen.getByText('0/6')).toBeTruthy();
     const findingPortrait = document.querySelector(`img[src="${heroFindingImage}"]`);
     expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();
     expect(findingPortrait).toBeTruthy();
@@ -258,7 +291,7 @@ describe('HomeScreen', () => {
     harness.pushState(makeView());
 
     expect(screen.getByRole('button', { name: en.home.rejoin })).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy();
+    expect(findMatchButton()).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.home.rejoin }));
     expect(harness.services.nav.screen()).toBe('waiting-room');
   });
@@ -298,7 +331,7 @@ describe('HomeScreen', () => {
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(screen.queryByRole('button', { name: en.home.rejoin })).toBeNull();
-    expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy();
+    expect(findMatchButton()).toBeTruthy();
   });
 
   it('Should list friends above Find Match and invite one with a tap', async () => {

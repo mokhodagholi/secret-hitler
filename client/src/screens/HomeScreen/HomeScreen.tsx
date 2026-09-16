@@ -26,6 +26,8 @@ const SUPPORT_ROTATE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 2_800;
 const SUPPORT_FADE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 0 : 220;
+const MATCH_POLL_MS =
+  import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 4_000;
 
 /**
  * Lobby splash: Hitler at the desk, Find Match on the table, Play with
@@ -104,6 +106,7 @@ export function HomeScreen() {
   async function enterMatch(): Promise<void> {
     if (game.queued()) {
       await game.leaveMatchQueue();
+      void game.loadMatchOccupancy().catch(() => undefined);
       return;
     }
     if (publicLobby()) {
@@ -135,6 +138,15 @@ export function HomeScreen() {
     return Math.max(0, Math.ceil((choice.endsAt - nowMs()) / 1000));
   };
 
+  const matchOccupancy = () =>
+    formatMessage('home.matchOccupancy', {
+      waiting: game.matchWaiting(),
+      max: game.matchMax(),
+    });
+
+  const findMatchLabel = () =>
+    formatMessage(finding() ? 'home.finding' : 'home.findGame');
+
   const [supportIndex, setSupportIndex] = createSignal(0);
   const [supportFading, setSupportFading] = createSignal(false);
 
@@ -145,6 +157,14 @@ export function HomeScreen() {
   });
 
   onMount(() => {
+    void game.loadMatchOccupancy().catch(() => undefined);
+    const poll = setInterval(() => {
+      // Queued seats already get match:status on the socket.
+      if (game.queued()) return;
+      void game.loadMatchOccupancy().catch(() => undefined);
+    }, MATCH_POLL_MS);
+    onCleanup(() => clearInterval(poll));
+
     const tick = setInterval(() => {
       if (!animation.motionEnabled() || SUPPORT_FADE_MS === 0) {
         setSupportIndex((index) => (index + 1) % SUPPORT_LABELS.length);
@@ -290,7 +310,7 @@ export function HomeScreen() {
                 [styles.cta]: true,
                 [styles.ctaFinding]: finding(),
               }}
-              aria-label={formatMessage(finding() ? 'home.finding' : 'home.findGame')}
+              aria-label={`${findMatchLabel()} ${matchOccupancy()}`}
               onClick={() => void enterMatch()}
             >
               <span
@@ -300,7 +320,7 @@ export function HomeScreen() {
                 }}
                 dir="auto"
               >
-                {formatMessage(finding() ? 'home.finding' : 'home.findGame')}
+                {findMatchLabel()}
                 <Show when={finding()}>
                   <span class={styles.ctaDots} aria-hidden="true">
                     <span>.</span>
@@ -308,6 +328,9 @@ export function HomeScreen() {
                     <span>.</span>
                   </span>
                 </Show>
+              </span>
+              <span class={styles.ctaOccupancy} dir="ltr">
+                {matchOccupancy()}
               </span>
             </button>
           </div>

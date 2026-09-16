@@ -32,6 +32,7 @@ export const fa = {
     play: 'بازی',
     findGame: 'پیدا کردن بازی',
     finding: 'داریم میز پیدا می‌کنیم',
+    matchOccupancy: '{waiting}/{max}',
     inviteFriends: 'دعوت دوست',
     playWithFriends: 'بازی با دوستان',
     history: 'تاریخچه',

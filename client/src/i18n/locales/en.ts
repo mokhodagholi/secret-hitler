@@ -34,6 +34,7 @@ export const en = {
     play: 'Play',
     findGame: 'Find Match',
     finding: 'Finding',
+    matchOccupancy: '{waiting}/{max}',
     inviteFriends: 'Invite friends',
     playWithFriends: 'Play with friends',
     history: 'History',

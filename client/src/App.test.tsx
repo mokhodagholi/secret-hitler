@@ -43,7 +43,7 @@ describe('App — first-run guide', () => {
     const harness = buildHarness();
     render(() => <App services={harness.services} />);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(en.home.findGame) })).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
     expect(screen.queryByText(en.tutorial.announce)).toBeNull();
   });
@@ -52,7 +52,7 @@ describe('App — first-run guide', () => {
     const harness = buildHarness({ seated: true });
     render(() => <App services={harness.services} />);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: en.home.findGame })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(en.home.findGame) })).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.tutorial.announcing()).toBe(false);
   });
