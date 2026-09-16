@@ -65,6 +65,14 @@ describe('LobbyFillService', () => {
         (event) => event.name === 'lobby_fill_invite' && event.userKey === 'bale:42',
       ),
     ).toBe(true);
+    const wave = product.events.find((event) => event.name === 'lobby_fill_wave');
+    expect(wave?.payload).toMatchObject({
+      seats: 3,
+      invited: 1,
+      failed: 0,
+      candidates: 1,
+      stop: 'done',
+    });
 
     service.dispose();
     await app.close();
@@ -117,6 +125,77 @@ describe('LobbyFillService', () => {
     await service.sweep();
 
     expect(sent).toEqual([]);
+    expect(product.events.some((event) => event.name === 'lobby_fill_wave')).toBe(false);
+    expect(product.events.some((event) => event.name === 'lobby_fill_invite')).toBe(false);
+    service.dispose();
+    await app.close();
+  });
+
+  it('Should record fail and wave when the messenger rejects a DM', async () => {
+    const product = new InMemoryProductStore();
+    const now = Date.now();
+    await product.recordEvent({
+      name: 'find_match',
+      at: new Date(now - 20 * 60_000),
+      platform: 'bale',
+      userKey: 'bale:42',
+    });
+
+    const bot: BaleMessenger = {
+      sendMessage: async () => {
+        const error = new Error('Too Many Requests') as Error & { errorCode: number };
+        error.errorCode = 429;
+        throw error;
+      },
+    };
+
+    const { app, repo, sockets } = await buildServer({
+      flags: { ...DEFAULT_FLAGS, lobbyFill: false },
+      product,
+    });
+
+    let clock = now;
+    const service = new LobbyFillService({
+      repo,
+      sockets,
+      product,
+      bale: {
+        bot,
+        botToken: 't',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+      now: () => clock,
+      sendDelayMs: 0,
+    });
+
+    const entry = repo.create({ name: 'Fill me' });
+    entry.engine.addPlayer('A', false, 0, 'bale:1');
+    entry.engine.addPlayer('B', false, 0, 'bale:2');
+    entry.engine.addPlayer('C', false, 0, 'bale:3');
+
+    await service.sweep();
+    clock += LOBBY_FILL.waitBeforeInviteMs + 1;
+    await service.sweep();
+
+    expect(
+      product.events.some(
+        (event) =>
+          event.name === 'lobby_fill_fail' &&
+          event.userKey === 'bale:42' &&
+          event.payload?.reason === 'rate_limit',
+      ),
+    ).toBe(true);
+    expect(
+      product.events.some(
+        (event) =>
+          event.name === 'lobby_fill_wave' &&
+          event.payload?.invited === 0 &&
+          event.payload?.failed === 1,
+      ),
+    ).toBe(true);
+    expect(product.events.some((event) => event.name === 'lobby_fill_invite')).toBe(false);
+
     service.dispose();
     await app.close();
   });

@@ -13,6 +13,8 @@ export const PRODUCT_EVENT_NAMES = [
   'lobby_died',
   'game_abandoned',
   'lobby_fill_invite',
+  'lobby_fill_fail',
+  'lobby_fill_wave',
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];

@@ -53,9 +53,29 @@ Ranked from `product_events` (`listWarmInviteTargets` /
 | Already invited for this room this process | Per-room dedupe |
 | Cold `/start` only | Low convert; not worth a seat ping |
 
-Successful sends record `lobby_fill_invite` on `product_events` (cooldown +
-analytics). Hard 403 blocks drop the chat from `bot_subscribers`; **429 rate
-limits do not**.
+Successful sends record `lobby_fill_invite`. Every wave also records
+`lobby_fill_wave` (seats, limit, candidates, invited, failed, stop). Failed DMs
+record `lobby_fill_fail` with `reason`: `rate_limit` | `blocked` |
+`bad_user_key` | `other`. Hard 403 blocks drop the chat from `bot_subscribers`;
+**429 rate limits do not**.
+
+### Measurement queries
+
+```sql
+-- Invites and conversion in the last day
+SELECT COUNT(*) FILTER (WHERE name = 'lobby_fill_invite') AS invited,
+       COUNT(*) FILTER (WHERE name = 'lobby_fill_fail') AS failed,
+       COUNT(*) FILTER (WHERE name = 'lobby_fill_wave') AS waves
+FROM product_events
+WHERE at > NOW() - INTERVAL '1 day'
+  AND name LIKE 'lobby_fill_%';
+
+-- Empty warm pool vs delivered waves
+SELECT payload->>'stop' AS stop, COUNT(*)
+FROM product_events
+WHERE name = 'lobby_fill_wave'
+GROUP BY 1;
+```
 
 ## Flag
 

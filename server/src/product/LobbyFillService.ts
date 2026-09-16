@@ -26,6 +26,10 @@ interface NeedyRoomState {
   invited: Set<string>;
 }
 
+type FillFailReason = 'rate_limit' | 'blocked' | 'bad_user_key' | 'other';
+
+type WaveStopReason = 'done' | 'no_candidates' | 'lobby_gone' | 'table_full';
+
 /**
  * When a lobby sits at 3–4 seats, DM a few warm messenger users with a deep
  * link into that room. Gated by FEATURE_LOBBY_FILL. See docs/lobby-fill.md.
@@ -99,8 +103,9 @@ export class LobbyFillService {
       const limit = invitesForWave(seats);
       if (limit <= 0) continue;
 
-      const sent = await this.inviteWave(entry.room.code, entry.room.id, seats, state, limit, now);
-      if (sent > 0) state.lastWaveAt = now;
+      await this.inviteWave(entry.room.code, entry.room.id, seats, state, limit, now);
+      // Always cool down after an attempt so empty warm pools do not hammer every sweep.
+      state.lastWaveAt = now;
     }
 
     for (const roomId of [...this.needy.keys()]) {
@@ -115,15 +120,22 @@ export class LobbyFillService {
     state: NeedyRoomState,
     limit: number,
     nowMs: number,
-  ): Promise<number> {
+  ): Promise<void> {
     const exclude = this.busyUserKeys();
     for (const userKey of state.invited) exclude.add(userKey);
 
     let sent = 0;
+    let failed = 0;
+    let candidates = 0;
+    let stop: WaveStopReason = 'no_candidates';
+
     for (const runtime of this.runtimes()) {
       const kind = messengerKindOf(runtime);
       const remaining = limit - sent;
-      if (remaining <= 0) break;
+      if (remaining <= 0) {
+        stop = 'done';
+        break;
+      }
 
       const targets = await this.product.listWarmInviteTargets({
         platform: kind,
@@ -134,20 +146,53 @@ export class LobbyFillService {
         excludeUserKeys: exclude,
         limit: remaining,
       });
+      candidates += targets.length;
 
       for (const userKey of targets) {
         const live = this.repo.get(roomId);
-        if (!live || live.room.phase !== Phase.Lobby) return sent;
-        if (live.room.players.length >= 5) return sent;
+        if (!live || live.room.phase !== Phase.Lobby) {
+          stop = 'lobby_gone';
+          await this.recordWave(roomCode, seats, limit, candidates, sent, failed, stop, nowMs);
+          return;
+        }
+        if (live.room.players.length >= 5) {
+          stop = 'table_full';
+          await this.recordWave(roomCode, seats, limit, candidates, sent, failed, stop, nowMs);
+          return;
+        }
 
-        const ok = await this.sendInvite(runtime, kind, userKey, roomCode, seats, nowMs);
+        const result = await this.sendInvite(runtime, kind, userKey, roomCode, seats, nowMs);
         exclude.add(userKey);
         state.invited.add(userKey);
-        if (ok) sent += 1;
+        if (result === 'sent') sent += 1;
+        else failed += 1;
         if (this.sendDelayMs > 0) await sleep(this.sendDelayMs);
       }
     }
-    return sent;
+
+    if (sent >= limit) stop = 'done';
+    else if (candidates === 0) stop = 'no_candidates';
+    else if (sent + failed > 0) stop = 'done';
+
+    await this.recordWave(roomCode, seats, limit, candidates, sent, failed, stop, nowMs);
+  }
+
+  private async recordWave(
+    roomCode: string,
+    seats: number,
+    limit: number,
+    candidates: number,
+    invited: number,
+    failed: number,
+    stop: WaveStopReason,
+    nowMs: number,
+  ): Promise<void> {
+    await this.product.recordEvent({
+      name: 'lobby_fill_wave',
+      at: new Date(nowMs),
+      roomCode,
+      payload: { seats, limit, candidates, invited, failed, stop },
+    });
   }
 
   private busyUserKeys(): Set<string> {
@@ -172,12 +217,18 @@ export class LobbyFillService {
     roomCode: string,
     seats: number,
     nowMs: number,
-  ): Promise<boolean> {
+  ): Promise<'sent' | 'failed'> {
     const prefix = `${kind}:`;
-    if (!userKey.startsWith(prefix)) return false;
+    if (!userKey.startsWith(prefix)) {
+      await this.recordFail(kind, userKey, roomCode, seats, 'bad_user_key', nowMs);
+      return 'failed';
+    }
     const chatId = userKey.slice(prefix.length);
     const numericChatId = Number(chatId);
-    if (!Number.isFinite(numericChatId)) return false;
+    if (!Number.isFinite(numericChatId)) {
+      await this.recordFail(kind, userKey, roomCode, seats, 'bad_user_key', nowMs);
+      return 'failed';
+    }
 
     const reply = lobbyFillInviteReply({
       seats,
@@ -194,10 +245,12 @@ export class LobbyFillService {
         reply_markup: reply.reply_markup,
       });
     } catch (error) {
-      if (isHardMessengerBlock(error)) {
+      const reason = classifyMessengerFailure(error);
+      if (reason === 'blocked') {
         await this.subscribers?.remove(kind, chatId);
       }
-      return false;
+      await this.recordFail(kind, userKey, roomCode, seats, reason, nowMs, errorMessage(error));
+      return 'failed';
     }
 
     await this.product.recordEvent({
@@ -208,7 +261,26 @@ export class LobbyFillService {
       roomCode,
       payload: { seats },
     });
-    return true;
+    return 'sent';
+  }
+
+  private async recordFail(
+    platform: MessengerKind,
+    userKey: string,
+    roomCode: string,
+    seats: number,
+    reason: FillFailReason,
+    nowMs: number,
+    detail?: string,
+  ): Promise<void> {
+    await this.product.recordEvent({
+      name: 'lobby_fill_fail',
+      at: new Date(nowMs),
+      platform,
+      userKey,
+      roomCode,
+      payload: detail ? { seats, reason, detail: detail.slice(0, 200) } : { seats, reason },
+    });
   }
 }
 
@@ -216,8 +288,13 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isHardMessengerBlock(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function classifyMessengerFailure(error: unknown): FillFailReason {
+  if (!(error instanceof Error)) return 'other';
   const errorCode =
     'errorCode' in error && typeof (error as { errorCode: unknown }).errorCode === 'number'
       ? (error as { errorCode: number }).errorCode
@@ -227,11 +304,13 @@ function isHardMessengerBlock(error: unknown): boolean {
       ? (error as { description: string }).description
       : error.message) ?? ''
   ).toLowerCase();
-  if (errorCode === 429) return false;
-  if (errorCode != null && errorCode !== 403) return false;
-  return (
+  if (errorCode === 429 || description.includes('too many requests')) return 'rate_limit';
+  if (
     description.includes('blocked') ||
     description.includes("can't initiate") ||
     description.includes('cannot initiate')
-  );
+  ) {
+    return 'blocked';
+  }
+  return 'other';
 }
