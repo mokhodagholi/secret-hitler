@@ -18,7 +18,7 @@ table ([`mini-app.md`](./mini-app.md)); this is how Find Match helps.
 | When 6 are queued, reserve a table and ask Accept | Yes — 15 s. Silence is a kick (not a ban), then deal if a legal table remains. |
 | If someone leaves the reserved room, backfill from the queue | Yes. |
 | 5-minute lobby AFK kick on **every** room | Yes, with the host exception below. |
-| Vote to remove someone in the reserved lobby, same as in-game | Yes. Half yes → kick, report, and ban from **that** room. |
+| Vote to remove someone in the reserved lobby, same as in-game | Yes. Half yes → kick and report; **no ban** in lobby (they can sit again). In-game still bans. |
 
 The diagnosis is right. The public table fills to six, then everyone
 Accepts. There is no host gavel and no Start button. The locked chrome
@@ -192,14 +192,13 @@ Fewer than three connected cannot open a vote. The Accept window and a
 kick vote do not overlap; Accept waits while a vote is open.
 
 On a **yes**, the server reports to the support group (same kick letter
-as in-game), removes the seat, and bans that player's sit identity
-(`bale:`, `telegram:`, or browser `client:`) on **this room**. Join and
-reserved-seat reconnect both refuse with `BANNED`. They can sit a
-later public lobby — that is a new room after this one deals.
+as in-game) and removes the seat. Lobby kicks do **not** ban — the
+kicked player can sit the same room again (same as AFK / Accept silence).
+Host kick in a hosted waiting room matches that: seat cleared, no ban.
 
-The same ban list is written by an in-game kick that passes, and by a
-hosted-room host kick. AFK and Accept silence do **not** ban;
-those people can sit again.
+The ban list is written only by an **in-game** kick that passes, or by a
+hosted-room host kick mid-game. Those refuse join / reserved reconnect
+with `BANNED` on **this room**.
 
 ## What stays the same
 
@@ -210,8 +209,9 @@ those people can sit again.
 - `MIN_PLAYERS` / role mix / night deal do not change.
 - Password rooms, group `/create`, share codes, mid-game join still
   forbidden.
-- In-game kick vote still freezes game clocks. A yes now also bans that
-  identity from this room (reserved reconnect cannot walk back in).
+- In-game kick vote still freezes game clocks. A yes bans that identity
+  from this room (reserved reconnect cannot walk back in). Lobby kicks
+  do not.
 
 ## Implementation map
 
@@ -223,7 +223,7 @@ those people can sit again.
 | Never assign host; Accept set; full-table window; AFK clock | `shared/src/engine/GameEngine.ts` lobby methods |
 | Commands | `shared/src/types/events.ts` + `clientMessages.ts` (`player:wantStart` is Accept; `match:cancel` leaves the queue) |
 | Finding… + Accept on Home | `HomeScreen` — stay on Home until the match deals; hide Find Match when `publicTable` is off |
-| Ban on this room | `Room.bannedJoinKeys` — set on vote-yes and host kick; checked at join |
+| Ban on this room | `Room.bannedJoinKeys` — set on in-game vote-yes and in-game host kick; checked at join. Lobby kicks do not ban. |
 | Copy | `fa.ts` **and** `en.ts` — [`persian.md`](./persian.md) **میز** |
 | Flag | `publicTable` in [`flags.ts`](../shared/src/flags.ts), default off |
 

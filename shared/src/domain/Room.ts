@@ -81,7 +81,7 @@ export class Room {
   spentKickRequestIds = new Set<string>();
   /** Public-table Accept window after the table fills. */
   startChoice: StartChoiceState | null = null;
-  /** Join keys voted off this room — they cannot sit here again. */
+  /** Join keys kicked mid-game — they cannot sit this room again. Lobby kicks do not land here. */
   bannedJoinKeys = new Set<string>();
 
   constructor(args: {

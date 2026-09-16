@@ -49,7 +49,8 @@ A disconnected lobby seat is dropped after 15 seconds (no ban). See
 [`public-table.md`](./public-table.md).
 
 When `lobbyKick` is off, hosted rooms hide host-kick in the waiting room and
-the server rejects lobby `player:kick` / lobby `kick:request`.
+the server rejects lobby `player:kick` / lobby `kick:request`. When on, a
+lobby kick clears the seat only — no ban; the player may sit again.
 
 When `gameKick` is off, in-game kick votes and mid-game host kick stay dark;
 the server rejects those frames too.

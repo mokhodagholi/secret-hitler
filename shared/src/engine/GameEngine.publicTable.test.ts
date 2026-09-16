@@ -150,7 +150,7 @@ describe('GameEngine — public table', () => {
     expect(players[3].wantsStart).toBe(true);
   });
 
-  it('Should let the public lobby vote someone out and ban their sit identity', () => {
+  it('Should let the public lobby vote someone out without banning them', () => {
     const engine = publicEngine();
     const [ana, ben, cal] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
     const joinKey = 'client:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
@@ -158,12 +158,9 @@ describe('GameEngine — public table', () => {
     expect(engine.requestKick(ana.id, ben.id)).toBeNull();
     expect(engine.voteKick(cal.id, true)).toBeNull();
     expect(engine.room.findPlayer(ben.id)).toBeUndefined();
-    expect(engine.room.bannedJoinKeys.has(joinKey)).toBe(true);
+    expect(engine.room.bannedJoinKeys.has(joinKey)).toBe(false);
     expect(engine.addPlayer('Ben', false, undefined, joinKey)).toMatchObject({
-      code: 'BANNED',
-    });
-    expect(engine.addPlayer('Dia', false, undefined, 'client:bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee')).toMatchObject({
-      name: 'Dia',
+      name: 'Ben',
     });
   });
 
@@ -180,14 +177,15 @@ describe('GameEngine — public table', () => {
     expect(cal.isHost).toBe(false);
   });
 
-  it('Should ban a hosted-lobby guest the host kicks', () => {
+  it('Should let a hosted-lobby guest rejoin after the host kicks', () => {
     const engine = new GameEngine(makeRoom());
     const [host, guest] = seatPlayers(engine, ['Ana', 'Ben']);
     const joinKey = 'client:cccccccc-bbbb-cccc-dddd-eeeeeeeeeeee';
     guest.joinKey = joinKey;
     expect(engine.kickPlayer(host.id, guest.id)).toBeNull();
+    expect(engine.room.bannedJoinKeys.has(joinKey)).toBe(false);
     expect(engine.addPlayer('Ben', false, undefined, joinKey)).toMatchObject({
-      code: 'BANNED',
+      name: 'Ben',
     });
   });
 

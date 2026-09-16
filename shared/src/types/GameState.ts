@@ -85,8 +85,8 @@ export interface Player {
   /** Lobby clock for the 5-minute idle kick; null while engaged or offline. */
   unreadySince: number | null;
   /**
-   * Stable sit identity (`bale:`, `telegram:`, or `client:`) used to keep a
-   * kicked player off this room. Never shown to other sitters.
+   * Stable sit identity (`bale:`, `telegram:`, or `client:`) used to keep an
+   * in-game kicked player off this room. Never shown to other sitters.
    */
   joinKey: string | null;
   isAlive: boolean;

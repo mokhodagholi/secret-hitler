@@ -181,8 +181,9 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   /**
-   * Host-only kick. Lobby: the seat is removed. In-game: marked dead, same as
-   * an explicit leave. The socket layer then closes the target's connection.
+   * Host-only kick. Lobby: the seat is removed (no ban — they may sit again).
+   * In-game: marked dead and banned from this room, same as a passed kick vote.
+   * The socket layer then closes the target's connection.
    */
   kickPlayer(hostId: string, targetId: string): EngineError | null {
     const room = this.room;
@@ -196,11 +197,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (!target) {
       return err('INVALID_ACTION', 'That player is not in the room.');
     }
-    this.banFromTable(target);
     if (room.phase === Phase.Lobby) {
       this.removePlayer(targetId);
       return null;
     }
+    this.banFromTable(target);
     this.vacateInGame(target, 'kicked');
     return null;
   }
@@ -871,10 +872,12 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.emit('kickVoteTimerChanged', { endsAt: null });
 
     if (kicked && target) {
-      this.banFromTable(target);
       if (inLobby) {
+        // Lobby kick clears the seat only; AFK / Accept silence already
+        // allow a re-sit, and host kick matches that.
         this.removePlayer(target.id, 'kicked');
       } else {
+        this.banFromTable(target);
         this.settlingKickVote = true;
         if (!heldOffice) this.resumeDeadlineTimers(pausedAt);
         this.vacateInGame(target, 'kicked');

@@ -132,9 +132,14 @@ describe('GameEngine — lobby', () => {
   it('Should let the host kick a guest from the lobby', () => {
     const engine = new GameEngine(makeRoom());
     const [host, ben] = seatPlayers(engine, ['Ana', 'Ben', 'Cal']);
+    ben.joinKey = 'client:bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee';
     expect(engine.kickPlayer(host.id, ben.id)).toBeNull();
     expect(engine.room.findPlayer(ben.id)).toBeUndefined();
     expect(engine.room.players.map((p) => p.name)).toEqual(['Ana', 'Cal']);
+    expect(engine.room.bannedJoinKeys.size).toBe(0);
+    expect(engine.addPlayer('Ben', false, undefined, ben.joinKey)).toMatchObject({
+      name: 'Ben',
+    });
   });
 
   it('Should refuse a kick from anyone but the host', () => {
@@ -507,9 +512,11 @@ describe('GameEngine — nomination and voting', () => {
   it('Should let the host kick a player during the game', () => {
     const { engine, room, players } = startGame();
     const [host, ben] = players;
+    ben.joinKey = 'client:dddddddd-bbbb-cccc-dddd-eeeeeeeeeeee';
     expect(engine.kickPlayer(host.id, ben.id)).toBeNull();
     expect(ben.isAlive).toBe(false);
     expect(room.findPlayer(ben.id)).toBeTruthy();
+    expect(room.bannedJoinKeys.has(ben.joinKey)).toBe(true);
   });
 
   it('Should open the nomination window when the President starts nomination', () => {
