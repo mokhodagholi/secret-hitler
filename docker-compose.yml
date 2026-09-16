@@ -22,6 +22,30 @@ services:
       timeout: 5s
       retries: 5
 
+  # Logical dump every 15m → Bale sendDocument to BALE_BACKUP_CHAT_ID.
+  db-backup:
+    image: postgres:16-alpine
+    container_name: secret-hitler-db-backup
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-secret_hitler}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-secret_hitler}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-900}
+    volumes:
+      - ./scripts/db-backup-loop.sh:/usr/local/bin/db-backup-loop.sh:ro
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        apk add --no-cache curl >/dev/null
+        exec /bin/sh /usr/local/bin/db-backup-loop.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   server:
     build:
       context: .
