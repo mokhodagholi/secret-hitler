@@ -1,5 +1,17 @@
 {
-      "releases": [
+  "releases": [
+    {
+      "version": "0.7.0",
+      "bump": "minor",
+      "date": "2026-09-16",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "از اتاق انتظار می‌توانید دوست‌ها را دعوت کنید؛ دعوت با پیام به بازوی بله می‌رسد.",
+          "en": "From the waiting room you can invite friends; the invite arrives as a Bale bot message."
+        }
+      ]
+    },
     {
       "version": "0.6.0",
       "bump": "minor",

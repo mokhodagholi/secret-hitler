@@ -286,6 +286,10 @@ same way a `/join/CODE` browser link does.
 
 Builds a message you can forward to friends.
 
+The waiting-room **Invite friends** list also DMs a friend the same kind of
+button (`ورود به اتاق` + `startapp=CODE`), naming who invited them. That path
+does not use this command — it goes through `/api/social/invites`.
+
 Code resolution, in order:
 
 1. Argument after the command, if it is a 6-character code.

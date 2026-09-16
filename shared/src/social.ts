@@ -12,7 +12,7 @@ export const SOCIAL_INVITE_DAILY_LIMIT = 10;
 export const SOCIAL_REQUEST_DAILY_LIMIT = 10;
 export const SOCIAL_IGNORE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
-/** Line shown on Home when inviting a friend with one tap. */
+/** Line shown when inviting a friend from the waiting-room list. */
 export const HOME_TABLE_INVITE_NOTE: TableInviteNoteId = 'emptySeat';
 
 export function isTableInviteNoteId(value: unknown): value is TableInviteNoteId {
@@ -102,12 +102,4 @@ export interface SocialAccountActionBody {
 
 export interface SocialInviteSendResponse {
   invite: SocialInviteView;
-  /** Present when this invite opened a new hosted room for the sender. */
-  seat?: {
-    roomId: string;
-    code: string;
-    shareLink: string;
-    token: string;
-    playerId: string;
-  };
 }

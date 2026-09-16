@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@rstest/core';
+import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { Phase } from '@secret-hitler/shared';
 import { WaitingRoomScreen } from './WaitingRoomScreen';
@@ -6,6 +6,9 @@ import { en } from '../../i18n/locales/en';
 import { buildHarness, makePlayer, makeView, renderWithApp } from '../../../test/test-utils';
 
 describe('WaitingRoomScreen', () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+  });
   it('Should copy a local /join invite on localhost, not a Bale startapp link', async () => {
     const written: string[] = [];
     Object.assign(navigator, {
@@ -20,6 +23,54 @@ describe('WaitingRoomScreen', () => {
       expect(written).toEqual([`${location.origin}/join/ABC123`]);
     });
     expect(written[0]).not.toContain('ble.ir');
+  });
+
+  it('Should invite a friend from the lobby with one tap', async () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('profileName', 'Ana');
+    let invitedAccount: string | null = null;
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes('/api/social/list')) {
+        return new Response(
+          JSON.stringify({
+            friends: [{ accountId: 'client:ben', name: 'Ben', avatar: 1 }],
+            incomingRequests: [],
+            outgoingRequests: [],
+            incomingInvites: [],
+            outgoingInvites: [],
+            blocked: [],
+            mates: {},
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.includes('/api/social/invites') && !url.includes('/accept')) {
+        invitedAccount = JSON.parse(String(init?.body ?? '{}')).accountId ?? null;
+        return new Response(
+          JSON.stringify({
+            invite: {
+              id: 'inv-1',
+              from: { accountId: 'client:ana', name: 'Ana', avatar: 0 },
+              to: { accountId: 'client:ben', name: 'Ben', avatar: 1 },
+              noteId: 'emptySeat',
+              roomCode: 'ABC123',
+              createdAt: 1,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response('[]', { status: 200 });
+    });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(makeView({ hostId: 'you', code: 'ABC123' }));
+
+    fireEvent.click(screen.getByRole('button', { name: en.waiting.inviteFriends }));
+    await waitFor(() => expect(screen.getByText('Ben')).toBeTruthy());
+    expect(screen.getByText(en.social.notes.emptySeat)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Ben/ }));
+    await waitFor(() => expect(invitedAccount).toBe('client:ben'));
   });
 
   it('Should let a guest mark themselves ready', () => {

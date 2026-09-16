@@ -246,19 +246,19 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: en.rules.title })).toBeTruthy();
   });
 
-  it('Should keep the home poster to Find Match, invite friends, play with friends, support, rules, history, and settings', () => {
+  it('Should keep the home poster to Find Match, play with friends, support, rules, history, and settings', () => {
     const harness = buildHarness({ flags: { publicTable: true } });
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(findMatchButton()).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.home.inviteFriends })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.home.inviteFriends })).toBeNull();
     expect(screen.getByRole('button', { name: en.home.playWithFriends })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.support.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.home.history })).toBeTruthy();
     expect(screen.getByText(en.nav.rules)).toBeTruthy();
-    expect(screen.getAllByRole('button')).toHaveLength(7);
+    expect(screen.getAllByRole('button')).toHaveLength(6);
     expect(screen.getByText('0/6')).toBeTruthy();
     const findingPortrait = document.querySelector(`img[src="${heroFindingImage}"]`);
     expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();
@@ -367,66 +367,10 @@ describe('HomeScreen', () => {
     expect(findMatchButton()).toBeTruthy();
   });
 
-  it('Should list friends above Find Match and invite one with a tap', async () => {
+  it('Should not invite friends from home', () => {
     const harness = buildHarness();
-    harness.services.settings.set('profileName', 'Ana');
-    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input);
-      if (url.includes('/api/social/list')) {
-        return new Response(
-          JSON.stringify({
-            friends: [{ accountId: 'client:ben', name: 'Ben', avatar: 1 }],
-            incomingRequests: [],
-            outgoingRequests: [],
-            incomingInvites: [],
-            outgoingInvites: [],
-            blocked: [],
-            mates: {},
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-      if (url.includes('/api/social/invites')) {
-        return new Response(
-          JSON.stringify({
-            invite: {
-              id: 'inv-1',
-              from: { accountId: 'client:ana', name: 'Ana', avatar: 0 },
-              to: { accountId: 'client:ben', name: 'Ben', avatar: 1 },
-              noteId: 'emptySeat',
-              roomCode: 'ABC123',
-              createdAt: 1,
-            },
-            seat: {
-              roomId: 'room-9',
-              code: 'ABC123',
-              shareLink: 'http://localhost/join/ABC123',
-              token: 't-9',
-              playerId: 'p-ana',
-            },
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-      return new Response('[]', { status: 200 });
-    });
-    renderWithApp(
-      () => (
-        <Show
-          when={harness.services.nav.screen() === 'home'}
-          fallback={<WaitingRoomScreen />}
-        >
-          <HomeScreen />
-        </Show>
-      ),
-      harness,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: en.home.inviteFriends }));
-    await waitFor(() => expect(screen.getByText('Ben')).toBeTruthy());
-    expect(screen.getByText(en.social.notes.emptySeat)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Ben/ }));
-    await waitFor(() => expect(harness.services.nav.screen()).toBe('waiting-room'));
+    renderWithApp(() => <HomeScreen />, harness);
+    expect(screen.queryByRole('button', { name: en.home.inviteFriends })).toBeNull();
   });
 
   it('Should open history under the guide and send a friend request from a past table', async () => {

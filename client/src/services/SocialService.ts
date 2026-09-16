@@ -135,11 +135,10 @@ export class SocialService {
     accountId: string,
     identity: SocialIdentity,
     noteId: TableInviteNoteId = HOME_TABLE_INVITE_NOTE,
-  ): Promise<RoomSession> {
+  ): Promise<void> {
     this.setInvitingId(accountId);
     try {
-      if (this.game.queued()) await this.game.leaveMatchQueue();
-      const response = await this.request<SocialInviteSendResponse>('/api/social/invites', {
+      await this.request<SocialInviteSendResponse>('/api/social/invites', {
         accountId,
         noteId,
         clientId: identity.clientId,
@@ -148,10 +147,6 @@ export class SocialService {
         avatar: identity.avatar,
       });
       await this.load(identity);
-      if (!response.seat) {
-        throw new RoomApiError('NETWORK', 'Invite did not open a table.');
-      }
-      return this.game.adoptSeat(response.seat);
     } finally {
       this.setInvitingId(null);
     }

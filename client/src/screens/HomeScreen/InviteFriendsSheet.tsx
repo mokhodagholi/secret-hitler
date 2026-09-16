@@ -16,7 +16,7 @@ export interface InviteFriendsSheetProps {
   onIgnoreRequest: (id: string) => void;
 }
 
-/** Friends the player can see, plus pending invites, over a dimmed home. */
+/** Friends the player can see, plus pending invites, over a dimmed lobby. */
 export function InviteFriendsSheet(props: InviteFriendsSheetProps) {
   const { social, i18n, animation } = useApp();
   const { formatMessage } = i18n;
@@ -35,11 +35,11 @@ export function InviteFriendsSheet(props: InviteFriendsSheetProps) {
           class={styles.sheet}
           role="dialog"
           aria-modal="true"
-          aria-label={formatMessage('home.inviteFriends')}
+          aria-label={formatMessage('waiting.inviteFriends')}
           ref={(element) => void animation.play(element, 'pop-in')}
         >
           <header class={styles.header}>
-            <span class={styles.title}>{formatMessage('home.inviteFriends')}</span>
+            <span class={styles.title}>{formatMessage('waiting.inviteFriends')}</span>
             <button
               type="button"
               class={styles.close}
@@ -163,7 +163,7 @@ export function InviteFriendsSheet(props: InviteFriendsSheetProps) {
                                 (invite) => invite.to.accountId === friend.accountId,
                               )
                             ? formatMessage('social.sent')
-                            : formatMessage('home.inviteFriends')}
+                            : formatMessage('waiting.inviteFriends')}
                       </span>
                     </button>
                 )}

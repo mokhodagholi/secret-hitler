@@ -1,5 +1,5 @@
 import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
-import { Phase, type SocialPerson } from '@secret-hitler/shared';
+import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
@@ -11,7 +11,6 @@ import heroFindingImage from '../../assets/home/hero-finding.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
-import { InviteFriendsSheet } from './InviteFriendsSheet';
 import { MatchHistorySheet } from './MatchHistorySheet';
 import styles from './HomeScreen.module.scss';
 
@@ -61,7 +60,6 @@ export function HomeScreen() {
   const amWantStart = () => game.you()?.wantsStart ?? false;
 
   const [nowMs, setNowMs] = createSignal(Date.now());
-  const [inviteOpen, setInviteOpen] = createSignal(false);
   const [historyOpen, setHistoryOpen] = createSignal(false);
 
   function resolvedName(): string {
@@ -78,15 +76,6 @@ export function HomeScreen() {
     };
   }
 
-  async function openInvites(): Promise<void> {
-    setInviteOpen(true);
-    try {
-      await social.load(socialIdentity());
-    } catch {
-      // Empty list + server error toast from fetch; sheet still opens.
-    }
-  }
-
   async function openHistory(): Promise<void> {
     setHistoryOpen(true);
     const identity = socialIdentity();
@@ -94,26 +83,6 @@ export function HomeScreen() {
       await Promise.all([social.load(identity), social.loadHistory(identity)]);
     } catch {
       // Empty list + server error toast from fetch; sheet still opens.
-    }
-  }
-
-  async function inviteFriend(friend: SocialPerson): Promise<void> {
-    try {
-      await social.inviteFriend(friend.accountId, socialIdentity());
-      setInviteOpen(false);
-      nav.navigate('waiting-room');
-    } catch {
-      // Stay on the sheet; the list reload or a later tap is enough.
-    }
-  }
-
-  async function acceptInvite(id: string): Promise<void> {
-    try {
-      await social.acceptInvite(id, socialIdentity());
-      setInviteOpen(false);
-      nav.navigate('waiting-room');
-    } catch {
-      /* Keep the sheet open. */
     }
   }
 
@@ -326,18 +295,6 @@ export function HomeScreen() {
               </span>
             </button>
           </Show>
-          <Show when={!finding()}>
-            <button
-              type="button"
-              class={styles.ctaInvite}
-              aria-label={formatMessage('home.inviteFriends')}
-              onClick={() => void openInvites()}
-            >
-              <span class={styles.ctaInviteLabel} dir="auto">
-                {formatMessage('home.inviteFriends')}
-              </span>
-            </button>
-          </Show>
           <Show
             when={matchmaking()}
             fallback={
@@ -395,15 +352,6 @@ export function HomeScreen() {
         </div>
       </div>
 
-      <InviteFriendsSheet
-        open={inviteOpen() && !finding()}
-        onClose={() => setInviteOpen(false)}
-        onInvite={(friend) => void inviteFriend(friend)}
-        onAcceptInvite={(id) => void acceptInvite(id)}
-        onIgnoreInvite={(id) => void social.ignoreInvite(id, socialIdentity())}
-        onAcceptRequest={(id) => void social.acceptFriendRequest(id, socialIdentity())}
-        onIgnoreRequest={(id) => void social.ignoreFriendRequest(id, socialIdentity())}
-      />
       <MatchHistorySheet
         open={historyOpen()}
         identity={socialIdentity()}

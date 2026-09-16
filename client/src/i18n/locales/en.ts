@@ -349,6 +349,7 @@ export const en = {
     shareLink: 'Share Link',
     copy: 'Copy',
     copied: 'Copied!',
+    inviteFriends: 'Invite friends',
     playerCount: '{count}/{max}',
     playersSection: 'Players',
     host: 'Host',
@@ -819,7 +820,7 @@ export const en = {
   },
   error: {
     AUTH_FAILED: 'Your session expired. Join the room again.',
-    ROOM_NOT_FOUND: 'That room no longer exists.',
+    ROOM_NOT_FOUND: 'This lobby no longer exists.',
     ROOM_FULL: 'This room is full.',
     WRONG_PASSWORD: 'Wrong password.',
     ALREADY_STARTED: 'The game has already started.',

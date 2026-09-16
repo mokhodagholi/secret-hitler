@@ -553,7 +553,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     repo,
     tokens,
     sockets,
-    recorder,
     history,
     social: deps.social,
     bale,

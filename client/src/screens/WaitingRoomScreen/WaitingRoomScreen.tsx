@@ -7,12 +7,13 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { Phase, type GameStateView, type PublicPlayer } from '@secret-hitler/shared';
+import { Phase, type GameStateView, type PublicPlayer, type SocialPerson } from '@secret-hitler/shared';
 import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
 import { copyText } from '../../services/clipboard';
 import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
+import type { SocialIdentity } from '../../services/SocialService';
 import { Button } from '../../components/Button/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
@@ -20,6 +21,7 @@ import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { KickVoteOverlay } from '../GameScreen/KickVoteOverlay';
 import { PlayerActionsMenu } from '../GameScreen/PlayerActionsMenu';
+import { InviteFriendsSheet } from '../HomeScreen/InviteFriendsSheet';
 import { LobbyChat } from './LobbyChat';
 import { PlayerSlot } from './PlayerSlot';
 import { seatLayoutForBox } from './slotSize';
@@ -31,12 +33,13 @@ import styles from './WaitingRoomScreen.module.scss';
  * Navigates to the game board as soon as the server leaves the lobby phase.
  */
 export function WaitingRoomScreen() {
-  const { nav, game, socket, i18n, sound, prefetch, miniApp, flags } = useApp();
+  const { nav, game, socket, i18n, sound, prefetch, miniApp, flags, social, settings } = useApp();
   const { formatMessage } = i18n;
 
   const [copied, setCopied] = createSignal(false);
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [startOpen, setStartOpen] = createSignal(false);
+  const [inviteOpen, setInviteOpen] = createSignal(false);
   const [kickTarget, setKickTarget] = createSignal<{
     id: string;
     name: string;
@@ -52,6 +55,43 @@ export function WaitingRoomScreen() {
   const amReady = () => game.you()?.ready ?? false;
   const amWantStart = () => game.you()?.wantsStart ?? false;
   const isPublicTable = () => view()?.kind === 'public';
+
+  function socialIdentity(): SocialIdentity {
+    const name = miniApp.user()?.firstName ?? settings.settings.profileName.trim();
+    return {
+      clientId: settings.settings.profileId,
+      initData: miniApp.initData(),
+      name: name || formatMessage('home.guest'),
+      avatar: settings.settings.avatar,
+      token: game.currentSession()?.token,
+    };
+  }
+
+  async function openInvites(): Promise<void> {
+    setInviteOpen(true);
+    try {
+      await social.load(socialIdentity());
+    } catch {
+      // Empty list + server error toast from fetch; sheet still opens.
+    }
+  }
+
+  async function inviteFriend(friend: SocialPerson): Promise<void> {
+    try {
+      await social.inviteFriend(friend.accountId, socialIdentity());
+    } catch {
+      // Stay on the sheet; the list reload or a later tap is enough.
+    }
+  }
+
+  async function acceptInvite(id: string): Promise<void> {
+    try {
+      await social.acceptInvite(id, socialIdentity());
+      setInviteOpen(false);
+    } catch {
+      /* Keep the sheet open. */
+    }
+  }
 
   // Session dropped (left room / token expired) → back to the play menu.
   createEffect(() => {
@@ -196,14 +236,26 @@ export function WaitingRoomScreen() {
           tone="warm"
           onBack={() => setConfirmingLeave((open) => !open)}
           right={
-            <button
-              type="button"
-              class={styles.guide}
-              aria-label={formatMessage('nav.rules')}
-              onClick={() => nav.navigate('rules')}
-            >
-              <Icon name="book" size={22} />
-            </button>
+            <div class={styles.headerActions}>
+              <Show when={!isPublicTable()}>
+                <button
+                  type="button"
+                  class={styles.guide}
+                  aria-label={formatMessage('waiting.inviteFriends')}
+                  onClick={() => void openInvites()}
+                >
+                  <Icon name="people" size={22} />
+                </button>
+              </Show>
+              <button
+                type="button"
+                class={styles.guide}
+                aria-label={formatMessage('nav.rules')}
+                onClick={() => nav.navigate('rules')}
+              >
+                <Icon name="book" size={22} />
+              </button>
+            </div>
           }
         />
 
@@ -449,6 +501,16 @@ export function WaitingRoomScreen() {
           )}
         </Show>
       </div>
+
+      <InviteFriendsSheet
+        open={inviteOpen()}
+        onClose={() => setInviteOpen(false)}
+        onInvite={(friend) => void inviteFriend(friend)}
+        onAcceptInvite={(id) => void acceptInvite(id)}
+        onIgnoreInvite={(id) => void social.ignoreInvite(id, socialIdentity())}
+        onAcceptRequest={(id) => void social.acceptFriendRequest(id, socialIdentity())}
+        onIgnoreRequest={(id) => void social.ignoreFriendRequest(id, socialIdentity())}
+      />
     </Screen>
   );
 

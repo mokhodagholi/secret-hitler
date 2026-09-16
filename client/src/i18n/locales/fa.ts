@@ -347,6 +347,7 @@ export const fa = {
     shareLink: 'لینک دعوت',
     copy: 'کپی',
     copied: 'کپی شد!',
+    inviteFriends: 'دعوت دوست',
     playerCount: '{count}/{max}',
     playersSection: 'بازیکنان',
     host: 'میزبان',
@@ -813,7 +814,7 @@ export const fa = {
   },
   error: {
     AUTH_FAILED: 'نشست‌تان تمام شده. دوباره وارد اتاق شوید.',
-    ROOM_NOT_FOUND: 'این اتاق دیگر نیست.',
+    ROOM_NOT_FOUND: 'این لابی دیگه نیست.',
     ROOM_FULL: 'این اتاق پر است.',
     WRONG_PASSWORD: 'رمز اشتباه است.',
     ALREADY_STARTED: 'بازی شروع شده.',

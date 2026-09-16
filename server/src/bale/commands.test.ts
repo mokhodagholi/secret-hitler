@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, isUsersCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply, usersEmptyReply, usersListReply } from './commands';
+import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, friendTableInviteReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, isUsersCommand, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply, usersEmptyReply, usersListReply } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -63,6 +63,20 @@ describe('parseBotCommand', () => {
   it('Should treat a typed start without a slash as /start', () => {
     expect(parseBotCommand('start')).toEqual({ command: 'start', arg: '' });
     expect(parseBotCommand('Start')).toEqual({ command: 'start', arg: '' });
+  });
+
+  it('Should treat bare admin commands the same as their / form', () => {
+    expect(parseBotCommand('users')).toEqual({ command: 'users', arg: '' });
+    expect(parseBotCommand('Users')).toEqual({ command: 'users', arg: '' });
+    expect(parseBotCommand('broadcast امشب')).toEqual({
+      command: 'broadcast',
+      arg: 'امشب',
+    });
+    expect(parseBotCommand('message 9,11')).toEqual({
+      command: 'message',
+      arg: '9,11',
+    });
+    expect(parseBotCommand('unsend')).toEqual({ command: 'unsend', arg: '' });
   });
 
   it('Should not treat a bare room code as a command', () => {
@@ -192,6 +206,20 @@ describe('handleBotText', () => {
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]?.url).toBe(
       'https://ble.ir/secret_hitler_bot?startapp=ABC123',
     );
+  });
+
+  it('Should DM a friend invite with who asked and a lobby button', () => {
+    const reply = friendTableInviteReply({
+      fromName: 'Ana',
+      code: 'ABC123',
+      botUsername: BOT,
+    });
+    expect(reply.text).toContain('Ana');
+    expect(reply.text).toContain('ABC123');
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]).toEqual({
+      text: 'ورود به اتاق',
+      url: 'https://ble.ir/secret_hitler_bot?startapp=ABC123',
+    });
   });
 
   it('Should tell a private /create to open a table in a group instead', () => {

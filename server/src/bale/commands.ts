@@ -14,6 +14,16 @@ const KNOWN_COMMANDS = new Set([
   'create',
   'play_game',
   'delete',
+  // Hidden admin aliases — same bare-text rule as play_game / delete.
+  'broadcast',
+  'sendall',
+  'send_all',
+  'message',
+  'unsend',
+  'undo',
+  'retract',
+  'users',
+  'user',
 ]);
 
 export interface BotCommandContext {
@@ -243,6 +253,30 @@ function inviteReply(ctx: BotCommandContext, arg: string): BotReply {
   const link = linkOf(ctx, code);
   return {
     text: `بیا راز هیتلر — ${name}\nکد اتاق: ${code}`,
+    reply_markup: {
+      inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
+    },
+  };
+}
+
+/**
+ * DM when a seated friend taps Invite in the waiting room.
+ * Button is the only way into the mini-app — same as `/invite`.
+ */
+export function friendTableInviteReply(params: {
+  fromName: string;
+  code: string;
+  botUsername: string;
+  startLink?: (startApp?: string) => string;
+  platform?: MessengerKind;
+}): BotReply {
+  const link = linkOf(params, params.code);
+  const raw = [
+    `${params.fromName} دعوتت کرده بیای سر میزش.`,
+    `کد اتاق: ${params.code}`,
+  ].join('\n');
+  return {
+    text: params.platform === 'telegram' ? raw : escapeBaleMarkdown(raw),
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],
     },

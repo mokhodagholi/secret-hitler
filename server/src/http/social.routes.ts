@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
   HOME_TABLE_INVITE_NOTE,
   Phase,
-  isPublicTable,
   isTableInviteNoteId,
   normalizeAvatar,
   roomInviteLink,
@@ -24,10 +23,10 @@ import { RateLimiter } from '../util/RateLimiter';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { TokenStore } from '../rooms/TokenStore';
-import type { GameResultRecorder } from '../history/GameResultRecorder';
 import type { GameHistoryStore } from '../history/GameHistoryStore';
 import { identifyInitData } from '../bale/initData';
-import { messengerKindOf, type BaleRuntime } from '../bale/webhook';
+import { friendTableInviteReply } from '../bale/commands';
+import { messengerKindOf, startLinkFor, type BaleRuntime } from '../bale/webhook';
 import { isEngineError, SocialBook } from '../social/SocialBook';
 import type { StoredTableInvite } from '../social/SocialStore';
 
@@ -39,7 +38,6 @@ export interface SocialRouteDeps {
   repo: RoomRepository;
   tokens: TokenStore;
   sockets: SocketHandler;
-  recorder: GameResultRecorder;
   history: GameHistoryStore;
   social: SocialBook;
   bale?: BaleRuntime;
@@ -112,6 +110,41 @@ function requestView(request: {
   };
 }
 
+/** Best-effort DM so the friend can open the lobby from the bot keyboard. */
+async function dmFriendTableInvite(
+  req: FastifyRequest,
+  toAccountId: string,
+  fromName: string,
+  code: string,
+  bale?: BaleRuntime,
+  telegram?: BaleRuntime,
+): Promise<void> {
+  const runtime = toAccountId.startsWith('telegram:')
+    ? telegram
+    : toAccountId.startsWith('bale:')
+      ? bale
+      : undefined;
+  if (!runtime) return;
+  const chatId = Number(toAccountId.slice(toAccountId.indexOf(':') + 1));
+  if (!Number.isFinite(chatId)) return;
+  const reply = friendTableInviteReply({
+    fromName,
+    code,
+    botUsername: runtime.botUsername,
+    startLink: startLinkFor(runtime),
+    platform: messengerKindOf(runtime),
+  });
+  try {
+    await runtime.bot.sendMessage({
+      chat_id: chatId,
+      text: reply.text,
+      reply_markup: reply.reply_markup,
+    });
+  } catch (error) {
+    req.log.error(error, 'Failed to DM friend table invite');
+  }
+}
+
 function socialLink(req: FastifyRequest, code: string, runtime?: BaleRuntime): string {
   const host = typeof req.headers.host === 'string' ? req.headers.host : 'localhost';
   const proto =
@@ -136,7 +169,7 @@ function engineFail(reply: FastifyReply, error: { code: string; message: string 
 }
 
 export function registerSocialRoutes(app: FastifyInstance, deps: SocialRouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, social, bale, telegram } = deps;
+  const { repo, tokens, sockets, history, social, bale, telegram } = deps;
   const messengers = configuredMessengers(bale, telegram);
   const limiter = new RateLimiter(SOCIAL_LIMIT, LIMIT_WINDOW_MS);
 
@@ -281,7 +314,7 @@ export function registerSocialRoutes(app: FastifyInstance, deps: SocialRouteDeps
       return fail(reply, 429, 'RATE_LIMITED', 'Too many social requests.');
     }
     const body = (req.body ?? {}) as SocialInviteRequestBody;
-    const { identified, accountId, person } = readCaller(body);
+    const { accountId, person } = readCaller(body);
     if (!accountId || !person) {
       return fail(reply, 400, 'AUTH_FAILED', 'A profile is required.');
     }
@@ -289,41 +322,10 @@ export function registerSocialRoutes(app: FastifyInstance, deps: SocialRouteDeps
       return fail(reply, 400, 'INVALID_ACTION', 'accountId is required.');
     }
     const noteId = isTableInviteNoteId(body.noteId) ? body.noteId : HOME_TABLE_INVITE_NOTE;
-    sockets.leaveMatchQueueByJoinKey(accountId);
     const seated = repo.findSeatByJoinKey(accountId);
-    if (seated && seated.entry.room.phase !== Phase.Lobby) {
-      return fail(reply, 400, 'INVALID_ACTION', 'Finish this table first.');
+    if (!seated || seated.entry.room.phase !== Phase.Lobby) {
+      return fail(reply, 400, 'INVALID_ACTION', 'Join a lobby first.');
     }
-    const joinRuntime = identified ? runtimeOf(identified.kind, bale, telegram) : undefined;
-    let hosted = repo.findHostedLobbyByJoinKey(accountId);
-    if (!hosted) {
-      if (seated && isPublicTable(seated.entry.room.options)) {
-        sockets.dropSeat(seated.entry, seated.playerId);
-      }
-      hosted = repo.create({
-        name: person.name,
-        timerEnabled: true,
-      });
-      sockets.registerEngine(hosted);
-      recorder.attach(hosted);
-      const host = hosted.engine.addPlayer(person.name, true, person.avatar, accountId);
-      if ('code' in host) {
-        return fail(reply, 400, host.code, host.message);
-      }
-      void sockets.persistRoom(hosted.room.id);
-    }
-    const hostSeat = hosted.room.players.find((player) => player.joinKey === accountId);
-    if (!hostSeat) {
-      return fail(reply, 400, 'INVALID_ACTION', 'Could not sit at that table.');
-    }
-    const token = tokens.issue({ roomId: hosted.room.id, playerId: hostSeat.id });
-    const createdSeat: JoinRoomResponse = {
-      roomId: hosted.room.id,
-      code: hosted.room.code,
-      shareLink: socialLink(req, hosted.room.code, joinRuntime ?? bale ?? telegram),
-      token,
-      playerId: hostSeat.id,
-    };
     const friends = await social.snapshot(accountId);
     const target =
       friends.friends.find((friend) => friend.accountId === body.accountId) ?? {
@@ -332,13 +334,20 @@ export function registerSocialRoutes(app: FastifyInstance, deps: SocialRouteDeps
         avatar: 0,
       };
     const result = await social.sendInvite(person, target, noteId, {
-      id: hosted.room.id,
-      code: hosted.room.code,
+      id: seated.entry.room.id,
+      code: seated.entry.room.code,
     });
     if (isEngineError(result)) return engineFail(reply, result);
+    await dmFriendTableInvite(
+      req,
+      target.accountId,
+      person.name,
+      seated.entry.room.code,
+      bale,
+      telegram,
+    );
     const res: SocialInviteSendResponse = {
       invite: inviteView(result),
-      seat: createdSeat,
     };
     return res;
   });
