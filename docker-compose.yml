@@ -22,7 +22,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Logical dump every 15m → Bale sendDocument to BALE_BACKUP_CHAT_ID.
+  # Logical dump + .env every 15m → Bale sendDocument to BALE_BACKUP_CHAT_ID.
   db-backup:
     image: postgres:16-alpine
     container_name: secret-hitler-db-backup
@@ -35,8 +35,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-secret_hitler}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-900}
+      ENV_FILE: /backup-env/.env
     volumes:
       - ./scripts/db-backup-loop.sh:/usr/local/bin/db-backup-loop.sh:ro
+      # Raw file (not just env vars) so the loop can sendDocument it.
+      - ./.env:/backup-env/.env:ro
     entrypoint: ['/bin/sh', '-c']
     command:
       - |
