@@ -32,7 +32,6 @@ export interface BotCommandContext {
 
 export interface BotReply {
   text: string;
-  parse_mode?: 'HTML';
   reply_markup?: {
     inline_keyboard: Array<Array<{ text: string; url: string }>>;
   };
@@ -67,11 +66,6 @@ function linkOf(
 /** Bale always parses Markdown; unmatched `_` * ` [ make sendMessage fail. */
 export function escapeBaleMarkdown(text: string): string {
   return text.replace(/([_*`\[\]])/g, '\\$1');
-}
-
-/** HTML parse_mode: `_` in a URL stays `_`, not `\_`. */
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** Slash command as Bale Markdown. `_` must be escaped or sendMessage fails. */
@@ -140,13 +134,13 @@ function startReply(
     '',
     'راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.',
   ].join('\n');
-  // Bale Markdown treats `_` as italic; HTML keeps the channel nick intact.
+  // Bale always Markdown-parses; `_` in the channel nick must be escaped or
+  // sendMessage fails. HTML parse_mode does not turn that off on Bale.
   if (ctx.platform === 'telegram') {
     return { text, reply_markup: playKeyboardFor(ctx) };
   }
   return {
-    text: escapeHtml(text),
-    parse_mode: 'HTML',
+    text: escapeBaleMarkdown(text),
     reply_markup: playKeyboardFor(ctx),
   };
 }
@@ -332,9 +326,9 @@ export function broadcastPlayerReply(
   if (ctx.platform === 'telegram') {
     return { text: trimmed, reply_markup: playKeyboardFor(ctx) };
   }
+  // Same Markdown rule as /start — escape `_` so ble.ir/… paths do not 500.
   return {
-    text: escapeHtml(trimmed),
-    parse_mode: 'HTML',
+    text: escapeBaleMarkdown(trimmed),
     reply_markup: playKeyboardFor(ctx),
   };
 }

@@ -97,10 +97,10 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('راز هیتلر');
     expect(reply.text).not.toContain('هیتلر مخفی');
     expect(reply.text).toContain('پیدا کردن بازی');
-    expect(reply.text).toContain('@secret_hitler_official');
+    expect(reply.text).toContain('@secret\\_hitler\\_official');
     expect(reply.text).toContain('/create');
     expect(reply.text).not.toContain('/find_game');
-    expect(reply.parse_mode).toBe('HTML');
+    expect(reply.parse_mode).toBeUndefined();
     expect(JSON.stringify(reply)).not.toContain('mrfantastic');
     expect(reply.text).not.toContain('بازی کن');
     expect(reply.text).not.toContain('ble.ir');
@@ -113,6 +113,7 @@ describe('handleBotText', () => {
     const reply = ctx({ text: '/start', platform: 'telegram' });
     expect(reply.parse_mode).toBeUndefined();
     expect(reply.text).toContain('@secret_hitler_official');
+    expect(reply.text).not.toContain('\\_');
   });
 
   it('Should greet a typed start the same as /start', () => {
@@ -228,14 +229,13 @@ describe('broadcast copy', () => {
     expect(broadcastHelpReply().text).toContain('متن');
   });
 
-  it('Should leave underscores in a ble.ir path', () => {
+  it('Should escape underscores in a ble.ir path so Bale Markdown accepts it', () => {
     const reply = broadcastPlayerReply(
       { botUsername: BOT, platform: 'bale' },
       'شناسه درست: ble.ir/secret_hitler_official',
     );
-    expect(reply.text).toContain('secret_hitler_official');
-    expect(reply.text).not.toContain('\\_');
-    expect(reply.parse_mode).toBe('HTML');
+    expect(reply.text).toContain('secret\\_hitler\\_official');
+    expect(reply.parse_mode).toBeUndefined();
   });
 });
 

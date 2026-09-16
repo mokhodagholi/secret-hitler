@@ -51,7 +51,7 @@ export interface BaleMessenger {
   sendMessage(params: {
     chat_id: number | string;
     text: string;
-    parse_mode?: BotReply['parse_mode'];
+    parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2';
     reply_markup?: BotReply['reply_markup'];
   }): Promise<{ message_id?: number } | unknown>;
   editMessageText?(params: {
@@ -650,7 +650,6 @@ async function sendChat(
     const sent = await bale.bot.sendMessage({
       chat_id: chatId,
       text: response.text,
-      parse_mode: response.parse_mode,
       reply_markup: response.reply_markup,
     });
     return { message_id: readMessageId(sent) };
@@ -661,7 +660,6 @@ async function sendChat(
       const sent = await bale.bot.sendMessage({
         chat_id: chatId,
         text: response.text,
-        parse_mode: response.parse_mode,
       });
       return { message_id: readMessageId(sent) };
     } catch (retryError) {

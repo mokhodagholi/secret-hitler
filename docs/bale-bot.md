@@ -148,7 +148,7 @@ Reply:
 راستی، برای بازی با دوستات کافیه بازو رو بذاری تو گروه و اونجا /create بزنی. خودش برات اتاق می‌سازه و راحت بازی می‌کنید.
 ```
 
-Bale sends this as HTML so the channel nick’s `_` is not italic Markdown.
+Bale escapes the channel nick’s `_` for Markdown (`@secret\_hitler\_official`);
 Telegram keeps plain text.
 
 Button: **بازی کن** → mini-app with an empty `startapp`. The client lands on
@@ -437,9 +437,10 @@ A one-time SQL backfill copies existing `profiles.bale_user_id` /
 `telegram_user_id` rows. Bale admins reach Bale sitters; Telegram admins
 reach Telegram sitters.
 
-Each player DM has the same **بازی کن** button as `/start`. The body is
-HTML, not Markdown, so a `ble.ir/secret_hitler_official` path keeps its
-underscores. People who blocked the bot are dropped from the list.
+Each player DM has the same **بازی کن** button as `/start`. On Bale the body
+is Markdown-escaped so a `ble.ir/secret_hitler_official` path does not make
+`sendMessage` fail (underscores become `\_` in the wire text). People who
+blocked the bot are dropped from the list.
 
 Empty list:
 
