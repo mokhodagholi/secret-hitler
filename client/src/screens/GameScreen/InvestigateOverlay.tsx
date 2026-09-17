@@ -44,6 +44,14 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
   });
 
   onMount(() => {
+    let finished = false;
+    const finish = () => {
+      if (closed || finished) return;
+      finished = true;
+      props.onContinue();
+    };
+    const cap = window.setTimeout(finish, NOTICE_MS + 2_700);
+    onCleanup(() => window.clearTimeout(cap));
     void animation.enqueue(async () => {
       if (closed) return;
       sound.play('party-slide');
@@ -82,10 +90,12 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
           );
         }
         await linger();
-        if (!closed) props.onContinue();
+        window.clearTimeout(cap);
+        finish();
       } else {
         await linger();
-        if (!closed) props.onContinue();
+        window.clearTimeout(cap);
+        finish();
       }
     });
   });

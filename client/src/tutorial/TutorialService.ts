@@ -1,6 +1,6 @@
 import { createSignal, type Accessor, type Setter } from 'solid-js';
 import type { GameCommand, GameStateView, Role } from '@secret-hitler/shared';
-import type { MessageKey } from '../i18n';
+import type { MessageKey, MessageValues } from '../i18n';
 import type { NavigationService } from '../services/NavigationService';
 import { TutorialDirector } from './TutorialDirector';
 import {
@@ -17,7 +17,19 @@ import {
   type PlayLock,
   type ScriptedTable,
 } from './scriptedTable';
-import { LOOK_BEATS, buildLookView, type LookYou } from './lookView';
+import {
+  LOOK_BEATS,
+  LOOK_CAMPAIGN,
+  LOOK_CAMPAIGN_AGAIN,
+  LOOK_SEAT,
+  buildLookView,
+  lookBeatAt,
+  lookBlursTable,
+  lookShowsChat,
+  samePitch,
+  type LookWait,
+  type LookYou,
+} from './lookView';
 import { INTRO_SLIDE_COUNT, INTRO_SLIDES } from './introSlides';
 import type { IntroSlide } from './introSlides';
 
@@ -36,6 +48,7 @@ export interface TutorialTalk {
   playerId: string;
   name: string;
   key?: MessageKey;
+  values?: MessageValues;
   text?: string;
   at: number;
 }
@@ -78,10 +91,23 @@ export class TutorialService {
   private readonly setTalk: Setter<TutorialTalk[]>;
 
   private lookSettled = false;
+  private lookPicked = false;
+  private lookPitchFails = 0;
+  private lookTimers: number[] = [];
   private sitAsked = false;
   private lookYou: LookYou | null = null;
   private table: ScriptedTable | null = null;
   private director: TutorialDirector | null = null;
+  private readonly setLookLifted: Setter<boolean>;
+  private readonly lookLifted: Accessor<boolean>;
+  private readonly lookHintKey: Accessor<MessageKey>;
+  private readonly setLookHintKey: Setter<MessageKey>;
+  private readonly lookWaitOverride: Accessor<LookWait | null>;
+  private readonly setLookWaitOverride: Setter<LookWait | null>;
+  private readonly lookHeadlineOverride: Accessor<MessageKey | null>;
+  private readonly setLookHeadlineOverride: Setter<MessageKey | null>;
+  private readonly lookTest =
+    import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test';
 
   constructor() {
     const [announcing, setAnnouncing] = createSignal(false);
@@ -96,7 +122,18 @@ export class TutorialService {
     const [lock, setLock] = createSignal<PlayLock>(null);
     const [playHeadline, setPlayHeadline] = createSignal<MessageKey>('onboard.pick');
     const [talk, setTalk] = createSignal<TutorialTalk[]>([]);
+    const [lookLifted, setLookLifted] = createSignal(false);
+    const [lookHintKey, setLookHintKey] = createSignal<MessageKey>(
+      'onboard.idea.composeHint',
+    );
+    const [lookWaitOverride, setLookWaitOverride] = createSignal<LookWait | null>(
+      null,
+    );
+    const [lookHeadlineOverride, setLookHeadlineOverride] =
+      createSignal<MessageKey | null>(null);
     this.announcing = announcing;
+    this.lookLifted = lookLifted;
+    this.setLookLifted = setLookLifted;
     this.setAnnouncing = setAnnouncing;
     this.offeringSit = offeringSit;
     this.setOfferingSit = setOfferingSit;
@@ -120,6 +157,12 @@ export class TutorialService {
     this.setPlayHeadline = setPlayHeadline;
     this.talk = talk;
     this.setTalk = setTalk;
+    this.lookHintKey = lookHintKey;
+    this.setLookHintKey = setLookHintKey;
+    this.lookWaitOverride = lookWaitOverride;
+    this.setLookWaitOverride = setLookWaitOverride;
+    this.lookHeadlineOverride = lookHeadlineOverride;
+    this.setLookHeadlineOverride = setLookHeadlineOverride;
   }
 
   /** Any onboarding path owns the client — GameScreen hides the server path. */
@@ -242,19 +285,55 @@ export class TutorialService {
     this.setOfferingSit(false);
     this.lookSettled = false;
     this.lookYou = you;
-    this.setBeat(0);
-    this.setLookView(buildLookView(you, 0));
+    this.setTalk([]);
     this.setLooking(true);
+    this.applyLookBeat(0);
   }
 
   headlineKey(): MessageKey {
     if (this.playing()) return this.playHeadline();
-    return LOOK_BEATS[this.beat()]?.headline ?? LOOK_BEATS[0].headline;
+    if (this.looking() && this.lookHeadlineOverride()) {
+      return this.lookHeadlineOverride()!;
+    }
+    return lookBeatAt(this.beat()).headline;
   }
 
   target(): string {
     if (this.playing()) return this.lockTarget(this.lock());
-    return LOOK_BEATS[this.beat()]?.target ?? LOOK_BEATS[0].target;
+    return lookBeatAt(this.beat()).target;
+  }
+
+  lookWait(): LookWait {
+    if (this.looking() && this.lookWaitOverride()) return this.lookWaitOverride()!;
+    return lookBeatAt(this.beat()).wait;
+  }
+
+  lookChat(): boolean {
+    return this.looking() && lookShowsChat(this.beat());
+  }
+
+  lookBlurred(): boolean {
+    return this.looking() && lookBlursTable(this.beat());
+  }
+
+  lookContinueKey(): MessageKey {
+    return lookBeatAt(this.beat()).continueKey ?? 'onboard.continue';
+  }
+
+  lookComposeHint(): boolean {
+    return this.looking() && this.lookWait() === 'say';
+  }
+
+  lookComposeHintKey(): MessageKey {
+    return this.lookHintKey();
+  }
+
+  lookPassHole(): boolean {
+    return this.looking() && this.lookWait() === 'say';
+  }
+
+  canContinueLook(): boolean {
+    return this.looking() && this.lookWait() === 'continue';
   }
 
   role(): Role | null {
@@ -270,8 +349,7 @@ export class TutorialService {
       this.settleLook();
       return true;
     }
-    this.setBeat(next);
-    if (this.lookYou) this.setLookView(buildLookView(this.lookYou, next));
+    this.applyLookBeat(next);
     return false;
   }
 
@@ -280,8 +358,7 @@ export class TutorialService {
     if (!this.looking()) return;
     const previous = this.beat() - 1;
     if (previous < 0) return;
-    this.setBeat(previous);
-    if (this.lookYou) this.setLookView(buildLookView(this.lookYou, previous));
+    this.applyLookBeat(previous);
   }
 
   /** After look: open a scripted table. Count 5 is the full small hand. */
@@ -316,10 +393,28 @@ export class TutorialService {
     this.refreshPlay();
   }
 
-  say(text: string): void {
-    if (!this.playing() || !this.table) return;
+  say(text: string, expected?: string): void {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (this.looking()) {
+      if (this.lookWait() !== 'say' || !this.lookYou) return;
+      this.pushTalk({
+        playerId: LOOK_SEAT.you,
+        name: this.lookYou.name,
+        text: trimmed,
+      });
+      if (expected != null && !samePitch(trimmed, expected)) {
+        this.rejectPitch();
+        return;
+      }
+      if (this.lookPitchFails === 0) {
+        this.rejectPitch();
+        return;
+      }
+      this.acceptPitch();
+      return;
+    }
+    if (!this.playing() || !this.table) return;
     this.pushTalk({
       playerId: this.table.youId,
       name: this.table.room.findPlayer(this.table.youId)?.name ?? '',
@@ -391,6 +486,9 @@ export class TutorialService {
 
   /** Lift the teaching mask while bots play, and during night (its own overlay). */
   maskLifted(): boolean {
+    if (this.looking()) {
+      return lookBeatAt(this.beat()).lifted === true || this.lookLifted();
+    }
     if (!this.playing()) return false;
     const lock = this.lock();
     return (lock == null || lock === 'night') && this.playView()?.winner == null;
@@ -556,8 +654,124 @@ export class TutorialService {
     return 'seats';
   }
 
+  private applyLookBeat(index: number): void {
+    this.stopLookScript();
+    this.setLookWaitOverride(null);
+    this.setLookHeadlineOverride(null);
+    this.setBeat(index);
+    this.setLookLifted(false);
+    const beat = lookBeatAt(index);
+    const campaignFrom = LOOK_BEATS.findIndex((item) => item.wait === 'talk');
+    const governmentFrom = LOOK_BEATS.findIndex((item) => item.target === 'government');
+    const pickedBefore = this.lookPicked;
+    if (index < governmentFrom) this.lookPicked = false;
+    if (beat.wait !== 'say') {
+      this.lookPitchFails = 0;
+      this.setLookHintKey('onboard.idea.composeHint');
+    }
+    if (index <= campaignFrom) this.setTalk([]);
+    if (!this.lookView() || pickedBefore !== this.lookPicked) this.refreshLookView();
+    if (beat.wait === 'talk') this.startCampaignTalk();
+  }
+
+  private refreshLookView(): void {
+    if (!this.lookYou) return;
+    this.setLookView(
+      buildLookView(this.lookYou, this.beat(), { picked: this.lookPicked }),
+    );
+  }
+
+  private startCampaignTalk(
+    lines: typeof LOOK_CAMPAIGN | typeof LOOK_CAMPAIGN_AGAIN = LOOK_CAMPAIGN,
+    then: 'advance' | 'say' = 'advance',
+  ): void {
+    const speak = (offset: number): void => {
+      if (offset >= lines.length) {
+        if (then === 'advance') {
+          this.advanceLook();
+          return;
+        }
+        this.setLookWaitOverride(null);
+        this.setLookHeadlineOverride(null);
+        this.setLookHintKey('onboard.idea.composeHint2');
+        return;
+      }
+      const line = lines[offset];
+      if (!line) {
+        if (then === 'advance') this.advanceLook();
+        return;
+      }
+      this.pushTalk({
+        playerId: LOOK_SEAT[line.seat],
+        name: this.companionName(line.seat),
+        key: line.key,
+      });
+      this.scheduleLook(() => speak(offset + 1), this.lookDelay(2800, 4200));
+    };
+    this.scheduleLook(() => speak(0), this.lookDelay(2000, 2800));
+  }
+
+  private rejectPitch(): void {
+    if (this.lookPitchFails === 0) {
+      this.lookPitchFails = 1;
+      this.setLookWaitOverride('talk');
+      this.setLookHeadlineOverride('onboard.idea.badPitch');
+      this.scheduleLook(() => {
+        this.pushTalk({
+          playerId: LOOK_SEAT.nima,
+          name: this.companionName('nima'),
+          key: 'onboard.talk.badLine',
+        });
+        this.startCampaignTalk(LOOK_CAMPAIGN_AGAIN, 'say');
+      }, this.lookDelay(1600, 2400));
+      return;
+    }
+    this.setLookHeadlineOverride('onboard.idea.writeTheHint');
+  }
+
+  private acceptPitch(): void {
+    this.setLookWaitOverride('auto');
+    this.scheduleLook(() => {
+      this.pushTalk({
+        playerId: LOOK_SEAT.nima,
+        name: this.companionName('nima'),
+        key: 'onboard.talk.iPickYou',
+        values: { name: this.lookYou?.name ?? '' },
+      });
+    }, this.lookDelay(1400, 2200));
+    this.scheduleLook(() => {
+      this.lookPicked = true;
+      this.setLookWaitOverride(null);
+      this.refreshLookView();
+      this.advanceLook();
+    }, this.lookDelay(2600, 3600));
+  }
+
+  private companionName(seat: keyof typeof LOOK_SEAT): string {
+    if (seat === 'you') return this.lookYou?.name ?? '';
+    const order = ['nima', 'sara', 'reza', 'omid'] as const;
+    const index = order.indexOf(seat);
+    return this.lookYou?.companions?.[index] ?? ['Nima', 'Sara', 'Reza', 'Omid'][index] ?? '';
+  }
+
+  private lookDelay(min: number, max: number): number {
+    if (this.lookTest) return 0;
+    return min + Math.floor(Math.random() * (max - min + 1));
+  }
+
+  private scheduleLook(fn: () => void, ms: number): void {
+    const id = window.setTimeout(fn, ms);
+    this.lookTimers.push(id);
+  }
+
+  private stopLookScript(): void {
+    for (const timer of this.lookTimers) window.clearTimeout(timer);
+    this.lookTimers = [];
+  }
+
   private settleLook(): void {
     this.lookSettled = true;
+    this.stopLookScript();
     try {
       localStorage.setItem(ONBOARDING_STEP_KEY, '1');
     } catch {
@@ -567,6 +781,14 @@ export class TutorialService {
 
   private endLook(): void {
     this.lookSettled = false;
+    this.lookPicked = false;
+    this.lookPitchFails = 0;
+    this.setLookHintKey('onboard.idea.composeHint');
+    this.setLookWaitOverride(null);
+    this.setLookHeadlineOverride(null);
+    this.setLookLifted(false);
+    this.stopLookScript();
+    this.setTalk([]);
     this.setLooking(false);
     this.setLookView(null);
   }

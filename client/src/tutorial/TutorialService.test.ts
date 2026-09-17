@@ -1,7 +1,8 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase } from '@secret-hitler/shared';
 import { NavigationService } from '../services/NavigationService';
-import { LOOK_BEATS, LOOK_SEAT, buildLookView, effectForLookTarget } from './lookView';
+import { LOOK_BEATS, LOOK_SEAT, buildLookView, effectForLookTarget, LOOK_CAMPAIGN, LOOK_CAMPAIGN_AGAIN, samePitch } from './lookView';
+import { en } from '../i18n/locales/en';
 import {
   ONBOARDING_DECLINE_KEY,
   ONBOARDING_STEP_KEY,
@@ -117,34 +118,45 @@ describe('TutorialService — look', () => {
     ]);
     expect(view.phase).toBe(Phase.Nomination);
     expect(LOOK_BEATS[0]?.headline).toBe('onboard.idea.welcome');
-    expect(LOOK_BEATS[0]?.target).toBe('seats');
+    expect(LOOK_BEATS[0]?.target).toBe('table');
+    expect(view.board.president).toBe(LOOK_SEAT.nima);
+    expect(view.players.find((player) => player.id === LOOK_SEAT.nima)?.isPresident).toBe(
+      true,
+    );
+    expect(view.players.find((player) => player.id === LOOK_SEAT.you)?.isPresident).toBe(
+      false,
+    );
   });
 
-  it('Should stage the vote dialog with a president and chancellor', () => {
-    const voteBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'vote');
-    const view = buildLookView({ name: 'You', avatar: 0 }, voteBeat);
-    expect(view.phase).toBe(Phase.Voting);
-    expect(view.board.president).toBe(LOOK_SEAT.you);
-    expect(view.board.chancellor).toBe(LOOK_SEAT.nima);
-    expect(view.voteDeadline).not.toBeNull();
-    expect(view.you.vote).toBeNull();
+  it('Should keep Nima as president from the first look beat', () => {
+    const view = buildLookView({ name: 'You', avatar: 0 }, 0);
+    expect(view.board.president).toBe(LOOK_SEAT.nima);
   });
 
-  it('Should stage three policy tiles for the laws beat', () => {
-    const lawsBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'laws');
-    const view = buildLookView({ name: 'You', avatar: 0 }, lawsBeat);
-    expect(view.phase).toBe(Phase.PresidentLegislative);
-    expect(view.you.policies).toEqual(['liberal', 'fascist', 'liberal']);
+  it('Should name Nima president once people start talking', () => {
+    const chatBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'chat');
+    const view = buildLookView({ name: 'You', avatar: 0 }, chatBeat);
+    expect(view.board.president).toBe(LOOK_SEAT.nima);
+    expect(view.board.chancellor).toBeNull();
+  });
+
+  it('Should sit the viewer as chancellor on the government beat', () => {
+    const governmentBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'government');
+    const view = buildLookView({ name: 'You', avatar: 0 }, governmentBeat, {
+      picked: true,
+    });
+    expect(view.board.chancellor).toBe(LOOK_SEAT.you);
+    expect(view.board.president).toBe(LOOK_SEAT.nima);
   });
 
   it('Should name the table object for each look punch-out', () => {
     expect(effectForLookTarget('seats')).toBe('onboard-seats');
     expect(effectForLookTarget('boards')).toBe('onboard-boards');
+    expect(effectForLookTarget('president')).toBe('onboard-offices');
     expect(effectForLookTarget('government')).toBe('onboard-offices');
-    expect(effectForLookTarget('vote')).toBe('onboard-vote');
-    expect(effectForLookTarget('tracker')).toBe('onboard-tracker');
-    expect(effectForLookTarget('deck')).toBe('onboard-deck');
-    expect(effectForLookTarget('laws')).toBe('onboard-laws');
+    expect(effectForLookTarget('table')).toBeNull();
+    expect(effectForLookTarget('chat')).toBeNull();
+    expect(effectForLookTarget('composer')).toBeNull();
   });
 
   it('Should walk every look beat then remember the step', () => {
@@ -152,6 +164,7 @@ describe('TutorialService — look', () => {
     tutorial.startLook({ name: 'You', avatar: 0 });
     expect(tutorial.looking()).toBe(true);
     expect(tutorial.headlineKey()).toBe(LOOK_BEATS[0].headline);
+    expect(tutorial.maskLifted()).toBe(true);
 
     for (let index = 1; index < LOOK_BEATS.length; index++) {
       expect(tutorial.advanceLook()).toBe(false);
@@ -204,6 +217,81 @@ describe('TutorialService — look', () => {
     tutorial.retreatLook();
     expect(tutorial.beat()).toBe(0);
     expect(tutorial.target()).toBe(LOOK_BEATS[0].target);
+  });
+
+  it('Should play the campaign then name the viewer chancellor', async () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    const talkIndex = LOOK_BEATS.findIndex((beat) => beat.wait === 'talk');
+    for (let index = 0; index < talkIndex; index++) tutorial.advanceLook();
+    expect(tutorial.lookWait()).toBe('talk');
+    expect(tutorial.canContinueLook()).toBe(false);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tutorial.lookWait()).toBe('say');
+    expect(tutorial.talk().map((line) => line.key)).toEqual(
+      LOOK_CAMPAIGN.map((line) => line.key),
+    );
+
+    const hint = en.onboard.idea.composeHint;
+    tutorial.say(hint, hint);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tutorial.talk().some((line) => line.key === 'onboard.talk.badLine')).toBe(
+      true,
+    );
+    expect(tutorial.lookComposeHintKey()).toBe('onboard.idea.composeHint2');
+    expect(tutorial.lookWait()).toBe('say');
+
+    const hint2 = en.onboard.idea.composeHint2;
+    tutorial.say(hint2, hint2);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tutorial.talk().some((line) => line.key === 'onboard.talk.iPickYou')).toBe(
+      true,
+    );
+    expect(tutorial.target()).toBe('government');
+    expect(tutorial.lookView()?.board.chancellor).toBe(LOOK_SEAT.you);
+    expect(tutorial.lookView()?.board.president).toBe(LOOK_SEAT.nima);
+    tutorial.skipLook();
+  });
+
+  it('Should reject a pitch that is not the suggestion then ask again', async () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    const talkIndex = LOOK_BEATS.findIndex((beat) => beat.wait === 'talk');
+    for (let index = 0; index < talkIndex; index++) tutorial.advanceLook();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tutorial.lookWait()).toBe('say');
+
+    tutorial.say('put me in', en.onboard.idea.composeHint);
+    expect(tutorial.lookWait()).toBe('talk');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tutorial.talk().some((line) => line.key === 'onboard.talk.badLine')).toBe(
+      true,
+    );
+    expect(
+      LOOK_CAMPAIGN_AGAIN.every((line) =>
+        tutorial.talk().some((spoken) => spoken.key === line.key),
+      ),
+    ).toBe(true);
+    expect(tutorial.lookWait()).toBe('say');
+    expect(tutorial.lookComposeHintKey()).toBe('onboard.idea.composeHint2');
+
+    tutorial.say('still no', en.onboard.idea.composeHint2);
+    expect(tutorial.headlineKey()).toBe('onboard.idea.writeTheHint');
+    expect(tutorial.lookWait()).toBe('say');
+
+    const hint2 = en.onboard.idea.composeHint2;
+    tutorial.say(hint2, hint2);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tutorial.target()).toBe('government');
+    tutorial.skipLook();
+  });
+
+  it('Should treat collapsed spaces as the same pitch', () => {
+    expect(samePitch("  Just put me in. I don't care who wins.  ", en.onboard.idea.composeHint)).toBe(
+      true,
+    );
+    expect(samePitch('put me in', en.onboard.idea.composeHint)).toBe(false);
   });
 
   it('Should skip without marking the look complete', () => {

@@ -14,12 +14,13 @@ import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import { growComposerHeight } from '../../services/KeyboardService';
 import { isChatNearBottom, scrollChatToBottom } from '../chatScroll';
+import { commitOnPress } from './commitOnPress';
 import styles from './ChatPanel.module.scss';
 
 /** Handle + chrome only — feed and composer hide at this height. */
 const CHAT_MIN = 96;
 /** Handle + chrome + composer; the feed collapses to no height. */
-const CHAT_COMPOSER = 152;
+const CHAT_COMPOSER = 164;
 const CHAT_DEFAULT = 280;
 /** Leave room for the event header, deck, and a full-size seat row. */
 const BOARD_RESERVE = 260;
@@ -37,6 +38,10 @@ export interface ChatPanelProps {
   onSkipTimer?: () => void;
   onOpenMenu: () => void;
   onHeightChange?: (height: number) => void;
+  /** Ghost suggestion that stays visible while the player types. */
+  composeHint?: string;
+  /** Hide the chrome clock the moment this viewer commits a law pick. */
+  suppressActionClock?: boolean;
 }
 
 /**
@@ -49,7 +54,9 @@ export function ChatPanel(props: ChatPanelProps) {
   const { formatMessage } = i18n;
 
   const [chatDraft, setChatDraft] = createSignal('');
-  const [height, setHeight] = createSignal(CHAT_DEFAULT);
+  const [height, setHeight] = createSignal(
+    tutorial.lookChat() ? CHAT_COMPOSER : CHAT_DEFAULT,
+  );
   const [resizing, setResizing] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
   let panelEl: HTMLElement | undefined;
@@ -63,12 +70,16 @@ export function ChatPanel(props: ChatPanelProps) {
   let micHandledByPointer = false;
 
   const talkingAllowed = () => props.talkingAllowed !== false;
+  const tableView = () => {
+    if (tutorial.looking()) return tutorial.lookView();
+    if (tutorial.playing()) return tutorial.playView();
+    return game.view();
+  };
   const chatLines = () =>
-    tutorial.playing() ? tutorial.talk() : game.chatMessages();
-  const youId = () =>
-    tutorial.playing() ? tutorial.playView()?.you.id : game.view()?.you.id;
+    tutorial.looking() || tutorial.playing() ? tutorial.talk() : game.chatMessages();
+  const youId = () => tableView()?.you.id;
   const slowSecondsLeft = () => {
-    if (tutorial.playing()) return 0;
+    if (tutorial.looking() || tutorial.playing()) return 0;
     const until = game.chatSlowUntil();
     if (until <= 0) return 0;
     return Math.max(0, Math.ceil((until - now()) / 1000));
@@ -85,6 +96,22 @@ export function ChatPanel(props: ChatPanelProps) {
         ? Math.max(CHAT_MIN, available - BOARD_RESERVE)
         : 560;
     return Math.round(Math.min(max, Math.max(CHAT_MIN, next)));
+  };
+
+  const growLookChat = () => {
+    if (
+      import.meta.env.MODE === 'test' ||
+      process.env.NODE_ENV === 'test' ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    ) {
+      applyHeight(CHAT_DEFAULT);
+      return;
+    }
+    applyHeight(CHAT_COMPOSER);
+    const frame = requestAnimationFrame(() => {
+      applyHeight(CHAT_DEFAULT);
+    });
+    onCleanup(() => cancelAnimationFrame(frame));
   };
 
   const applyHeight = (next: number, persist = false) => {
@@ -130,11 +157,14 @@ export function ChatPanel(props: ChatPanelProps) {
 
   onMount(() => {
     game.markChatRead();
-    try {
-      const stored = Number(localStorage.getItem(HEIGHT_KEY));
-      if (Number.isFinite(stored) && stored > 0) applyHeight(stored);
-    } catch {
-      applyHeight(height());
+    if (tutorial.lookChat()) growLookChat();
+    else {
+      try {
+        const stored = Number(localStorage.getItem(HEIGHT_KEY));
+        if (Number.isFinite(stored) && stored > 0) applyHeight(stored);
+      } catch {
+        applyHeight(height());
+      }
     }
     const ticker = setInterval(() => setNow(Date.now()), 1000);
     const onWinResize = () => {
@@ -149,7 +179,8 @@ export function ChatPanel(props: ChatPanelProps) {
   });
 
   const actionSecondsLeft = () => {
-    if (tutorial.playing()) return null;
+    if (props.suppressActionClock) return null;
+    if (tutorial.looking() || tutorial.playing()) return null;
     const state = game.view();
     if (!state) return null;
     const clock = state.kickVote?.startedAt ?? now();
@@ -167,9 +198,7 @@ export function ChatPanel(props: ChatPanelProps) {
   };
 
   const playerById = (playerId: string) =>
-    (tutorial.playing() ? tutorial.playView()?.players : game.view()?.players)?.find(
-      (player) => player.id === playerId,
-    );
+    tableView()?.players.find((player) => player.id === playerId);
 
   const timestamp = (at: number) =>
     new Date(at).toLocaleTimeString(i18n.lang(), {
@@ -179,7 +208,8 @@ export function ChatPanel(props: ChatPanelProps) {
 
   function sendChat(): void {
     if (!talkingAllowed() || !canSend()) return;
-    if (tutorial.playing()) tutorial.say(chatDraft());
+    if (tutorial.looking()) tutorial.say(chatDraft(), props.composeHint);
+    else if (tutorial.playing()) tutorial.say(chatDraft());
     else game.sendChat(chatDraft());
     setChatDraft('');
     setNow(Date.now());
@@ -225,9 +255,14 @@ export function ChatPanel(props: ChatPanelProps) {
 
   return (
     <section
-      classList={{ [styles.panel]: true, [styles.resizing]: resizing() }}
+      classList={{
+        [styles.panel]: true,
+        [styles.resizing]: resizing(),
+        [styles.lookGrow]: tutorial.lookChat(),
+      }}
       style={{ height: `${height()}px`, 'flex-basis': `${height()}px` }}
       aria-label={formatMessage('game.chat')}
+      data-tutorial-target="chat"
       ref={(element) => (panelEl = element)}
     >
       <div
@@ -260,7 +295,7 @@ export function ChatPanel(props: ChatPanelProps) {
               <button
                 type="button"
                 class={styles.tableAction}
-                onClick={props.onAction}
+                {...commitOnPress(() => props.onAction?.())}
               >
                 {props.actionLabel}
               </button>
@@ -281,6 +316,7 @@ export function ChatPanel(props: ChatPanelProps) {
           </Show>
         </div>
 
+        <Show when={!tutorial.looking()}>
         <div class={styles.tools}>
           <Show when={flags.flags.voice}>
             <button
@@ -290,11 +326,17 @@ export function ChatPanel(props: ChatPanelProps) {
                 [styles.toolMuted]: voice.selfMuted(),
               }}
               aria-label={formatMessage(
-                voice.selfMuted() ? 'game.unmuteSelf' : 'game.muteSelf',
+                tutorial.looking() || !voice.selfMuted()
+                  ? 'game.muteSelf'
+                  : 'game.unmuteSelf',
               )}
-              aria-pressed={!voice.selfMuted()}
+              aria-pressed={tutorial.looking() || !voice.selfMuted()}
               onPointerDown={(event) => {
                 if (event.button !== 0) return;
+                if (tutorial.looking()) {
+                  event.preventDefault();
+                  return;
+                }
                 // Swallow the synthetic click — both handlers would toggle twice
                 // and the mic could never stay muted.
                 micHandledByPointer = true;
@@ -302,6 +344,7 @@ export function ChatPanel(props: ChatPanelProps) {
                 voice.toggleSelfMute();
               }}
               onClick={() => {
+                if (tutorial.looking()) return;
                 if (micHandledByPointer) {
                   micHandledByPointer = false;
                   return;
@@ -309,7 +352,12 @@ export function ChatPanel(props: ChatPanelProps) {
                 voice.toggleSelfMute();
               }}
             >
-              <Icon name={voice.selfMuted() ? 'micOff' : 'mic'} size={20} />
+              <Icon
+                name={
+                  tutorial.looking() || !voice.selfMuted() ? 'mic' : 'micOff'
+                }
+                size={20}
+              />
             </button>
           </Show>
           <button
@@ -348,6 +396,7 @@ export function ChatPanel(props: ChatPanelProps) {
             <Icon name="gear" size={20} />
           </button>
         </div>
+        </Show>
       </header>
 
       <Show when={showComposer()}>
@@ -368,7 +417,7 @@ export function ChatPanel(props: ChatPanelProps) {
               const player = () => playerById(message.playerId);
               const body = () =>
                 'key' in message && message.key
-                  ? formatMessage(message.key)
+                  ? formatMessage(message.key, 'values' in message ? message.values : undefined)
                   : message.text ?? '';
               return (
                 <article
@@ -410,39 +459,57 @@ export function ChatPanel(props: ChatPanelProps) {
             [styles.composer]: true,
             [styles.composerMuted]: !talkingAllowed(),
           }}
+          data-tutorial-target="composer"
         >
-          <textarea
-            class={styles.input}
-            rows={1}
-            dir={i18n.dir()}
-            placeholder={
-              !talkingAllowed()
-                ? formatMessage('game.chatSilentPlaceholder')
-                : slowSecondsLeft() > 0
-                  ? formatMessage('game.chatSlowPlaceholder', {
-                      seconds: slowSecondsLeft(),
-                    })
-                  : formatMessage('game.chatPlaceholder')
-            }
-            maxlength={500}
-            disabled={!talkingAllowed()}
-            aria-disabled={!talkingAllowed()}
-            {...nativeFieldAttrs({ enterKeyHint: 'send' })}
-            ref={(element) => {
-              inputEl = element;
-              queueMicrotask(autosizeInput);
-            }}
-            onInput={(event) => {
-              if (!talkingAllowed()) return;
-              setChatDraft(event.currentTarget.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendChat();
+          <div class={styles.composerField}>
+            <Show when={props.composeHint}>
+              <span class={styles.composeHint} aria-hidden="true" dir={i18n.dir()}>
+                {props.composeHint}
+              </span>
+            </Show>
+            <textarea
+              class={styles.input}
+              rows={1}
+              dir={i18n.dir()}
+              aria-label={
+                props.composeHint ??
+                formatMessage(
+                  !talkingAllowed()
+                    ? 'game.chatSilentPlaceholder'
+                    : 'game.chatPlaceholder',
+                )
               }
-            }}
-          />
+              placeholder={
+                props.composeHint
+                  ? ''
+                  : !talkingAllowed() && !tutorial.looking()
+                    ? formatMessage('game.chatSilentPlaceholder')
+                    : slowSecondsLeft() > 0
+                      ? formatMessage('game.chatSlowPlaceholder', {
+                          seconds: slowSecondsLeft(),
+                        })
+                      : formatMessage('game.chatPlaceholder')
+              }
+              maxlength={500}
+              disabled={!talkingAllowed()}
+              aria-disabled={!talkingAllowed()}
+              {...nativeFieldAttrs({ enterKeyHint: 'send' })}
+              ref={(element) => {
+                inputEl = element;
+                queueMicrotask(autosizeInput);
+              }}
+              onInput={(event) => {
+                if (!talkingAllowed()) return;
+                setChatDraft(event.currentTarget.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  sendChat();
+                }
+              }}
+            />
+          </div>
           <button
             type="button"
             class={styles.send}

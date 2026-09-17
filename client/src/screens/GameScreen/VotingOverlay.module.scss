@@ -82,6 +82,7 @@
   aspect-ratio: 3 / 2;
   object-fit: contain;
   display: block;
+  pointer-events: none;
   background: transparent;
   mix-blend-mode: lighten;
   filter: grayscale(0.25) brightness(0.88);

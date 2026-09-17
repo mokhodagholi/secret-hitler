@@ -12,6 +12,7 @@ import {
   flyToTarget,
   pileEl,
 } from './cardFlight';
+import { commitOnPress } from './commitOnPress';
 import styles from './LegislativeModal.module.scss';
 
 export interface LegislativeModalProps {
@@ -32,7 +33,7 @@ export interface LegislativeModalProps {
   onDrewCard?: () => void;
   /** Draw pile is back in sync with the server (deal finished or skipped). */
   onDealCaughtUp?: () => void;
-  onPick: (index: number) => void;
+  onPick: (index: number, mode: 'discard' | 'enact') => void;
   onVeto: () => void;
   formatMessage: FormatMessage;
 }
@@ -49,7 +50,7 @@ type Beat = 'deal' | 'burn' | 'pass' | 'choose';
  */
 export function LegislativeModal(props: LegislativeModalProps) {
   const { formatMessage } = props;
-  const { animation, ravi, sound, tutorial } = useApp();
+  const { animation, game, ravi, sound, tutorial } = useApp();
   const drag = useDialogDrag();
   const [picking, setPicking] = createSignal(false);
   const [beat, setBeat] = createSignal<Beat>(
@@ -65,10 +66,12 @@ export function LegislativeModal(props: LegislativeModalProps) {
   let travelGen = 0;
   let seenMode: 'discard' | 'enact' | null = null;
   let didBurn = false;
+  let unlockTimer: ReturnType<typeof setTimeout> | undefined;
 
   onCleanup(() => {
     closed = true;
     travelGen += 1;
+    if (unlockTimer !== undefined) clearTimeout(unlockTimer);
   });
 
   createEffect(() => {
@@ -77,6 +80,10 @@ export function LegislativeModal(props: LegislativeModalProps) {
     if (previous === mode) return;
     seenMode = mode;
     void playTravel(mode, previous);
+  });
+
+  createEffect(() => {
+    if (game.lastError()) setPicking(false);
   });
 
   async function playTravel(
@@ -153,16 +160,24 @@ export function LegislativeModal(props: LegislativeModalProps) {
     void ravi.speak(props.mode === 'discard' ? 'private.discard' : 'private.enact');
   }
 
-  async function pick(index: number): Promise<void> {
+  function pick(index: number): void {
     if (picking()) return;
     setPicking(true);
-    if (props.mode === 'discard') {
-      const card = faceCards[index];
-      sound.play('policy-burn');
-      await flyToTarget(animation, card, pileEl('discard'), { landScale: 0.28 });
-      didBurn = true;
-    }
-    props.onPick(index);
+    // Mini App often never fires `click` while a WAAPI flip is still pending.
+    props.onPick(index, props.mode);
+    if (unlockTimer !== undefined) clearTimeout(unlockTimer);
+    // Dropped frames used to lock the cards until the clock auto-picked.
+    unlockTimer = setTimeout(() => {
+      if (!closed) setPicking(false);
+    }, 1_500);
+    if (props.mode !== 'discard') return;
+    const card = faceCards[index];
+    sound.play('policy-burn');
+    void flyToTarget(animation, card, pileEl('discard'), { landScale: 0.28 }).then(
+      () => {
+        didBurn = true;
+      },
+    );
   }
 
   const showFaces = () => props.policies.length > 0;
@@ -228,7 +243,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
         />
         <span class={styles.title}>{title()}</span>
 
-        <Show when={beat() === 'choose' && props.secondsLeft > 0}>
+        <Show when={beat() === 'choose' && !picking() && props.secondsLeft > 0}>
           <span
             classList={{
               [styles.timer]: true,
@@ -251,18 +266,28 @@ export function LegislativeModal(props: LegislativeModalProps) {
                   disabled={picking()}
                   ref={(element) => {
                     faceCards[index()] = element;
-                    void animation.play(element, 'card-flip-in', {
-                      delay: index() * REVEAL_STEP_MS,
-                      fill: 'backwards',
-                    });
                   }}
-                  onClick={() => void pick(index())}
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    pick(index());
+                  }}
+                  onClick={() => pick(index())}
                 >
-                  <WarmImg
-                    class={styles.cardImage}
-                    src={POLICY_FACE[policy]}
-                    alt={formatMessage(`game.${policy}`)}
-                  />
+                  <span
+                    class={styles.cardFace}
+                    ref={(element) => {
+                      void animation.play(element, 'card-flip-in', {
+                        delay: index() * REVEAL_STEP_MS,
+                        fill: 'backwards',
+                      });
+                    }}
+                  >
+                    <WarmImg
+                      class={styles.cardImage}
+                      src={POLICY_FACE[policy]}
+                      alt={formatMessage(`game.${policy}`)}
+                    />
+                  </span>
                 </button>
               )}
             </For>
@@ -291,7 +316,7 @@ export function LegislativeModal(props: LegislativeModalProps) {
             type="button"
             class={styles.veto}
             disabled={picking()}
-            onClick={() => props.onVeto()}
+            {...commitOnPress(() => props.onVeto())}
           >
             {formatMessage('game.veto.propose')}
           </button>

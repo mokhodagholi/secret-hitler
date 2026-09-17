@@ -2,7 +2,6 @@ import {
   AVATAR_COUNT,
   Phase,
   type GameStateView,
-  type Policy,
   type PublicPlayer,
 } from '@secret-hitler/shared';
 import type { MessageKey } from '../i18n';
@@ -17,24 +16,135 @@ export const LOOK_SEAT = {
   omid: 'look-omid',
 } as const;
 
-/**
- * Step 1 — how a hand plays on the real table.
- * Step 0 already named the pieces; here Daniel walks the moves.
- */
-export const LOOK_BEATS = [
-  { target: 'seats', headline: 'onboard.idea.welcome' },
-  { target: 'boards', headline: 'onboard.idea.boards' },
-  { target: 'government', headline: 'onboard.idea.government' },
-  { target: 'vote', headline: 'onboard.idea.vote' },
-  { target: 'tracker', headline: 'onboard.idea.tracker' },
-  { target: 'deck', headline: 'onboard.idea.deck' },
-  { target: 'laws', headline: 'onboard.idea.laws' },
-] as const satisfies ReadonlyArray<{
+export type LookWait = 'continue' | 'talk' | 'say' | 'auto';
+
+interface LookBeatSpec {
   target: string;
   headline: MessageKey;
-}>;
+  wait: LookWait;
+  lifted?: boolean;
+  chat?: boolean;
+  blur?: boolean;
+  continueKey?: MessageKey;
+}
+
+/**
+ * Step 1 — the table, then how people talk their way into office.
+ * Step 0 already named the pieces.
+ */
+export const LOOK_BEATS = [
+  {
+    target: 'table',
+    headline: 'onboard.idea.welcome',
+    wait: 'continue',
+    lifted: true,
+  },
+  { target: 'seats', headline: 'onboard.idea.people', wait: 'continue' },
+  { target: 'boards', headline: 'onboard.idea.boards', wait: 'continue' },
+  {
+    target: 'president',
+    headline: 'onboard.idea.thisPresident',
+    wait: 'continue',
+  },
+  { target: 'chat', headline: 'onboard.idea.talk', wait: 'continue', chat: true },
+  {
+    target: 'chat',
+    headline: 'onboard.idea.campaign',
+    wait: 'continue',
+    chat: true,
+  },
+  {
+    target: 'chat',
+    headline: 'onboard.idea.talkAbout',
+    wait: 'continue',
+    chat: true,
+  },
+  {
+    target: 'chat',
+    headline: 'onboard.idea.talkAbout',
+    wait: 'talk',
+    chat: true,
+  },
+  {
+    target: 'composer',
+    headline: 'onboard.idea.yourTurn',
+    wait: 'say',
+    chat: true,
+  },
+  {
+    target: 'government',
+    headline: 'onboard.idea.youChancellor',
+    wait: 'continue',
+    chat: true,
+  },
+  {
+    target: 'table',
+    headline: 'onboard.idea.seeNext',
+    wait: 'continue',
+    lifted: true,
+    blur: true,
+    continueKey: 'onboard.seeNext',
+  },
+] as const satisfies ReadonlyArray<LookBeatSpec>;
 
 export type LookBeat = (typeof LOOK_BEATS)[number];
+
+export function lookBeatAt(index: number): LookBeat {
+  return LOOK_BEATS[Math.max(0, Math.min(index, LOOK_BEATS.length - 1))]!;
+}
+
+export function lookShowsChat(index: number): boolean {
+  return lookBeatAt(index).chat === true;
+}
+
+export function lookBlursTable(index: number): boolean {
+  return lookBeatAt(index).blur === true;
+}
+
+/** Nima is President; the other three campaign, two lines each. */
+export const LOOK_CAMPAIGN: ReadonlyArray<{
+  seat: keyof typeof LOOK_SEAT;
+  key: MessageKey;
+}> = [
+  { seat: 'reza', key: 'onboard.talk.trustMe' },
+  { seat: 'sara', key: 'onboard.talk.playingYou' },
+  { seat: 'omid', key: 'onboard.talk.anyoneCan' },
+  { seat: 'nima', key: 'onboard.talk.listening' },
+  { seat: 'reza', key: 'onboard.talk.putMeIn' },
+  { seat: 'sara', key: 'onboard.talk.tooEager' },
+  { seat: 'omid', key: 'onboard.talk.quietlyLiberal' },
+  { seat: 'nima', key: 'onboard.talk.illPick' },
+];
+
+/** Second pass after a pitch that was not the suggestion. */
+export const LOOK_CAMPAIGN_AGAIN: ReadonlyArray<{
+  seat: keyof typeof LOOK_SEAT;
+  key: MessageKey;
+}> = [
+  { seat: 'reza', key: 'onboard.talk.stillLiberal' },
+  { seat: 'sara', key: 'onboard.talk.pickElse' },
+  { seat: 'omid', key: 'onboard.talk.sameSong' },
+  { seat: 'nima', key: 'onboard.talk.stillListening' },
+  { seat: 'reza', key: 'onboard.talk.thisHand' },
+  { seat: 'sara', key: 'onboard.talk.noRush' },
+];
+
+/**
+ * The compose ghost is the required line. Allow collapsed spaces and the
+ * usual ي/ك slip; do not accept a different sentence.
+ */
+export function samePitch(typed: string, expected: string): boolean {
+  return normalizePitch(typed) === normalizePitch(expected);
+}
+
+function normalizePitch(text: string): string {
+  return text
+    .replace(/\u064A/g, '\u06CC')
+    .replace(/\u0643/g, '\u06A9')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
 
 /** Lesson sting for the punched-out widget. Not live-table foley. */
 export type LookBeatEffect =
@@ -52,6 +162,7 @@ export function effectForLookTarget(target: string): LookBeatEffect | null {
       return 'onboard-seats';
     case 'boards':
       return 'onboard-boards';
+    case 'president':
     case 'government':
       return 'onboard-offices';
     case 'vote':
@@ -78,8 +189,6 @@ const COMPANIONS: ReadonlyArray<{
   { id: LOOK_SEAT.omid, name: 'Omid', seat: 4 },
 ];
 
-const LOOK_DEADLINE_MS = 60_000;
-
 export interface LookYou {
   name: string;
   avatar: number;
@@ -87,14 +196,23 @@ export interface LookYou {
   companions?: readonly string[];
 }
 
+export interface LookViewOptions {
+  /** President has already named the viewer Chancellor. */
+  picked?: boolean;
+}
+
 /**
  * Frozen table staged for the current look beat. No server room — GameScreen
  * paints the same chrome a live match would.
  */
-export function buildLookView(you: LookYou, beatIndex = 0): GameStateView {
-  const beat = LOOK_BEATS[Math.max(0, Math.min(beatIndex, LOOK_BEATS.length - 1))];
+export function buildLookView(
+  you: LookYou,
+  beatIndex = 0,
+  options: LookViewOptions = {},
+): GameStateView {
+  const beat = lookBeatAt(beatIndex);
   const target = beat.target;
-  const withOffices = target === 'government' || target === 'vote' || target === 'laws';
+  const withChancellor = options.picked === true || target === 'government';
 
   const avatars = companionAvatars(you.avatar);
   const players: PublicPlayer[] = [
@@ -104,14 +222,14 @@ export function buildLookView(you: LookYou, beatIndex = 0): GameStateView {
       avatar: you.avatar,
       seat: 0,
       isHost: true,
-      isPresident: withOffices,
+      isChancellor: withChancellor,
     }),
     seat({
       id: LOOK_SEAT.nima,
       name: you.companions?.[0] ?? COMPANIONS[0].name,
       avatar: avatars[0],
       seat: COMPANIONS[0].seat,
-      isChancellor: withOffices,
+      isPresident: true,
     }),
     seat({
       id: LOOK_SEAT.sara,
@@ -133,14 +251,10 @@ export function buildLookView(you: LookYou, beatIndex = 0): GameStateView {
     }),
   ];
 
-  const base = emptyView(players, withOffices);
-
-  if (target === 'vote') return votingStage(base);
-  if (target === 'laws') return lawsStage(base);
-  return base;
+  return emptyView(players, withChancellor);
 }
 
-function emptyView(players: PublicPlayer[], withOffices: boolean): GameStateView {
+function emptyView(players: PublicPlayer[], withChancellor: boolean): GameStateView {
   return {
     roomId: LOOK_ROOM_ID,
     code: 'LOOK',
@@ -159,8 +273,8 @@ function emptyView(players: PublicPlayer[], withOffices: boolean): GameStateView
       electionTracker: 0,
       drawPile: 17,
       discardPile: 0,
-      president: withOffices ? LOOK_SEAT.you : null,
-      chancellor: withOffices ? LOOK_SEAT.nima : null,
+      president: LOOK_SEAT.nima,
+      chancellor: withChancellor ? LOOK_SEAT.you : null,
       lastEnacted: [],
     },
     winner: null,
@@ -186,30 +300,6 @@ function emptyView(players: PublicPlayer[], withOffices: boolean): GameStateView
       canRequestKick: false,
       wantStartCooldownUntil: null,
     },
-  };
-}
-
-/** Real vote dialog: Ja / Nein cards. */
-function votingStage(base: GameStateView): GameStateView {
-  const now = Date.now();
-  return {
-    ...base,
-    phase: Phase.Voting,
-    voteDeadline: { startedAt: now, endsAt: now + LOOK_DEADLINE_MS },
-    you: { ...base.you, vote: null },
-  };
-}
-
-/** Three policy tiles in the president's hand. */
-function lawsStage(base: GameStateView): GameStateView {
-  const now = Date.now();
-  const policies: Policy[] = ['liberal', 'fascist', 'liberal'];
-  return {
-    ...base,
-    phase: Phase.PresidentLegislative,
-    board: { ...base.board, drawPile: 14 },
-    legislativeDeadline: { startedAt: now, endsAt: now + LOOK_DEADLINE_MS },
-    you: { ...base.you, policies },
   };
 }
 

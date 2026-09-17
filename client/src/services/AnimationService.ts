@@ -86,9 +86,17 @@ export class AnimationService {
     // Promote to the compositor for the animation only (project rule).
     element.style.willChange = 'transform, opacity';
     const animation = element.animate(keyframes, options);
-    return animation.finished
-      .catch(() => {}) // cancelled mid-flight (e.g. unmount) is not an error
+    const duration = typeof options.duration === 'number' ? options.duration : 0;
+    const delay = typeof options.delay === 'number' ? options.delay : 0;
+    // Mini App WebViews sometimes never resolve `animation.finished`.
+    const cap = delay + duration + 80;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<void>((resolve) => {
+      watchdog = setTimeout(resolve, cap);
+    });
+    return Promise.race([animation.finished.catch(() => {}), timedOut])
       .finally(() => {
+        if (watchdog !== undefined) clearTimeout(watchdog);
         element.style.willChange = '';
       })
       .then(() => {});

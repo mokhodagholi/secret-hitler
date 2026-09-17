@@ -4,6 +4,7 @@ import type { FormatMessage } from '../../i18n';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { PlayerRow } from './PlayerRow';
+import { commitOnPress } from './commitOnPress';
 import styles from './NominationModal.module.scss';
 
 export interface NominationModalProps {
@@ -69,7 +70,7 @@ export function NominationModal(props: NominationModalProps) {
         <button
           type="button"
           class={styles.endRound}
-          onClick={() => props.onEndRound()}
+          {...commitOnPress(() => props.onEndRound())}
         >
           {formatMessage('game.endRound')}
         </button>

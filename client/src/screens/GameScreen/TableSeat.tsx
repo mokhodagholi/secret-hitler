@@ -7,6 +7,7 @@ import { PARTY_FACE, VOTE_BACK, VOTE_FACE } from '../../assets/cards';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
+import { commitOnPress } from './commitOnPress';
 import styles from './TableSeat.module.scss';
 
 export interface TableSeatProps {
@@ -81,6 +82,9 @@ export function TableSeat(props: TableSeatProps) {
     if (tutorial.looking() && tutorial.target() === 'government') {
       return undefined;
     }
+    if (tutorial.looking() && tutorial.target() === 'president' && props.player.isPresident) {
+      return 'president';
+    }
     if (
       tutorial.looking() &&
       tutorial.target() === 'nextPresident' &&
@@ -118,9 +122,9 @@ export function TableSeat(props: TableSeatProps) {
       data-local-mute={locallyMuted() ? 'true' : undefined}
       aria-disabled={!interactive()}
       tabIndex={interactive() ? 0 : -1}
-      onClick={() => {
+      {...commitOnPress(() => {
         if (interactive()) props.onSelect();
-      }}
+      })}
     >
       <Show when={props.bubble}>
         <span class={styles.bubble} dir="auto">
@@ -132,6 +136,7 @@ export function TableSeat(props: TableSeatProps) {
 
       <Show when={office()}>
         {(kind) => (
+          <span class={styles.officeWrap}>
           <span
             classList={{
               [styles.office]: true,
@@ -142,12 +147,14 @@ export function TableSeat(props: TableSeatProps) {
             data-office={kind()}
             ref={(element) => {
               if (props.suppressOffice) return;
+              if (tutorial.looking()) return;
               void animation.play(element, 'badge-pop');
             }}
           >
             {formatMessage(
               kind() === 'president' ? 'game.president' : 'game.chancellor',
             )}
+          </span>
           </span>
         )}
       </Show>

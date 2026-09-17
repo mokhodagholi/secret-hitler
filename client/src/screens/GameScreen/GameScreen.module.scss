@@ -15,6 +15,7 @@
   --chat-panel-height: 280px;
   /* Button row (~44) + bottom inset (12) + gap above Skip / Continue (~40). */
   --look-chrome-height: 96px;
+  --look-chrome-nudge: 0px;
 }
 
 .body {
@@ -35,6 +36,47 @@
 
 .sceneLooking .players {
   padding-bottom: 8px;
+}
+
+.sceneLookChat .players {
+  padding-bottom: 28px;
+}
+
+.lookSeeNext {
+  position: absolute;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 28px 120px;
+  background: rgba(12, 8, 5, 0.4);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  animation: look-blur-in 0.55s ease-out;
+}
+
+.lookSeeNextText {
+  margin: 0;
+  color: $cream;
+  font-family: $font-body;
+  font-size: 1.28rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  max-width: 18rem;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+@keyframes look-blur-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(10px);
+  }
 }
 
 .table {

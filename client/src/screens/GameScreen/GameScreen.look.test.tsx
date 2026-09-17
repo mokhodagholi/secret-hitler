@@ -1,21 +1,11 @@
 import { Show } from 'solid-js';
 import { describe, expect, it } from '@rstest/core';
-import { fireEvent, screen } from '@solidjs/testing-library';
+import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { GameScreen } from './GameScreen';
 import { en } from '../../i18n/locales/en';
-import { LOOK_BEATS } from '../../tutorial/lookView';
 import { ONBOARDING_STEP_KEY } from '../../tutorial/TutorialService';
 import { useApp } from '../../services/AppContext';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
-
-const LOOK_HEADLINES = LOOK_BEATS.map((beat) => {
-  const [group, ...rest] = beat.headline.split('.');
-  let cursor: unknown = en;
-  for (const part of [group, ...rest]) {
-    cursor = (cursor as Record<string, unknown>)[part];
-  }
-  return cursor as string;
-});
 
 function LookRoutes() {
   const { nav } = useApp();
@@ -31,11 +21,8 @@ function openLook(harness: ReturnType<typeof buildHarness>): void {
   harness.services.nav.navigate('game');
 }
 
-function advanceTo(target: string): void {
-  const index = LOOK_BEATS.findIndex((beat) => beat.target === target);
-  for (let step = 0; step < index; step++) {
-    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
-  }
+function clickContinue(): void {
+  fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
 }
 
 describe('GameScreen — look', () => {
@@ -45,6 +32,7 @@ describe('GameScreen — look', () => {
     renderWithApp(() => <LookRoutes />, harness);
 
     expect(screen.getByText(en.onboard.idea.welcome)).toBeTruthy();
+    expect(screen.getByText(en.game.president)).toBeTruthy();
     expect(screen.getByText('Nima')).toBeTruthy();
     expect(screen.getByText('Sara')).toBeTruthy();
     expect(screen.getByText('Reza')).toBeTruthy();
@@ -52,6 +40,9 @@ describe('GameScreen — look', () => {
     expect(screen.getByRole('button', { name: en.onboard.continue })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.onboard.previous })).toBeNull();
+    expect(
+      screen.queryByRole('dialog', { name: en.game.chancellorRevealTitleYou }),
+    ).toBeNull();
   });
 
   it('Should retreat one look beat when Previous is pressed', () => {
@@ -59,52 +50,86 @@ describe('GameScreen — look', () => {
     openLook(harness);
     renderWithApp(() => <LookRoutes />, harness);
 
-    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
-    expect(screen.getByText(LOOK_HEADLINES[1])).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.people)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.previous })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.previous }));
-    expect(screen.getByText(LOOK_HEADLINES[0])).toBeTruthy();
+    expect(screen.getByText(en.onboard.idea.welcome)).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.onboard.previous })).toBeNull();
   });
 
-  it('Should advance the header through each look beat', () => {
+  it('Should walk seats and boards before the table starts talking', () => {
     const harness = buildHarness();
     openLook(harness);
     renderWithApp(() => <LookRoutes />, harness);
 
-    expect(screen.getByText(LOOK_HEADLINES[0])).toBeTruthy();
-    for (const headline of LOOK_HEADLINES.slice(1)) {
-      fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
-      expect(screen.getByText(headline)).toBeTruthy();
-    }
+    expect(screen.getByText(en.onboard.idea.welcome)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.people)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.boards)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.thisPresident)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.talk)).toBeTruthy();
+    expect(screen.getByLabelText(en.game.chat)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.game.muteSelf })).toBeNull();
   });
 
-  it('Should show the government ticket on the government beat', () => {
+  it('Should campaign in chat then wait for the viewer to write', async () => {
     const harness = buildHarness();
     openLook(harness);
     renderWithApp(() => <LookRoutes />, harness);
 
-    advanceTo('government');
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.talk)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.campaign)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.talkAbout)).toBeTruthy();
+    clickContinue();
 
-    expect(screen.getByText(en.onboard.idea.government)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(en.onboard.idea.yourTurn)).toBeTruthy();
+    });
+    expect(screen.getAllByText(en.onboard.talk.putMeIn).length).toBeGreaterThan(1);
+    expect(screen.getAllByText(en.onboard.talk.playingYou).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(en.onboard.talk.illPick).length).toBeGreaterThan(1);
+    expect(screen.getByText(en.onboard.idea.composeHint)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
+
+    const field = screen.getByRole('textbox', { name: en.onboard.idea.composeHint });
+    fireEvent.input(field, { target: { value: en.onboard.idea.composeHint } });
+    fireEvent.click(screen.getByRole('button', { name: en.game.send }));
+
+    await waitFor(() => {
+      expect(screen.getByText(en.onboard.idea.badPitch)).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole('textbox', { name: en.onboard.idea.composeHint2 }),
+      ).toBeTruthy();
+    });
+    fireEvent.input(screen.getByRole('textbox', { name: en.onboard.idea.composeHint2 }), {
+      target: { value: en.onboard.idea.composeHint2 },
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.game.send }));
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(en.onboard.talk.iPickYou.replace('{name}', 'You')).length,
+      ).toBeGreaterThan(0);
+    });
+    await waitFor(() => {
+      expect(screen.getByText(en.onboard.idea.youChancellor)).toBeTruthy();
+    });
     expect(
       screen.getByRole('dialog', { name: en.game.chancellorRevealTitleYou }),
     ).toBeTruthy();
-    expect(screen.getAllByText(en.game.president).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(en.game.chancellor).length).toBeGreaterThan(0);
-  });
-
-  it('Should show Ja / Nein vote cards on the vote beat', () => {
-    const harness = buildHarness();
-    openLook(harness);
-    renderWithApp(() => <LookRoutes />, harness);
-
-    advanceTo('vote');
-
-    expect(screen.getByText(en.onboard.idea.vote)).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.game.voteJa })).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.game.voteNein })).toBeTruthy();
   });
 
   it('Should go home when Skip is pressed', () => {
@@ -118,14 +143,41 @@ describe('GameScreen — look', () => {
     expect(localStorage.getItem(ONBOARDING_STEP_KEY)).toBeNull();
   });
 
-  it('Should open the five-player table after the last Continue', () => {
+  it('Should open the five-player table after the last Continue', async () => {
     const harness = buildHarness();
     openLook(harness);
     renderWithApp(() => <LookRoutes />, harness);
 
-    for (let index = 0; index < LOOK_HEADLINES.length; index++) {
-      fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
-    }
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    await waitFor(() => {
+      expect(screen.getByText(en.onboard.idea.yourTurn)).toBeTruthy();
+    });
+    fireEvent.input(screen.getByRole('textbox', { name: en.onboard.idea.composeHint }), {
+      target: { value: en.onboard.idea.composeHint },
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.game.send }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('textbox', { name: en.onboard.idea.composeHint2 }),
+      ).toBeTruthy();
+    });
+    fireEvent.input(screen.getByRole('textbox', { name: en.onboard.idea.composeHint2 }), {
+      target: { value: en.onboard.idea.composeHint2 },
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.game.send }));
+    await waitFor(() => {
+      expect(screen.getByText(en.onboard.idea.youChancellor)).toBeTruthy();
+    });
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.seeNext)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.seeNext }));
+
     expect(harness.services.nav.screen()).toBe('game');
     expect(harness.services.tutorial.looking()).toBe(false);
     expect(harness.services.tutorial.playing()).toBe(true);

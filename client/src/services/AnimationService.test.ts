@@ -110,6 +110,18 @@ describe('AnimationService — sequencing', () => {
     expect(order).toEqual(['survivor']);
   });
 
+  it('Should resolve when animation.finished never settles', async () => {
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+    (element as unknown as { animate: unknown }).animate = rs.fn(() => ({
+      finished: new Promise(() => {}),
+    }));
+
+    await buildService().playCustom(element, [{ opacity: 1 }, { opacity: 0 }], {
+      duration: 20,
+    });
+  });
+
   it('Should skip suspense holds while Reduce Motion is on', async () => {
     const service = buildService({ reduceMotion: true });
     // A skipped hold resolves immediately — were it not skipped, this await

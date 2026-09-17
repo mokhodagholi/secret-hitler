@@ -7,6 +7,7 @@ import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { DialogDragHandle } from '../../components/DialogDragHandle/DialogDragHandle';
 import { useDialogDrag } from '../../components/DialogDragHandle/useDialogDrag';
 import { GovernmentTicket } from './GovernmentTicket';
+import { commitOnPress } from './commitOnPress';
 import styles from './VotingOverlay.module.scss';
 
 export interface VotingOverlayProps {
@@ -74,14 +75,14 @@ export function VotingOverlay(props: VotingOverlayProps) {
               />
             </Show>
             <div class={styles.buttons}>
-              <button type="button" class={styles.ja} onClick={() => choose('ja')}>
+              <button type="button" class={styles.ja} {...commitOnPress(() => choose('ja'))}>
                 <WarmImg class={styles.cardArt} src={VOTE_FACE.ja} alt="" />
                 <span>{formatMessage('game.voteJa')}</span>
               </button>
               <button
                 type="button"
                 class={styles.nein}
-                onClick={() => choose('nein')}
+                {...commitOnPress(() => choose('nein'))}
               >
                 <WarmImg class={styles.cardArt} src={VOTE_FACE.nein} alt="" />
                 <span>{formatMessage('game.voteNein')}</span>

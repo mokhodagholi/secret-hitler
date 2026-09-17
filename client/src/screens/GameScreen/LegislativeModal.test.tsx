@@ -106,9 +106,7 @@ describe('LegislativeModal', () => {
       screen.getByRole('button', { name: en.game.liberal }),
     );
     fireEvent.click(liberal);
-    await waitFor(() => {
-      expect(picked).toEqual([0]);
-    });
+    expect(picked).toEqual([0]);
 
     await waitFor(() => {
       expect(screen.getByText(en.game.legislativePass)).toBeTruthy();
@@ -170,9 +168,48 @@ describe('LegislativeModal', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
-    await waitFor(() => {
-      expect(picked).toEqual([0]);
+    expect(picked).toEqual([0]);
+  });
+
+  it('Should enact on pointer down, before a click arrives', () => {
+    const harness = buildHarness({ seated: true });
+    const picked: number[] = [];
+    renderWithApp(
+      () => (
+        <LegislativeModal
+          mode="enact"
+          policies={['liberal', 'fascist']}
+          presidentId="you"
+          chancellorId="cal"
+          youId="cal"
+          presidentName="You"
+          chancellorName="Cal"
+          secondsLeft={18}
+          canVeto={false}
+          startedAt={Date.now() + 8_000}
+          onPick={(index) => {
+            picked.push(index);
+          }}
+          onVeto={() => {}}
+          formatMessage={harness.services.i18n.formatMessage}
+        />
+      ),
+      harness,
+    );
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: en.game.liberal }), {
+      button: 0,
     });
+    expect(picked).toEqual([0]);
+  });
+
+  it('Should hide the choice clock as soon as a card is tapped', () => {
+    const harness = buildHarness({ seated: true });
+    renderModal(harness, { secondsLeft: 18, startedAt: Date.now() - 1_000 });
+
+    expect(screen.getByText('18s')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
+    expect(screen.queryByText('18s')).toBeNull();
   });
 
   it('Should let the player drag the legislative panel aside', () => {

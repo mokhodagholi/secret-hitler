@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
-import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
+import { DEFAULT_FLAGS, Phase, CHAT_SLOWMODE_MS } from '@secret-hitler/shared';
 import { ChatPanel } from './ChatPanel';
 import { en } from '../../i18n/locales/en';
 import {
@@ -161,7 +161,7 @@ describe('ChatPanel', () => {
     });
   });
 
-  it('Should wait seven seconds before the next chat message', () => {
+  it('Should wait before the next chat message', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);
     harness.pushState(seatedView());
@@ -170,19 +170,20 @@ describe('ChatPanel', () => {
     fireEvent.input(input, { target: { value: 'first' } });
     fireEvent.click(screen.getByRole('button', { name: en.game.send }));
 
-    fireEvent.input(screen.getByPlaceholderText(/Wait 7s/), {
+    const seconds = String(Math.ceil(CHAT_SLOWMODE_MS / 1000));
+    fireEvent.input(screen.getByPlaceholderText(new RegExp(`Wait ${seconds}s`)), {
       target: { value: 'too soon' },
     });
     fireEvent.click(
       screen.getByRole('button', {
-        name: en.game.chatSlowWait.replace('{seconds}', '7'),
+        name: en.game.chatSlowWait.replace('{seconds}', seconds),
       }),
     );
 
     expect(
       harness.socket.sent.filter((message) => message.type === 'chat:message'),
     ).toHaveLength(1);
-    expect(screen.getByText('7')).toBeTruthy();
+    expect(screen.getByText(seconds)).toBeTruthy();
   });
 
   it('Should show the discussion countdown while discussion is open', () => {
@@ -298,7 +299,7 @@ describe('ChatPanel', () => {
 
     fireEvent.dblClick(screen.getByRole('separator'));
     expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
-    expect(screen.getByLabelText(en.game.chat).style.height).toBe('152px');
+    expect(screen.getByLabelText(en.game.chat).style.height).toBe('164px');
   });
 
   it('Should hide the composer when the panel is collapsed to the header', () => {
@@ -405,5 +406,31 @@ describe('ChatPanel', () => {
     });
 
     expect(document.querySelector('[data-chat-ballot]')).toBeNull();
+  });
+
+  it('Should hide the chrome clock when a law pick is already committed', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(
+      () => (
+        <ChatPanel
+          onOpenPlayers={() => {}}
+          onOpenHistory={() => {}}
+          onOpenMenu={() => {}}
+          suppressActionClock
+        />
+      ),
+      harness,
+    );
+    const view = seatedView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      legislativeDeadline: {
+        startedAt: Date.now() - 1_000,
+        endsAt: Date.now() + 28_000,
+      },
+    });
+
+    expect(screen.queryByText(/^0:2\d$/)).toBeNull();
   });
 });

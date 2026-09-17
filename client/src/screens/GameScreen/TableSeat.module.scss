@@ -131,7 +131,6 @@
 }
 
 .bubble,
-.office,
 .officeAnchor,
 .next {
   position: absolute;
@@ -185,8 +184,18 @@
   visibility: hidden;
 }
 
+.officeWrap {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+}
+
 .office {
-  bottom: calc(100% - 2px);
+  position: relative;
+  display: block;
   padding: 4px 8px;
   border-radius: 999px;
   font-family: $font-body;

@@ -22,6 +22,20 @@
   }
 }
 
+.lookGrow {
+  transition: height 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+
+  :global(html[data-android]) & {
+    transition: height 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lookGrow {
+    transition: height 0.2s ease;
+  }
+}
+
 .resizing {
   transition: none;
 
@@ -271,7 +285,7 @@
   align-items: flex-end;
   gap: 8px;
   margin: auto 0 0;
-  padding: 8px 16px env(safe-area-inset-bottom, 0px);
+  padding: 8px 16px calc(18px + env(safe-area-inset-bottom, 0px));
   background: #1c140e;
   border: none;
   border-top: 1px solid rgba(180, 130, 70, 0.38);
@@ -290,6 +304,35 @@
   }
 }
 
+.composerField {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(180, 130, 70, 0.5);
+  border-radius: 10px;
+  background: #16100b;
+}
+
+.composeHint {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  color: rgba($cream, 0.32);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  pointer-events: none;
+  white-space: pre-wrap;
+  overflow: hidden;
+  word-break: break-word;
+}
+
 .composerMuted {
   opacity: 0.62;
 
@@ -299,18 +342,25 @@
 }
 
 .input {
-  flex: 1;
+  position: relative;
+  z-index: 1;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
-  min-height: 44px;
-  max-height: calc(1.45em * 4 + 20px);
-  height: 44px;
-  padding: 10px 2px;
+  min-height: 52px;
+  max-height: calc(1.45em * 4 + 24px);
+  height: 52px;
+  padding: 12px 14px;
+  margin: 0;
   background: transparent;
   border: none;
   color: $cream;
   font: inherit;
   font-size: 16px;
+  font-weight: 400;
   line-height: 1.45;
+  letter-spacing: 0;
   outline: none;
   resize: none;
   @include scroll-y;
@@ -325,10 +375,10 @@
   @include pressable;
   display: grid;
   place-items: center;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
-  margin: 0;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  margin: 0 0 4px;
   padding: 0;
   border: none;
   border-radius: 50%;

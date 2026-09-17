@@ -29,7 +29,7 @@ the whole thing, any time.
 | Step | Table | What they learn |
 |---|---|---|
 | **0. Pieces** | Full-page slides | What each thing *is* — role cards, boards, offices, vote cards, tracker, deck, laws. Short labels only. |
-| **1. How to play** | Frozen 5-seat table | How a hand moves: propose government, vote, failed tracker, deck, three laws. |
+| **1. How to play** | Frozen 5-seat table | The table, who sits, the boards, how talk gets you named Chancellor. Not a recap of every piece. |
 | **2. Five** | 5-player match | The whole small table: night, nominate, vote, tracker, laws, peek, execute, how each side wins. Easy script, player is Liberal. |
 | **3. Six** | 6-player match | Same board as five. Extra Liberal. Term limits when five remain. |
 | **4. Seven** | 7-player match | Hitler does **not** see the Fascists. Investigate. Special election. |
@@ -59,11 +59,15 @@ A live join link or a restored seat still wins over this, same as today.
   Chat is table talk, never “this is a lesson”. They never mention
   Daniel, the guide, or that they are scripted.
 - **Daniel is the guide.** He speaks only to the viewer. While he
-  teaches, a **mask** covers the rest of the table (warm smoke, not
-  black) and one region stays clear and tappable.
-- **One lit thing.** During a teaching beat, only the highlighted
-  control works. Wrong taps do nothing; Daniel repeats. When it is an
-  ordinary bot turn, the mask lifts and the table just plays.
+  points at a widget, a **mask** covers the rest of the table (warm
+  smoke, not black) and that region stays clear. When he is talking
+  about the whole room, there is no mask hole.
+- **One lit thing — or none.** During a teaching beat, only the
+  highlighted control works. Wrong taps do nothing; Daniel repeats.
+  **Some beats have no highlight.** If Daniel is talking about the
+  whole table, lift the mask: no gold ring, no punched-out seat, no
+  office ribbon that looks like a pick. When it is an ordinary bot
+  turn, the mask lifts and the table just plays.
 - **Human timing.** Nothing important happens in 0.2 s. Joins, chat,
   nominations, votes, and discards sit in the **1.5–5 s** range, with
   jitter, so it feels like people thinking. See [Timing](#timing).
@@ -95,28 +99,101 @@ Slides live in `client/src/tutorial/introSlides.ts`. Copy under
 ## Step 1 — how to play
 
 Not a slideshow of posters. A **staged 5-seat table** (the real
-Game-screen chrome). First a recap of the step 0 pieces, then the hand
-starts.
+Game-screen chrome). Step 0 already named the pieces. Here they see the
+room, then how people talk their way into office.
 
-Daniel: «خب وارد بازی شدیم. چیزهایی که تا الان دیدیم، توی همین صفحه
-استفاده می‌شه.» The mask walks seats → boards → government → vote →
-tracker → deck → laws. Continue after laws sits them in the five-player
-hand. A random seat is President. The others talk and campaign like
-Liberals who want the chancellor seat.
+Nima is President from the first beat. The player is not. After the
+boards, Daniel points at Nima, then chat opens and grows up. He
+explains why people talk, then they listen together, then the table
+campaigns. The first ghost is a bad line — copying it is still
+rejected. The second ghost is the real pitch. After a match, Nima names
+them Chancellor, the ticket modal, then a blur and “see next”.
 
-Each recap beat: Daniel’s line → Continue → the gold ring moves.
+Beats live in `client/src/tutorial/lookView.ts` (`LOOK_BEATS`). Copy
+under `onboard.idea.*` and `onboard.talk.*` in both locales.
 
-| # | Punch-out | They learn | Daniel FA | Daniel EN | Tone |
-|---|---|---|---|---|---|
-| 1 | Seats | We're at the table | خب وارد بازی شدیم. چیزهایی که تا الان دیدیم، توی همین صفحه استفاده می‌شه. | We're at the table. Everything you just saw lives on this screen. | `[warmly]` |
-| 2 | Boards | The two boards | *(step 0 boards, shorter)* | | `[calm]` |
-| 3 | Government ticket | President picks Chancellor | هر دست یه دولت پیشنهاد می‌شه. رئیس‌جمهور صدراعظم رو انتخاب می‌کنه. | Each hand a government is proposed. The President picks the Chancellor. | `[announce]` |
-| 4 | Ja / Nein vote cards | Everyone votes | همه رأی می‌دن: آره یا نه. | Everyone votes Ja or Nein. | `[calm]` |
-| 5 | Tracker | Three marks | همین شمارنده‌ست. سه تا خونه داره. | This is the tracker. Three marks. | `[calm]` |
-| 6 | Draw / discard | Where laws come from | قانون‌ها از این دسته میان. سوخته‌ها می‌رن رو توده دورریز. | Laws come from this deck. Burned laws go on the discard pile. | `[calm]` |
-| 7 | Three policy tiles | 3 → burn 1 → chancellor enacts 1 | *(step 0 laws)* | | `[calm]` |
+### Ring — sometimes there is no select
 
-Then the hand starts. No “this is a lesson table” in these lines.
+The gold ring is a **pointer**, not a default. If the beat is “look at
+the whole table”, lift the mask. No hole, no gold border, no office
+ribbons that make a seat look picked.
+
+| Ring | What they see |
+|---|---|
+| **Off** | Whole table. Warm room, no smoke hole. Nima already wears the President ribbon — no gold ring, so it is not a pick (welcome). After the ticket, the closing beat is off again — you already sit as Chancellor, no ring. |
+| **On** | One punched-out thing, gold border, smoke over the rest. That widget is the lesson. Chat / composer rings sit **inside** the panel: inset from the screen edge, below Continue. |
+| **On, then chat** | After boards, ring **only** Nima. Then open chat. Do not ring the whole table while they talk. After a matching pitch, Nima speaks in chat; then ring **only** the ticket modal. |
+
+Never ring the seats on the first beat. Never leave a seat looking
+selected when Daniel is talking about the whole page. Chat is hidden
+until after the President beat; it **grows up** from composer height
+when it first opens. The composer ring is only for the write beat
+(clicks must pass through so they can type). Ghost hint stays dim even
+while they type. Continue on the talk beats sits a little onto the chat
+handle — it must not sit on the gold border.
+
+Continue is hidden while the campaign plays, while they write, and while
+Nima names them in chat. Previous still works. The last Continue is
+«ببینیم» / “Let's see”, not «ادامه».
+
+The write beat is two tries. First ghost is a **bad** line — even copying
+it is rejected («این جمله کمکتون نمی‌کنه.»). Then another campaign and
+the real suggestion. Match that, Nima names them in chat, ticket modal,
+then a blur and «می‌خواید ببینید بعدش چی می‌شه؟».
+
+### Beats
+
+| # | Ring | Chat | Wait | They learn | Daniel FA | Daniel EN | Tone |
+|---|---|---|---|---|---|---|---|
+| 1 | **Off** — whole table, Nima already President | Hidden | Continue | We're in | وارد بازی شدیم. درسته، همه‌چی که تا الان دیدیم اینجا استفاده می‌شه. | We're in. Right — everything you just saw is used on this screen. | `[warmly]` |
+| 2 | **On** — all seats | Hidden | Continue | Who sits | اینا آدمای بازی‌ان. دو دسته تو بازی هست: فاشیست و لیبرال. | These are the people in the game. Two sides: Fascist and Liberal. | `[calm]` |
+| 3 | **On** — boards | Hidden | Continue | Where laws sit | اینا هم تخته‌های بازی‌ان. قانون‌ها روشون می‌شینه. | And these are the boards. That is where the laws sit. | `[calm]` |
+| 4 | **On** — Nima | Hidden | Continue | Who is President | این یکی رئیس‌جمهوره. هر دست صدراعظم رو این انتخاب می‌کنه. | This one is President. They pick the Chancellor each hand. | `[calm]` |
+| 5 | **On** — chat (inset) | Opens, grows up | Continue | How people talk | آدما با هم حرف می‌زنن — هم با پیام، هم با میکروفون. | People talk to each other — in chat, and on the mic. | `[calm]` |
+| 6 | **On** — chat (inset) | Open | Continue | Why they talk | همه سعی می‌کنن لیبرال به نظر برسن تا رئیس‌جمهور بذارتشون صدراعظم. | Everyone tries to look Liberal so the President will make them Chancellor. | `[announce]` |
+| 7 | **On** — chat (inset) | Open | Continue | Let's listen | با هم ببینیم سر میز چی می‌گن. | Let's watch together what they're saying. | `[calm]` |
+| 8 | **On** — chat (inset) | Open, auto lines + seat clouds | Until talk ends | Campaign as Liberal | (same as #7) | (same as #7) | `[announce]` |
+| 9 | **On** — composer only (tappable) | Open | Until they send | Write — first line is bad | شما هم بنویسید. یه چیزی که رئیس‌جمهور بذارتتون صدراعظم. | Your turn. Write something that makes the President name you Chancellor. | `[calm]` |
+| 10 | **On** — ticket modal only | Open | Continue | You are Chancellor | این یعنی شما صدراعظم این دستید. | That makes you Chancellor this hand. | `[announce]` |
+| 11 | **Blur** — whole table | Hidden | «ببینیم» | Next hand | می‌خواید ببینید بعدش چی می‌شه؟ | Want to see what happens next? | `[warmly]` |
+
+Then the five-player hand starts. No “this is a lesson table” in these lines.
+
+### Campaign talk (beat 8)
+
+Table colour. Two lines each from رضا، سارا، امید، and نیما (President).
+Each line also paints the seat cloud. 2.8–4.2 s between messages.
+Reza claims Liberal first; Sara calls it. Native fa / native en — not a
+translation of each other. They never mention Daniel, the guide, or that
+the table is scripted.
+
+| Who | FA | EN |
+|---|---|---|
+| رضا | من لیبرالم، به من اعتماد کن. | I'm Liberal. Trust me. |
+| سارا | نه بابا، داره فریبتون می‌ده. | Come off it. He's playing you. |
+| امید | از کجا معلوم؟ هر کی می‌تونه اینو بگه. | How would we know? Anyone can say that. |
+| نیما | آروم باشید. دارم گوش می‌دم. | Easy. I'm listening. |
+| رضا | جدی می‌گم. بذارید برم صدراعظم، خودتون می‌بینید. | I'm serious. Put me in — you'll see. |
+| سارا | رئیس‌جمهور این یکی رو نذار. خیلی عجله داره. | Don't pick him. He's rushing it. |
+| امید | منم لیبرالم. فقط سر میز داد نمی‌زنم. | I'm Liberal too. I just don't shout it. |
+| نیما | باشه. یکی رو برمی‌دارم. | Alright. I'll pick someone. |
+
+Ghost 1 (bad, even a copy is rejected): «منو بذارید. برام فرقی نداره کی می‌بره.» / “Just put me in. I don't care who wins.”
+Ghost 2: «رئیس‌جمهور منو بذارید. لیبرالم.» / “Put me in. I'm Liberal.”
+
+Nima on a bad first line: «این جمله به درد نمی‌خوره.» / “That line won't get you in.”
+Nima on a match, before the modal: «{name} رو می‌ذارم صدراعظم.» / “I'm putting {name} in as Chancellor.”
+
+Second campaign (after the first miss):
+
+| Who | FA | EN |
+|---|---|---|
+| رضا | باز هم می‌گم، لیبرالم. | I'll say it again. I'm Liberal. |
+| سارا | یکی دیگه رو بذار. | Pick someone else. |
+| امید | فرقی نمی‌کنه، همه همینو می‌گن. | Doesn't matter. Everyone says that. |
+| نیما | هنوز گوش می‌دم. | Still listening. |
+| رضا | این دست منو بذارید. | This hand, put me in. |
+| سارا | رئیس‌جمهور عجله نکن. | Don't rush it. |
 
 ---
 
@@ -131,12 +208,13 @@ Not a black dimmer and not a tutorial cartoon.
 - The punched-out control is the only pressable hit target.
 - Ravi / Daniel plaque sits **above** the mask (never covered).
 - Continue / Skip / Previous sit in the safe area, also above the mask.
-  Previous is hidden on the first beat.
+  On chat beats they overlap the chat handle a little so they are not
+  sitting on the gold ring. Previous is hidden on the first beat.
 - Reduce-motion: no pulse; hole still moves.
 
 Same overlay for step 1 and for teaching beats inside a match. When
 the table is just playing (a bot nominates, votes flip), **lift the
-mask**.
+mask**. Step 1 also lifts on purpose: welcome and the closing “see next”.
 
 ---
 
@@ -150,6 +228,7 @@ on the same frame.
 | Next player sits in lobby | 1.8–4.5 s after the previous |
 | First lobby chat after sitting | 2–5 s |
 | Chat after a public event (law, failed vote) | 1.8–3.8 s |
+| Look-table campaign line | 2.8–4.2 s between seats; first line 2–2.8 s |
 | Bot nominates | 2.5–5 s “thinking” |
 | Bot vote (stagger per seat) | 1.6–4.5 s, each seat different |
 | Bot burns / enacts | 2–4 s |
@@ -170,7 +249,7 @@ They play like people. Scripted, not an LLM. They never break character.
 
 | Seat | Name (fa) | Name (en) | Role (step 2) | Manner |
 |---|---|---|---|---|
-| 0 | (player) | (player) | Liberal | Only human. First President. |
+| 0 | (player) | (player) | Liberal | Only human. Step 1: not President — Nima is, from beat 1. Step 2: first President. |
 | 1 | نیما | Nima | Liberal | Calm. Short lines. Picks Liberals. |
 | 2 | سارا | Sara | Liberal | Asks. Follows Nima. |
 | 3 | رضا | Reza | Fascist | Sure of himself. Moves too early. |
@@ -193,6 +272,12 @@ Staggered as they sit.
 | امید | باشه. | Alright. |
 
 No one says تمرین, ربات, درس, آموزش.
+
+### Step 1 campaign (look table)
+
+Eight lines, two each. Keys `onboard.talk.trustMe` … `illPick`. A miss
+adds `LOOK_CAMPAIGN_AGAIN`. Each line is also a seat cloud. Timing as
+in [Timing](#timing) — not a burst.
 
 ### In-match chat
 
@@ -308,11 +393,18 @@ Do not use the word تمرین / practice / bot / ربات in any of these.
 | Id | Tone | FA | EN |
 |---|---|---|---|
 | `onboard.sit` | warmly | بشینید. از روی میز نشون می‌دم. | Sit. I'll show you from the table. |
-| `onboard.idea.table` | warmly | *(step 1 #1)* | |
-| `onboard.idea.boards` | calm | *(step 1 #2)* | |
-| `onboard.idea.vote` | calm | *(step 1 #3)* | |
-| `onboard.idea.government` | announcing | *(step 1 #4)* | |
-| `onboard.idea.laws` | calm | *(step 1 #5)* | |
+| `onboard.idea.welcome` | warmly | *(step 1 #1 — no ring)* | |
+| `onboard.idea.people` | calm | *(step 1 #2 — ring seats)* | |
+| `onboard.idea.boards` | calm | *(step 1 #3 — ring boards)* | |
+| `onboard.idea.thisPresident` | calm | *(step 1 #4 — ring Nima)* | |
+| `onboard.idea.talk` | calm | *(step 1 #5 — ring chat)* | |
+| `onboard.idea.campaign` | announcing | *(step 1 #6)* | |
+| `onboard.idea.talkAbout` | calm | *(step 1 #7 — then talk starts)* | |
+| `onboard.idea.yourTurn` | calm | *(step 1 #9 — ring composer)* | |
+| `onboard.idea.badPitch` | down | *(first send, even if they copied the ghost)* | |
+| `onboard.idea.writeTheHint` | down | *(second miss)* | |
+| `onboard.idea.youChancellor` | announcing | *(step 1 #10 — ring ticket)* | |
+| `onboard.idea.seeNext` | warmly | *(step 1 #11 — blur)* | |
 | `onboard.letsSit` | warmly | بریم سر میز. | Let's sit. |
 | `onboard.night.done` | whispering | شما لیبرالید. بقیه رو نمی‌بینید. همین درسته. | You are a Liberal. You do not see the others. That is the point. |
 | `onboard.pick` | calm | یه صدراعظم انتخاب کنید. نیما آرومه. از اونجا شروع کنید. | Pick a Chancellor. Nima is calm. Start there. |
@@ -389,7 +481,7 @@ client/src/tutorial/
   TutorialDirector.ts    timed seat actions + chat, human delays
   Spotlight.tsx          mask + hole + lock
   introSlides.ts         step 0
-  lookView.ts            step 1 beats
+  lookView.ts            step 1 beats (ring vs lifted; campaign talk)
   scriptedTable.ts       5–10 in-memory tables
   cast.ts                companion names
 
@@ -451,8 +543,8 @@ happens, …).
 - [x] Step 1 beat list + Daniel lines in i18n (header text; no clips yet).
 - [x] First-run: Sit / Not now. Skip. `sh:onboarding-step`.
 - [x] Tests: punch-outs in order; Skip leaves.
-- [x] Staged UI per beat: seats, boards, government, vote dialog, ballots,
-      tracker, deck, laws.
+- [x] Staged UI per beat: whole table (no ring) → seats → boards → chat
+      → campaign → player writes → Nima picks → ticket → see next.
 
 ### Step 2
 

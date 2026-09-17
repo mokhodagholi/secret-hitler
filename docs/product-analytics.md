@@ -62,7 +62,7 @@ Notes:
 ## Connect (always)
 
 ```bash
-ssh root@194.147.142.231
+ssh root@195.248.241.251
 docker exec secret-hitler-postgres psql -U secret_hitler -d secret_hitler -c "…"
 ```
 
@@ -77,7 +77,7 @@ Rules:
 One-liner from your laptop:
 
 ```bash
-ssh root@194.147.142.231 \
+ssh root@195.248.241.251 \
   "docker exec secret-hitler-postgres psql -U secret_hitler -d secret_hitler -c \"SELECT 1\""
 ```
 

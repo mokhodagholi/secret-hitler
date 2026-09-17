@@ -45,6 +45,7 @@ import { tutorialYou } from '../../tutorial/cast';
 import { effectForLookTarget } from '../../tutorial/lookView';
 import { tableSeatOrder } from './tableSeats';
 import { emptyWell, flyToTarget, offsetFrom, pileEl } from './cardFlight';
+import { commitOnPress } from './commitOnPress';
 import styles from './GameScreen.module.scss';
 
 /**
@@ -81,6 +82,7 @@ export function GameScreen() {
   const [now, setNow] = createSignal(Date.now());
   const clockMs = () => view()?.kickVote?.startedAt ?? now();
   const [drawHold, setDrawHold] = createSignal(0);
+  const [actionCommitted, setActionCommitted] = createSignal(false);
   const vetoDrag = useDialogDrag();
   let seenDrawCount = -1;
   let seenDrawPhase: Phase | null = null;
@@ -782,6 +784,7 @@ export function GameScreen() {
   }
 
   function continueLook(): void {
+    if (!tutorial.canContinueLook()) return;
     if (tutorial.advanceLook()) tutorial.startPlay(playYou(), 5);
   }
 
@@ -812,6 +815,7 @@ export function GameScreen() {
     canReport(player) || canMuteOther(player);
 
   function nominate(player: PublicPlayer): void {
+    setActionCommitted(true);
     game.sendCommand({ kind: 'nominateChancellor', targetId: player.id });
     setPlayersOpen(false);
     setHistoryOpen(false);
@@ -834,11 +838,13 @@ export function GameScreen() {
       return;
     }
     game.sendCommand({ kind: 'castVote', vote });
+    setActionCommitted(true);
   }
 
   // During discussion the President's endTurn opens nomination; in the
   // nomination window it ends the round (the engine decides which by state).
   function sendEndTurn(): void {
+    setActionCommitted(true);
     game.sendCommand({ kind: 'endTurn' });
   }
 
@@ -860,49 +866,63 @@ export function GameScreen() {
     return true;
   };
   const myPolicies = () => view()?.you.policies ?? [];
+  createEffect((previous?: string) => {
+    const stamp = [
+      view()?.phase ?? '',
+      view()?.legislativeDeadline?.endsAt ?? 0,
+      view()?.nominationDeadline?.endsAt ?? 0,
+      view()?.specialPowerDeadline?.endsAt ?? 0,
+      view()?.voteDeadline?.endsAt ?? 0,
+    ].join(':');
+    if (previous !== undefined && previous !== stamp) setActionCommitted(false);
+    return stamp;
+  });
+  createEffect(() => {
+    if (game.lastError()) setActionCommitted(false);
+  });
   const legislativeSecondsLeft = () => {
+    if (actionCommitted()) return 0;
     const deadline = view()?.legislativeDeadline;
     if (!deadline) return 0;
     if (now() < deadline.startedAt) return 0;
     return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
   };
   const specialPowerSecondsLeft = () => {
+    if (actionCommitted()) return 0;
     const deadline = view()?.specialPowerDeadline;
     if (!deadline) return 0;
     if (now() < deadline.startedAt) return 0;
     return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
   };
 
-  function chooseLegislative(index: number): void {
+  function chooseLegislative(index: number, mode: 'discard' | 'enact'): void {
     if (tutorial.looking()) {
       continueLook();
       return;
     }
+    const kind = mode === 'discard' ? 'discardPolicy' : 'enactPolicy';
+    setActionCommitted(true);
     if (tutorial.playing()) {
-      const phase = view()?.phase;
-      if (phase === Phase.PresidentLegislative) {
-        tutorial.handlePlay({ kind: 'discardPolicy', index });
-      } else if (phase === Phase.ChancellorLegislative) {
-        tutorial.handlePlay({ kind: 'enactPolicy', index });
-      }
+      tutorial.handlePlay({ kind, index });
       return;
     }
-    const phase = view()?.phase;
-    if (phase === Phase.PresidentLegislative) {
-      game.sendCommand({ kind: 'discardPolicy', index });
-    } else if (phase === Phase.ChancellorLegislative) {
-      game.sendCommand({ kind: 'enactPolicy', index });
-    }
+    game.sendCommand({ kind, index });
   }
 
   const iAmChancellor = () => {
     const state = view();
     return state != null && state.board.chancellor === state.you.id;
   };
-  const proposeVeto = () => game.sendCommand({ kind: 'vetoRequest' });
-  const respondVeto = (agree: boolean) =>
+  const proposeVeto = () => {
+    setActionCommitted(true);
+    game.sendCommand({ kind: 'vetoRequest' });
+  };
+  const respondVeto = (agree: boolean) => {
+    setActionCommitted(true);
     game.sendCommand({ kind: 'vetoConsent', agree });
+  };
   const usePower = (targetId: string) => {
+    setActionCommitted(true);
     if (tutorial.playing()) {
       tutorial.handlePlay({ kind: 'useSpecialPower', targetId });
       return;
@@ -1026,10 +1046,18 @@ export function GameScreen() {
   const BUBBLE_MS = 8_000;
   const bubbleFor = (playerId: string) => {
     if (ceremonyOpen()) return undefined;
-    const messages = game.chatMessages();
+    const messages =
+      tutorial.looking() || tutorial.playing()
+        ? tutorial.talk()
+        : game.chatMessages();
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].playerId !== playerId) continue;
-      return now() - messages[i].at < BUBBLE_MS ? messages[i].text : undefined;
+      const message = messages[i];
+      if (message.playerId !== playerId) continue;
+      if (now() - message.at >= BUBBLE_MS) return undefined;
+      if ('key' in message && message.key) {
+        return formatMessage(message.key, message.values);
+      }
+      return message.text;
     }
     return undefined;
   };
@@ -1197,11 +1225,14 @@ export function GameScreen() {
             classList={{
               [styles.scene]: true,
               [styles.sceneLooking]: onboarding(),
+              [styles.sceneLookChat]: tutorial.looking() && tutorial.lookChat(),
             }}
             style={{
-              '--chat-panel-height': `${tutorial.looking() ? 0 : chatHeight()}px`,
+              '--chat-panel-height': `${tutorial.looking() && !tutorial.lookChat() ? 0 : chatHeight()}px`,
+              '--look-chrome-nudge': tutorial.lookChat() ? '40px' : '0px',
             }}
           >
+            <Show when={!tutorial.lookBlurred()}>
             <GameEventHeader
               headline={
                 onboarding()
@@ -1210,6 +1241,7 @@ export function GameScreen() {
               }
               durationMs={onboarding() ? undefined : ravi.lineDurationMs()}
             />
+            </Show>
 
             <div class={styles.body}>
             <DeckStrip
@@ -1321,9 +1353,18 @@ export function GameScreen() {
 
             </div>
 
-            <Show when={!tutorial.looking()}>
+            <Show when={!tutorial.looking() || tutorial.lookChat()}>
             <ChatPanel
-              talkingAllowed={!ceremonyOpen()}
+              talkingAllowed={
+                !ceremonyOpen() &&
+                (!tutorial.looking() || tutorial.lookWait() === 'say')
+              }
+              composeHint={
+                tutorial.lookComposeHint()
+                  ? formatMessage(tutorial.lookComposeHintKey())
+                  : undefined
+              }
+              suppressActionClock={actionCommitted()}
               actionLabel={
                 ceremonyOpen() || !iAmPresident() || state().kickVote
                   ? undefined
@@ -1356,14 +1397,28 @@ export function GameScreen() {
             </Show>
 
             <Show when={onboarding()}>
-              <Show when={tutorial.looking()}>
+              <Show when={tutorial.looking() && !tutorial.lookChat()}>
                 <div class={styles.lookChromeSpacer} aria-hidden="true" />
+              </Show>
+              <Show when={tutorial.lookBlurred()}>
+                <div class={styles.lookSeeNext} aria-live="polite">
+                  <p class={styles.lookSeeNextText} dir="auto">
+                    {formatMessage(tutorial.headlineKey())}
+                  </p>
+                </div>
               </Show>
               <Spotlight
                 target={tutorial.target()}
-                lifted={tutorial.maskLifted()}
+                lifted={tutorial.maskLifted() || tutorial.lookBlurred()}
+                passHole={tutorial.lookPassHole()}
+                layoutKey={chatHeight()}
+                continueLabel={
+                  tutorial.looking()
+                    ? formatMessage(tutorial.lookContinueKey())
+                    : undefined
+                }
                 showContinue={
-                  tutorial.looking() ||
+                  (tutorial.looking() && tutorial.canContinueLook()) ||
                   tutorial.lock() === 'delta' ||
                   tutorial.lock() === 'night' ||
                   (tutorial.playing() && view()?.winner != null)
@@ -1531,14 +1586,14 @@ export function GameScreen() {
                       <button
                         type="button"
                         class={styles.voteJa}
-                        onClick={() => respondVeto(true)}
+                        {...commitOnPress(() => respondVeto(true))}
                       >
                         {formatMessage('game.veto.agree')}
                       </button>
                       <button
                         type="button"
                         class={styles.voteNein}
-                        onClick={() => respondVeto(false)}
+                        {...commitOnPress(() => respondVeto(false))}
                       >
                         {formatMessage('game.veto.reject')}
                       </button>

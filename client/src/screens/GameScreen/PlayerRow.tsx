@@ -5,6 +5,7 @@ import { playerLabel } from '../../i18n/perspective';
 import { useApp } from '../../services/AppContext';
 import { avatarImage } from '../../assets/avatars';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
+import { commitOnPress } from './commitOnPress';
 import styles from './GameScreen.module.scss';
 
 export interface PlayerRowProps {
@@ -51,7 +52,7 @@ export function PlayerRow(props: PlayerRowProps) {
         [styles.voted]: props.player.hasVoted,
       }}
       disabled={!props.nominatable}
-      onClick={() => props.onNominate()}
+      {...commitOnPress(() => props.onNominate())}
     >
       <span class={styles.playerAvatar}>
         <WarmImg

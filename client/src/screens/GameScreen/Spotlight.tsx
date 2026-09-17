@@ -14,6 +14,62 @@ export interface SpotlightProps {
   /** Step back one look beat. Hidden on the first beat when omitted/false. */
   onPrevious?: () => void;
   showPrevious?: boolean;
+  /** Label on Continue. Defaults to onboard.continue. */
+  continueLabel?: string;
+  /** Punch-out lets the widget below receive taps (composer, etc.). */
+  passHole?: boolean;
+  /** Remeasure when docked chrome (chat height) moves. */
+  layoutKey?: number;
+}
+
+function PassBars(props: { hole: HoleRect }) {
+  const hole = () => props.hole;
+  return (
+    <>
+      <div
+        class={styles.block}
+        style={{
+          top: '0',
+          left: '0',
+          right: '0',
+          height: `${Math.max(0, hole().top)}px`,
+          bottom: 'auto',
+        }}
+      />
+      <div
+        class={styles.block}
+        style={{
+          top: `${hole().top + hole().height}px`,
+          left: '0',
+          right: '0',
+          bottom: '0',
+          height: 'auto',
+        }}
+      />
+      <div
+        class={styles.block}
+        style={{
+          top: `${hole().top}px`,
+          left: '0',
+          width: `${Math.max(0, hole().left)}px`,
+          height: `${hole().height}px`,
+          right: 'auto',
+          bottom: 'auto',
+        }}
+      />
+      <div
+        class={styles.block}
+        style={{
+          top: `${hole().top}px`,
+          left: `${hole().left + hole().width}px`,
+          right: '0',
+          width: 'auto',
+          height: `${hole().height}px`,
+          bottom: 'auto',
+        }}
+      />
+    </>
+  );
 }
 
 interface HoleRect {
@@ -26,6 +82,9 @@ interface HoleRect {
 /** Space between the gold ring and the punched-out widget. */
 const HOLE_PAD = 8;
 const HOLE_RADIUS = 12;
+/** Keep the chat ring off the screen edge and under Continue. */
+const CHAT_EDGE = 20;
+const CHAT_TOP_GAP = 52;
 
 /**
  * Warm-smoke mask with one punched-out region. Previous / Continue / Skip sit
@@ -80,6 +139,29 @@ export function Spotlight(props: SpotlightProps) {
       return;
     }
 
+    if (props.target === 'chat' || props.target === 'composer') {
+      const topGap = props.target === 'chat' ? CHAT_TOP_GAP : 10;
+      const holeLeft = Math.max(CHAT_EDGE, left - overlayBox.left + 6);
+      const holeTop = top - overlayBox.top + topGap;
+      const holeRight = Math.min(
+        overlayBox.width - CHAT_EDGE,
+        right - overlayBox.left - 6,
+      );
+      const holeBottom = Math.min(
+        overlayBox.height - CHAT_EDGE,
+        bottom - overlayBox.top - 6,
+      );
+      setHoles([
+        {
+          left: holeLeft,
+          top: holeTop,
+          width: Math.max(0, holeRight - holeLeft),
+          height: Math.max(0, holeBottom - holeTop),
+        },
+      ]);
+      return;
+    }
+
     setHoles([
       {
         left: left - overlayBox.left - HOLE_PAD,
@@ -110,6 +192,7 @@ export function Spotlight(props: SpotlightProps) {
 
   createEffect(() => {
     props.target;
+    props.layoutKey;
     measure();
     const frame = requestAnimationFrame(measure);
     onCleanup(() => cancelAnimationFrame(frame));
@@ -128,12 +211,19 @@ export function Spotlight(props: SpotlightProps) {
     <div class={styles.root} ref={(element) => (overlay = element)}>
       <Show when={!props.lifted}>
         <>
-      <div
-        classList={{
-          [styles.block]: true,
-          [styles.blockDim]: holes().length === 0,
-        }}
-      />
+      <Show
+        when={props.passHole && holes()[0]}
+        fallback={
+          <div
+            classList={{
+              [styles.block]: true,
+              [styles.blockDim]: holes().length === 0,
+            }}
+          />
+        }
+      >
+        {(rect) => <PassBars hole={rect()} />}
+      </Show>
       <Show when={holes().length > 0}>
         <svg
           class={styles.mask}
@@ -179,10 +269,14 @@ export function Spotlight(props: SpotlightProps) {
             <button
               type="button"
               class={styles.hole}
+              classList={{ [styles.holePass]: props.passHole === true }}
               style={holeStyle(rect)}
               tabIndex={-1}
               aria-hidden="true"
-              onClick={() => props.onContinue()}
+              onClick={() => {
+                if (props.showContinue === false || props.passHole) return;
+                props.onContinue();
+              }}
             />
           )}
         </For>
@@ -209,7 +303,7 @@ export function Spotlight(props: SpotlightProps) {
               class={styles.continue}
               onClick={() => props.onContinue()}
             >
-              {props.formatMessage('onboard.continue')}
+              {props.continueLabel ?? props.formatMessage('onboard.continue')}
             </button>
           </Show>
         </div>

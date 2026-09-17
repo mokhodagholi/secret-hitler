@@ -37,6 +37,15 @@ export function PeekOverlay(props: PeekOverlayProps) {
   });
 
   onMount(() => {
+    let finished = false;
+    const finish = () => {
+      if (closed || finished) return;
+      finished = true;
+      props.onContinue();
+    };
+    // Hung deal flights used to skip this overlay until the power clock timed out.
+    const cap = window.setTimeout(finish, NOTICE_MS + TRAVEL_MS * PEEK_COUNT + 2_000);
+    onCleanup(() => window.clearTimeout(cap));
     void animation.enqueue(async () => {
       if (closed) return;
       sound.play('policy-draw');
@@ -58,9 +67,9 @@ export function PeekOverlay(props: PeekOverlayProps) {
         }
       }
       await linger();
-      if (closed) return;
+      window.clearTimeout(cap);
       sound.play('peek-done');
-      props.onContinue();
+      finish();
     });
   });
 
