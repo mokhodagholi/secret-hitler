@@ -148,3 +148,47 @@ describe('GameStateService — table chat', () => {
     ).toHaveLength(2);
   });
 });
+
+describe('GameStateService — seat identity', () => {
+  it('Should keep seat object identity across snapshots that do not change the circle', () => {
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    const first = makeView({ phase: Phase.Nomination });
+    socket.emit({ type: 'state', state: first });
+    const seat = game.view()!.players[0];
+
+    socket.emit({
+      type: 'state',
+      state: {
+        ...first,
+        players: first.players.map((player) => ({ ...player })),
+        board: { ...first.board, drawPile: 14 },
+      },
+    });
+
+    expect(game.view()!.players[0]).toBe(seat);
+    expect(game.view()!.board.drawPile).toBe(14);
+  });
+
+  it('Should replace a seat object when that player actually changed', () => {
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    const first = makeView({ phase: Phase.Nomination });
+    socket.emit({ type: 'state', state: first });
+    const seat = game.view()!.players[0];
+
+    socket.emit({
+      type: 'state',
+      state: {
+        ...first,
+        players: first.players.map((player) =>
+          player.id === seat.id ? { ...player, ready: true } : { ...player },
+        ),
+      },
+    });
+
+    expect(game.view()!.players[0]).not.toBe(seat);
+    expect(game.view()!.players[0].ready).toBe(true);
+    expect(game.view()!.players[1]).toBe(first.players[1]);
+  });
+});

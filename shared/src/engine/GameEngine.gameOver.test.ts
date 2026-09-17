@@ -10,22 +10,10 @@ describe('GameEngine — game over continue', () => {
     });
   });
 
-  it('Should stay in game-over until every remaining player continues', () => {
-    const { engine, room, players } = startGame();
-    engine.endGame('liberal');
-    expect(engine.continuePlaying(players[0].id)).toBeNull();
-    expect(room.phase).toBe(Phase.GameOver);
-    expect(players[0].wantsContinue).toBe(true);
-    expect(engine.continuePlaying(players[1].id)).toBeNull();
-    expect(room.phase).toBe(Phase.GameOver);
-  });
-
-  it('Should return the same room to lobby when everyone continues', () => {
+  it('Should return the same room to lobby as soon as a player stays', () => {
     const { engine, room, players } = startGame();
     engine.endGame('fascist');
-    for (const player of players) {
-      expect(engine.continuePlaying(player.id)).toBeNull();
-    }
+    expect(engine.continuePlaying(players[0].id)).toBeNull();
     expect(room.phase).toBe(Phase.Lobby);
     expect(room.winner).toBeNull();
     expect(room.players).toHaveLength(3);
@@ -37,15 +25,13 @@ describe('GameEngine — game over continue', () => {
     expect(players[1].ready).toBe(false);
   });
 
-  it('Should return to lobby when only continuers are left', () => {
+  it('Should drop disconnected seats when a player stays', () => {
     const { engine, room, players } = startGame();
-    const [ana, ben, cal] = players;
+    const [ana, ben] = players;
     engine.endGame('liberal');
+    engine.setConnected(ben.id, false);
     expect(engine.continuePlaying(ana.id)).toBeNull();
-    engine.removePlayer(ben.id);
-    expect(room.phase).toBe(Phase.GameOver);
-    engine.removePlayer(cal.id);
     expect(room.phase).toBe(Phase.Lobby);
-    expect(room.players.map((player) => player.name)).toEqual(['Ana']);
+    expect(room.players.map((player) => player.name)).toEqual(['Ana', 'Cal']);
   });
 });

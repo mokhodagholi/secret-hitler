@@ -1,5 +1,6 @@
 import {
   For,
+  Index,
   Show,
   createEffect,
   createMemo,
@@ -259,8 +260,10 @@ export function WaitingRoomScreen() {
           }
         />
 
+        {/* A new snapshot is a new object; remounting would rebuild every seat. */}
         <Show
           when={view()}
+          keyed={false}
           fallback={
             <p class={styles.note}>
               {formatMessage(CONNECTION_STATUS_KEYS[socket.status()])}
@@ -609,13 +612,13 @@ export function WaitingRoomScreen() {
             />
           )}
         </For>
-        <For each={Array.from({ length: awaiting() })}>
+        <Index each={Array.from({ length: awaiting() })}>
           {() => (
             <PlayerSlot
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
             />
           )}
-        </For>
+        </Index>
       </div>
     );
   }

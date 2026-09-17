@@ -443,8 +443,14 @@ export class GameStateService {
         });
       })
       .on('state', (message) => {
-        this.setView(message.state);
-        if (message.state.you.role) this.setRole(message.state.you.role);
+        const previous = this.view();
+        const players = reusePlayers(previous?.players, message.state.players);
+        const state =
+          players === message.state.players
+            ? message.state
+            : { ...message.state, players };
+        this.setView(state);
+        if (state.you.role) this.setRole(state.you.role);
       })
       .on('private', (message) => this.setRole(message.role))
       .on('chat', (message) => {
@@ -569,4 +575,46 @@ function parseSession(raw: string | null): RoomSession | null {
   } catch {
     return null;
   }
+}
+
+function samePublicPlayer(left: PublicPlayer, right: PublicPlayer): boolean {
+  return (
+    left.id === right.id &&
+    left.name === right.name &&
+    left.avatar === right.avatar &&
+    left.seat === right.seat &&
+    left.isHost === right.isHost &&
+    left.connected === right.connected &&
+    left.ready === right.ready &&
+    left.wantsStart === right.wantsStart &&
+    left.isAlive === right.isAlive &&
+    left.isPresident === right.isPresident &&
+    left.isChancellor === right.isChancellor &&
+    left.hasVoted === right.hasVoted &&
+    left.vote === right.vote &&
+    left.wantsContinue === right.wantsContinue &&
+    left.role === right.role &&
+    left.party === right.party &&
+    left.selfMuted === right.selfMuted
+  );
+}
+
+/** Keep seat object identity so Solid `<For>` does not remount portraits. */
+function reusePlayers(
+  previous: PublicPlayer[] | undefined,
+  next: PublicPlayer[],
+): PublicPlayer[] {
+  if (!previous || previous.length === 0) return next;
+  const priorById = new Map(previous.map((player) => [player.id, player]));
+  let unchanged = previous.length === next.length;
+  const merged = next.map((player, index) => {
+    const prior = priorById.get(player.id);
+    if (prior && samePublicPlayer(prior, player)) {
+      if (previous[index] !== prior) unchanged = false;
+      return prior;
+    }
+    unchanged = false;
+    return player;
+  });
+  return unchanged ? previous : merged;
 }

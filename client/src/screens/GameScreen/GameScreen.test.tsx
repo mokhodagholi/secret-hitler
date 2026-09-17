@@ -1614,4 +1614,38 @@ describe('GameScreen — game over', () => {
     fireEvent.click(screen.getByRole('button', { name: en.game.leaveRoom }));
     expect(harness.socket.lastSent('room:leave')).toEqual({ type: 'room:leave' });
   });
+
+  it('Should sit in the waiting room as soon as this player stays', () => {
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('raviVoice', false);
+    harness.services.nav.navigate('game');
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.GameOver,
+      winner: 'liberal',
+      players: view.players.map((player) => ({
+        ...player,
+        role: 'liberal',
+      })),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.over.stay }));
+    harness.pushState(
+      makeView({
+        phase: Phase.Lobby,
+        hostId: 'you',
+        players: view.players.map((player) => ({
+          ...player,
+          role: null,
+          isPresident: false,
+          isChancellor: false,
+          ready: player.id === 'you',
+        })),
+      }),
+    );
+
+    expect(harness.services.nav.screen()).toBe('waiting-room');
+  });
 });

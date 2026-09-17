@@ -70,7 +70,7 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
 
         <Show when={props.showRoles}>
           <ul class={styles.roles}>
-            <For each={[...props.players].sort((a, b) => a.seat - b.seat)}>
+            <For each={[...props.players].sort((left, right) => left.seat - right.seat)}>
               {(player, index) => (
                 <li
                   class={styles.roleRow}

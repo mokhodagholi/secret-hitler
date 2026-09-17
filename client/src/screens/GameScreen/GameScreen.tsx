@@ -850,7 +850,8 @@ export function GameScreen() {
 
   return (
     <Screen fill>
-      <Show when={view()}>
+      {/* A new snapshot is a new object; remounting would rebuild every seat. */}
+      <Show when={view()} keyed={false}>
         {(state) => (
           <div
             classList={{

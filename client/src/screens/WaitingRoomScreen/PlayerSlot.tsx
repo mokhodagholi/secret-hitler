@@ -34,6 +34,7 @@ export function PlayerSlot(props: PlayerSlotProps) {
   return (
     <Show
       when={props.player}
+      keyed={false}
       fallback={
         <div
           classList={{

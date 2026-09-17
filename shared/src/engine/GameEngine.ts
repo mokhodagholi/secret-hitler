@@ -451,7 +451,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.changed();
   }
 
-  /** Stay after a win — the table returns to lobby once everyone still here has stayed. */
+  /** Stay after a win — the table returns to lobby as soon as this player stays. */
   continuePlaying(playerId: string): EngineError | null {
     const room = this.room;
     if (room.phase !== Phase.GameOver) {
@@ -1114,14 +1114,15 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   /**
-   * After a win: reset this room to lobby once every remaining connected
-   * seat has chosen to stay (leavers are already gone).
+   * After a win: reset this room to lobby as soon as someone still
+   * connected has chosen to stay. Everyone still here comes along;
+   * leavers are already gone.
    */
   private maybeReturnToLobby(): boolean {
     if (this.room.phase !== Phase.GameOver) return false;
     const remaining = this.room.players.filter((player) => player.connected);
     if (remaining.length === 0) return false;
-    if (!remaining.every((player) => player.wantsContinue)) return false;
+    if (!remaining.some((player) => player.wantsContinue)) return false;
     this.returnToLobby(remaining);
     return true;
   }
