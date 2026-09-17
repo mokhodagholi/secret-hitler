@@ -384,6 +384,11 @@ export const en = {
     createTab: 'Create Room',
     joinTab: 'Join Room',
     publicName: 'Public table',
+    ownTable: 'Own table',
+    ownTableBody:
+      'Everyone sits at this table so you can talk before the game. If you still want a private table, tap the button below.',
+    ownTableStay: "I'll stay here",
+    ownTableWant: 'I want my own table',
   },
   createRoom: {
     title: 'Create Room',
@@ -401,6 +406,7 @@ export const en = {
     availableRooms: 'Available Rooms',
     refresh: 'Refresh',
     noRooms: 'No open rooms right now. Create one!',
+    noSalon: 'The public table is not here yet. Try refresh.',
     colName: 'Name',
     colPlayers: 'Players',
     playerCount: '{count}/{max} players',

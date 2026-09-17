@@ -20,7 +20,7 @@ export interface RoomCreateArgs {
   /** Group chat id when the table was opened with `/create`. */
   originChatId?: number;
   originPlatform?: MessengerKind;
-  /** Evergreen Join lobby — no host. */
+  /** Evergreen Join lobby — first sitter is host. */
   kind?: 'public';
   /** Admin `/play-game` table owner. */
   adminPlayUserId?: number;

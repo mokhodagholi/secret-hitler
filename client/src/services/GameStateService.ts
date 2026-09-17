@@ -216,6 +216,22 @@ export class GameStateService {
     return this.beginSession(session);
   }
 
+  /** Measurement only. Join's own-table dialog; does not create a room. */
+  async recordOwnRoom(
+    intent: 'prompt' | 'want',
+    identity: { initData?: string; clientId?: string } = {},
+  ): Promise<void> {
+    try {
+      await this.request('POST', '/api/product/own-room', {
+        intent,
+        initData: identity.initData,
+        clientId: identity.clientId,
+      });
+    } catch {
+      /* crumbs must not block Join */
+    }
+  }
+
   async listRooms(): Promise<RoomSummary[]> {
     let response: Response;
     try {

@@ -1,4 +1,4 @@
-import { makeRoomCode, type MessengerKind } from '@secret-hitler/shared';
+import { makeRoomCode, PUBLIC_TABLE_NAME, type MessengerKind } from '@secret-hitler/shared';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
@@ -38,8 +38,34 @@ export function createGroupRoom(params: {
   fromId: number;
   creatorName: string;
   roomPassword?: boolean;
+  publicTable?: boolean;
 }): GroupRoomCreated | { reply: BotReply } {
   const creatorName = params.creatorName.trim() || 'میزبان';
+  if (params.publicTable) {
+    const joinKey = `${params.platform ?? 'bale'}:${params.fromId}`;
+    const seated = params.sockets.sitPublicLobby({ name: creatorName, joinKey });
+    if ('error' in seated) {
+      return { reply: createFailedReply() };
+    }
+    params.seats.occupy(
+      params.fromId,
+      {
+        roomId: seated.roomId,
+        code: seated.code,
+        playerId: seated.playerId,
+        roomName: PUBLIC_TABLE_NAME,
+      },
+      params.platform ?? 'bale',
+    );
+    const reply = createGroupPostedReply({
+      creatorName,
+      code: seated.code,
+      botUsername: params.botUsername,
+      startLink: params.startLink,
+      platform: params.platform ?? 'bale',
+    });
+    return { reply, code: seated.code };
+  }
   const lockWithPassword = params.roomPassword === true;
   const password = lockWithPassword ? makeRoomCode() : null;
   const platform = params.platform ?? 'bale';

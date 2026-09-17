@@ -33,7 +33,8 @@ returns `{ flags }` rebuilt from the catalog only — never a dump of env.
 The client [`FeatureFlagService`](../client/src/services/FeatureFlagService.ts)
 fetches that once at boot (`cache: 'no-store'`). Splash waits for that
 response so screens never paint with a stale catalog. `publicTable`
-defaults off so Home never flashes Find Match before the fetch. Joining a
+defaults off so Join still shows Create until the fetch confirms the
+salon. Joining a
 room also applies `flags` from the `authed` WebSocket frame — that is the
 live switch, so a missed HTTP fetch cannot hide in-game chrome. Callers
 read `flags.flags.voice` in JSX (the store) or `flags.enabled('voice')` in
@@ -44,10 +45,11 @@ not set `process.env`.
 When `voice` is off, the client hides every mic control and the server rejects
 `voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).
 
-When `publicTable` is off, the server does not run the Find Match queue and
-does not create reserved public tables. Home hides Find Match and shows Play,
-which opens create/join on the Join tab. AFK kicks in every lobby still run.
-A disconnected lobby seat is dropped after 15 seconds (no ban). See
+When `publicTable` is off, Home Play opens create/join and the server does
+not keep an evergreen lobby. When on, Join shows **one** public table
+(first sitter is host, Start from 5–10); Create is hidden; group `/create`
+sits that salon. Find Match is not used. AFK kicks in every lobby still
+run. A disconnected lobby seat is dropped after 15 seconds (no ban). See
 [`public-table.md`](./public-table.md).
 
 When `lobbyKick` is off, hosted rooms hide host-kick in the waiting room and

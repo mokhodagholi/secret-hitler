@@ -1,255 +1,149 @@
-# Public table — one room that is always there
+# Public table — one waiting room
 
-Shipped behind `FEATURE_PUBLIC_TABLE` (default off). Hosted rooms, Join,
-`/find_game`, and `/games` still work as they did. Turn the flag on to let
-Home **Find Match** queue players and reserve a six-seat table.
+Shipped behind `FEATURE_PUBLIC_TABLE` (default off). Turn the flag on to
+put every stranger at **one** sit-and-wait lobby on Join. Find Match is
+not this product. Hosted Create stays only while the flag is off.
 
-Secret Hitler needs five to ten people in the **same** lobby. Today every
-table is born when someone taps Create and dies when that host leaves. With
-a small player pool that splits the room: three people in one empty lobby,
-two in another, nobody at five, Join looks dead. The product is filling a
-table ([`mini-app.md`](./mini-app.md)); this is how Find Match helps.
+Secret Hitler needs five to ten people in the **same** lobby. Free Create
+splits a small pool: three in one room, two in another, host leaves, Join
+looks dead. The public table is the cafe — people sit, talk, and the host
+starts when they want.
 
 ## Verdict
 
 | Question | Answer |
 |---|---|
-| Always-on public lobby, no host, pinned on Join | No. Find Match is a queue on Home. |
-| When 6 are queued, reserve a table and ask Accept | Yes — 15 s. Silence is a kick (not a ban), then deal if a legal table remains. |
-| If someone leaves the reserved room, backfill from the queue | Yes. |
-| 5-minute lobby AFK kick on **every** room | Yes, with the host exception below. |
-| Vote to remove someone in the reserved lobby, same as in-game | Yes. Half yes → kick and report; **no ban** in lobby (they can sit again). In-game still bans. |
-
-The diagnosis is right. The public table fills to six, then everyone
-Accepts. There is no host gavel and no Start button. The locked chrome
-and the full-table Accept rule are below.
-
-## Why this helps a small pool
-
-Hosted rooms ask a stranger to **found** a table and then wait. Most people
-will not. They open Join, see nothing (or a 2/10 waiting on a host), and
-leave. One evergreen seat — always listed, always joinable, nobody's
-"room" — is the same trick Among Us public lobbies and Codenames clubs
-use: concentrate whoever is online **now**.
-
-Private Create stays. Friends who want a password, a Bale group
-`/create`, or a host who decides when to deal still have that. The public
-table is the default place for everyone else.
+| Always-on public lobby, pinned on Join | **Yes.** Exactly one room in `Phase.Lobby`. |
+| First sitter is host | **Yes.** They Start from **5 to 10** when they want. |
+| Host leave destroys the room | **No.** Host migrates to a connected sitter. The room dies only when it is empty. |
+| Empty lobby stays on Join | **Yes.** Play never sees “no rooms” because the salon is missing. |
+| When it deals, a new empty salon | **Yes**, in the same turn, so Join does not flicker empty. |
+| Find Match queue / Accept at 6 | **No.** That skipped the waiting room. |
+| Stranger Create / extra waiting rooms | **No.** One lobby. In-progress games are separate. |
+| Group `/create` | Sits **this** salon (does not open a private group table). |
+| Own-table button | Measurement only. Records `own_room_prompt` / `own_room_want`. Does **not** spawn a second lobby. |
+| 5-minute lobby AFK | Yes, guests who sit unready. Do not AFK-kick the host. |
+| Cap / spillover | Max **10**. Full → wait for the next salon after deal. No second public lobby in v1. |
 
 ## What a player actually does
 
 ```
-Open Home, tap Find Match
-  → button reads Finding… (stay on Home; no waiting-room)
-  → when 6 people are queued, they are seated in a reserved public room
-  → everyone gets Accept (15 seconds); Find Match occupancy drops to whoever is still queued
-  → if they do not Accept, they are kicked (not banned)
-  → if someone leaves the reserved room, the next queued player is seated
-  → if enough seats remain and all remaining Accepted, deal
-  → the started game is an ordinary in-progress room
+Home → Play → Join (one row: میز عمومی)
+  → sit, chat, Ready
+  → host Start once 5–10 people are connected
+  → that table becomes a normal in-progress game
+  → Join already shows a fresh empty میز عمومی
 ```
 
-Home **Find Match** is the queue (occupancy is `n/6` waiters). **Play with friends** is Create / Join — a hosted room for a group that already has a table. There is no sit-and-wait lobby page for finding a match.
+Home does not queue. There is no Create tab while the flag is on.
+
+A quieter link on Join: **میز خودم**. It opens a dialog explaining the
+shared table. The bottom button records that they still want a private
+room (`own_room_want`). It does not create one.
 
 ## Locked rules
 
 ### One public lobby at a time
 
-Exactly **one** room in `Phase.Lobby` is the public table. It has no
-password, no host, no `originChatId`. It is created on boot (and after a
-restart, restored or recreated). Extra empty public lobbies left in
-`live_rooms` after a deploy are dropped. It is never destroyed because
-it went empty.
+Exactly **one** room in `Phase.Lobby` is `kind: 'public'`. No password.
+Created on boot (and after a restart, restored or recreated). Extra empty
+public lobbies left in `live_rooms` after a deploy are dropped. It is
+**kept** when it goes empty.
 
 When that room **leaves lobby** (a successful start), the server creates
-the next empty public table in the same turn so Join does not flicker
-empty. The game that just started keeps its code and seats; it is a
-normal match from then on.
+the next empty public table in the same turn. The game that just started
+keeps its code and seats.
 
-V1 does **not** open a second public lobby when the current one is 6/6
-and still waiting. The row stays, marked full. Spillover is a follow-up
-if the pool actually fills a table.
+V1 does **not** open a second public lobby when the current one is 10/10
+and still waiting. The row stays, marked full.
 
-### No host
+### Host
 
-`GameEngine.addPlayer` today makes the first sitter the host, and
-`startGame` is host-only. Host leave destroys the room
-(`SocketHandler.dropSeat`). None of that may apply here.
+The first sitter is host (`hostId`, Start, kick if `lobbyKick` is on).
+Host leave **vacates like a guest**; a connected player gets the gavel
+(`newHost`). Disconnect uses the same grace as hosted rooms.
 
-- The public table's `hostId` stays empty. `isHost` is false on every seat.
-- Nobody can kick as host. Table kick-vote (in-game) is unchanged once
-  the match has started.
-- Last sitter leaving does **not** destroy the room. The empty lobby
-  stays in `RoomRepository` and on disk.
-- After a process restart, hosted waiting rooms and finished games are
-  dropped (every socket is gone, so they look empty). In-progress matches
-  keep a reconnect window. That window must **not** delete an empty public
-  lobby. Join and `/find_game` also call `ensurePublicLobby` so a missing
-  evergreen seat heals itself.
+After a process restart, this empty public lobby must **not** be deleted.
+Join and `/find_game` call `ensurePublicLobby` so a missing evergreen
+seat heals itself.
 
-Hosted rooms keep today's host button and host-leave destroys-the-room
-behaviour. Host kick in the waiting room is behind `lobbyKick`
-(`FEATURE_LOBBY_KICK`, default off).
+### Start
 
-### Full table → everyone Accepts
+Host `startGame` when connected sitters are in **5..10**. The host
+chooses the moment — no all-Ready gate on the public table, no Accept
+modal, no auto-deal at six.
 
-Sitting is the seat. Hosted rooms keep Ready and the host Start / share
-link. The public table has none of those.
-
-When **connected sitters = maxPlayers** (6), every connected player who
-has not Accepted gets a modal they cannot ignore. One action: **Accept**.
-Clock **15 s**. There is no Nein on this modal — staying and refusing
-is what the kick is for. Leave is still Leave.
-
-If they Accept in time, they stay. If the clock hits and they have not
-Accepted, they are kicked with the away / did-not-choose reason. They
-are **not** banned; they can sit the same public table again.
-
-People who already Accepted do **not** get that modal. They see the
-table waiting on the others.
-
-If someone leaves or drops so the table is no longer full, the window
-closes. Filling to 6 opens it again.
-
-Then the engine looks at who is left:
-
-- Remaining connected `>= minPlayers` (5) and all remaining Accepted →
-  deal on those seats.
-- Remaining connected `< minPlayers` → **do not deal**. The people who
-  Accepted stay seated. Wait until the table is full again.
-
-Ten sit, two ignore Accept, eight remain — the game can start. Ten sit,
-six ignore Accept, four remain — wait for more people. Do not pretend
-a 4-player Secret Hitler began.
-
-Do **not** add this Accept window to hosted rooms. A private table
-already has a host who is supposed to wait for their group.
+Private hosted rooms (flag off) still require Ready + host Start.
 
 ### Lists, pin, name
 
-`RoomSummary` grows a flag (`kind: 'public' | 'hosted'` or
-`pinned: true`). Join, `/find_game`, and `/games` sort the public lobby
-**first**. Copy is a proper name, not “Untitled Room”:
+Join lists **only** the public lobby while the flag is on. Copy:
 
 | Locale | Name |
 |---|---|
 | fa | میز عمومی |
 | en | Public table |
 
-Join always shows that row, including `0/6`. Empty state “no rooms”
-only appears if the public table is somehow missing (a bug). `/find_game`
-must not send people to Create when the public table exists.
+Empty state “no rooms” only if the public table is missing (a bug).
+`/find_game` must not send people to Create when the salon exists.
 
-Home **Find Match** is a queue on Home (the occupancy on that button is
-`n/6` waiters). **Play with friends** is Create / Join — a hosted room for
-a group that already has a table.
+In-progress matches stay on `/games`. They are not a second waiting room.
 
-Reserved public rooms do not appear on Join. When a reserved table deals, the
-in-progress match stays on `/games`.
+## Lobby AFK
 
-## Lobby AFK — every room
+If a **connected guest** sits unready in lobby for **5 minutes**, kick
+them (not a ban). Do **not** kick the host.
 
-If a **connected** player sits idle in lobby for **5 minutes**, the
-server kicks them and tells them they were away.
-
-Idle means: hosted room, Ready is off; public table, Accept has not
-been tapped.
-
-| | Rule |
-|---|---|
-| Clock starts | On sit, or when they flip ready → unready (hosted). |
-| Clock resets | Hosted: Ready. Public: Accept. Disconnect clears the clock. |
-| Pauses | While the Accept modal is open, and while a kick vote is open. |
-| Message | `room:closed` with a dedicated reason (not `KICKED` / `HOST_LEFT`). Client copy: they were away; they can join again. |
-| Who | Every non-host seat, every lobby. On the public table there is no host, so every seat. |
-
-**Do not kick the host of a hosted room for this.** Host leave still
-destroys that room. A host waiting for friends from a group chat is
-the intended use of Create. Kicking them after five minutes of unreadiness
-would delete the table they just opened.
-
-A **disconnected** lobby seat is dropped after **15 seconds** if they do
-not reconnect. That is a kick, not a ban — they can sit again. The same
-clock applies to every lobby seat, including the host of a hosted room
-(host migrates if someone else is still connected).
-
-Silent drops (phone kill / sleep without a clean WebSocket close) are
-detected when the client stops pinging (~40s idle). Then the 15s lobby
-clock starts.
-
-This AFK rule is for people who are online and idle. `startGame` still
-keeps only `connected` seats.
-
-Five minutes is long enough to take a call and short enough that a
-corpse seat does not sit on a 4/5 table for an hour.
+A **disconnected** lobby seat is dropped after **15 seconds**. Host
+migrates if someone else is still connected.
 
 ## Table kick and ban
 
-The public lobby has no host, so it uses the same kick vote as the game
-page: tap a seat, confirm, Ja / Nein overlay. No Ravi in the waiting
-room. Half of the **connected** sitters (`kickVoteYesNeeded`) is enough.
-Fewer than three connected cannot open a vote. The Accept window and a
-kick vote do not overlap; Accept waits while a vote is open.
+Lobby: host kick when `lobbyKick` is on (seat only, no ban). In-game
+kick vote is unchanged. Ban list is still only in-game kicks.
 
-On a **yes**, the server reports to the support group (same kick letter
-as in-game) and removes the seat. Lobby kicks do **not** ban — the
-kicked player can sit the same room again (same as AFK / Accept silence).
-Host kick in a hosted waiting room matches that: seat cleared, no ban.
+## Own-table interest
 
-The ban list is written only by an **in-game** kick that passes, or by a
-hosted-room host kick mid-game. Those refuse join / reserved reconnect
-with `BANNED` on **this room**.
+`product_events`:
+
+| Name | When |
+|---|---|
+| `own_room_prompt` | They opened the dialog |
+| `own_room_want` | They tapped the bottom “I want my own table” button |
+
+Do not treat `own_room_want` as a Create. If that number stays high,
+revisit private tables later.
 
 ## What stays the same
 
-- Server is the source of truth. The client never starts a game locally.
-- `GameEngine` is the only mutator. Who has Accepted, and whether
-  the full-table clock is running, is lobby state on the engine (same
-  family as `kickVote`: snapshot + timer owned by `SocketHandler`).
+- Server is the source of truth.
+- `GameEngine` is the only mutator.
 - `MIN_PLAYERS` / role mix / night deal do not change.
-- Password rooms, group `/create`, share codes, mid-game join still
-  forbidden.
-- In-game kick vote still freezes game clocks. A yes bans that identity
-  from this room (reserved reconnect cannot walk back in). Lobby kicks
-  do not.
+- Mid-game join still forbidden.
+- Lobby-fill DMs still fire at 2–4 seats — now that is this salon.
 
 ## Implementation map
 
 | Piece | Where |
 |---|---|
-| Find Match queue | `server/src/rooms/MatchQueue.ts` |
-| Enqueue / occupancy | `POST /api/match/queue`, `GET /api/match` |
-| Form a reserved table at 6; backfill on leave | `SocketHandler` |
-| Never assign host; Accept set; full-table window; AFK clock | `shared/src/engine/GameEngine.ts` lobby methods |
-| Commands | `shared/src/types/events.ts` + `clientMessages.ts` (`player:wantStart` is Accept; `match:cancel` leaves the queue) |
-| Finding… + Accept on Home | `HomeScreen` — stay on Home until the match deals; hide Find Match when `publicTable` is off |
-| Ban on this room | `Room.bannedJoinKeys` — set on in-game vote-yes and in-game host kick; checked at join. Lobby kicks do not ban. |
+| Create / keep one empty lobby | `SocketHandler.ensurePublicLobby` |
+| First sitter host; Start 5–10 | `shared/src/engine/GameEngine.ts` |
+| Join lists only the salon | `GET /api/rooms` when `publicTable` |
+| Sit the salon (HTTP + `/create`) | `SocketHandler.sitPublicLobby` |
+| Own-table crumbs | `POST /api/product/own-room` |
+| Join-only Home | `HomeScreen` Play → `RoomsScreen` join |
 | Copy | `fa.ts` **and** `en.ts` — [`persian.md`](./persian.md) **میز** |
 | Flag | `publicTable` in [`flags.ts`](../shared/src/flags.ts), default off |
-
-AFK kick runs even when the public table is dark. The evergreen lobby
-itself stays behind `FEATURE_PUBLIC_TABLE`.
 
 ## Follow-ups (not v1)
 
 - A second public lobby when the first is full and still in lobby.
-- Auto-start when `minPlayers` have Accepted for N seconds with no
-  holdouts. Not v1 — the full-table Accept modal is the delay valve.
-- Giving hosted rooms the same per-player Accept.
-- Kicking a hosted-room host for AFK (would need host migration instead
-  of destroy).
+- Actually creating a private table from `own_room_want`.
+- Fill DMs at 1 seat on the salon.
 
 ## What we will not do
 
 - Several always-on public tables “to give choice.” That re-fragments
   the same small pool.
-- Deal as soon as anyone Accepts, ignoring a full table. One impatient
-  sitter would deal a 2-player table.
-- A Ja / Nein political vote that everyone casts at once when one
-  person “calls start.” Filling the table **is** the call; Accept is
-  only “I am here.”
-- Dealing after the Accept kicks if fewer than `minPlayers` remain.
-- Majority of **all seated including disconnected**. Disconnected
-  seats do not Accept and are already dropped at deal.
-- A public table with a rotating host. Then we inherit host-leave
-  destroys-the-room and “waiting for the host.”
+- Find Match (stay on Home until six, then Accept). People never talk.
+- Letting Join Create open a competing stranger lobby while the flag is on.

@@ -116,13 +116,64 @@ export class SocketHandler {
     }
   }
 
-  /** Drop leftover empty reserved tables and cap restored ones to six. */
+  /** Keep one empty public salon. Drop leftover extra waiting publics. */
   ensurePublicLobby(): void {
     if (!this.flags.publicTable) return;
-    for (const extra of this.repo.emptyPublicLobbies()) {
+    const waiting = this.repo.waitingPublicLobbies();
+    for (const extra of waiting.slice(1)) {
       this.removeRoom(extra.room.id);
     }
-    this.repo.ensurePublicLobby();
+    const keep = this.repo.waitingPublicLobby();
+    if (keep) {
+      keep.engine.applyPublicSeatCap(PUBLIC_TABLE_MAX_PLAYERS);
+      return;
+    }
+    const created = this.repo.create({ name: PUBLIC_TABLE_NAME, kind: 'public' });
+    this.registerEngine(created);
+    this.onRoomCreated?.(created);
+    void this.persistRoom(created.room.id);
+  }
+
+  /** Sit the evergreen Join salon. First sitter becomes host. */
+  sitPublicLobby(args: {
+    name: string;
+    avatar?: number;
+    joinKey: string | null;
+  }):
+    | { roomId: string; code: string; token: string; playerId: string }
+    | { error: EngineError } {
+    this.ensurePublicLobby();
+    const entry = this.repo.waitingPublicLobby();
+    if (!entry) {
+      return { error: { code: 'ROOM_NOT_FOUND', message: 'Room not found' } };
+    }
+    if (args.joinKey && entry.room.bannedJoinKeys.has(args.joinKey)) {
+      return { error: { code: 'BANNED', message: 'You cannot sit at this table.' } };
+    }
+    if (args.joinKey) {
+      const already = entry.room.players.find((player) => player.joinKey === args.joinKey);
+      if (already) {
+        const token = this.tokens.issue({ roomId: entry.room.id, playerId: already.id });
+        return {
+          roomId: entry.room.id,
+          code: entry.room.code,
+          token,
+          playerId: already.id,
+        };
+      }
+    }
+    const player = entry.engine.addPlayer(args.name, false, args.avatar, args.joinKey);
+    if ('code' in player) {
+      return { error: player };
+    }
+    const token = this.tokens.issue({ roomId: entry.room.id, playerId: player.id });
+    void this.persistRoom(entry.room.id);
+    return {
+      roomId: entry.room.id,
+      code: entry.room.code,
+      token,
+      playerId: player.id,
+    };
   }
 
   /** Sit in Find Match. Same identity may re-queue and keep their token. */
@@ -156,7 +207,12 @@ export class SocketHandler {
   }
 
   matchStatus(): { waiting: number; max: number } {
-    return this.matchQueue.status();
+    this.ensurePublicLobby();
+    const salon = this.repo.waitingPublicLobby();
+    const waiting = salon
+      ? salon.room.players.filter((player) => player.connected).length
+      : 0;
+    return { waiting, max: PUBLIC_TABLE_MAX_PLAYERS };
   }
 
   /** Join keys in the Find Match queue — lobby fill must not DM them. */
@@ -1040,69 +1096,15 @@ export class SocketHandler {
   }
 
   private tryFormMatch(): void {
-    if (!this.flags.publicTable) return;
-    if (this.matchQueue.connectedCount() < PUBLIC_TABLE_MAX_PLAYERS) {
-      this.broadcastMatchStatus();
-      return;
-    }
-    const taken = this.matchQueue.takeConnected(PUBLIC_TABLE_MAX_PLAYERS);
-    if (taken.length < PUBLIC_TABLE_MAX_PLAYERS) {
-      this.broadcastMatchStatus();
-      return;
-    }
-
-    const created = this.repo.create({ name: PUBLIC_TABLE_NAME, kind: 'public' });
-    this.registerEngine(created);
-    this.onRoomCreated?.(created);
-
-    const seated: Array<{
-      ws: (typeof taken)[number]['ws'];
-      playerId: string;
-      token: string;
-    }> = [];
-    for (const queued of taken) {
-      const player = created.engine.addPlayer(
-        queued.name,
-        false,
-        queued.avatar,
-        queued.joinKey,
-      );
-      if ('code' in player) continue;
-      const token = this.tokens.issue({ roomId: created.room.id, playerId: player.id });
-      seated.push({ ws: queued.ws, playerId: player.id, token });
-    }
-
-    for (const seat of seated) {
-      const player = created.room.findPlayer(seat.playerId);
-      this.product.seated(created.room, player?.joinKey ?? null);
-      this.attachQueuedSocket(created, seat);
-    }
-    void this.persistRoom(created.room.id);
     this.broadcastMatchStatus();
-    this.tryFormMatch();
   }
 
   /**
-   * Pull waiters into a reserved lobby that still has sitters. An empty
-   * reserved room is dropped instead of resurrecting a 1-person table.
+   * Find Match queue is retired; leftover waiters are not seated into a
+   * reserved six-player table.
    */
-  private fillReservedFromQueue(entry: RoomEntry | null): void {
-    if (!entry || !this.flags.publicTable) return;
-    if (!isPublicTable(entry.room.options) || entry.room.phase !== Phase.Lobby) return;
-    if (entry.room.players.length === 0) return;
-
-    while (!entry.room.isFull) {
-      const next = this.matchQueue.takeConnected(1)[0];
-      if (!next) break;
-      const player = entry.engine.addPlayer(next.name, false, next.avatar, next.joinKey);
-      if ('code' in player) break;
-      const token = this.tokens.issue({ roomId: entry.room.id, playerId: player.id });
-      this.product.seated(entry.room, next.joinKey);
-      this.attachQueuedSocket(entry, { ws: next.ws, playerId: player.id, token });
-    }
-    void this.persistRoom(entry.room.id);
+  private fillReservedFromQueue(_entry: RoomEntry | null): void {
     this.broadcastMatchStatus();
-    this.tryFormMatch();
   }
 
   private attachQueuedSocket(
@@ -1141,7 +1143,7 @@ export class SocketHandler {
 
   private scheduleHostGrace(roomId: string): void {
     const room = this.repo.get(roomId)?.room;
-    if (!room || isPublicTable(room.options) || !room.hostId) return;
+    if (!room || !room.hostId) return;
     this.cancelHostGrace(roomId);
     const timer = setTimeout(() => {
       this.hostGraceTimers.delete(roomId);

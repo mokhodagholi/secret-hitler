@@ -381,6 +381,11 @@ export const fa = {
     createTab: 'ساخت اتاق',
     joinTab: 'پیوستن',
     publicName: 'میز عمومی',
+    ownTable: 'میز خودم',
+    ownTableBody:
+      'اینجا همه میان سر یه میز تا با هم حرف بزنن. اگه فکر می‌کنید میز خودتون بهتره، پایین رو بزنید.',
+    ownTableStay: 'باشه، همین‌جا می‌مونم',
+    ownTableWant: 'می‌خوام میز خودم رو',
   },
   createRoom: {
     title: 'ساخت اتاق',
@@ -398,6 +403,7 @@ export const fa = {
     availableRooms: 'اتاق‌های باز',
     refresh: 'به‌روزرسانی',
     noRooms: 'الان اتاقی نیست. یکی بسازید.',
+    noSalon: 'میز عمومی هنوز نیومده. به‌روزرسانی بزنید.',
     colName: 'نام',
     colPlayers: 'بازیکنان',
     playerCount: '{count}/{max} بازیکن',

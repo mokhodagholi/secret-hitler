@@ -1,9 +1,9 @@
 # Lobby fill invites
 
 Server DMs that pull warm players into a waiting table. Ships dark behind
-`FEATURE_LOBBY_FILL` (default off). Not a replacement for Find Match or the
-public table — only a backfill when a lobby already has **2+** seats and still
-needs people to deal.
+`FEATURE_LOBBY_FILL` (default off). Not a replacement for the public salon —
+only a backfill when a lobby already has **2+** seats and still needs people
+to deal. With `FEATURE_PUBLIC_TABLE` that lobby is the one Join table.
 
 ## Why
 

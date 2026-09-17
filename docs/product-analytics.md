@@ -11,7 +11,7 @@ Related design docs (read only when needed):
 | Lobby-fill DMs | [`lobby-fill.md`](./lobby-fill.md) |
 | Support-group digest (bot) | this file → **Support-group digest** |
 | Bale bot /broadcast | [`bale-bot.md`](./bale-bot.md) |
-| Public table / Find Match | [`public-table.md`](./public-table.md) |
+| Public table | [`public-table.md`](./public-table.md) |
 | Schema (code) | `server/src/db/schema.ts` |
 | Event writers | `server/src/product/ProductTracker.ts`, `LobbyFillService.ts` |
 | Digest service | `server/src/product/ProductDigestService.ts` |
@@ -113,8 +113,10 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 |---|---|
 | `bot_start` | Private bot start |
 | `miniapp_auth` | Mini-app opened/authed (also marks blast *opened*) |
-| `find_match` | Find Match queue |
+| `find_match` | Legacy Find Match queue (unused while the salon is on) |
 | `room_create` / `room_join` / `group_create` | How the table was born / joined |
+| `own_room_prompt` | Opened the “own table” dialog on Join |
+| `own_room_want` | Tapped “I want my own table” (does not Create) |
 | `seated` | Sat a tracked table (also marks blast *sat*) |
 | `table_dealt` | Cards dealt |
 | `game_finished` / `game_abandoned` | Match end crumbs |
@@ -141,6 +143,7 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 | User asks… | Start with |
 |---|---|
 | How many starts / miniapp / sits today? | `product_events` distinct `user_key` |
+| Did people want their own table? | `own_room_prompt` / `own_room_want` |
 | Did lobby-fill work? Conversion? | `lobby_fill_*` + join to `seated` |
 | Why did this invite fail? | `lobby_fill_fail` then user timeline |
 | When did user X join / block? | `product_events` + `bot_subscribers` |

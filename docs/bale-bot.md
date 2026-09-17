@@ -182,7 +182,7 @@ Same list the mini-app Join tab uses: live rooms still in **lobby**, with
 at least one empty seat. Password rooms are included (🔒). In-progress
 games are not. The public table
 ([`public-table.md`](./public-table.md)) is always the first line when
-`FEATURE_PUBLIC_TABLE` is on, including `0/6` — the empty-state Create
+`FEATURE_PUBLIC_TABLE` is on, including `0/10` — the empty-state Create
 button is only for a missing table (a bug).
 
 Each line:
@@ -430,6 +430,19 @@ Button: **بازی کن** with `startapp=p{N}{CODE}` (e.g. `p1ABC123`). The mini
 claims that seat via `POST /api/play-game` and lands on the board.
 
 Bad `N`: `شماره صندلی ۱ تا ۵ رو بنویس، مثلاً:` `/play-game 1`.
+
+### Local `pnpm dev`
+
+Non-production servers set `allowDevPlay` so the browser can call
+`POST /api/play-game` with `{ seat: 1 }` and no mini-app `initData`. The
+client auto-claims seat 1 on boot (same 5-seat `میز آزمایش` as the bot
+command). Add `?home=1` to the URL to stay on the lobby instead.
+
+On that table:
+
+- Your Ja / Nein is mirrored to every seat, so the election always matches
+  your ballot.
+- A skip (⏭) tool in the chat chrome ends the open clock or announce breath.
 
 ---
 

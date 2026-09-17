@@ -262,4 +262,49 @@ describe('RoomsScreen', () => {
     expect(harness.services.game.view()).toBeNull();
     expect(harness.services.game.currentSession()?.roomId).toBe('room-2');
   });
+
+  it('Should hide Create when the public table is on', () => {
+    const harness = buildHarness({ flags: { publicTable: true } });
+    harness.services.game.listRooms = async () => [];
+    renderWithApp(() => <RoomsScreen />, harness);
+
+    expect(screen.queryByRole('tab', { name: en.rooms.createTab })).toBeNull();
+    expect(screen.queryByRole('tab', { name: en.rooms.joinTab })).toBeNull();
+    expect(screen.getByRole('button', { name: en.rooms.ownTable })).toBeTruthy();
+  });
+
+  it('Should record own-table interest without creating a room', async () => {
+    const harness = buildHarness({ flags: { publicTable: true } });
+    harness.services.settings.set('profileId', 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+    harness.services.game.listRooms = async () => [];
+    const intents: string[] = [];
+    const bodies: unknown[] = [];
+    harness.services.game.recordOwnRoom = async (intent, identity) => {
+      intents.push(intent);
+      bodies.push(identity);
+    };
+    renderWithApp(() => <RoomsScreen />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.rooms.ownTable }));
+    expect(screen.getByText(en.rooms.ownTableBody)).toBeTruthy();
+    await waitFor(() => expect(intents).toEqual(['prompt']));
+    expect(bodies[0]).toEqual({
+      initData: undefined,
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: en.rooms.ownTableWant }));
+    await waitFor(() => expect(intents).toEqual(['prompt', 'want']));
+    expect(harness.services.nav.screen()).not.toBe('waiting-room');
+    expect(screen.queryByText(en.rooms.ownTableBody)).toBeNull();
+  });
+
+  it('Should show salon empty copy when the public table is missing', async () => {
+    const harness = buildHarness({ flags: { publicTable: true } });
+    harness.services.game.listRooms = async () => [];
+    renderWithApp(() => <RoomsScreen />, harness);
+
+    await waitFor(() => expect(screen.getByText(en.joinGame.noSalon)).toBeTruthy());
+    expect(screen.queryByText(en.joinGame.noRooms)).toBeNull();
+  });
 });

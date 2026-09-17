@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it } from '@rstest/core';
 import {
   DEFAULT_FLAGS,
-  Phase,
   PUBLIC_TABLE_MAX_PLAYERS,
+  type JoinRoomResponse,
   type MatchOccupancy,
-  type MatchQueueResponse,
   type RoomSummary,
 } from '@secret-hitler/shared';
 import { buildServer } from '../app';
-import { httpJson, listenServer, TestClient } from '../../test/test-utils';
+import { httpJson } from '../../test/test-utils';
+import { InMemoryProductStore } from '../product/InMemoryProductStore';
 import type { FastifyInstance } from 'fastify';
 
 describe('public table', () => {
@@ -32,41 +32,43 @@ describe('public table', () => {
     expect(queued.status).toBe(404);
   });
 
-  it('Should keep Find Match as a queue instead of an empty Join lobby', async () => {
+  it('Should list one empty Join salon when the flag is on', async () => {
     const built = await buildServer({
       flags: { ...DEFAULT_FLAGS, publicTable: true },
     });
     app = built.app;
-    expect(built.repo.listPublic().filter((room) => room.kind === 'public')).toHaveLength(0);
-
     const { body } = await httpJson<RoomSummary[]>(built.app, 'GET', '/api/rooms');
-    expect(body.some((room) => room.kind === 'public')).toBe(false);
+    expect(body.filter((room) => room.kind === 'public')).toHaveLength(1);
+    expect(body[0]?.playerCount).toBe(0);
+    expect(body[0]?.maxPlayers).toBe(PUBLIC_TABLE_MAX_PLAYERS);
 
     const occupancy = await httpJson<MatchOccupancy>(built.app, 'GET', '/api/match');
     expect(occupancy.body).toEqual({ waiting: 0, max: PUBLIC_TABLE_MAX_PLAYERS });
   });
 
-  it('Should drop empty leftover public lobbies', async () => {
+  it('Should keep the empty salon and drop extra waiting publics', async () => {
     const built = await buildServer({
       flags: { ...DEFAULT_FLAGS, publicTable: true },
     });
     app = built.app;
-    const leftover = built.repo.create({ name: 'میز عمومی', kind: 'public' });
-    const leftoverId = leftover.room.id;
+    const keep = built.repo.waitingPublicLobby();
+    expect(keep).toBeTruthy();
+    const extra = built.repo.create({ name: 'میز عمومی', kind: 'public' });
     built.sockets.ensurePublicLobby();
-    expect(built.repo.get(leftoverId)).toBeUndefined();
+    expect(built.repo.get(keep!.room.id)).toBeTruthy();
+    expect(built.repo.get(extra.room.id)).toBeUndefined();
   });
 
-  it('Should cap a restored public lobby to six seats', async () => {
+  it('Should cap a restored public lobby to ten seats', async () => {
     const built = await buildServer({
       flags: { ...DEFAULT_FLAGS, publicTable: true },
     });
     app = built.app;
     const entry = built.repo.create({ name: 'میز عمومی', kind: 'public' });
     entry.engine.addPlayer('Ana');
-    entry.room.options.maxPlayers = 10;
+    entry.room.options.maxPlayers = 8;
     built.sockets.ensurePublicLobby();
-    expect(entry.room.options.maxPlayers).toBe(6);
+    expect(entry.room.options.maxPlayers).toBe(10);
   });
 
   it('Should hide admin play tables from the public and /games lists', async () => {
@@ -100,67 +102,46 @@ describe('public table', () => {
     expect(built.repo.get(entry.room.id)).toBeUndefined();
   });
 
-  it('Should refuse joining a reserved public table by code', async () => {
+  it('Should let a player sit the public salon by code', async () => {
     const built = await buildServer({
       flags: { ...DEFAULT_FLAGS, publicTable: true },
     });
     app = built.app;
-    const entry = built.repo.create({ name: 'میز عمومی', kind: 'public' });
-    const joined = await httpJson(built.app, 'POST', `/api/rooms/${entry.room.code}/join`, {
-      name: 'Ben',
-    });
-    expect(joined.status).toBe(403);
-    expect((joined.body as { code?: string }).code).toBe('INVALID_ACTION');
+    built.sockets.ensurePublicLobby();
+    const salon = built.repo.waitingPublicLobby();
+    expect(salon).toBeTruthy();
+    const joined = await httpJson<JoinRoomResponse>(
+      built.app,
+      'POST',
+      `/api/rooms/${salon!.room.code}/join`,
+      { name: 'Ben' },
+    );
+    expect(joined.status).toBe(200);
+    expect(joined.body.playerId).toBeTruthy();
+    expect(salon!.room.hostId).toBe(joined.body.playerId);
   });
-});
 
-describe('Find Match queue', () => {
-  it('Should seat six connected waiters in a reserved room and leave leftovers queued', async () => {
-    const live = await listenServer(3, { flags: { ...DEFAULT_FLAGS, publicTable: true } });
-    const names = ['Ana', 'Ben', 'Cal', 'Dia', 'Eli', 'Fay', 'Gus'];
-    const clients: TestClient[] = [];
-    try {
-      for (const name of names) {
-        const queued = await httpJson<MatchQueueResponse>(
-          live.app,
-          'POST',
-          '/api/match/queue',
-          { name, clientId: `${name.toLowerCase()}aaa-bbbb-cccc-dddd-eeeeeeeeeeee`.slice(0, 36) },
-        );
-        expect(queued.status).toBe(200);
-        const client = await TestClient.connect(live.port);
-        await client.auth(queued.body.token);
-        clients.push(client);
-      }
-
-      const found = await clients[0].waitFor('match:found');
-      for (const client of clients.slice(1, 6)) {
-        await client.waitFor('match:found');
-      }
-
-      const occupancy = await httpJson<MatchOccupancy>(live.app, 'GET', '/api/match');
-      expect(occupancy.body.waiting).toBe(1);
-
-      const reserved = live.repo.get(found.roomId);
-      expect(reserved).toBeTruthy();
-      expect(reserved!.room.players).toHaveLength(6);
-      expect(reserved!.room.startChoice).not.toBeNull();
-
-      const leaver = reserved!.room.players[0];
-      live.sockets.dropSeat(reserved!, leaver.id);
-
-      const backfill = await clients[6].waitFor('match:found');
-      expect(backfill.playerId).toBeTruthy();
-      expect(reserved!.room.players).toHaveLength(6);
-      expect(
-        reserved!.room.players.some((player) => player.id === backfill.playerId),
-      ).toBe(true);
-
-      const after = await httpJson<MatchOccupancy>(live.app, 'GET', '/api/match');
-      expect(after.body.waiting).toBe(0);
-    } finally {
-      for (const client of clients) client.close();
-      await live.close();
-    }
+  it('Should record own-table interest without opening a room', async () => {
+    const store = new InMemoryProductStore();
+    const built = await buildServer({
+      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      product: store,
+    });
+    app = built.app;
+    const prompt = await httpJson(built.app, 'POST', '/api/product/own-room', {
+      intent: 'prompt',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    });
+    const want = await httpJson(built.app, 'POST', '/api/product/own-room', {
+      intent: 'want',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    });
+    expect(prompt.status).toBe(200);
+    expect(want.status).toBe(200);
+    await built.product.flush();
+    expect(store.events.map((event) => event.name)).toEqual([
+      'own_room_prompt',
+      'own_room_want',
+    ]);
   });
 });

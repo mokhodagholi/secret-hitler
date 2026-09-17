@@ -67,6 +67,14 @@ export class ProductTracker {
     this.event('find_match', { userKey, platform: platformOf(userKey) });
   }
 
+  ownRoomPrompt(userKey: string | null): void {
+    this.event('own_room_prompt', { userKey, platform: platformOf(userKey) });
+  }
+
+  ownRoomWant(userKey: string | null): void {
+    this.event('own_room_want', { userKey, platform: platformOf(userKey) });
+  }
+
   hostedRoomCreated(room: Room, userKey: string | null): void {
     if (!isTracked(room)) return;
     this.event('room_create', {

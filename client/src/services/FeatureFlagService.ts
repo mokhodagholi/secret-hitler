@@ -10,9 +10,9 @@ import {
 
 /**
  * Server-owned flags, fetched once at boot. Callers use {@link enabled};
- * a failed or missing `/api/flags` keeps the catalog defaults. Find Match
- * stays dark until {@link ready} so a late `/api/flags` cannot flash the
- * queue; `publicTable` also defaults off.
+ * a failed or missing `/api/flags` keeps the catalog defaults. Splash
+ * waits on {@link ready} so Join does not hide Create before the salon
+ * flag is known; `publicTable` also defaults off.
  */
 export class FeatureFlagService {
   readonly flags: Store<FeatureFlags>;

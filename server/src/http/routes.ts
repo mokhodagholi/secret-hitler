@@ -9,8 +9,6 @@ import type {
   JoinRoomResponse,
   MatchLeaveRequest,
   MatchOccupancy,
-  MatchQueueRequest,
-  MatchQueueResponse,
   MessengerKind,
   ProfileResponse,
   SaveProfileRequest,
@@ -120,6 +118,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     broadcastDelayMs: deps.broadcastDelayMs,
     product,
     roomPassword: flags.roomPassword,
+    publicTable: flags.publicTable,
   };
   const messengers = configuredMessengers(bale, telegram);
   registerBaleBodyParser(app);
@@ -349,6 +348,45 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       ? runtimeOf(identified.kind, bale, telegram)
       : undefined;
     const previousSeat = reservedSeat(identified, hostRuntime);
+    const joinKey = joinBanKey(identified, body.clientId);
+
+    if (flags.publicTable) {
+      const seated = sockets.sitPublicLobby({
+        name: body.hostName,
+        avatar: body.avatar,
+        joinKey,
+      });
+      if ('error' in seated) {
+        const status =
+          seated.error.code === 'ROOM_FULL'
+            ? 409
+            : seated.error.code === 'BANNED'
+              ? 403
+              : 400;
+        return reply.code(status).send({ error: seated.error.message, code: seated.error.code });
+      }
+      const salon = repo.get(seated.roomId);
+      if (salon) {
+        vacatePreviousSeat(sockets, repo, previousSeat, salon.room.id);
+        bindMessengerSeat(
+          hostRuntime,
+          identified,
+          seated.playerId,
+          salon.room.id,
+          salon.room.code,
+          salon.room.options.name,
+        );
+        product.seated(salon.room, joinKey);
+      }
+      const salonRes: CreateRoomResponse = {
+        roomId: seated.roomId,
+        code: seated.code,
+        shareLink: requestInviteLink(req, seated.code, inviteRuntime(hostRuntime, bale, telegram)),
+        token: seated.token,
+        playerId: seated.playerId,
+      };
+      return reply.code(201).send(salonRes);
+    }
 
     const entry = repo.create({
       name: body.name,
@@ -385,47 +423,23 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return reply.code(201).send(res);
   });
 
-  // List public, joinable hosted rooms. Find Match is a queue, not this list.
+  // Join list: the salon only while publicTable is on.
   app.get('/api/rooms', async () => {
     sockets.ensurePublicLobby();
-    return repo.listPublic();
+    const rooms = repo.listPublic();
+    if (flags.publicTable) return rooms.filter((room) => room.kind === 'public');
+    return rooms.filter((room) => room.kind !== 'public');
   });
 
   app.get('/api/match', async (): Promise<MatchOccupancy> => {
-    if (!flags.publicTable) return { waiting: 0, max: 6 };
+    if (!flags.publicTable) return { waiting: 0, max: 10 };
     return sockets.matchStatus();
   });
 
-  app.post('/api/match/queue', async (req, reply) => {
-    if (!flags.publicTable) {
-      return reply
-        .code(404)
-        .send({ error: 'Find Match is not enabled.', code: 'ROOM_NOT_FOUND' });
-    }
-    if (!joinLimiter.allow(req.ip)) {
-      return reply
-        .code(429)
-        .send({ error: 'Too many join attempts. Try again shortly.', code: 'RATE_LIMITED' });
-    }
-    const body = (req.body ?? {}) as MatchQueueRequest;
-    if (!body.name?.trim()) {
-      return reply.code(400).send({ error: 'name is required' });
-    }
-    const identified = identifyInitData(body.initData, messengers);
-    const joinRuntime = identified
-      ? runtimeOf(identified.kind, bale, telegram)
-      : undefined;
-    const joinKey = joinBanKey(identified, body.clientId);
-    const previous = reservedSeat(identified, joinRuntime);
-    vacatePreviousSeat(sockets, repo, previous, '');
-    const queued = sockets.enqueueMatch({
-      name: body.name,
-      avatar: body.avatar,
-      joinKey,
-    });
-    product.findMatchQueued(joinKey);
-    const res: MatchQueueResponse = queued;
-    return reply.send(res);
+  app.post('/api/match/queue', async (_req, reply) => {
+    return reply
+      .code(404)
+      .send({ error: 'Find Match is not enabled.', code: 'ROOM_NOT_FOUND' });
   });
 
   app.post('/api/match/leave', async (req, reply) => {
@@ -479,11 +493,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!entry) {
       return reply.code(404).send({ error: 'Room not found', code: 'ROOM_NOT_FOUND' });
     }
-    if (isPublicTable(entry.room.options)) {
-      return reply
-        .code(403)
-        .send({ error: 'This table is reserved.', code: 'INVALID_ACTION' });
-    }
 
     const identified = identifyInitData(body.initData, messengers);
     const joinRuntime = identified
@@ -507,7 +516,9 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       } satisfies JoinRoomResponse);
     }
 
-    const passwordOk = verifyPassword(body.password ?? '', entry.room.passwordHash);
+    const publicSalon = isPublicTable(entry.room.options);
+    const passwordOk =
+      publicSalon || verifyPassword(body.password ?? '', entry.room.passwordHash);
     const originPlatform = entry.room.options.originPlatform ?? 'bale';
     const originRuntime = runtimeOf(originPlatform, bale, telegram);
     const inOriginGroup =
@@ -540,7 +551,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       entry.room.code,
       entry.room.options.name,
     );
-    product.hostedRoomJoined(entry.room, joinKey);
+    if (isPublicTable(entry.room.options)) {
+      product.seated(entry.room, joinKey);
+    } else {
+      product.hostedRoomJoined(entry.room, joinKey);
+    }
     const res: JoinRoomResponse = {
       roomId: entry.room.id,
       code: entry.room.code,
@@ -549,6 +564,22 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       playerId: player.id,
     };
     return reply.send(res);
+  });
+
+  app.post('/api/product/own-room', async (req, reply) => {
+    const body = (req.body ?? {}) as {
+      intent?: string;
+      initData?: string;
+      clientId?: string;
+    };
+    if (body.intent !== 'prompt' && body.intent !== 'want') {
+      return reply.code(400).send({ error: 'intent is required' });
+    }
+    const identified = identifyInitData(body.initData, messengers);
+    const userKey = joinBanKey(identified, body.clientId);
+    if (body.intent === 'prompt') product.ownRoomPrompt(userKey);
+    else product.ownRoomWant(userKey);
+    return reply.send({ ok: true });
   });
 
   registerSocialRoutes(app, {

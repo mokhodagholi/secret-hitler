@@ -63,7 +63,6 @@ export class RoomRepository {
   listPublic() {
     return [...this.rooms.values()]
       .filter((entry) => entry.room.options.adminPlayUserId == null)
-      .filter((entry) => entry.room.options.kind !== 'public')
       .map((e) => e.room.summary())
       .filter((s) => s.phase === 'lobby')
       .sort(pinPublicFirst);
@@ -130,14 +129,19 @@ export class RoomRepository {
   }
 
   /**
-   * Cap restored public lobbies to six. Find Match is a queue, so this no
-   * longer creates an empty sit-and-wait table.
+   * Cap restored public lobbies. Creating the empty salon is
+   * {@link SocketHandler.ensurePublicLobby} so the engine is registered.
    */
   ensurePublicLobby(): RoomEntry | null {
-    for (const entry of this.waitingPublicLobbies()) {
+    const waiting = this.waitingPublicLobbies();
+    for (const entry of waiting) {
       entry.engine.applyPublicSeatCap(PUBLIC_TABLE_MAX_PLAYERS);
     }
-    return null;
+    return waiting[0] ?? null;
+  }
+
+  waitingPublicLobby(): RoomEntry | undefined {
+    return this.waitingPublicLobbies()[0];
   }
 
   /** Public lobbies with no seats left. Disconnected sitters still count. */
@@ -145,7 +149,7 @@ export class RoomRepository {
     return this.waitingPublicLobbies().filter((entry) => entry.room.players.length === 0);
   }
 
-  private waitingPublicLobbies(): RoomEntry[] {
+  waitingPublicLobbies(): RoomEntry[] {
     return [...this.rooms.values()]
       .filter(
         (entry) =>

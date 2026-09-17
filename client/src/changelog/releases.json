@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.8.1",
+      "bump": "patch",
+      "date": "2026-09-17",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "الان همه سر یک میز عمومی می‌نشینند و حرف می‌زنند؛ میزبان از پنج نفر می‌تواند بازی را شروع کند.",
+          "en": "Everyone sits at one public table to talk; the host can start once five people are there."
+        }
+      ]
+    },
+    {
       "version": "0.8.0",
       "bump": "minor",
       "date": "2026-09-17",

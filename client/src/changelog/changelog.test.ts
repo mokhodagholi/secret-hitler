@@ -64,7 +64,7 @@ describe('parseChangelog', () => {
 
   it('Should keep the shipped archive version in lockstep with the client package', () => {
     expect(CHANGELOG_RELEASES[0]?.version).toBe(APP_PACKAGE_VERSION);
-    expect(APP_PACKAGE_VERSION).toBe('0.7.0');
+    expect(APP_PACKAGE_VERSION).toBe('0.8.1');
   });
 });
 

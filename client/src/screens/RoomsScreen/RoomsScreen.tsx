@@ -14,6 +14,7 @@ import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import { KeyboardForm } from '../../components/KeyboardForm/KeyboardForm';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import styles from './RoomsScreen.module.scss';
 
 type RoomsTab = 'create' | 'join';
@@ -23,9 +24,12 @@ export interface RoomsScreenProps {
 }
 
 export function RoomsScreen(props: RoomsScreenProps) {
-  const { i18n } = useApp();
+  const { i18n, flags } = useApp();
   const { formatMessage } = i18n;
-  const [tab, setTab] = createSignal<RoomsTab>(props.initialTab ?? 'join');
+  const salon = () => flags.flags.publicTable;
+  const [tab, setTab] = createSignal<RoomsTab>(
+    salon() ? 'join' : (props.initialTab ?? 'join'),
+  );
 
   return (
     <Screen>
@@ -35,29 +39,31 @@ export function RoomsScreen(props: RoomsScreenProps) {
         <ScreenHeader title={formatMessage('play.title')} tone="warm" />
 
         <div class={styles.panel}>
-          <div class={styles.tabs} role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab() === 'create'}
-              classList={{ [styles.tab]: true, [styles.tabActive]: tab() === 'create' }}
-              onClick={() => setTab('create')}
-            >
-              {formatMessage('rooms.createTab')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab() === 'join'}
-              classList={{ [styles.tab]: true, [styles.tabActive]: tab() === 'join' }}
-              onClick={() => setTab('join')}
-            >
-              {formatMessage('rooms.joinTab')}
-            </button>
-          </div>
+          <Show when={!salon()}>
+            <div class={styles.tabs} role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab() === 'create'}
+                classList={{ [styles.tab]: true, [styles.tabActive]: tab() === 'create' }}
+                onClick={() => setTab('create')}
+              >
+                {formatMessage('rooms.createTab')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab() === 'join'}
+                classList={{ [styles.tab]: true, [styles.tabActive]: tab() === 'join' }}
+                onClick={() => setTab('join')}
+              >
+                {formatMessage('rooms.joinTab')}
+              </button>
+            </div>
+          </Show>
 
           <div class={styles.board}>
-            <Show when={tab() === 'create'} fallback={<JoinRoomPanel />}>
+            <Show when={!salon() && tab() === 'create'} fallback={<JoinRoomPanel />}>
               <CreateRoomPanel />
             </Show>
           </div>
@@ -192,8 +198,10 @@ function CreateRoomPanel() {
 }
 
 function JoinRoomPanel() {
-  const { nav, settings, game, i18n, miniApp } = useApp();
+  const { nav, settings, game, i18n, miniApp, flags } = useApp();
   const { formatMessage } = i18n;
+  const salon = () => flags.flags.publicTable;
+  const [ownOpen, setOwnOpen] = createSignal(false);
 
   const [invite, setInvite] = createSignal(nav.consumeJoinCode());
   const [rooms, { refetch }] = createResource(
@@ -295,7 +303,11 @@ function JoinRoomPanel() {
               when={(rooms() ?? []).length > 0}
               fallback={
                 <Show when={!rooms.loading}>
-                  <p class={styles.empty}>{formatMessage('joinGame.noRooms')}</p>
+                  <p class={styles.empty}>
+                    {formatMessage(
+                      salon() ? 'joinGame.noSalon' : 'joinGame.noRooms',
+                    )}
+                  </p>
                 </Show>
               }
             >
@@ -407,6 +419,38 @@ function JoinRoomPanel() {
       <Show when={errorKey()}>
         <p class={styles.error}>{formatMessage(errorKey()!)}</p>
       </Show>
+
+      <Show when={salon() && !invite()}>
+        <button
+          type="button"
+          class={styles.ownTable}
+          onClick={() => {
+            setOwnOpen(true);
+            void game.recordOwnRoom('prompt', {
+              initData: miniApp.initData(),
+              clientId: settings.settings.profileId,
+            });
+          }}
+        >
+          {formatMessage('rooms.ownTable')}
+        </button>
+      </Show>
+
+      <ConfirmDialog
+        open={ownOpen()}
+        message={formatMessage('rooms.ownTableBody')}
+        cancelLabel={formatMessage('rooms.ownTableStay')}
+        confirmLabel={formatMessage('rooms.ownTableWant')}
+        stackActions
+        onCancel={() => setOwnOpen(false)}
+        onConfirm={() => {
+          void game.recordOwnRoom('want', {
+            initData: miniApp.initData(),
+            clientId: settings.settings.profileId,
+          });
+          setOwnOpen(false);
+        }}
+      />
     </div>
   );
 }

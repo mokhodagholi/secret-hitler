@@ -6,25 +6,25 @@ export function isInProgressLiveGame(room: Room): boolean {
 }
 
 /**
- * What belongs on disk across a restart: an occupied reserved public
- * lobby (Accept still open), and tables that are mid-game so seats can
+ * What belongs on disk across a restart: the evergreen public lobby (even
+ * empty), occupied or not, and tables that are mid-game so seats can
  * reconnect. Hosted waiting rooms and finished games are cheap to recreate
  * and look empty after a boot.
  */
 export function shouldPersistLiveRoom(room: Room): boolean {
   if (isPublicTable(room.options) && room.phase === Phase.Lobby) {
-    return room.players.length > 0;
+    return true;
   }
   return isInProgressLiveGame(room);
 }
 
 /**
- * Empty reserved public rooms are dropped — Find Match waits in the queue.
- * An in-progress match stays only while post-restart reconnect grace is open.
+ * The public salon stays listed at 0 seats. An in-progress match stays only
+ * while post-restart reconnect grace is open.
  */
 export function shouldKeepEmptyRoom(room: Room, reconnectGrace: boolean): boolean {
   if (isPublicTable(room.options) && room.phase === Phase.Lobby) {
-    return room.players.length > 0;
+    return true;
   }
   return reconnectGrace && isInProgressLiveGame(room);
 }

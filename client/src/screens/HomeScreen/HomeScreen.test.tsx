@@ -3,7 +3,6 @@ import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { Show } from 'solid-js';
 import { Phase } from '@secret-hitler/shared';
 import heroImage from '../../assets/home/hero.webp';
-import heroFindingImage from '../../assets/home/hero-finding.webp';
 import { HomeScreen } from './HomeScreen';
 import { RoomsScreen } from '../RoomsScreen/RoomsScreen';
 import { RulesScreen } from '../RulesScreen/RulesScreen';
@@ -12,22 +11,13 @@ import { WaitingRoomScreen } from '../WaitingRoomScreen/WaitingRoomScreen';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, makeView, renderWithApp } from '../../../test/test-utils';
 
-function findMatchButton() {
-  return screen.getByRole('button', { name: new RegExp(en.home.findGame) });
-}
-
-function findingButton() {
-  return screen.getByRole('button', { name: new RegExp(en.home.finding) });
-}
-
 describe('HomeScreen', () => {
   afterEach(() => {
     rs.restoreAllMocks();
   });
 
-  it('Should stay on Home when Find Match cannot queue', async () => {
+  it('Should open Join without Create tabs when the public table is on', () => {
     const harness = buildHarness({ flags: { publicTable: true } });
-    const fetchSpy = rs.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
     renderWithApp(
       () => (
         <Show
@@ -40,15 +30,16 @@ describe('HomeScreen', () => {
       harness,
     );
 
-    fireEvent.click(findMatchButton());
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
-    expect(harness.services.nav.screen()).toBe('home');
-    expect(findMatchButton()).toBeTruthy();
-    expect(screen.queryByRole('tab', { name: 'Join Room' })).toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Create Room' })).toBeNull();
+    expect(screen.queryByRole('button', { name: new RegExp(en.home.findGame) })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.home.playWithFriends })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: en.home.play }));
+    expect(harness.services.nav.screen()).toBe('join-game');
+    expect(screen.queryByRole('tab', { name: en.rooms.joinTab })).toBeNull();
+    expect(screen.queryByRole('tab', { name: en.rooms.createTab })).toBeNull();
+    expect(screen.getByRole('button', { name: en.rooms.ownTable })).toBeTruthy();
   });
 
-  it('Should open create/join on the Join tab when Find Match is off', () => {
+  it('Should open create/join on the Join tab when the public table is off', () => {
     const harness = buildHarness({ flags: { publicTable: false } });
     renderWithApp(
       () => (
@@ -73,131 +64,12 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
   });
 
-  it('Should hide Find Match until flags are ready even when publicTable is on', () => {
+  it('Should keep Play on Home even before flags are ready', () => {
     const harness = buildHarness({ flags: { publicTable: true }, flagsReady: false });
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(screen.queryByRole('button', { name: new RegExp(en.home.findGame) })).toBeNull();
     expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
-  });
-
-  it('Should swap Find Match for Play when publicTable turns off after mount', async () => {
-    const harness = buildHarness({ flags: { publicTable: true } });
-    renderWithApp(() => <HomeScreen />, harness);
-    expect(findMatchButton()).toBeTruthy();
-
-    harness.services.flags.apply({
-      voice: false,
-      publicTable: false,
-      lobbyKick: false,
-      gameKick: false,
-      onboarding: false,
-      roomPassword: false,
-    });
-
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: new RegExp(en.home.findGame) })).toBeNull(),
-    );
-    expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
-  });
-
-  it('Should queue Find Match as Guest when the profile has no name', async () => {
-    const harness = buildHarness({ flags: { publicTable: true } });
-    let queuedName = '';
-    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = String(input);
-      if (url.includes('/api/match/queue')) {
-        queuedName = JSON.parse(String(init?.body ?? '{}')).name;
-        return new Response(
-          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 1, max: 6 }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-      return new Response('[]', { status: 200 });
-    });
-    renderWithApp(() => <HomeScreen />, harness);
-
-    fireEvent.click(findMatchButton());
-    await waitFor(() => expect(harness.services.game.queued()).toBe(true));
-    expect(queuedName).toBe(en.home.guest);
-    expect(harness.services.nav.screen()).toBe('home');
-  });
-
-  it('Should keep Find Match on home while searching', async () => {
-    const harness = buildHarness({ flags: { publicTable: true } });
-    harness.services.settings.set('profileName', 'Ana');
-    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input);
-      if (url.includes('/api/match/queue')) {
-        return new Response(
-          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 1, max: 6 }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-      if (url.includes('/api/match')) {
-        return new Response(JSON.stringify({ waiting: 1, max: 6 }), { status: 200 });
-      }
-      return new Response('[]', { status: 200 });
-    });
-    renderWithApp(() => <HomeScreen />, harness);
-
-    fireEvent.click(findMatchButton());
-    await waitFor(() =>
-      expect(findingButton()).toBeTruthy(),
-    );
-    expect(harness.services.nav.screen()).toBe('home');
-    expect(harness.services.game.queued()).toBe(true);
-    expect(screen.queryByRole('button', { name: en.home.inviteFriends })).toBeNull();
-    expect(screen.getByText('1/6')).toBeTruthy();
-    const findingPortrait = document.querySelector(`img[src="${heroFindingImage}"]`);
-    expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();
-    expect(findingPortrait).toBeTruthy();
-    expect(findingPortrait?.className).toContain('heroImageFinding');
-    expect(findingPortrait?.parentElement?.className).toContain('heroFinding');
-  });
-
-  it('Should show how many people are waiting on Find Match', async () => {
-    const harness = buildHarness({ flags: { publicTable: true } });
-    harness.services.settings.set('profileName', 'Ana');
-    rs.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input);
-      if (url.includes('/api/match/queue')) {
-        return new Response(
-          JSON.stringify({ token: 'q-token', playerId: 'p1', waiting: 4, max: 6 }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-      if (url.includes('/api/match')) {
-        return new Response(JSON.stringify({ waiting: 3, max: 6 }), { status: 200 });
-      }
-      return new Response('[]', { status: 200 });
-    });
-    renderWithApp(() => <HomeScreen />, harness);
-
-    await waitFor(() => expect(screen.getByText('3/6')).toBeTruthy());
-    fireEvent.click(findMatchButton());
-    await waitFor(() => expect(findingButton()).toBeTruthy());
-    expect(screen.getByText('4/6')).toBeTruthy();
-    harness.socket.emit({ type: 'match:status', waiting: 5, max: 6 });
-    expect(screen.getByText('5/6')).toBeTruthy();
-  });
-
-  it('Should ask everyone to Accept when a reserved table is full', () => {
-    const harness = buildHarness({ seated: true, flags: { publicTable: true } });
-    renderWithApp(() => <HomeScreen />, harness);
-    harness.pushState(
-      makeView({
-        kind: 'public',
-        startChoice: { startedAt: 1, endsAt: Date.now() + 15_000 },
-      }),
-    );
-
-    expect(screen.getByText(en.waiting.startChoiceHoldout)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: en.waiting.wantStart }));
-    expect(harness.socket.lastSent('player:wantStart')).toEqual({
-      type: 'player:wantStart',
-    });
-    expect(harness.services.nav.screen()).toBe('home');
   });
 
   it('Should hide the title and keep currency off the home screen', () => {
@@ -247,24 +119,21 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('heading', { name: en.rules.title })).toBeTruthy();
   });
 
-  it('Should keep the home poster to Find Match, play with friends, support, rules, history, and settings', () => {
+  it('Should keep the home poster to Play, support, rules, history, and settings', () => {
     const harness = buildHarness({ flags: { publicTable: true } });
     renderWithApp(() => <HomeScreen />, harness);
 
-    expect(findMatchButton()).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: new RegExp(en.home.findGame) })).toBeNull();
     expect(screen.queryByRole('button', { name: en.home.inviteFriends })).toBeNull();
-    expect(screen.getByRole('button', { name: en.home.playWithFriends })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.home.playWithFriends })).toBeNull();
     expect(screen.getByRole('button', { name: en.support.title })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.home.history })).toBeTruthy();
     expect(screen.getByText(en.nav.rules)).toBeTruthy();
-    expect(screen.getAllByRole('button')).toHaveLength(6);
-    expect(screen.getByText('0/6')).toBeTruthy();
-    const findingPortrait = document.querySelector(`img[src="${heroFindingImage}"]`);
+    expect(screen.queryByText('0/6')).toBeNull();
     expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();
-    expect(findingPortrait).toBeTruthy();
-    expect(findingPortrait?.parentElement?.className).not.toContain('heroFinding');
   });
 
   it('Should open Support from the cycling text chip', () => {
@@ -285,28 +154,6 @@ describe('HomeScreen', () => {
     expect(harness.services.nav.screen()).toBe('support');
   });
 
-  it('Should open create/join from Play with friends', () => {
-    const harness = buildHarness({ flags: { publicTable: true } });
-    renderWithApp(
-      () => (
-        <Show
-          when={harness.services.nav.screen() === 'home'}
-          fallback={<RoomsScreen initialTab="join" />}
-        >
-          <HomeScreen />
-        </Show>
-      ),
-      harness,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: en.home.playWithFriends }));
-    expect(harness.services.nav.screen()).toBe('play');
-    expect(screen.getByRole('tab', { name: en.rooms.joinTab }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
-    expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
-  });
-
   it('Should offer a way back when a live seat is still open', () => {
     const harness = buildHarness({ seated: true, flags: { publicTable: true } });
     renderWithApp(
@@ -323,12 +170,12 @@ describe('HomeScreen', () => {
     harness.pushState(makeView());
 
     expect(screen.getByRole('button', { name: en.home.rejoin })).toBeTruthy();
-    expect(findMatchButton()).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.home.rejoin }));
     expect(harness.services.nav.screen()).toBe('waiting-room');
   });
 
-  it('Should keep Play with friends on create/join even when a live seat is open', () => {
+  it('Should still open Join from Play when a live seat is open', () => {
     const harness = buildHarness({ seated: true, flags: { publicTable: true } });
     renderWithApp(
       () => (
@@ -343,12 +190,10 @@ describe('HomeScreen', () => {
     );
     harness.pushState(makeView());
 
-    fireEvent.click(screen.getByRole('button', { name: en.home.playWithFriends }));
-    expect(harness.services.nav.screen()).toBe('play');
-    expect(screen.getByRole('tab', { name: en.rooms.joinTab }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
-    expect(screen.getByRole('tab', { name: en.rooms.createTab })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.home.play }));
+    expect(harness.services.nav.screen()).toBe('join-game');
+    expect(screen.queryByRole('tab', { name: en.rooms.createTab })).toBeNull();
+    expect(screen.getByRole('button', { name: en.rooms.ownTable })).toBeTruthy();
   });
 
   it('Should send an in-game seat back to the table', () => {
@@ -365,7 +210,7 @@ describe('HomeScreen', () => {
     renderWithApp(() => <HomeScreen />, harness);
 
     expect(screen.queryByRole('button', { name: en.home.rejoin })).toBeNull();
-    expect(findMatchButton()).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
   });
 
   it('Should not invite friends from home', () => {

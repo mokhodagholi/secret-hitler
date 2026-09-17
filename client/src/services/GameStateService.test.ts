@@ -192,3 +192,28 @@ describe('GameStateService — seat identity', () => {
     expect(game.view()!.players[1]).toBe(first.players[1]);
   });
 });
+
+describe('GameStateService — own-table crumbs', () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+  });
+
+  it('Should post own-table intent without throwing when the crumb fails', async () => {
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    let body: unknown;
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      body = JSON.parse(String(init?.body ?? '{}'));
+      return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+
+    await game.recordOwnRoom('prompt', { clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' });
+    expect(body).toEqual({
+      intent: 'prompt',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    });
+
+    rs.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+    await expect(game.recordOwnRoom('want')).resolves.toBeUndefined();
+  });
+});

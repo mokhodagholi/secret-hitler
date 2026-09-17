@@ -136,8 +136,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       return err('BANNED', 'You cannot sit at this table.');
     }
 
-    const publicTable = isPublicTable(room.options);
-    const isHost = publicTable ? false : asHost || room.players.length === 0;
+    const isHost = asHost || room.players.length === 0;
     const player = PlayerFactory.create(
       name,
       room.players.length,
@@ -228,7 +227,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   setReady(playerId: string, ready: boolean): void {
     const player = this.room.findPlayer(playerId);
     if (!player || this.room.phase !== Phase.Lobby) return;
-    if (isPublicTable(this.room.options)) return;
     if (this.room.startChoice && !ready) return;
     player.ready = ready;
     if (ready) {
@@ -278,14 +276,13 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     return null;
   }
 
-  /** True when the host may start: minimum players present and all ready. */
+  /** True when the host may start: minimum players present. Hosted rooms also need Ready. */
   canStart(): boolean {
     const connected = this.room.players.filter((p) => p.connected);
-    return (
-      this.room.phase === Phase.Lobby &&
-      connected.length >= this.room.options.minPlayers &&
-      connected.every((p) => p.ready)
-    );
+    if (this.room.phase !== Phase.Lobby) return false;
+    if (connected.length < this.room.options.minPlayers) return false;
+    if (isPublicTable(this.room.options)) return true;
+    return connected.every((p) => p.ready);
   }
 
   startGame(requesterId: string): EngineError | null {
@@ -293,7 +290,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (room.phase !== Phase.Lobby) {
       return err('ALREADY_STARTED', 'The game has already started.');
     }
-    if (isPublicTable(room.options) || requesterId !== room.hostId) {
+    if (requesterId !== room.hostId) {
       return err('NOT_HOST', 'Only the host can start the game.');
     }
     const connected = room.players.filter((p) => p.connected);
@@ -304,7 +301,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
         `Need at least ${room.options.minPlayers} players.`,
       );
     }
-    if (!adminPlay && !connected.every((p) => p.ready)) {
+    if (
+      !adminPlay &&
+      !isPublicTable(room.options) &&
+      !connected.every((p) => p.ready)
+    ) {
       return err('PLAYERS_NOT_READY', 'Everyone must be ready to start.');
     }
     this.dealLobby(connected);
@@ -961,11 +962,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   private maybeMigrateHost(): boolean {
+    // Public salon uses the same gavel as a hosted room.
     if (!this.room.hostId) return false;
-    // Public lobby has no host; an in-game public table still needs a successor.
-    if (isPublicTable(this.room.options) && this.room.phase === Phase.Lobby) {
-      return false;
-    }
     const host = this.room.findPlayer(this.room.hostId);
     if (host?.connected) return false;
     const successor = this.room.players.find((p) => p.connected);
@@ -980,7 +978,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   private isLobbyIdle(player: Player): boolean {
-    if (isPublicTable(this.room.options)) return !player.wantsStart;
     return !player.ready;
   }
 
@@ -1003,24 +1000,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   }
 
   private maybeAdvancePublicStart(): void {
-    const room = this.room;
-    if (!isPublicTable(room.options) || room.phase !== Phase.Lobby) return;
-    if (this.settlingStartChoice || room.kickVote) return;
-    const connected = this.connectedLobby();
-    if (connected.length === 0) {
-      this.clearStartChoice();
-      return;
-    }
-    if (connected.length < room.options.maxPlayers) {
-      this.clearStartChoice();
-      return;
-    }
-    if (connected.every((player) => player.wantsStart)) {
-      this.clearStartChoice();
-      this.maybeDealPublicTable();
-      return;
-    }
-    this.openStartChoice();
+    return;
   }
 
   private maybeDealPublicTable(): void {
@@ -1141,12 +1121,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.clearStartChoice();
 
     room.players = seated;
-    const publicTable = isPublicTable(room.options);
-    if (publicTable) {
-      room.hostId = '';
-    } else {
-      this.maybeMigrateHost();
-    }
+    this.maybeMigrateHost();
 
     seated.forEach((player, seat) => {
       player.seat = seat;
@@ -1155,7 +1130,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       player.wantsContinue = false;
       player.wantsStart = false;
       player.wantStartAt = null;
-      player.isHost = !publicTable && player.id === room.hostId;
+      player.isHost = player.id === room.hostId;
       player.ready = player.isHost;
       player.unreadySince = player.ready ? null : Date.now();
       this.armLobbyAfk(player);

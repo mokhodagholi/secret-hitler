@@ -54,7 +54,6 @@ export function WaitingRoomScreen() {
     game.currentSession()?.shareLink ??
     miniApp.inviteLink(view()?.code ?? '', location.origin, location.hostname);
   const amReady = () => game.you()?.ready ?? false;
-  const amWantStart = () => game.you()?.wantsStart ?? false;
   const isPublicTable = () => view()?.kind === 'public';
 
   function socialIdentity(): SocialIdentity {
@@ -151,9 +150,10 @@ export function WaitingRoomScreen() {
     const state = view();
     if (!state) return;
     const connected = state.players.filter((player) => player.connected);
+    const needReady = !isPublicTable();
     if (
       connected.length < state.minPlayers ||
-      !connected.every((player) => player.ready)
+      (needReady && !connected.every((player) => player.ready))
     ) {
       sound.play('ui-error');
     }
@@ -188,7 +188,7 @@ export function WaitingRoomScreen() {
     if (!state) return null;
     const connected = startConnected();
     if (connected.length < state.minPlayers) return 'needPlayers';
-    if (unreadyPlayers().length > 0) return 'notReady';
+    if (!isPublicTable() && unreadyPlayers().length > 0) return 'notReady';
     return 'confirm';
   };
 
@@ -198,12 +198,6 @@ export function WaitingRoomScreen() {
     const timer = setInterval(() => setNowMs(Date.now()), 250);
     onCleanup(() => clearInterval(timer));
   });
-
-  const startChoiceSeconds = () => {
-    const choice = view()?.startChoice;
-    if (!choice) return 0;
-    return Math.max(0, Math.ceil((choice.endsAt - nowMs()) / 1000));
-  };
 
   const playerName = (playerId: string) =>
     view()?.players.find((player) => player.id === playerId)?.name ?? '';
@@ -238,16 +232,14 @@ export function WaitingRoomScreen() {
           onBack={() => setConfirmingLeave((open) => !open)}
           right={
             <div class={styles.headerActions}>
-              <Show when={!isPublicTable()}>
-                <button
-                  type="button"
-                  class={styles.guide}
-                  aria-label={formatMessage('waiting.inviteFriends')}
-                  onClick={() => void openInvites()}
-                >
-                  <Icon name="people" size={22} />
-                </button>
-              </Show>
+              <button
+                type="button"
+                class={styles.guide}
+                aria-label={formatMessage('waiting.inviteFriends')}
+                onClick={() => void openInvites()}
+              >
+                <Icon name="people" size={22} />
+              </button>
               <button
                 type="button"
                 class={styles.guide}
@@ -281,41 +273,29 @@ export function WaitingRoomScreen() {
                   </p>
                 </Show>
 
-                <Show when={!isPublicTable()}>
-                  <div class={styles.actions}>
-                    <Button variant="outline" onClick={copyShareLink}>
-                      {formatMessage(copied() ? 'waiting.copied' : 'waiting.shareLink')}
-                    </Button>
+                <div class={styles.actions}>
+                  <Button variant="outline" onClick={copyShareLink}>
+                    {formatMessage(copied() ? 'waiting.copied' : 'waiting.shareLink')}
+                  </Button>
 
-                    <Show
-                      when={game.isHost()}
-                      fallback={
-                        <Button
-                          variant={amReady() ? 'outline' : 'gold'}
-                          onClick={() => game.setReady(!amReady())}
-                        >
-                          {formatMessage(
-                            amReady() ? 'waiting.notReadyYet' : 'waiting.imReady',
-                          )}
-                        </Button>
-                      }
-                    >
-                      <Button onClick={tryStart}>
-                        {formatMessage('waiting.startGame')}
+                  <Show
+                    when={game.isHost()}
+                    fallback={
+                      <Button
+                        variant={amReady() ? 'outline' : 'gold'}
+                        onClick={() => game.setReady(!amReady())}
+                      >
+                        {formatMessage(
+                          amReady() ? 'waiting.notReadyYet' : 'waiting.imReady',
+                        )}
                       </Button>
-                    </Show>
-                  </div>
-                </Show>
-
-                <Show when={isPublicTable()}>
-                  <p class={styles.startHint}>
-                    {formatMessage(
-                      view()?.startChoice && amWantStart()
-                        ? 'waiting.startChoiceWaiting'
-                        : 'waiting.publicFillHint',
-                    )}
-                  </p>
-                </Show>
+                    }
+                  >
+                    <Button onClick={tryStart}>
+                      {formatMessage('waiting.startGame')}
+                    </Button>
+                  </Show>
+                </div>
 
                 <LobbyChat />
               </footer>
@@ -330,21 +310,6 @@ export function WaitingRoomScreen() {
                 onConfirm={leaveRoom}
                 onCancel={() => setConfirmingLeave(false)}
               />
-
-              <ConfirmDialog
-                open={
-                  isPublicTable() &&
-                  view()?.startChoice != null &&
-                  !amWantStart()
-                }
-                message={formatMessage('waiting.startChoiceHoldout')}
-                confirmLabel={formatMessage('waiting.wantStart')}
-                onConfirm={() => game.setWantStart(true)}
-              >
-                {formatMessage('waiting.startChoiceClock', {
-                  seconds: startChoiceSeconds(),
-                })}
-              </ConfirmDialog>
 
               <ConfirmDialog
                 open={startGate() === 'needPlayers'}

@@ -1,7 +1,6 @@
-import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { Show, createSignal, onCleanup, onMount } from 'solid-js';
 import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
-import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
@@ -25,14 +24,11 @@ const SUPPORT_ROTATE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 2_800;
 const SUPPORT_FADE_MS =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 0 : 220;
-const MATCH_POLL_MS =
-  import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test' ? 50_000 : 4_000;
 
 /**
- * Lobby splash: Hitler at the desk, Find Match on the table when the
- * public table is on, otherwise Play (create/join). Play with friends
- * sits under Support. A live seat that can still be claimed gets its
- * own return button above Find Match.
+ * Lobby splash: Hitler at the desk, Play on the table. Play opens Join
+ * (one public salon when that flag is on). A live seat that can still
+ * be claimed gets its own return button above Play.
  */
 export function HomeScreen() {
   const {
@@ -44,22 +40,13 @@ export function HomeScreen() {
     settings,
     miniApp,
     social,
-    flags,
     tutorial,
   } = useApp();
   const { formatMessage } = i18n;
-  const matchmaking = () => flags.ready() && flags.flags.publicTable;
   const showDevOnboarding = import.meta.env.DEV;
 
-  const publicLobby = () => {
-    const view = game.view();
-    return view?.kind === 'public' && view.phase === Phase.Lobby;
-  };
-  const finding = () => game.queued() || publicLobby();
-  const canRejoin = () => game.inRoom() && game.view() != null && !publicLobby();
-  const amWantStart = () => game.you()?.wantsStart ?? false;
+  const canRejoin = () => game.inRoom() && game.view() != null;
 
-  const [nowMs, setNowMs] = createSignal(Date.now());
   const [historyOpen, setHistoryOpen] = createSignal(false);
 
   function resolvedName(): string {
@@ -86,30 +73,6 @@ export function HomeScreen() {
     }
   }
 
-  async function enterMatch(): Promise<void> {
-    if (game.queued()) {
-      await game.leaveMatchQueue();
-      void game.loadMatchOccupancy().catch(() => undefined);
-      return;
-    }
-    if (publicLobby()) {
-      if (amWantStart()) return;
-      game.leaveRoom();
-      return;
-    }
-    const name = resolvedName() || formatMessage('home.guest');
-    try {
-      await game.queueMatch({
-        name,
-        avatar: settings.settings.avatar,
-        clientId: settings.settings.profileId,
-        initData: miniApp.initData(),
-      });
-    } catch {
-      /* Stay on Home — Join/Create is Play with friends, not Find Match. */
-    }
-  }
-
   function rejoinMatch(): void {
     const phase = game.view()?.phase;
     nav.navigate(phase && phase !== Phase.Lobby ? 'game' : 'waiting-room');
@@ -123,40 +86,8 @@ export function HomeScreen() {
     nav.navigate('onboarding');
   }
 
-  const startChoiceSeconds = () => {
-    const choice = game.view()?.startChoice;
-    if (!choice) return 0;
-    return Math.max(0, Math.ceil((choice.endsAt - nowMs()) / 1000));
-  };
-
-  const matchOccupancy = () =>
-    formatMessage('home.matchOccupancy', {
-      waiting: game.matchWaiting(),
-      max: game.matchMax(),
-    });
-
-  const findMatchLabel = () =>
-    formatMessage(finding() ? 'home.finding' : 'home.findGame');
-
   const [supportIndex, setSupportIndex] = createSignal(0);
   const [supportFading, setSupportFading] = createSignal(false);
-
-  createEffect(() => {
-    if (!game.view()?.startChoice) return;
-    const tick = setInterval(() => setNowMs(Date.now()), 250);
-    onCleanup(() => clearInterval(tick));
-  });
-
-  createEffect(() => {
-    if (!matchmaking()) return;
-    void game.loadMatchOccupancy().catch(() => undefined);
-    const poll = setInterval(() => {
-      // Queued seats already get match:status on the socket.
-      if (game.queued()) return;
-      void game.loadMatchOccupancy().catch(() => undefined);
-    }, MATCH_POLL_MS);
-    onCleanup(() => clearInterval(poll));
-  });
 
   onMount(() => {
     const tick = setInterval(() => {
@@ -194,18 +125,6 @@ export function HomeScreen() {
                 {formatMessage(SUPPORT_LABELS[supportIndex()])}
               </span>
             </button>
-            <Show when={matchmaking()}>
-              <button
-                type="button"
-                class={styles.friendsChip}
-                aria-label={formatMessage('home.playWithFriends')}
-                onClick={() => nav.navigate('play')}
-              >
-                <span class={styles.supportLabel} dir="auto">
-                  {formatMessage('home.playWithFriends')}
-                </span>
-              </button>
-            </Show>
           </div>
           <div class={styles.toolEnd}>
             <button
@@ -259,7 +178,6 @@ export function HomeScreen() {
             <div
               classList={{
                 [styles.hero]: true,
-                [styles.heroFinding]: finding(),
                 [styles.heroNoMotion]: !animation.motionEnabled(),
               }}
             >
@@ -295,60 +213,18 @@ export function HomeScreen() {
               </span>
             </button>
           </Show>
-          <Show
-            when={matchmaking()}
-            fallback={
-              <div class={styles.ctaFind}>
-                <button
-                  type="button"
-                  class={styles.cta}
-                  aria-label={formatMessage('home.play')}
-                  onClick={() => nav.navigate('join-game')}
-                >
-                  <span class={styles.ctaLabel} dir="auto">
-                    {formatMessage('home.play')}
-                  </span>
-                </button>
-              </div>
-            }
-          >
-            <div
-              classList={{
-                [styles.ctaFind]: true,
-                [styles.ctaFinding]: finding(),
-              }}
+          <div class={styles.ctaFind}>
+            <button
+              type="button"
+              class={styles.cta}
+              aria-label={formatMessage('home.play')}
+              onClick={() => nav.navigate('join-game')}
             >
-              <button
-                type="button"
-                classList={{
-                  [styles.cta]: true,
-                  [styles.ctaFinding]: finding(),
-                }}
-                aria-label={`${findMatchLabel()} ${matchOccupancy()}`}
-                onClick={() => void enterMatch()}
-              >
-                <span
-                  classList={{
-                    [styles.ctaLabel]: true,
-                    [styles.ctaLabelFinding]: finding(),
-                  }}
-                  dir="auto"
-                >
-                  {findMatchLabel()}
-                  <Show when={finding()}>
-                    <span class={styles.ctaDots} aria-hidden="true">
-                      <span>.</span>
-                      <span>.</span>
-                      <span>.</span>
-                    </span>
-                  </Show>
-                </span>
-                <span class={styles.ctaOccupancy} dir="ltr">
-                  {matchOccupancy()}
-                </span>
-              </button>
-            </div>
-          </Show>
+              <span class={styles.ctaLabel} dir="auto">
+                {formatMessage('home.play')}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -357,24 +233,6 @@ export function HomeScreen() {
         identity={socialIdentity()}
         onClose={() => setHistoryOpen(false)}
       />
-      <ConfirmDialog
-        open={publicLobby() && game.view()?.startChoice != null && !amWantStart()}
-        message={formatMessage('waiting.startChoiceHoldout')}
-        confirmLabel={formatMessage('waiting.wantStart')}
-        onConfirm={() => game.setWantStart(true)}
-      >
-        {formatMessage('waiting.startChoiceClock', {
-          seconds: startChoiceSeconds(),
-        })}
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={publicLobby() && game.view()?.startChoice != null && amWantStart()}
-        message={formatMessage('waiting.startChoiceWaiting')}
-      >
-        {formatMessage('waiting.startChoiceClock', {
-          seconds: startChoiceSeconds(),
-        })}
-      </ConfirmDialog>
     </Screen>
   );
 }

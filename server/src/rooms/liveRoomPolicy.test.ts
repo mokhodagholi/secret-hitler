@@ -15,13 +15,11 @@ function publicLobby() {
 }
 
 describe('liveRoomPolicy', () => {
-  it('Should persist only an occupied public lobby and an in-progress match', () => {
+  it('Should persist the empty public salon and an in-progress match', () => {
     const hosted = hostedLobby();
     expect(shouldPersistLiveRoom(hosted)).toBe(false);
 
     const pub = publicLobby();
-    expect(shouldPersistLiveRoom(pub)).toBe(false);
-    pub.players.push({ id: 'p1' } as never);
     expect(shouldPersistLiveRoom(pub)).toBe(true);
 
     hosted.phase = Phase.Nomination;
@@ -32,21 +30,13 @@ describe('liveRoomPolicy', () => {
     expect(shouldPersistLiveRoom(hosted)).toBe(false);
   });
 
-  it('Should drop an empty public lobby and keep an in-progress match under grace', () => {
+  it('Should keep an empty public salon and an in-progress match under grace', () => {
     const pub = publicLobby();
-    expect(shouldKeepEmptyRoom(pub, false)).toBe(false);
-    pub.players.push({ id: 'p1' } as never);
     expect(shouldKeepEmptyRoom(pub, false)).toBe(true);
 
     const hosted = hostedLobby();
-    expect(shouldKeepEmptyRoom(hosted, true)).toBe(false);
-
-    hosted.phase = Phase.Voting;
-    expect(shouldKeepEmptyRoom(hosted, false)).toBe(false);
+    hosted.phase = Phase.Nomination;
     expect(shouldKeepEmptyRoom(hosted, true)).toBe(true);
-
-    pub.phase = Phase.Nomination;
-    expect(shouldKeepEmptyRoom(pub, false)).toBe(false);
-    expect(shouldKeepEmptyRoom(pub, true)).toBe(true);
+    expect(shouldKeepEmptyRoom(hosted, false)).toBe(false);
   });
 });

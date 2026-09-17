@@ -119,6 +119,8 @@ export interface BaleTableHooks {
   product?: ProductTracker;
   /** When false, group `/create` opens an unlocked lobby. */
   roomPassword?: boolean;
+  /** Sit the public salon instead of opening a private group table. */
+  publicTable?: boolean;
 }
 
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
@@ -734,6 +736,7 @@ async function handleGroupCreate(
     fromId,
     creatorName: firstName ?? '',
     roomPassword: table.roomPassword === true,
+    publicTable: table.publicTable === true,
   });
   const posted = await sendChat(req, bale, chat.id, created.reply);
   if ('code' in created && posted.ok && posted.message_id != null) {

@@ -36,7 +36,7 @@ describe('MatchQueue', () => {
       });
       queue.bindSocket(entry.id, fakeSocket() as never);
     }
-    const taken = queue.takeConnected(PUBLIC_TABLE_MAX_PLAYERS);
+    const taken = queue.takeConnected(6);
     expect(taken).toHaveLength(6);
     expect(taken[0]?.name).toBe('Ana');
     expect(queue.size).toBe(1);

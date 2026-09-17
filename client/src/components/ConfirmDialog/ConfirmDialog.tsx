@@ -16,6 +16,8 @@ export interface ConfirmDialogProps {
   confirmOnPointerDown?: boolean;
   /** Auto-dismiss after this many ms. Hides action buttons when set. */
   autoCloseMs?: number;
+  /** Stack actions so the primary sits at the bottom (own-table dialog). */
+  stackActions?: boolean;
 }
 
 /** Modal confirmation card over a dimmed backdrop. */
@@ -30,6 +32,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         onCancel={props.onCancel}
         confirmOnPointerDown={props.confirmOnPointerDown}
         autoCloseMs={props.autoCloseMs}
+        stackActions={props.stackActions}
       >
         {props.children}
       </Notice>
@@ -46,6 +49,7 @@ function Notice(props: {
   onCancel?: () => void;
   confirmOnPointerDown?: boolean;
   autoCloseMs?: number;
+  stackActions?: boolean;
 }) {
   const timed = () => props.autoCloseMs != null && props.autoCloseMs > 0;
   let confirmHandledByPointer = false;
@@ -71,7 +75,12 @@ function Notice(props: {
           <div class={styles.body}>{props.children}</div>
         </Show>
         <Show when={!timed() && props.confirmLabel}>
-          <div class={styles.buttons}>
+          <div
+            classList={{
+              [styles.buttons]: true,
+              [styles.buttonsStack]: props.stackActions,
+            }}
+          >
             <Show when={props.cancelLabel}>
               <Button variant="outline" onClick={() => props.onCancel?.()}>
                 {props.cancelLabel}
