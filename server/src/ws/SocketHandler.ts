@@ -982,10 +982,10 @@ export class SocketHandler {
     const messageId = entry.room.options.originMessageId;
     const originPlatform = entry.room.options.originPlatform ?? 'bale';
     const runtime = originPlatform === 'telegram' ? this.telegram : this.bale;
-    const edit = runtime?.bot.editMessageText;
-    if (chatId == null || messageId == null || !edit) return;
+    // Call on the bot: a detached editMessageText drops `this` and crashes Node.
+    if (chatId == null || messageId == null || !runtime?.bot.editMessageText) return;
     const closed = createGroupClosedReply({ creatorName: entry.room.options.name });
-    void edit({
+    void runtime.bot.editMessageText({
       chat_id: chatId,
       message_id: messageId,
       text: closed.text,
