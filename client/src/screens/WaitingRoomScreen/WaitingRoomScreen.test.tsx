@@ -9,20 +9,33 @@ describe('WaitingRoomScreen', () => {
   afterEach(() => {
     rs.restoreAllMocks();
   });
-  it('Should copy a local /join invite on localhost, not a Bale startapp link', async () => {
-    const written: string[] = [];
-    Object.assign(navigator, {
-      clipboard: { writeText: async (text: string) => written.push(text) },
-    });
+  it('Should invite friends from a lobby button, not a share link', async () => {
     const harness = buildHarness({ seated: true });
+    harness.services.settings.set('profileName', 'Ana');
+    rs.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          friends: [{ accountId: 'client:ben', name: 'Ben', avatar: 1 }],
+          incomingRequests: [],
+          outgoingRequests: [],
+          incomingInvites: [],
+          outgoingInvites: [],
+          blocked: [],
+          mates: {},
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(makeView({ hostId: 'you', code: 'ABC123' }));
 
-    fireEvent.click(screen.getByRole('button', { name: en.waiting.shareLink }));
-    await waitFor(() => {
-      expect(written).toEqual([`${location.origin}/join/ABC123`]);
-    });
-    expect(written[0]).not.toContain('ble.ir');
+    const invite = screen.getByRole('button', { name: en.waiting.inviteFriends });
+    expect(invite.textContent).toContain(en.waiting.inviteFriends);
+    expect(invite.closest('header')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Share Link|Copied/i })).toBeNull();
+
+    fireEvent.click(invite);
+    await waitFor(() => expect(screen.getByText('Ben')).toBeTruthy());
   });
 
   it('Should invite a friend from the lobby with one tap', async () => {
@@ -403,7 +416,7 @@ describe('WaitingRoomScreen', () => {
     expect(harness.services.nav.screen()).not.toBe('game');
   });
 
-  it('Should let a public guest Ready and share the salon', () => {
+  it('Should let a public guest Ready and invite friends', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);
     harness.pushState(
@@ -419,7 +432,7 @@ describe('WaitingRoomScreen', () => {
     );
 
     expect(screen.getByRole('button', { name: "I'm Ready" })).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.waiting.shareLink })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.waiting.inviteFriends })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Start Game' })).toBeNull();
     expect(screen.queryByText(en.waiting.publicFillHint)).toBeNull();
   });

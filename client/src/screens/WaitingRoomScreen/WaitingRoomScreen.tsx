@@ -11,7 +11,6 @@ import {
 import { Phase, type GameStateView, type PublicPlayer, type SocialPerson } from '@secret-hitler/shared';
 import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
-import { copyText } from '../../services/clipboard';
 import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
 import { isolateBidi } from '../../i18n/utils';
 import type { SocialIdentity } from '../../services/SocialService';
@@ -37,7 +36,6 @@ export function WaitingRoomScreen() {
   const { nav, game, socket, i18n, sound, prefetch, miniApp, flags, social, settings } = useApp();
   const { formatMessage } = i18n;
 
-  const [copied, setCopied] = createSignal(false);
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [startOpen, setStartOpen] = createSignal(false);
   const [inviteOpen, setInviteOpen] = createSignal(false);
@@ -50,9 +48,6 @@ export function WaitingRoomScreen() {
   const [nowMs, setNowMs] = createSignal(Date.now());
 
   const view = game.view;
-  const shareLink = () =>
-    game.currentSession()?.shareLink ??
-    miniApp.inviteLink(view()?.code ?? '', location.origin, location.hostname);
   const amReady = () => game.you()?.ready ?? false;
   const isPublicTable = () => view()?.kind === 'public';
 
@@ -132,13 +127,6 @@ export function WaitingRoomScreen() {
     seenPlayerIds = ids;
     lastReadyCount = readyCount;
   });
-
-  async function copyShareLink(): Promise<void> {
-    if (!(await copyText(shareLink()))) return;
-    sound.play('ui-copied');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
 
   function leaveRoom(): void {
     setConfirmingLeave(false);
@@ -231,24 +219,14 @@ export function WaitingRoomScreen() {
           tone="warm"
           onBack={() => setConfirmingLeave((open) => !open)}
           right={
-            <div class={styles.headerActions}>
-              <button
-                type="button"
-                class={styles.guide}
-                aria-label={formatMessage('waiting.inviteFriends')}
-                onClick={() => void openInvites()}
-              >
-                <Icon name="people" size={22} />
-              </button>
-              <button
-                type="button"
-                class={styles.guide}
-                aria-label={formatMessage('nav.rules')}
-                onClick={() => nav.navigate('rules')}
-              >
-                <Icon name="book" size={22} />
-              </button>
-            </div>
+            <button
+              type="button"
+              class={styles.guide}
+              aria-label={formatMessage('nav.rules')}
+              onClick={() => nav.navigate('rules')}
+            >
+              <Icon name="book" size={22} />
+            </button>
           }
         />
 
@@ -274,8 +252,8 @@ export function WaitingRoomScreen() {
                 </Show>
 
                 <div class={styles.actions}>
-                  <Button variant="outline" onClick={copyShareLink}>
-                    {formatMessage(copied() ? 'waiting.copied' : 'waiting.shareLink')}
+                  <Button variant="outline" onClick={() => void openInvites()}>
+                    {formatMessage('waiting.inviteFriends')}
                   </Button>
 
                   <Show
