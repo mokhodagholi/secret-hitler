@@ -76,6 +76,12 @@ export {
   playGameStartApp,
 } from './net/playGameStartApp';
 
+// Bot
+export { BotBrain } from './bot/BotBrain';
+export type { BotDecision } from './bot/BotBrain';
+export { GameMemory } from './bot/GameMemory';
+export type { RoundRecord, InvestigationRecord } from './bot/GameMemory';
+
 // Utilities
 export { TypedEmitter } from './util/TypedEmitter';
 export { makeId, makeRoomCode } from './util/ids';

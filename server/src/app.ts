@@ -30,6 +30,8 @@ import { LobbyFillService } from './product/LobbyFillService';
 import { ProductDigestService } from './product/ProductDigestService';
 import { SocialBook } from './social/SocialBook';
 import { InMemorySocialStore } from './social/SocialStore';
+import { createBotManager } from './bot/BotManager';
+import type { BotManager } from './bot/BotManager';
 
 const WS_PATH = '/ws';
 
@@ -92,6 +94,7 @@ export interface BuiltServer {
   product: ProductTracker;
   lobbyFill: LobbyFillService | null;
   productDigest: ProductDigestService | null;
+  bots: BotManager | null;
 }
 
 /**
@@ -131,6 +134,23 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     options.social ?? new SocialBook(new InMemorySocialStore(), history);
   sockets.product = product;
   sockets.onRoomCreated = (entry) => recorder.attach(entry);
+
+  // Bot manager: fills empty lobby seats with AI players when FEATURE_BOTS=true.
+  const bots = createBotManager(flags);
+  if (bots) {
+    sockets.onRoomCreated = (entry) => {
+      recorder.attach(entry);
+      // When a human player joins, top up empty seats with bots until minPlayers.
+      entry.engine.on('stateChanged', ({ room }) => {
+        if (room.phase !== 'lobby') return;
+        if (bots.hasBots(room.id)) return;
+        const humanCount = room.players.filter((p) => !p.isBot).length;
+        if (humanCount >= 1 && room.players.length < room.options.minPlayers) {
+          bots.fillRoom(entry, room.options.minPlayers);
+        }
+      });
+    };
+  }
 
   if (options.live) {
     const restored = await restoreLiveRooms({
@@ -173,6 +193,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   app.addHook('onClose', async () => {
     productDigest?.dispose();
     lobbyFill?.dispose();
+    bots?.dispose();
     sockets.dispose();
   });
 
@@ -211,5 +232,5 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
-  return { app, repo, tokens, sockets, seats, product, lobbyFill, productDigest };
+  return { app, repo, tokens, sockets, seats, product, lobbyFill, productDigest, bots };
 }

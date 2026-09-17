@@ -100,6 +100,8 @@ export interface Player {
   role: Role | null;
   /** Game-over: this seat wants another round in the same room. */
   wantsContinue: boolean;
+  /** True when this seat is controlled by an AI bot (not a human player). */
+  isBot?: boolean;
 }
 
 /** Player fields safe to broadcast to everyone in the room. */
@@ -121,6 +123,8 @@ export interface PublicPlayer {
   vote: Vote | null;
   /** Game-over: this seat has chosen to stay for another round. */
   wantsContinue: boolean;
+  /** True when this seat is an AI bot. */
+  isBot: boolean;
   /** Revealed role, or null when still hidden to the viewer. */
   role: Role | null;
   /**
