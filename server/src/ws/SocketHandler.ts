@@ -236,9 +236,18 @@ export class SocketHandler {
   sweepIdleSockets(now = this.now()): void {
     const cutoff = now - this.idleMs;
     for (const [ws, lastSeen] of this.socketLastSeen) {
-      if (lastSeen >= cutoff) continue;
-      this.socketLastSeen.delete(ws);
-      ws.terminate();
+      if (lastSeen < cutoff || ws.readyState !== ws.OPEN) {
+        this.socketLastSeen.delete(ws);
+        ws.terminate();
+        continue;
+      }
+      // Protocol ping: the browser replies even when JS timers are frozen.
+      try {
+        ws.ping();
+      } catch {
+        this.socketLastSeen.delete(ws);
+        ws.terminate();
+      }
     }
   }
 
@@ -671,6 +680,7 @@ export class SocketHandler {
       this.touchSocket(ws);
       this.onMessage(ws, data.toString());
     });
+    ws.on('pong', () => this.touchSocket(ws));
     ws.on('close', () => {
       this.socketLastSeen.delete(ws);
       this.onClose(ws);

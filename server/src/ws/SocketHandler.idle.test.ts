@@ -8,6 +8,8 @@ import { SocketHandler } from './SocketHandler';
 class FakeSocket {
   readyState = 1;
   readonly OPEN = 1;
+  autoPong = false;
+  pingCalls = 0;
   private readonly listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 
   on(event: string, listener: (...args: unknown[]) => void): void {
@@ -18,6 +20,11 @@ class FakeSocket {
 
   emit(event: string, ...args: unknown[]): void {
     for (const listener of this.listeners.get(event) ?? []) listener(...args);
+  }
+
+  ping(): void {
+    this.pingCalls += 1;
+    if (this.autoPong) this.emit('pong');
   }
 
   terminate(): void {
@@ -39,9 +46,15 @@ describe('SocketHandler — idle sockets', () => {
   afterEach(() => {
     handler?.dispose();
     handler = undefined;
+    clock = 1_000_000;
   });
 
-  it('Should mark a lobby seat disconnected when the socket goes idle', () => {
+  function sitGuest(): {
+    entry: ReturnType<RoomRepository['create']>;
+    guestId: string;
+    hostId: string;
+    ws: FakeSocket;
+  } {
     const repo = new RoomRepository(3);
     const tokens = new TokenStore();
     handler = new SocketHandler(
@@ -67,19 +80,37 @@ describe('SocketHandler — idle sockets', () => {
     const ws = new FakeSocket();
     handler.handleConnection(ws as never);
     ws.emit('message', JSON.stringify({ type: 'auth', token }));
-    expect(entry.room.findPlayer(guest.id)?.connected).toBe(true);
+    return { entry, guestId: guest.id, hostId: host.id, ws };
+  }
+
+  it('Should mark a lobby seat disconnected when the socket goes idle', () => {
+    const { entry, guestId, hostId } = sitGuest();
+    expect(entry.room.findPlayer(guestId)?.connected).toBe(true);
 
     clock += WS_IDLE_MS + 1;
-    handler.sweepIdleSockets();
+    handler!.sweepIdleSockets();
 
-    const seat = entry.room.findPlayer(guest.id);
+    const seat = entry.room.findPlayer(guestId);
     expect(seat?.connected).toBe(false);
     expect(entry.room.phase).toBe(Phase.Lobby);
 
     // Engine timestamps use wall clock; force the disconnect grace elapsed.
     seat!.unreadySince = Date.now() - LOBBY_DISCONNECT_MS;
-    entry.engine.resolveLobbyAfkTimeout(guest.id);
-    expect(entry.room.findPlayer(guest.id)).toBeUndefined();
-    expect(entry.room.findPlayer(host.id)).toBeTruthy();
+    entry.engine.resolveLobbyAfkTimeout(guestId);
+    expect(entry.room.findPlayer(guestId)).toBeUndefined();
+    expect(entry.room.findPlayer(hostId)).toBeTruthy();
+  });
+
+  it('Should keep a seat when the browser answers protocol pings', () => {
+    const { entry, guestId, ws } = sitGuest();
+    ws.autoPong = true;
+
+    clock += WS_IDLE_MS / 2;
+    handler!.sweepIdleSockets();
+    clock += WS_IDLE_MS / 2;
+    handler!.sweepIdleSockets();
+
+    expect(ws.pingCalls).toBe(2);
+    expect(entry.room.findPlayer(guestId)?.connected).toBe(true);
   });
 });

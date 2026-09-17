@@ -34,6 +34,9 @@ export class WebSocketService {
     const [status, setStatus] = createSignal<ConnectionStatus>('disconnected');
     this.status = status;
     this.setStatus = setStatus;
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.onVisibility);
+    }
   }
 
   /** Subscribe to every server message. Returns an unsubscribe function. */
@@ -128,6 +131,18 @@ export class WebSocketService {
       socket.close();
     }
   }
+
+  /** Bale/Telegram freeze JS in the background; ping as soon as the WebView wakes. */
+  private readonly onVisibility = (): void => {
+    if (typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+    if (!this.token) return;
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.send({ type: 'ping' });
+      return;
+    }
+    if (this.socket?.readyState === WebSocket.CONNECTING) return;
+    this.scheduleReconnect();
+  };
 
   private startHeartbeat(): void {
     this.stopHeartbeat();

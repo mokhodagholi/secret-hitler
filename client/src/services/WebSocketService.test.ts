@@ -90,4 +90,12 @@ describe('WebSocketService', () => {
     expect(service.status()).toBe('disconnected');
     expect(FakeWebSocket.instances).toHaveLength(1);
   });
+
+  it('Should ping when the tab becomes visible', () => {
+    const { service, socket } = connectAuthed();
+    socket.sent.length = 0;
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(JSON.parse(socket.sent[0]!)).toEqual({ type: 'ping' });
+    service.disconnect();
+  });
 });
