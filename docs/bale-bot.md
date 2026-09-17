@@ -70,9 +70,11 @@ gets the “started” line, then fan out in the background. Holding the HTTP
 request open for every DM used to time out nginx/Bale and make later
 commands look dead until the container restarted.
 
-An admin `/message` or `/broadcast` compose draft is cancelled by `/start`
-(and the other menu commands). Bare text and `ble.ir/…` paths stay in the
-draft so a broadcast body is not mistaken for a greeting.
+An admin `/message` or `/broadcast` compose draft is cancelled by a bare
+`/start` (and the other menu commands with no extra text). A body that only
+starts with those words, plus bare text and `ble.ir/…` paths, stays in the
+draft so it is not mistaken for a greeting. Private-chat admin checks use
+`chat.id` when Bale omits `message.from`.
 
 Source: [`server/src/bale/webhook.ts`](../server/src/bale/webhook.ts),
 [`server/src/index.ts`](../server/src/index.ts).

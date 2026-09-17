@@ -157,12 +157,25 @@ const DRAFT_CANCEL_COMMANDS = new Set([
   'create',
 ]);
 
-function adminDraftKey(kind: MessengerKind, chatId: number): string {
+function adminDraftKey(kind: MessengerKind, chatId: number | string): string {
   return `${kind}:${chatId}`;
 }
 
-function cancelsAdminDraft(command: string | undefined): boolean {
-  return command != null && DRAFT_CANCEL_COMMANDS.has(command);
+/** Bare `/start` (and the other menu names) abort compose. Extra text is a body. */
+function cancelsAdminDraft(parsed: { command: string; arg: string } | null): boolean {
+  return parsed != null && parsed.arg === '' && DRAFT_CANCEL_COMMANDS.has(parsed.command);
+}
+
+/**
+ * Bale often omits `message.from` (even on `/start`). In a private chat the
+ * peer is `chat.id`, which is what admin gates and compose drafts must use.
+ */
+function privateUserId(fromId: unknown, chatId: unknown): number {
+  const from = Number(fromId);
+  if (Number.isFinite(from) && from > 0) return from;
+  const chat = Number(chatId);
+  if (Number.isFinite(chat) && chat > 0) return chat;
+  return 0;
 }
 
 /**
@@ -306,7 +319,7 @@ export async function handleMessengerWebhook(
   }
 
   const fromId = Number(message.from?.id);
-  const seatedId = Number.isFinite(fromId) ? fromId : 0;
+  const seatedId = privateUserId(message.from?.id, chat.id);
 
   const kind = messengerKindOf(messenger);
   if (!isDirectMessage(chat)) {
@@ -378,9 +391,8 @@ export async function handleMessengerWebhook(
     return sendBotReply(req, reply, messenger, chat.id, usersListReply(chatIds));
   }
 
-  // Player commands cancel a stuck compose; bare text / ble.ir paths stay owned
-  // by the draft so a broadcast body is not mistaken for /start.
-  if (cancelsAdminDraft(parsed?.command) && table && isAdminUser(seatedId, table.adminUserIds)) {
+  // Bare menu commands abort compose; `/start بزن` and ble.ir paths stay in the draft.
+  if (cancelsAdminDraft(parsed) && table && isAdminUser(seatedId, table.adminUserIds)) {
     adminDrafts.delete(adminDraftKey(kind, chat.id));
   } else if (table && isAdminUser(seatedId, table.adminUserIds)) {
     const continued = await continueAdminDraft(req, reply, messenger, table, chat.id, text);
@@ -395,7 +407,7 @@ export async function handleMessengerWebhook(
     fromId: seatedId,
     lobbies: repo.listPublic(),
     games: repo.listAll(),
-    seated: Number.isFinite(fromId) ? messenger.seats.get(fromId, kind) : undefined,
+    seated: seatedId > 0 ? messenger.seats.get(seatedId, kind) : undefined,
     botUsername: messenger.botUsername,
     startLink: startLinkFor(messenger),
     platform: kind,
