@@ -12,7 +12,7 @@ export const LOBBY_FILL = {
   /** Gap between waves for the same room. */
   waveCooldownMs: 75_000,
   /** Look back for miniapp / seated / find_match activity. */
-  warmWindowMs: 90 * 60_000,
+  warmWindowMs: 6 * 60 * 60_000,
   /** Skip anyone who finished a game this recently. */
   postGameCooldownMs: 30 * 60_000,
   /** At most one fill DM per user in this window. */

@@ -27,6 +27,7 @@ import type { ProductStore } from './product/ProductStore';
 import { InMemoryProductStore } from './product/InMemoryProductStore';
 import { ProductTracker } from './product/ProductTracker';
 import { LobbyFillService } from './product/LobbyFillService';
+import { ProductDigestService } from './product/ProductDigestService';
 import { SocialBook } from './social/SocialBook';
 import { InMemorySocialStore } from './social/SocialStore';
 
@@ -85,6 +86,7 @@ export interface BuiltServer {
   seats: BaleSeatIndex;
   product: ProductTracker;
   lobbyFill: LobbyFillService | null;
+  productDigest: ProductDigestService | null;
 }
 
 /**
@@ -152,7 +154,19 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
         })
       : null;
 
+  const productDigest =
+    bale?.supportChatId != null || telegram?.supportChatId != null
+      ? new ProductDigestService({
+          product: productStore,
+          repo,
+          bale,
+          telegram,
+        })
+      : null;
+  productDigest?.start();
+
   app.addHook('onClose', async () => {
+    productDigest?.dispose();
     lobbyFill?.dispose();
     sockets.dispose();
   });
@@ -190,5 +204,5 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
-  return { app, repo, tokens, sockets, seats, product, lobbyFill };
+  return { app, repo, tokens, sockets, seats, product, lobbyFill, productDigest };
 }

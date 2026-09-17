@@ -615,6 +615,7 @@ These talk to Bale but **never** as a slash-command in private chat.
 |---|---|---|
 | Support letter | Mini-app Support screen → `POST /api/support` | Bot posts a letter to `BALE_SUPPORT_CHAT_ID` (help / suggestion / criticism). There is no `/support` in chat. |
 | Kick-vote notice | Server, after a table kick vote | Same support group gets a tally (requester, target, yes/needed, kicked or not). |
+| Product digest | `ProductDigestService` on Iran 6h boundaries | Same support group gets people / lobby / fill / match counts for the last window. See [`product-analytics.md`](./product-analytics.md). |
 | Mini-app login | `POST /api/auth/bale` | Validates `initData`, returns first name + saved avatar. Not a chat command. |
 
 ---
@@ -630,7 +631,7 @@ From [`.env.example`](../.env.example):
 | `BALE_WEBHOOK_URL` | HTTPS URL Bale POSTs updates to (port 443 or 88). |
 | `BALE_WEBHOOK_SECRET` | Appended to the webhook path; also accepted as `X-Telegram-Bot-Api-Secret-Token`. Required when registering. |
 | `BOT_SET_WEBHOOK` | `true` only on the VPS (compose default). Local `pnpm dev` must leave it unset so boot does not steal production `setWebhook`. |
-| `BALE_SUPPORT_CHAT_ID` | Group for support letters and kick notices. Not used by chat commands. |
+| `BALE_SUPPORT_CHAT_ID` | Group for support letters, kick notices, and the product digest. Not used by chat commands. |
 | `ADMIN_USER_IDS` | Extra Bale ids for `/play-game`, `/broadcast`, `/message`, `/unsend`, `/users`, and `/delete`. `1902004260` is always allowed. |
 
 Copy for new replies: [`docs/persian.md`](./persian.md) (register **بله**).

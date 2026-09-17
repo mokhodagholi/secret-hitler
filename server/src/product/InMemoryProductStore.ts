@@ -1,6 +1,7 @@
 import type { MessengerKind } from '@secret-hitler/shared';
 import {
   BLAST_RETURN_WINDOW_MS,
+  type DigestWindowTotals,
   type LobbyDeathReason,
   type LobbySource,
   type MatchOutcome,
@@ -11,6 +12,7 @@ import {
   type ProductStore,
   type WarmInviteQuery,
 } from './ProductStore';
+import { PRODUCT_DIGEST } from './productDigest';
 import { rankWarmInviteTargets } from './rankWarmInviteTargets';
 
 function makeId(): string {
@@ -157,6 +159,26 @@ export class InMemoryProductStore implements ProductStore {
     return rankWarmInviteTargets(this.events, query);
   }
 
+  async summarizeDigestWindow(from: Date, to: Date): Promise<DigestWindowTotals> {
+    const eventUntil = new Date(to.getTime() + PRODUCT_DIGEST.fillConvertWindowMs);
+    return {
+      events: this.events.filter(
+        (event) => event.at.getTime() >= from.getTime() && event.at.getTime() < eventUntil.getTime(),
+      ),
+      lobbies: this.lobbies.filter(
+        (lobby) =>
+          inDigestRange(lobby.openedAt, from, to) ||
+          (lobby.dealtAt != null && inDigestRange(lobby.dealtAt, from, to)) ||
+          (lobby.diedAt != null && inDigestRange(lobby.diedAt, from, to)),
+      ),
+      matches: this.matches.filter(
+        (match) =>
+          inDigestRange(match.startedAt, from, to) ||
+          (match.endedAt != null && inDigestRange(match.endedAt, from, to)),
+      ),
+    };
+  }
+
   async close(): Promise<void> {}
 
   private openLobbyRow(roomCode: string): ProductLobby | undefined {
@@ -200,4 +222,9 @@ export class InMemoryProductStore implements ProductStore {
     }
     return undefined;
   }
+}
+
+function inDigestRange(at: Date, from: Date, to: Date): boolean {
+  const ms = at.getTime();
+  return ms >= from.getTime() && ms < to.getTime();
 }

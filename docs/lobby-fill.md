@@ -41,8 +41,8 @@ Ranked from `product_events` (`listWarmInviteTargets` /
 
 | Prefer | Signal |
 |---|---|
-| 1 | `find_match` in the last 90 minutes |
-| 2 | `seated` or `miniapp_auth` in the last 90 minutes |
+| 1 | `find_match` in the last 6 hours |
+| 2 | `seated` or `miniapp_auth` in the last 6 hours |
 
 | Skip | Reason |
 |---|---|
@@ -53,6 +53,10 @@ Ranked from `product_events` (`listWarmInviteTargets` /
 | Already invited for this room this process | Per-room dedupe |
 | Cold `/start` only | Low convert; not worth a seat ping |
 
+Warm window is **6 hours** (was 90m) so lukewarm players still get a chance;
+ranking still prefers fresher `find_match` first. Rate timers
+(`sendDelayMs` 400ms, max 3/wave, 12h invite cooldown) are unchanged.
+
 Successful sends record `lobby_fill_invite`. Every wave also records
 `lobby_fill_wave` (seats, limit, candidates, invited, failed, stop). Failed DMs
 record `lobby_fill_fail` with `reason`: `rate_limit` | `blocked` |
@@ -60,6 +64,9 @@ record `lobby_fill_fail` with `reason`: `rate_limit` | `blocked` |
 **429 rate limits do not**.
 
 ### Measurement queries
+
+Full data-assistant runbook (all tables, funnel, blasts, social, games, support digest):
+[`product-analytics.md`](./product-analytics.md).
 
 ```sql
 -- Invites and conversion in the last day

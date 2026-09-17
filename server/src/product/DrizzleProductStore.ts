@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, isNull, lt, or, sql } from 'drizzle-orm';
 import type { MessengerKind } from '@secret-hitler/shared';
 import { connectDatabase, type Database, type DbConnection } from '../db/connection';
 import {
@@ -11,13 +11,17 @@ import {
 import { LOBBY_FILL } from './lobbyFill';
 import {
   BLAST_RETURN_WINDOW_MS,
+  type DigestWindowTotals,
   type LobbyDeathReason,
   type LobbySource,
   type MatchOutcome,
   type ProductEvent,
+  type ProductLobby,
+  type ProductMatch,
   type ProductStore,
   type WarmInviteQuery,
 } from './ProductStore';
+import { PRODUCT_DIGEST } from './productDigest';
 import { rankWarmInviteTargets } from './rankWarmInviteTargets';
 
 /** Postgres-backed {@link ProductStore}. */
@@ -237,6 +241,88 @@ export class DrizzleProductStore implements ProductStore {
       payload: row.payload,
     }));
     return rankWarmInviteTargets(events, query);
+  }
+
+  async summarizeDigestWindow(from: Date, to: Date): Promise<DigestWindowTotals> {
+    const eventUntil = new Date(to.getTime() + PRODUCT_DIGEST.fillConvertWindowMs);
+    const eventRows = await this.db
+      .select({
+        name: productEvents.name,
+        at: productEvents.at,
+        platform: productEvents.platform,
+        userKey: productEvents.userKey,
+        roomCode: productEvents.roomCode,
+        payload: productEvents.payload,
+      })
+      .from(productEvents)
+      .where(
+        and(
+          gte(productEvents.at, from),
+          lt(productEvents.at, eventUntil),
+          sql`${productEvents.name} IN (
+            'miniapp_auth',
+            'seated',
+            'room_join',
+            'lobby_fill_invite',
+            'lobby_fill_fail'
+          )`,
+        ),
+      );
+
+    const lobbyRows = await this.db
+      .select()
+      .from(productLobbies)
+      .where(
+        or(
+          and(gte(productLobbies.openedAt, from), lt(productLobbies.openedAt, to)),
+          and(gte(productLobbies.dealtAt, from), lt(productLobbies.dealtAt, to)),
+          and(gte(productLobbies.diedAt, from), lt(productLobbies.diedAt, to)),
+        ),
+      );
+
+    const matchRows = await this.db
+      .select()
+      .from(productMatches)
+      .where(
+        or(
+          and(gte(productMatches.startedAt, from), lt(productMatches.startedAt, to)),
+          and(gte(productMatches.endedAt, from), lt(productMatches.endedAt, to)),
+        ),
+      );
+
+    const events: ProductEvent[] = eventRows.map((row) => ({
+      name: row.name as ProductEvent['name'],
+      at: row.at,
+      platform: row.platform as ProductEvent['platform'],
+      userKey: row.userKey,
+      roomCode: row.roomCode,
+      payload: row.payload,
+    }));
+
+    const lobbies: ProductLobby[] = lobbyRows.map((row) => ({
+      roomCode: row.roomCode,
+      source: row.source as ProductLobby['source'],
+      openedAt: row.openedAt,
+      hourIran: row.hourIran,
+      peakSeats: row.peakSeats,
+      reached5At: row.reached5At,
+      dealtAt: row.dealtAt,
+      diedAt: row.diedAt,
+      deathReason: row.deathReason as ProductLobby['deathReason'],
+      afkKicks: row.afkKicks,
+    }));
+
+    const matches: ProductMatch[] = matchRows.map((row) => ({
+      roomCode: row.roomCode,
+      startedAt: row.startedAt,
+      endedAt: row.endedAt,
+      outcome: row.outcome as ProductMatch['outcome'],
+      disconnects: row.disconnects,
+      kickVotes: row.kickVotes,
+      afkKicks: row.afkKicks,
+    }));
+
+    return { events, lobbies, matches };
   }
 
   close(): Promise<void> {

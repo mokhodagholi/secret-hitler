@@ -87,7 +87,7 @@ describe('rankWarmInviteTargets', () => {
   });
 
   it('Should ignore activity older than the warm window', () => {
-    const ranked = rankWarmInviteTargets([event('seated', 'bale:9', 200)], {
+    const ranked = rankWarmInviteTargets([event('seated', 'bale:9', 400)], {
       platform: 'bale',
       now: NOW,
       warmWindowMs: LOBBY_FILL.warmWindowMs,
@@ -97,6 +97,19 @@ describe('rankWarmInviteTargets', () => {
       limit: 10,
     });
     expect(ranked).toEqual([]);
+  });
+
+  it('Should include lukewarm activity inside a 6 hour window', () => {
+    const ranked = rankWarmInviteTargets([event('seated', 'bale:9', 200)], {
+      platform: 'bale',
+      now: NOW,
+      warmWindowMs: LOBBY_FILL.warmWindowMs,
+      postGameCooldownMs: LOBBY_FILL.postGameCooldownMs,
+      inviteCooldownMs: LOBBY_FILL.inviteCooldownMs,
+      excludeUserKeys: new Set(),
+      limit: 10,
+    });
+    expect(ranked).toEqual(['bale:9']);
   });
 });
 

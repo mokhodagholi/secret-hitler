@@ -86,7 +86,7 @@ export interface ProductBlastRecipient {
 export interface WarmInviteQuery {
   platform: MessengerKind;
   now: Date;
-  /** Prefer activity inside this lookback (default 90m). */
+  /** Prefer activity inside this lookback (default 6h). */
   warmWindowMs: number;
   /** Skip anyone who finished a game this recently (default 30m). */
   postGameCooldownMs: number;
@@ -123,7 +123,19 @@ export interface ProductStore {
    * not post-game exhausted, not invite-cooled, not in `excludeUserKeys`.
    */
   listWarmInviteTargets(query: WarmInviteQuery): Promise<string[]>;
+  /**
+   * Aggregate funnel / lobby / fill / match health for one closed time window.
+   * Caller supplies `liveRooms` when formatting the support-group digest.
+   */
+  summarizeDigestWindow(from: Date, to: Date): Promise<DigestWindowTotals>;
   close(): Promise<void>;
+}
+
+/** Counts for {@link summarizeProductDigest} without live-room / clock fields. */
+export interface DigestWindowTotals {
+  events: ProductEvent[];
+  lobbies: ProductLobby[];
+  matches: ProductMatch[];
 }
 
 export const BLAST_RETURN_WINDOW_MS = 24 * 60 * 60 * 1000;
