@@ -31,7 +31,7 @@ type FillFailReason = 'rate_limit' | 'blocked' | 'bad_user_key' | 'other';
 type WaveStopReason = 'done' | 'no_candidates' | 'lobby_gone' | 'table_full';
 
 /**
- * When a lobby sits at 3–4 seats, DM a few warm messenger users with a deep
+ * When a lobby sits at 2–4 seats, DM a few warm messenger users with a deep
  * link into that room. Gated by FEATURE_LOBBY_FILL. See docs/lobby-fill.md.
  */
 export class LobbyFillService {

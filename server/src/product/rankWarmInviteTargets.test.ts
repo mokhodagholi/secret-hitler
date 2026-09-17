@@ -115,6 +115,7 @@ describe('rankWarmInviteTargets', () => {
 
 describe('invitesForWave', () => {
   it('Should invite enough seats to reach five, capped at three', () => {
+    expect(invitesForWave(2)).toBe(3);
     expect(invitesForWave(3)).toBe(2);
     expect(invitesForWave(4)).toBe(1);
     expect(invitesForWave(5)).toBe(0);

@@ -2,7 +2,7 @@
 
 Server DMs that pull warm players into a waiting table. Ships dark behind
 `FEATURE_LOBBY_FILL` (default off). Not a replacement for Find Match or the
-public table — only a backfill when a lobby already has **3+** seats and still
+public table — only a backfill when a lobby already has **2+** seats and still
 needs people to deal.
 
 ## Why
@@ -17,7 +17,9 @@ inside the rate limit and converts better.
 Every ~15s the server scans live lobbies (`LobbyFillService`):
 
 1. Phase is lobby, unlocked (no password), not an admin `/play-game` table.
-2. Seat count is **3–4** (already a real table; still short of the deal minimum of 5).
+2. Seat count is **2–4** (a pair waiting; still short of the deal minimum of 5).
+   Solo hosts (1 seat) are skipped so a person sitting alone does not ping the
+   warm pool.
 3. That room has been in the needy band for **≥75s**.
 4. No fill wave for that room in the last **75s**.
 

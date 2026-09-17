@@ -4,8 +4,8 @@ import type { MessengerKind } from '@secret-hitler/shared';
 export const LOBBY_FILL = {
   /** Sweep live lobbies this often. */
   sweepMs: 15_000,
-  /** Seats in [min, max] — 3+ waiting, still short of the deal minimum. */
-  minSeats: 3,
+  /** Seats in [min, max] — a pair waiting, still short of the deal minimum. */
+  minSeats: 2,
   maxSeats: 4,
   /** Wait this long after a lobby first hits the needy band before DMing. */
   waitBeforeInviteMs: 75_000,

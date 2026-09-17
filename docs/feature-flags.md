@@ -67,5 +67,5 @@ ignores a password on HTTP create. Group `/create` opens an unlocked lobby
 locked while the flag was on.
 
 When `lobbyFill` is off, the server does not DM warm players to fill waiting
-lobbies. When on, needy 3–4 seat tables get short deep-link invites. See
+lobbies. When on, needy 2–4 seat tables get short deep-link invites. See
 [`lobby-fill.md`](./lobby-fill.md).
