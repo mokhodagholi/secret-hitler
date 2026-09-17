@@ -251,7 +251,41 @@ export const en = {
     execute:
       'Take someone off the table. If it is Hitler, the Liberals win. Nobody sees the role unless it is Hitler.',
     win: 'The Liberals win. Next hand nobody tells you who is lying. Listen to who talks.',
+    winNext: 'The Liberals win. The next table only shows what changed.',
+    nightDone:
+      'You are a Liberal. You do not see the others. That is the point.',
+    nextSix:
+      'One more Liberal sits down. Same small board as five. While six remain, last president and last chancellor are locked. If someone dies and five are left, only last chancellor stays locked.',
+    termLimit:
+      'Nima just sat as Chancellor. You cannot name them again. While six are alive, last president is locked too.',
+    nextSeven:
+      'From seven on, Hitler does not see the Fascists at night. The board changes: first investigate, then a special election.',
+    investigate:
+      'Tap a seat. You see their party, not their role. Lie to the table if you have to.',
+    specialElection:
+      'You pick the next President — it does not walk around the table.',
+    nextEight:
+      'Same board as seven. Two Fascists around a Hitler who saw nothing at night. More seats, noisier votes.',
+    nextNine: 'Investigate twice. Three Fascists plus Hitler.',
+    nextTen: 'Full table. Same powers — more seats, more talk.',
+    talk: {
+      pickMe: "Put me in as Chancellor. I'll play it calm.",
+      meToo: "I'm here too.",
+    },
+    seat: {
+      nima: 'Nima',
+      sara: 'Sara',
+      reza: 'Reza',
+      omid: 'Omid',
+      maryam: 'Maryam',
+      kian: 'Kian',
+      arash: 'Arash',
+      hoda: 'Hoda',
+      behrad: 'Behrad',
+    },
     idea: {
+      welcome:
+        "We're at the table. Everything you just saw lives on this screen.",
       tableTitle: 'Who sits',
       table:
         'A few people around the table, ready to play together. Two teams: Liberal and Fascist. And one special seat — Hitler.',
@@ -267,6 +301,7 @@ export const en = {
       ballots:
         'Votes land on each seat. Remember who said Nein — it matters later.',
       trackerTitle: 'Election tracker',
+      tracker: 'This is the tracker. Three marks.',
       trackerFail1:
         'If half plus one say Nein, the government fails. The tracker moves up one.',
       nextPresidentTitle: 'Next president',
@@ -284,15 +319,21 @@ export const en = {
       letsSitBody: 'You have seen the table. Now sit — the hand starts from here.',
     },
     piece: {
+      welcomeTitle: 'A short sitting',
+      welcome:
+        "Before a real table, we'll walk the board together. About two minutes — skip whenever you want.",
+      welcomeTime: 'About 2 minutes',
       rolesTitle: 'Roles',
       roles: 'Liberal, Fascist, and Hitler.',
       boardsTitle: 'Boards',
       boards: 'Blue for Liberals, red for Fascists.',
       officesTitle: 'President and Chancellor',
       offices: 'The two seats that form a government.',
-      voteTitle: 'Vote cards',
-      vote:
-        'Ja or Nein. Every hand, these cards decide whether the proposed government takes power.',
+      voteTitle: 'The vote',
+      vote: 'Every round, everyone votes.',
+      trackerTitle: 'Election tracker',
+      tracker:
+        'This counts failed governments. Three marks in a row and the top law goes down with nobody in office.',
       trackerFail1Title: 'First fail',
       trackerFail1:
         'The government failed. The tracker fills one mark from the left.',
@@ -480,6 +521,8 @@ export const en = {
     roomLabel: 'Room: {name}',
     players: 'Players',
     playersTitle: 'Players',
+    historyTitle: 'Round history',
+    skipTimer: 'Skip wait',
     youAreRole: 'You are {role}',
     you: 'You',
     currentTurn: 'Current Turn',
@@ -641,6 +684,26 @@ export const en = {
       promptYours:
         'You ({requesterSeat}) asked the table to remove {target} ({targetSeat}).',
       help: 'The table is voting to remove {name}. The clocks are paused.',
+    },
+    history: {
+      empty: 'Nothing to show yet. Finished rounds land here.',
+      round: 'Round {n}',
+      president: 'President · {name}',
+      chancellor: 'Chancellor · {name}',
+      noChancellor: 'No Chancellor nominated',
+      votePassed: 'Elected · Ja {ja} · Nein {nein}',
+      voteFailed: 'Rejected · Ja {ja} · Nein {nein}',
+      nominationFailed: 'Nomination timed out',
+      votes: 'Votes',
+      abstained: 'no vote → Nein',
+      enactedLiberal: 'Liberal law enacted',
+      enactedFascist: 'Fascist law enacted',
+      chaos: 'Chaos — top of the deck enacted',
+      veto: 'Veto agreed — both laws burned',
+      powerInvestigate: 'Investigated {name}',
+      powerExecute: 'Executed {name}',
+      powerPeek: 'Peeked at the top three laws',
+      powerSpecial: 'Special election · {name}',
     },
   },
   vote: {

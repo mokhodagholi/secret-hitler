@@ -33,7 +33,7 @@ import {
   type BaleRuntime,
 } from '../bale/webhook';
 import { formatSupportLetter, isSupportTopic } from '../bale/support';
-import { isAdminUser, parseAdminUserIds } from '../bale/adminIds';
+import { DEFAULT_ADMIN_USER_ID, isAdminUser, parseAdminUserIds } from '../bale/adminIds';
 import { ensureAdminPlayTable } from '../bale/adminPlay';
 import { registerSocialRoutes } from './social.routes';
 import type { SocialBook } from '../social/SocialBook';
@@ -55,6 +55,12 @@ export interface RouteDeps {
   telegram?: BaleRuntime;
   flags: FeatureFlags;
   adminUserIds?: ReadonlySet<number>;
+  /**
+   * Local / test only: `POST /api/play-game` may omit mini-app login and still
+   * open the admin test table (same as `/play-game N` in Bale). Never on in
+   * production.
+   */
+  allowDevPlay?: boolean;
   broadcastDelayMs?: number;
   /** Funnel / lobby / blast / match health. */
   product: ProductTracker;
@@ -110,6 +116,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const { repo, tokens, sockets, recorder, history, profiles, subscribers, bale, telegram, flags, product } =
     deps;
   const adminUserIds = deps.adminUserIds ?? parseAdminUserIds();
+  const allowDevPlay = deps.allowDevPlay === true;
   const tableHooks = {
     sockets,
     recorder,
@@ -272,11 +279,17 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       typeof body.initData === 'string' ? body.initData : undefined,
       messengers,
     );
-    if (!identified) {
+    let adminUserId: number | null = null;
+    if (identified) {
+      if (!isAdminUser(identified.user.id, adminUserIds)) {
+        return reply.code(403).send({ error: 'Not allowed', code: 'AUTH_FAILED' });
+      }
+      adminUserId = identified.user.id;
+    } else if (allowDevPlay) {
+      // Browser localhost has no signed initData — same table as `/play-game 1`.
+      adminUserId = DEFAULT_ADMIN_USER_ID;
+    } else {
       return reply.code(401).send({ error: 'Invalid mini-app login', code: 'AUTH_FAILED' });
-    }
-    if (!isAdminUser(identified.user.id, adminUserIds)) {
-      return reply.code(403).send({ error: 'Not allowed', code: 'AUTH_FAILED' });
     }
     const seat =
       typeof body.seat === 'number' ? body.seat : Number.parseInt(String(body.seat ?? ''), 10);
@@ -287,7 +300,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       repo,
       sockets,
       recorder,
-      userId: identified.user.id,
+      userId: adminUserId,
     });
     if ('error' in opened) {
       return reply.code(400).send({ error: opened.error, code: 'INVALID_ACTION' });
@@ -297,7 +310,9 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!entry || !player) {
       return reply.code(404).send({ error: 'Seat not found', code: 'ROOM_NOT_FOUND' });
     }
-    const joinRuntime = runtimeOf(identified.kind, bale, telegram);
+    const joinRuntime = identified
+      ? runtimeOf(identified.kind, bale, telegram)
+      : undefined;
     const token = tokens.issue({ roomId: entry.room.id, playerId: player.id });
     const res: JoinRoomResponse = {
       roomId: entry.room.id,

@@ -54,16 +54,22 @@ export interface RoomOptions {
   originPlatform?: MessengerKind;
   /** Group `/create` post — rewritten when the host leaves. */
   originMessageId?: number;
-  /** Evergreen Join lobby — no host, vote-to-start. Absent means hosted. */
+  /** Evergreen Join lobby. First sitter is host. Absent means hosted. */
   kind?: 'public';
   /** Bale/Telegram user who opened this table with `/play-game`. Hidden from public lists. */
   adminPlayUserId?: number;
+  /**
+   * When true, Ravi prompt holds, deal/pass flight delays, and announce
+   * breaths collapse to 0 so unit tests can act immediately. Production
+   * rooms omit this (false).
+   */
+  skipCeremony?: boolean;
 }
 
 /** Stored name for the evergreen lobby; UIs localize via `kind`. */
 export const PUBLIC_TABLE_NAME = 'میز عمومی';
-/** Public Accept opens at this many connected sitters — not {@link MAX_PLAYERS}. */
-export const PUBLIC_TABLE_MAX_PLAYERS = 6;
+/** Public salon seats; same cap as a hosted table (`MAX_PLAYERS`). */
+export const PUBLIC_TABLE_MAX_PLAYERS = 10;
 
 export function isPublicTable(options: Pick<RoomOptions, 'kind'>): boolean {
   return options.kind === 'public';
@@ -78,7 +84,7 @@ export interface Player {
   isHost: boolean;
   connected: boolean;
   ready: boolean;
-  /** Public-table Accept tap during the full-table window. Hosted rooms leave this false. */
+  /** Public-table Accept leftover; salon start is host Start. Hosted rooms leave this false. */
   wantsStart: boolean;
   /** Last public Accept tap; unused for collecting Start (there is none). */
   wantStartAt: number | null;
@@ -190,6 +196,58 @@ export interface LogEntry {
   at: number;
 }
 
+/** One seat's ballot after a government vote closed (missing taps count as Nein). */
+export interface RoundHistoryBallot {
+  playerId: string;
+  name: string;
+  vote: Vote;
+  /** True when the engine filled Nein because they never cast. */
+  abstained: boolean;
+}
+
+/** Executive power recorded on a finished round. Party / peek colours stay private. */
+export interface RoundHistoryPower {
+  kind: ExecutivePower;
+  targetId: string | null;
+  targetName: string | null;
+}
+
+/**
+ * One completed (or in-progress draft) government cycle for the in-match
+ * history sheet. Ballots match what seats briefly show after the vote closes.
+ */
+export interface RoundHistoryEntry {
+  round: number;
+  presidentId: string;
+  presidentName: string;
+  chancellorId: string | null;
+  chancellorName: string | null;
+  /** Null until a government was put to a vote. */
+  ballots: RoundHistoryBallot[] | null;
+  ja: number | null;
+  nein: number | null;
+  /** Null if no vote; false if rejected; true if the government formed. */
+  elected: boolean | null;
+  /** President never named a Chancellor before the nomination window closed. */
+  nominationFailed: boolean;
+  vetoAgreed: boolean;
+  chaos: boolean;
+  enacted: Policy | null;
+  power: RoundHistoryPower | null;
+}
+
+/** Deferred hand-off while Ravi / ceremony announces the last beat. */
+export type BreathAction =
+  | { kind: 'advanceRound' }
+  | { kind: 'grantPower'; power: ExecutivePower }
+  | { kind: 'startSpecialElection'; playerId: string };
+
+export interface PendingBreath {
+  startedAt: number;
+  endsAt: number;
+  action: BreathAction;
+}
+
 /** Public snapshot of an in-progress vote to remove a player. */
 export interface KickVoteView {
   requesterId: string;
@@ -214,12 +272,18 @@ export interface GameStateView {
   maxPlayers: number;
   /** Reserved Find Match table when `public`. */
   kind: 'public' | 'hosted';
+  /** Hidden admin `/play-game` table — local DEV can skip clocks and mirror votes. */
+  adminPlay: boolean;
   /** Public-table must-choose window, else null. */
   startChoice: { startedAt: number; endsAt: number } | null;
   players: PublicPlayer[];
   board: BoardState;
   /** Winning faction once the game is over, else null. */
   winner: Faction | null;
+  /** Finished rounds for the in-match history sheet (oldest first). */
+  roundHistory: RoundHistoryEntry[];
+  /** Announce breath before the next phase hand-off, else null. */
+  breathDeadline: { startedAt: number; endsAt: number } | null;
   /** Open discussion window (epoch ms) before the President nominates, else null. */
   discussionDeadline: { startedAt: number; endsAt: number } | null;
   /** Active vote window (epoch ms) during the Voting phase, else null. */
@@ -279,9 +343,9 @@ export const SUPPORTED_MIN_PLAYERS = 3;
 /** Open discussion window each round before nomination — everyone may chat. */
 export const DISCUSSION_DURATION_MS = 180_000;
 /** How long the Ja/Nein vote stays open before unvoted players default to Nein. */
-export const VOTE_DURATION_MS = 30_000;
+export const VOTE_DURATION_MS = 45_000;
 /** How long a legislator has to choose before the engine picks at random. */
-export const LEGISLATIVE_DURATION_MS = 20_000;
+export const LEGISLATIVE_DURATION_MS = 35_000;
 /** One face-down policy flying from the pile or a seat to the table. */
 export const LEGISLATIVE_TRAVEL_CARD_MS = 780;
 /** President deal: three cards leave the draw pile before the choice clock starts. */
@@ -289,11 +353,28 @@ export const LEGISLATIVE_DEAL_MS = 100 + 3 * LEGISLATIVE_TRAVEL_CARD_MS;
 /** Chancellor pass: two cards travel before the choice clock starts. */
 export const LEGISLATIVE_PASS_MS = 100 + 2 * LEGISLATIVE_TRAVEL_CARD_MS;
 /** How long the President has to nominate before the election fails. */
-export const NOMINATION_DURATION_MS = 25_000;
+export const NOMINATION_DURATION_MS = 40_000;
 /** How long the President has to use an executive power (pick a target / peek). */
-export const SPECIAL_POWER_DURATION_MS = 15_000;
+export const SPECIAL_POWER_DURATION_MS = 30_000;
 /** After an investigate reveal, hold this long before the next round. */
 export const INVESTIGATION_HOLD_MS = 10_000;
+
+/**
+ * Public announce breaths — sized so Ravi’s mid-game lines can finish before
+ * the next decision clock / UI. Opening night already waits on clip length;
+ * these cover the rest of the table.
+ */
+/** vote.passed (~2.2s) before policies fly; stacks with {@link LEGISLATIVE_DEAL_MS}. */
+export const BREATH_AFTER_VOTE_MS = 4_000;
+/** law.liberal / law.fascist (~2.5–2.9s) before the next round or power UI. */
+export const BREATH_AFTER_LAW_MS = 3_500;
+/** vote.failed + tracker.advance (~5s) before the next discussion. */
+export const BREATH_AFTER_FAIL_MS = 5_500;
+/** chaos.start + chaos.enacted (~12s) before the next discussion. */
+export const BREATH_AFTER_CHAOS_MS = 13_000;
+/** Power resolve / special-election announce (~3s) before the next round. */
+export const BREATH_AFTER_POWER_MS = 3_500;
+
 /** How long a table kick vote stays open before it is counted as-is. */
 export const KICK_VOTE_DURATION_MS = 30_000;
 /** Public-table holdouts must Accept before this, or they are kicked. */

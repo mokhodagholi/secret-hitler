@@ -129,12 +129,7 @@ export function AppProvider(
 
   // One looping bed per room. Chat / menu / players keep whatever is playing.
   createEffect(() => {
-    const scene = {
-      screen: services.nav.screen(),
-      roomClosed: services.game.roomClosedNotice() != null,
-      view: services.game.view(),
-      logs: services.game.logEntries(),
-    };
+    const scene = musicScene(services);
     services.sound.playMusic(trackForScene(scene));
     services.prefetch.prefetch(
       urlsForNextStep({
@@ -148,14 +143,7 @@ export function AppProvider(
     const wait = nextMusicCheckMs(scene);
     if (wait == null) return;
     const id = setTimeout(() => {
-      services.sound.playMusic(
-        trackForScene({
-          screen: services.nav.screen(),
-          roomClosed: services.game.roomClosedNotice() != null,
-          view: services.game.view(),
-          logs: services.game.logEntries(),
-        }),
-      );
+      services.sound.playMusic(trackForScene(musicScene(services)));
     }, wait);
     onCleanup(() => clearTimeout(id));
   });
@@ -169,4 +157,18 @@ export function useApp(): AppServices {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used inside <AppProvider>');
   return ctx;
+}
+
+/** Onboarding beds are their own rooms; only a scripted match uses the live snapshot. */
+function musicScene(services: AppServices) {
+  return {
+    screen: services.nav.screen(),
+    roomClosed: services.game.roomClosedNotice() != null,
+    introducing: services.tutorial.introducing(),
+    looking: services.tutorial.looking(),
+    view: services.tutorial.playing()
+      ? services.tutorial.playView()
+      : services.game.view(),
+    logs: services.game.logEntries(),
+  };
 }

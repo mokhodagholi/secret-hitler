@@ -18,6 +18,26 @@ describe('trackForScene', () => {
     expect(scene('waiting-room')).toBe('lobby-theme');
   });
 
+  it('Should keep the lesson off the live table beds', () => {
+    expect(scene('onboarding')).toBe('onboard-theme');
+    expect(
+      trackForScene({
+        screen: 'game',
+        roomClosed: false,
+        view: makeView({ phase: Phase.Voting }),
+        looking: true,
+      }),
+    ).toBe('look-theme');
+    expect(
+      trackForScene({
+        screen: 'game',
+        roomClosed: false,
+        view: makeView({ phase: Phase.Nomination }),
+        introducing: true,
+      }),
+    ).toBe('onboard-theme');
+  });
+
   it('Should return to the foyer when the room is closed', () => {
     expect(
       trackForScene({
@@ -101,6 +121,14 @@ describe('nextTrackForScene', () => {
     expect(
       nextTrackForScene({ screen: 'home', roomClosed: false, view: null }),
     ).toBe('play-theme');
+    expect(
+      nextTrackForScene({
+        screen: 'onboarding',
+        roomClosed: false,
+        view: null,
+        introducing: true,
+      }),
+    ).toBe('look-theme');
     expect(
       nextTrackForScene({ screen: 'play', roomClosed: false, view: null }),
     ).toBe('lobby-theme');

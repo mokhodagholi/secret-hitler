@@ -22,6 +22,16 @@ import lawLiberal from './law-liberal.mp3';
 import nightFall from './night-fall.mp3';
 import nightLift from './night-lift.mp3';
 import nominateTimeout from './nominate-timeout.mp3';
+import onboardBoards from './onboard-boards.mp3';
+import onboardChaos from './onboard-chaos.mp3';
+import onboardDeck from './onboard-deck.mp3';
+import onboardLaws from './onboard-laws.mp3';
+import onboardOffices from './onboard-offices.mp3';
+import onboardRoles from './onboard-roles.mp3';
+import onboardSeats from './onboard-seats.mp3';
+import onboardTracker from './onboard-tracker.mp3';
+import onboardTurn from './onboard-turn.mp3';
+import onboardVote from './onboard-vote.mp3';
 import partySlide from './party-slide.mp3';
 import peekDone from './peek-done.mp3';
 import peekFlip from './peek-flip.mp3';
@@ -71,6 +81,16 @@ export const EFFECT_URLS = {
   'night-fall': nightFall,
   'night-lift': nightLift,
   'nominate-timeout': nominateTimeout,
+  'onboard-boards': onboardBoards,
+  'onboard-chaos': onboardChaos,
+  'onboard-deck': onboardDeck,
+  'onboard-laws': onboardLaws,
+  'onboard-offices': onboardOffices,
+  'onboard-roles': onboardRoles,
+  'onboard-seats': onboardSeats,
+  'onboard-tracker': onboardTracker,
+  'onboard-turn': onboardTurn,
+  'onboard-vote': onboardVote,
   'party-slide': partySlide,
   'peek-done': peekDone,
   'peek-flip': peekFlip,

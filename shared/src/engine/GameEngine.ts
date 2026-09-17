@@ -1,4 +1,8 @@
 import {
+  BREATH_AFTER_CHAOS_MS,
+  BREATH_AFTER_FAIL_MS,
+  BREATH_AFTER_LAW_MS,
+  BREATH_AFTER_POWER_MS,
   DISCUSSION_DURATION_MS,
   KICK_VOTE_DURATION_MS,
   LEGISLATIVE_DURATION_MS,
@@ -12,6 +16,7 @@ import {
   isOpeningNight,
   isPublicTable,
   kickVoteYesNeeded,
+  type BreathAction,
   type ChatMessage,
   type ExecutivePower,
   type Faction,
@@ -19,7 +24,13 @@ import {
   type LogEntry,
   type Player,
   type Policy,
+  type RoundHistoryEntry,
 } from '../types/GameState';
+import {
+  NOMINATION_PROMPT_MS,
+  VOTE_PROMPT_MS,
+  ceremonyDelay,
+} from '../ravi/clipMs';
 import type { GameCommand } from '../types/events';
 import { TypedEmitter } from '../util/TypedEmitter';
 import { type EngineError, err } from './errors';
@@ -56,6 +67,8 @@ export interface EngineEvents extends Record<string, unknown> {
   nominationTimerChanged: { endsAt: number | null };
   /** Executive-power window opened (endsAt set) or closed (null); server (un)schedules. */
   specialPowerTimerChanged: { endsAt: number | null };
+  /** Announce breath before the next hand-off; server (un)schedules. */
+  breathTimerChanged: { endsAt: number | null };
   /** Table kick-vote window opened or closed; server (un)schedules. */
   kickVoteTimerChanged: { endsAt: number | null };
   /** Public-table Accept window opened or closed; server (un)schedules. */
@@ -370,10 +383,99 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   /** Delegate an in-game {@link GameCommand} to the current phase. */
   handleCommand(playerId: string, command: GameCommand): EngineError | null {
+    if (command.kind === 'skipTimer') {
+      return this.skipTimer(playerId);
+    }
     if (this.room.kickVote) {
       return err('INVALID_ACTION', 'A kick vote is in progress.');
     }
+    if (this.room.pendingBreath) {
+      return err('INVALID_ACTION', 'Wait for the table to settle.');
+    }
     return this.currentPhase.handle(playerId, command);
+  }
+
+  /**
+   * Admin `/play-game` only — resolve the open announce breath or decision
+   * clock immediately so local DEV can step through ceremony waits.
+   */
+  skipTimer(playerId: string): EngineError | null {
+    if (this.room.options.adminPlayUserId == null) {
+      return err('INVALID_ACTION', 'Only available on admin play tables.');
+    }
+    const player = this.room.findPlayer(playerId);
+    if (!player?.connected) {
+      return err('INVALID_ACTION', 'That player is not in the room.');
+    }
+    if (this.room.kickVote) {
+      return err('INVALID_ACTION', 'A kick vote is in progress.');
+    }
+    if (this.room.pendingBreath) {
+      this.resolveBreathTimeout();
+      return null;
+    }
+    if (this.room.discussionEndsAt > 0) {
+      this.endDiscussion();
+      return null;
+    }
+    // Still in a Ravi prompt hold — open the choice clock without timing out.
+    if (this.releasePromptHold()) return null;
+    if (this.room.phase === Phase.Voting && this.room.voteEndsAt > 0) {
+      this.resolveVoteTimeout();
+      return null;
+    }
+    if (this.room.legislativeEndsAt > 0) {
+      this.resolveLegislativeTimeout();
+      return null;
+    }
+    if (this.room.nominationEndsAt > 0) {
+      this.resolveNominationTimeout();
+      return null;
+    }
+    if (this.room.phase === Phase.SpecialPower && this.room.specialPowerEndsAt > 0) {
+      this.resolveSpecialPowerTimeout();
+      return null;
+    }
+    return err('INVALID_ACTION', 'Nothing to skip.');
+  }
+
+  /** Snap a future `startedAt` to now so the choice UI unlocks (keeps remaining duration). */
+  private releasePromptHold(): boolean {
+    const now = Date.now();
+    const room = this.room;
+    if (room.nominationEndsAt > 0 && now < room.nominationStartedAt) {
+      const windowMs = room.nominationEndsAt - room.nominationStartedAt;
+      room.nominationStartedAt = now;
+      room.nominationEndsAt = now + windowMs;
+      this.emit('nominationTimerChanged', { endsAt: room.nominationEndsAt });
+      this.changed();
+      return true;
+    }
+    if (room.voteEndsAt > 0 && now < room.voteStartedAt) {
+      const windowMs = room.voteEndsAt - room.voteStartedAt;
+      room.voteStartedAt = now;
+      room.voteEndsAt = now + windowMs;
+      this.emit('voteTimerChanged', { endsAt: room.voteEndsAt });
+      this.changed();
+      return true;
+    }
+    if (room.legislativeEndsAt > 0 && now < room.legislativeStartedAt) {
+      const windowMs = room.legislativeEndsAt - room.legislativeStartedAt;
+      room.legislativeStartedAt = now;
+      room.legislativeEndsAt = now + windowMs;
+      this.emit('legislativeTimerChanged', { endsAt: room.legislativeEndsAt });
+      this.changed();
+      return true;
+    }
+    if (room.specialPowerEndsAt > 0 && now < room.specialPowerStartedAt) {
+      const windowMs = room.specialPowerEndsAt - room.specialPowerStartedAt;
+      room.specialPowerStartedAt = now;
+      room.specialPowerEndsAt = now + windowMs;
+      this.emit('specialPowerTimerChanged', { endsAt: room.specialPowerEndsAt });
+      this.changed();
+      return true;
+    }
+    return false;
   }
 
   // --- Board / round progression (PhaseHost) ----------------------------------
@@ -383,6 +485,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (policy === 'liberal') room.liberalPolicies += 1;
     else room.fascistPolicies += 1;
     room.lastEnacted = [...room.lastEnacted, policy].slice(-5);
+    this.recordHistoryEnacted(policy);
 
     if (room.liberalPolicies >= 5) {
       this.log('liberalsWin');
@@ -396,11 +499,18 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   /** A failed government: advance the tracker, chaos-enact on the third, next round. */
   failElection(): void {
     const room = this.room;
+    if (room.currentRound && room.currentRound.chancellorId == null) {
+      room.currentRound.nominationFailed = true;
+      room.currentRound.elected = false;
+    }
     room.electionTracker += 1;
+    let chaos = false;
     if (room.electionTracker >= 3) {
       const [policy] = room.deck.drawTiles(1);
       if (policy) {
+        chaos = true;
         this.log('chaos');
+        this.recordHistoryChaos();
         this.enactPolicy(policy);
       }
       room.electionTracker = 0;
@@ -408,12 +518,17 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       room.lastElectedPresidentId = null;
       room.lastElectedChancellorId = null;
     }
-    this.advanceRound();
+    if (room.phase === Phase.GameOver) return;
+    this.scheduleAdvanceRound(
+      chaos ? BREATH_AFTER_CHAOS_MS : BREATH_AFTER_FAIL_MS,
+    );
   }
 
   advanceRound(): void {
     const room = this.room;
     if (room.phase === Phase.GameOver) return;
+    this.clearBreath();
+    this.finalizeRoundHistory();
     if (this.fascistsHoldTheTable()) {
       this.log('fascistsWinNumbers');
       this.endGame('fascist');
@@ -431,6 +546,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   grantPower(power: ExecutivePower): void {
     const room = this.room;
+    this.clearBreath();
     room.activePower = power;
     room.investigation = null;
     room.peekedPolicies = power === 'policyPeek' ? room.deck.peekTop(3) : [];
@@ -440,12 +556,48 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   startSpecialElection(playerId: string): void {
     const room = this.room;
+    this.clearBreath();
+    this.recordHistoryPower('specialElection', playerId);
+    this.finalizeRoundHistory();
     room.specialElectionResumeAfterId = room.presidentId;
     room.presidentId = playerId;
     this.transitionTo(Phase.Nomination);
   }
 
+  scheduleAdvanceRound(delayMs = BREATH_AFTER_POWER_MS): void {
+    this.scheduleBreath(delayMs, { kind: 'advanceRound' });
+  }
+
+  scheduleGrantPower(
+    power: ExecutivePower,
+    delayMs = BREATH_AFTER_LAW_MS,
+  ): void {
+    this.scheduleBreath(delayMs, { kind: 'grantPower', power });
+  }
+
+  scheduleSpecialElection(
+    playerId: string,
+    delayMs = BREATH_AFTER_POWER_MS,
+  ): void {
+    this.scheduleBreath(delayMs, {
+      kind: 'startSpecialElection',
+      playerId,
+    });
+  }
+
+  /** Server calls this when an announce breath elapses. */
+  resolveBreathTimeout(): void {
+    if (this.room.kickVote) return;
+    const pending = this.room.pendingBreath;
+    if (!pending) return;
+    const action = pending.action;
+    this.clearBreath();
+    this.runBreathAction(action);
+  }
+
   endGame(winner: Faction): void {
+    this.clearBreath();
+    this.finalizeRoundHistory();
     this.room.winner = winner;
     this.transitionTo(Phase.GameOver);
     this.emit('gameOver', { room: this.room });
@@ -609,22 +761,24 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   endDiscussion(): void {
     if (this.room.discussionEndsAt === 0) return;
     this.closeDiscussion();
-    this.openNominationTimer();
+    this.openNominationTimer(ceremonyDelay(this.room.options.skipCeremony, NOMINATION_PROMPT_MS));
     this.changed();
   }
 
   /** Server calls this when the discussion window elapses. */
   resolveDiscussionTimeout(): void {
     if (this.room.kickVote) return;
+    if (this.room.pendingBreath) return;
     this.endDiscussion();
   }
 
   // --- Vote timer (PhaseHost) ------------------------------------------------
 
-  openVote(): void {
+  openVote(delayMs = ceremonyDelay(this.room.options.skipCeremony, VOTE_PROMPT_MS)): void {
     const room = this.room;
-    room.voteStartedAt = Date.now();
-    room.voteEndsAt = room.voteStartedAt + VOTE_DURATION_MS;
+    const openAt = Date.now() + Math.max(0, delayMs);
+    room.voteStartedAt = openAt;
+    room.voteEndsAt = openAt + VOTE_DURATION_MS;
     this.emit('voteTimerChanged', { endsAt: room.voteEndsAt });
   }
 
@@ -637,6 +791,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   /** Server calls this when the vote window elapses. */
   resolveVoteTimeout(): void {
     if (this.room.kickVote) return;
+    if (this.room.pendingBreath) return;
     this.currentPhase.timeout?.();
   }
 
@@ -644,7 +799,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   openLegislativeTimer(delayMs = 0): void {
     const room = this.room;
-    const openAt = Date.now() + Math.max(0, delayMs);
+    const openAt =
+      Date.now() + ceremonyDelay(room.options.skipCeremony, Math.max(0, delayMs));
     room.legislativeStartedAt = openAt;
     room.legislativeEndsAt = openAt + LEGISLATIVE_DURATION_MS;
     this.emit('legislativeTimerChanged', { endsAt: room.legislativeEndsAt });
@@ -659,15 +815,19 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   /** Server calls this when a legislator's choice window elapses. */
   resolveLegislativeTimeout(): void {
     if (this.room.kickVote) return;
+    if (this.room.pendingBreath) return;
     this.currentPhase.timeout?.();
   }
 
   // --- Nomination timer (PhaseHost) ------------------------------------------
 
-  openNominationTimer(): void {
+  openNominationTimer(
+    delayMs = ceremonyDelay(this.room.options.skipCeremony, NOMINATION_PROMPT_MS),
+  ): void {
     const room = this.room;
-    room.nominationStartedAt = Date.now();
-    room.nominationEndsAt = room.nominationStartedAt + NOMINATION_DURATION_MS;
+    const openAt = Date.now() + Math.max(0, delayMs);
+    room.nominationStartedAt = openAt;
+    room.nominationEndsAt = openAt + NOMINATION_DURATION_MS;
     this.emit('nominationTimerChanged', { endsAt: room.nominationEndsAt });
   }
 
@@ -680,15 +840,20 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   /** Server calls this when the President's nomination window elapses. */
   resolveNominationTimeout(): void {
     if (this.room.kickVote) return;
+    if (this.room.pendingBreath) return;
     this.currentPhase.timeout?.();
   }
 
   // --- Special power timer (PhaseHost) ---------------------------------------
 
-  openSpecialPowerTimer(durationMs = SPECIAL_POWER_DURATION_MS): void {
+  openSpecialPowerTimer(
+    durationMs = SPECIAL_POWER_DURATION_MS,
+    delayMs = 0,
+  ): void {
     const room = this.room;
-    room.specialPowerStartedAt = Date.now();
-    room.specialPowerEndsAt = room.specialPowerStartedAt + durationMs;
+    const openAt = Date.now() + Math.max(0, delayMs);
+    room.specialPowerStartedAt = openAt;
+    room.specialPowerEndsAt = openAt + durationMs;
     this.emit('specialPowerTimerChanged', { endsAt: room.specialPowerEndsAt });
   }
 
@@ -701,7 +866,150 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
   /** Server calls this when the President's power window elapses. */
   resolveSpecialPowerTimeout(): void {
     if (this.room.kickVote) return;
+    if (this.room.pendingBreath) return;
     this.currentPhase.timeout?.();
+  }
+
+  // --- In-match round history ------------------------------------------------
+
+  beginRoundHistory(): void {
+    const room = this.room;
+    if (room.currentRound) this.finalizeRoundHistory();
+    const president = room.findPlayer(room.presidentId ?? '');
+    if (!president) return;
+    room.currentRound = {
+      round: room.nextRoundNumber,
+      presidentId: president.id,
+      presidentName: president.name,
+      chancellorId: null,
+      chancellorName: null,
+      ballots: null,
+      ja: null,
+      nein: null,
+      elected: null,
+      nominationFailed: false,
+      vetoAgreed: false,
+      chaos: false,
+      enacted: null,
+      power: null,
+    };
+    room.nextRoundNumber += 1;
+  }
+
+  recordHistoryNomination(chancellorId: string): void {
+    const draft = this.room.currentRound;
+    if (!draft) return;
+    const chancellor = this.room.findPlayer(chancellorId);
+    if (!chancellor) return;
+    draft.chancellorId = chancellor.id;
+    draft.chancellorName = chancellor.name;
+  }
+
+  recordHistoryVote(elected: boolean): void {
+    const room = this.room;
+    const draft = room.currentRound;
+    if (!draft) return;
+    const electorate = room.players.filter(
+      (player) => player.isAlive && player.connected,
+    );
+    const ballots = electorate.map((player) => {
+      const cast = room.votes.get(player.id);
+      return {
+        playerId: player.id,
+        name: player.name,
+        vote: cast ?? ('nein' as const),
+        abstained: cast == null,
+      };
+    });
+    draft.ballots = ballots;
+    draft.ja = ballots.filter((ballot) => ballot.vote === 'ja').length;
+    draft.nein = ballots.filter((ballot) => ballot.vote === 'nein').length;
+    draft.elected = elected;
+    draft.nominationFailed = false;
+  }
+
+  recordHistoryVetoAgreed(): void {
+    const draft = this.room.currentRound;
+    if (!draft) return;
+    draft.vetoAgreed = true;
+  }
+
+  recordHistoryPower(kind: ExecutivePower, targetId: string | null = null): void {
+    const draft = this.room.currentRound;
+    if (!draft) return;
+    const target = targetId ? this.room.findPlayer(targetId) : null;
+    draft.power = {
+      kind,
+      targetId: target?.id ?? null,
+      targetName: target?.name ?? null,
+    };
+  }
+
+  finalizeRoundHistory(): void {
+    const room = this.room;
+    const draft = room.currentRound;
+    if (!draft) return;
+    room.roundHistory = [...room.roundHistory, cloneHistoryEntry(draft)];
+    room.currentRound = null;
+  }
+
+  private recordHistoryEnacted(policy: Policy): void {
+    const draft = this.room.currentRound;
+    if (!draft) return;
+    draft.enacted = policy;
+  }
+
+  private recordHistoryChaos(): void {
+    const draft = this.room.currentRound;
+    if (!draft) return;
+    draft.chaos = true;
+  }
+
+  private scheduleBreath(delayMs: number, action: BreathAction): void {
+    const room = this.room;
+    if (room.phase === Phase.GameOver) return;
+    // Stop decision clocks so a late timeout cannot double-apply the hand-off.
+    this.closeDiscussion();
+    this.closeVote();
+    this.closeLegislativeTimer();
+    this.closeNominationTimer();
+    this.closeSpecialPowerTimer();
+    const wait = ceremonyDelay(room.options.skipCeremony, Math.max(0, delayMs));
+    if (wait <= 0) {
+      this.clearBreath();
+      this.runBreathAction(action);
+      return;
+    }
+    const startedAt = Date.now();
+    room.pendingBreath = {
+      startedAt,
+      endsAt: startedAt + wait,
+      action,
+    };
+    this.emit('breathTimerChanged', { endsAt: room.pendingBreath.endsAt });
+    this.changed();
+  }
+
+  private clearBreath(): void {
+    if (!this.room.pendingBreath) return;
+    this.room.pendingBreath = null;
+    this.emit('breathTimerChanged', { endsAt: null });
+  }
+
+  private runBreathAction(action: BreathAction): void {
+    switch (action.kind) {
+      case 'advanceRound':
+        this.advanceRound();
+        this.changed();
+        return;
+      case 'grantPower':
+        this.grantPower(action.power);
+        return;
+      case 'startSpecialElection':
+        this.startSpecialElection(action.playerId);
+        this.changed();
+        return;
+    }
   }
 
   // --- Table kick vote ----------------------------------------------------------
@@ -908,6 +1216,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.emit('legislativeTimerChanged', { endsAt: null });
     this.emit('nominationTimerChanged', { endsAt: null });
     this.emit('specialPowerTimerChanged', { endsAt: null });
+    this.emit('breathTimerChanged', { endsAt: null });
   }
 
   /** Slide frozen deadlines forward by the pause so remaining time is intact. */
@@ -950,6 +1259,15 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       room.specialPowerStartedAt = next.startedAt;
       room.specialPowerEndsAt = next.endsAt;
       this.emit('specialPowerTimerChanged', { endsAt: room.specialPowerEndsAt });
+    }
+    if (room.pendingBreath) {
+      const next = shift(room.pendingBreath.startedAt, room.pendingBreath.endsAt);
+      room.pendingBreath = {
+        ...room.pendingBreath,
+        startedAt: next.startedAt,
+        endsAt: next.endsAt,
+      };
+      this.emit('breathTimerChanged', { endsAt: room.pendingBreath.endsAt });
     }
   }
 
@@ -1078,6 +1396,10 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.vetoRequested = false;
     room.kickVote = null;
     room.spentKickRequestIds.clear();
+    room.roundHistory = [];
+    room.currentRound = null;
+    room.nextRoundNumber = 1;
+    room.pendingBreath = null;
     room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
     if (isPublicTable(room.options) && !room.hostId) {
       const first = this.livingInSeatOrder()[0];
@@ -1114,6 +1436,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.closeLegislativeTimer();
     this.closeNominationTimer();
     this.closeSpecialPowerTimer();
+    this.clearBreath();
     if (room.kickVote) {
       room.kickVote = null;
       this.emit('kickVoteTimerChanged', { endsAt: null });
@@ -1156,6 +1479,10 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.specialElectionResumeAfterId = null;
     room.vetoRequested = false;
     room.spentKickRequestIds.clear();
+    room.roundHistory = [];
+    room.currentRound = null;
+    room.nextRoundNumber = 1;
+    room.pendingBreath = null;
 
     this.transitionTo(Phase.Lobby);
     this.changed();
@@ -1187,4 +1514,12 @@ function shuffle<T>(items: T[]): T[] {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+function cloneHistoryEntry(entry: RoundHistoryEntry): RoundHistoryEntry {
+  return {
+    ...entry,
+    ballots: entry.ballots?.map((ballot) => ({ ...ballot })) ?? null,
+    power: entry.power ? { ...entry.power } : null,
+  };
 }

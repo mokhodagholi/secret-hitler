@@ -146,4 +146,14 @@ describe('RaviService', () => {
     expect(play).toHaveBeenCalled();
     expect(ravi.line()).toBe('Voting has begun.');
   });
+
+  it('Should drop the current line and clip on skip', async () => {
+    const ravi = makeRavi(true);
+    void ravi.speak('vote.start');
+    ravi.skip();
+    await ravi.idle();
+    expect(ravi.line()).toBeNull();
+    expect(ravi.speaking()).toBe(false);
+    expect(ravi.lineDurationMs()).toBe(0);
+  });
 });

@@ -35,7 +35,13 @@ function emitChat(
 
 function renderPanel(harness: ReturnType<typeof buildHarness>) {
   return renderWithApp(
-    () => <ChatPanel onOpenPlayers={() => {}} onOpenMenu={() => {}} />,
+    () => (
+      <ChatPanel
+        onOpenPlayers={() => {}}
+        onOpenHistory={() => {}}
+        onOpenMenu={() => {}}
+      />
+    ),
     harness,
   );
 }
@@ -209,6 +215,7 @@ describe('ChatPanel', () => {
         <ChatPanel
           talkingAllowed={false}
           onOpenPlayers={() => {}}
+          onOpenHistory={() => {}}
           onOpenMenu={() => {}}
         />
       ),
@@ -260,6 +267,7 @@ describe('ChatPanel', () => {
           actionLabel={en.game.startNomination}
           onAction={() => {}}
           onOpenPlayers={() => {}}
+          onOpenHistory={() => {}}
           onOpenMenu={() => {}}
         />
       ),

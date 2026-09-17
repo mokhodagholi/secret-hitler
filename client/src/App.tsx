@@ -253,9 +253,14 @@ function SitOffer() {
   // true with no subscriber, and ConfirmDialog never sees a closed → open flip.
   createEffect(() => {
     if (!flags.ready() || !flags.flags.onboarding) return;
+    // Local `pnpm dev` uses the home icon — do not pop Sit on boot.
+    const skipSitInDev =
+      import.meta.env.DEV &&
+      import.meta.env.MODE !== 'test' &&
+      process.env.NODE_ENV !== 'test';
     tutorial.offerAfterSplash(
       nav,
-      game.inRoom() || nav.peekPlaySeat() != null,
+      game.inRoom() || nav.peekPlaySeat() != null || skipSitInDev,
       true,
     );
   });

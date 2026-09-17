@@ -32,6 +32,9 @@ export interface ChatPanelProps {
   actionLabel?: string;
   onAction?: () => void;
   onOpenPlayers: () => void;
+  onOpenHistory: () => void;
+  /** Local admin `/play-game` — skip the open clock / breath. */
+  onSkipTimer?: () => void;
   onOpenMenu: () => void;
   onHeightChange?: (height: number) => void;
 }
@@ -42,7 +45,7 @@ export interface ChatPanelProps {
  * chrome so the scene never leaves play.
  */
 export function ChatPanel(props: ChatPanelProps) {
-  const { game, i18n, flags, voice } = useApp();
+  const { game, i18n, flags, voice, tutorial } = useApp();
   const { formatMessage } = i18n;
 
   const [chatDraft, setChatDraft] = createSignal('');
@@ -60,7 +63,12 @@ export function ChatPanel(props: ChatPanelProps) {
   let micHandledByPointer = false;
 
   const talkingAllowed = () => props.talkingAllowed !== false;
+  const chatLines = () =>
+    tutorial.playing() ? tutorial.talk() : game.chatMessages();
+  const youId = () =>
+    tutorial.playing() ? tutorial.playView()?.you.id : game.view()?.you.id;
   const slowSecondsLeft = () => {
+    if (tutorial.playing()) return 0;
     const until = game.chatSlowUntil();
     if (until <= 0) return 0;
     return Math.max(0, Math.ceil((until - now()) / 1000));
@@ -101,13 +109,13 @@ export function ChatPanel(props: ChatPanelProps) {
   createEffect(() => props.onHeightChange?.(height()));
 
   createEffect(() => {
-    game.chatMessages();
+    chatLines();
     game.unreadChat();
-    if (feedOpen()) game.markChatRead();
+    if (feedOpen() && !tutorial.playing()) game.markChatRead();
   });
 
   createEffect(() => {
-    game.chatMessages();
+    chatLines();
     if (feedScroller && stickToBottom) scrollChatToBottom(feedScroller);
   });
 
@@ -140,15 +148,28 @@ export function ChatPanel(props: ChatPanelProps) {
     });
   });
 
-  const discussionSecondsLeft = () => {
-    const endsAt = game.discussionDeadline()?.endsAt;
-    if (endsAt == null) return null;
-    const clock = game.view()?.kickVote?.startedAt ?? now();
-    return Math.max(0, Math.ceil((endsAt - clock) / 1000));
+  const actionSecondsLeft = () => {
+    if (tutorial.playing()) return null;
+    const state = game.view();
+    if (!state) return null;
+    const clock = state.kickVote?.startedAt ?? now();
+    const deadline =
+      state.kickVote ??
+      state.discussionDeadline ??
+      state.nominationDeadline ??
+      state.voteDeadline ??
+      state.legislativeDeadline ??
+      state.specialPowerDeadline ??
+      state.breathDeadline;
+    if (!deadline) return null;
+    if ('startedAt' in deadline && now() < deadline.startedAt) return null;
+    return Math.max(0, Math.ceil((deadline.endsAt - clock) / 1000));
   };
 
   const playerById = (playerId: string) =>
-    game.view()?.players.find((player) => player.id === playerId);
+    (tutorial.playing() ? tutorial.playView()?.players : game.view()?.players)?.find(
+      (player) => player.id === playerId,
+    );
 
   const timestamp = (at: number) =>
     new Date(at).toLocaleTimeString(i18n.lang(), {
@@ -158,7 +179,8 @@ export function ChatPanel(props: ChatPanelProps) {
 
   function sendChat(): void {
     if (!talkingAllowed() || !canSend()) return;
-    game.sendChat(chatDraft());
+    if (tutorial.playing()) tutorial.say(chatDraft());
+    else game.sendChat(chatDraft());
     setChatDraft('');
     setNow(Date.now());
     if (inputEl) {
@@ -244,16 +266,16 @@ export function ChatPanel(props: ChatPanelProps) {
               </button>
             </Show>
           </Show>
-          <Show when={talkingAllowed() && game.inDiscussion() && discussionSecondsLeft() != null}>
+          <Show when={actionSecondsLeft() != null}>
             <span
               classList={{
                 [styles.timer]: true,
-                [styles.urgent]: (discussionSecondsLeft() ?? 0) <= 10,
+                [styles.urgent]: (actionSecondsLeft() ?? 0) <= 10,
               }}
             >
               <Icon name="clock" size={13} />
               {formatMessage('game.discussionLeft', {
-                time: formatClock(discussionSecondsLeft()!),
+                time: formatClock(actionSecondsLeft()!),
               })}
             </span>
           </Show>
@@ -298,6 +320,24 @@ export function ChatPanel(props: ChatPanelProps) {
           >
             <Icon name="people" size={20} />
           </button>
+          <button
+            type="button"
+            class={styles.tool}
+            aria-label={formatMessage('game.historyTitle')}
+            onClick={props.onOpenHistory}
+          >
+            <Icon name="scroll" size={20} />
+          </button>
+          <Show when={props.onSkipTimer}>
+            <button
+              type="button"
+              class={styles.tool}
+              aria-label={formatMessage('game.skipTimer')}
+              onClick={() => props.onSkipTimer?.()}
+            >
+              <Icon name="skip" size={20} />
+            </button>
+          </Show>
           <span class={styles.toolDivider} aria-hidden="true" />
           <button
             type="button"
@@ -322,10 +362,14 @@ export function ChatPanel(props: ChatPanelProps) {
             if (feedScroller) stickToBottom = isChatNearBottom(feedScroller);
           }}
         >
-          <For each={game.chatMessages()}>
+          <For each={chatLines()}>
             {(message) => {
-              const mine = () => message.playerId === game.view()?.you.id;
+              const mine = () => message.playerId === youId();
               const player = () => playerById(message.playerId);
+              const body = () =>
+                'key' in message && message.key
+                  ? formatMessage(message.key)
+                  : message.text ?? '';
               return (
                 <article
                   classList={{
@@ -347,7 +391,7 @@ export function ChatPanel(props: ChatPanelProps) {
                     <bdi class={styles.author}>
                       {playerLabel(mine(), message.name, formatMessage)}
                     </bdi>
-                    <bdi class={styles.text}>{message.text}</bdi>
+                    <bdi class={styles.text}>{body()}</bdi>
                     <time
                       class={styles.stamp}
                       datetime={new Date(message.at).toISOString()}

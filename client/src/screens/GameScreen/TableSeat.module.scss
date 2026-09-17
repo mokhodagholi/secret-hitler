@@ -31,6 +31,16 @@
   }
 }
 
+/** Ravi is still introducing the pick — sway without the gold “tap me” glow. */
+.awaitingPick {
+  pointer-events: none;
+
+  .paper {
+    animation: seat-sway 1.45s ease-in-out infinite;
+    filter: drop-shadow(0 0 5px rgba($gold, 0.4));
+  }
+}
+
 .speaking.selectable .paper {
   animation: seat-speak 0.85s ease-in-out infinite;
 }
@@ -47,6 +57,10 @@
   .paper {
     filter: drop-shadow(0 0 7px rgba($red-bright, 0.7));
   }
+}
+
+.nominationDimmed {
+  opacity: 0.42;
 }
 
 .dead {
@@ -118,6 +132,7 @@
 
 .bubble,
 .office,
+.officeAnchor,
 .next {
   position: absolute;
   left: 50%;
@@ -157,6 +172,17 @@
     border: 6px solid transparent;
     border-top-color: #f7f1e4;
   }
+}
+
+.officeAnchor {
+  bottom: calc(100% - 2px);
+  width: 1px;
+  height: 22px;
+  visibility: hidden;
+}
+
+.officeHidden {
+  visibility: hidden;
 }
 
 .office {
@@ -252,15 +278,15 @@
 
 .ballot {
   position: absolute;
-  right: -10%;
-  bottom: 6%;
+  right: -18%;
+  bottom: 2%;
   z-index: 3;
-  width: 38%;
+  width: 58%;
   aspect-ratio: 2 / 3;
   object-fit: contain;
   display: block;
-  border-radius: 2px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+  border-radius: 3px;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
@@ -342,6 +368,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .selectable .paper,
+  .awaitingPick .paper,
   .speaking .paper,
   .you.speaking .paper,
   .speaking .micLive {

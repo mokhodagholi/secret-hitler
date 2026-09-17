@@ -17,11 +17,17 @@ export interface MusicScene {
   view: GameStateView | null;
   logs?: readonly LogEntry[];
   now?: number;
+  /** Step 0 intro pages. */
+  introducing?: boolean;
+  /** Step 1 masked table — not a live hand. */
+  looking?: boolean;
 }
 
 /** Which looping bed belongs under this screen + snapshot. */
 export function trackForScene(scene: MusicScene): MusicTrack {
   if (scene.roomClosed) return 'menu-theme';
+  if (scene.introducing || scene.screen === 'onboarding') return 'onboard-theme';
+  if (scene.looking) return 'look-theme';
   switch (scene.screen) {
     case 'play':
     case 'create-room':
@@ -42,6 +48,8 @@ export function trackForScene(scene: MusicScene): MusicTrack {
  */
 export function nextTrackForScene(scene: MusicScene): MusicTrack | null {
   if (scene.roomClosed) return null;
+  if (scene.introducing || scene.screen === 'onboarding') return 'look-theme';
+  if (scene.looking) return 'discuss-theme';
   switch (scene.screen) {
     case 'play':
     case 'create-room':
@@ -62,6 +70,7 @@ export function nextTrackForScene(scene: MusicScene): MusicTrack | null {
  */
 export function nextMusicCheckMs(scene: MusicScene): number | null {
   const now = scene.now ?? Date.now();
+  if (scene.looking || scene.introducing) return null;
   if (scene.screen !== 'game' || scene.roomClosed || !scene.view) return null;
   if (openingNight(scene.view, now)) {
     const start = scene.view.discussionDeadline?.startedAt ?? 0;

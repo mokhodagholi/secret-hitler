@@ -4,9 +4,9 @@ A hands-on first table. Video and written rules stay on the guide hub.
 This is Daniel walking the player through the **real board**, then
 through live matches at every size.
 
-This file is the plan. Steps 0–2 are in the client (intro slides → look
-→ five). Daniel is header text only — no `onboard.*` clips yet. Counts
-6–10 are not implemented. Ships dark behind `FEATURE_ONBOARDING`
+This file is the plan. Steps 0–7 are in the client (intro slides → look
+→ five, then 6–10 as **difference-only** sittings). Daniel is header text
+only — no `onboard.*` clips yet. Ships dark behind `FEATURE_ONBOARDING`
 (default off).
 
 **The table must feel like a table.** The other seats are scripted, but
@@ -37,10 +37,12 @@ the whole thing, any time.
 | **6. Nine** | 9-player match | Two investigates. Fascists are three + Hitler. |
 | **7. Ten** | 10-player match | Full table. Same large board. Chaos and talk. |
 
-Ship **step 0 + 1 + 2** first. 6–10 are more scripts on the same
-machine, not a second system.
+Ship **step 0 + 1 + 2** first. 6–10 reuse the same machine and only
+teach what that count **adds** — term limits, Hitler-blind night,
+investigate, special election, two investigates, full table. Do not
+replay the five-player lecture.
 
-After a match: next step, or Home / Find Match. Remember progress in
+After a match: next step, or Home / Join. Remember progress in
 `localStorage` (`sh:onboarding-step`). Sit / Skip declines live in
 `sh:onboarding-declines` — not the old rules-hub `sh:tutorial-seen-count`.
 A live join link or a restored seat still wins over this, same as today.
@@ -78,8 +80,9 @@ A live join link or a restored seat still wins over this, same as today.
 Full-screen pages before the table. One subject per page: real game art
 plus a short name (not how to play). Continue / Previous / Skip.
 
-The election tracker is three pages in a row (first fail → second → chaos),
-each filling one more mark from the left.
+The election tracker starts with an empty what/why page, then three pages
+(first fail → second → chaos). Those three **add** the next mark — they do
+not refill from empty.
 
 Last page asks «گرفتید؟». Yes → «بریم سر میز». No → «مشکلی نیست» then
 still open the look table. Either answer goes to step 1.
@@ -92,34 +95,28 @@ Slides live in `client/src/tutorial/introSlides.ts`. Copy under
 ## Step 1 — how to play
 
 Not a slideshow of posters. A **staged 5-seat table** (the real
-Game-screen chrome, snapshot built on the client). Daniel walks the
-moves. A mask. One piece of UI is punched out so it is the only thing
-you can look at.
+Game-screen chrome). First a recap of the step 0 pieces, then the hand
+starts.
 
-Each beat: Daniel’s line → they tap the lit thing **or** Continue →
-mask moves to the next piece.
+Daniel: «خب وارد بازی شدیم. چیزهایی که تا الان دیدیم، توی همین صفحه
+استفاده می‌شه.» The mask walks seats → boards → government → vote →
+tracker → deck → laws. Continue after laws sits them in the five-player
+hand. A random seat is President. The others talk and campaign like
+Liberals who want the chancellor seat.
 
-Use the **actual widgets** (seats, boards, vote cards, deck). Do not
-commission a second set of illustrations. If a beat is clearer as a
-still (for example a vote card in flight), freeze that frame of the
-real UI — still not a separate painting.
+Each recap beat: Daniel’s line → Continue → the gold ring moves.
 
 | # | Punch-out | They learn | Daniel FA | Daniel EN | Tone |
 |---|---|---|---|---|---|
-| 1 | Government ticket | Propose a government; President picks Chancellor | هر دست یه دولت پیشنهاد می‌شه. رئیس‌جمهور صدراعظم رو انتخاب می‌کنه. | Each hand a government is proposed. The President picks the Chancellor. | `[announce]` |
-| 2 | Ja / Nein vote cards | Everyone votes | همه رأی می‌دن: آره یا نه. | Everyone votes Ja or Nein. | `[calm]` |
-| 3 | Face-up ballots on seats | Remember who said no | رأی‌ها می‌ره روی هر صندلی. کی نه داده یادتون بمونه — بعداً به کارتون می‌آد. | Votes land on each seat. Remember who said Nein — it matters later. | `[calm]` |
-| 4 | Election tracker (1) | Half + 1 Nein fails; tracker fills from the left | اگه نصف به‌علاوهٔ یک نه بدن، دولت رأی نمیاره. شمارنده یکی می‌ره بالا. | If half plus one say Nein, the government fails. The tracker moves up one. | `[down]` |
-| 5 | Next president seat | Presidency rotates | رئیس‌جمهور می‌ره نفر بعدی. | The presidency moves to the next seat. | `[announce]` |
-| 6 | Election tracker (2) | Second fail | باز هم رأی نیاورد. شمارنده دو تا شد. | It failed again. The tracker is at two. | `[down]` |
-| 7 | Election tracker (3) | Third fail → chaos law | سومین بار که بخوابه، قانون بالای دسته خودش می‌ره رو تخته — بدون رئیس‌جمهور و صدراعظم. | A third fail in a row and the top law enacts itself — no President, no Chancellor. | `[down]` |
-| 8 | Draw / discard piles | Where laws come from | قانون‌ها از این دسته میان. سوخته‌ها می‌رن رو توده دورریز. | Laws come from this deck. Burned laws go on the discard pile. | `[calm]` |
-| 9 | Three policy tiles | 3 → burn 1 (or timeout) → chancellor enacts 1 | رئیس‌جمهور سه تا قانون از بالای دسته می‌کشه و فقط خودش می‌بینه چی اومده. یکی رو می‌سوزونه؛ اگه وقت تموم بشه، یکی شانسی می‌سوزه. دو تای باقی‌مونده می‌ره دست صدراعظم؛ اون یکی رو تصویب می‌کنه. | The President draws three laws from the top of the deck and only they see what came. They burn one — if time runs out, one burns at random. The two that remain go to the Chancellor, who enacts one. | `[calm]` |
+| 1 | Seats | We're at the table | خب وارد بازی شدیم. چیزهایی که تا الان دیدیم، توی همین صفحه استفاده می‌شه. | We're at the table. Everything you just saw lives on this screen. | `[warmly]` |
+| 2 | Boards | The two boards | *(step 0 boards, shorter)* | | `[calm]` |
+| 3 | Government ticket | President picks Chancellor | هر دست یه دولت پیشنهاد می‌شه. رئیس‌جمهور صدراعظم رو انتخاب می‌کنه. | Each hand a government is proposed. The President picks the Chancellor. | `[announce]` |
+| 4 | Ja / Nein vote cards | Everyone votes | همه رأی می‌دن: آره یا نه. | Everyone votes Ja or Nein. | `[calm]` |
+| 5 | Tracker | Three marks | همین شمارنده‌ست. سه تا خونه داره. | This is the tracker. Three marks. | `[calm]` |
+| 6 | Draw / discard | Where laws come from | قانون‌ها از این دسته میان. سوخته‌ها می‌رن رو توده دورریز. | Laws come from this deck. Burned laws go on the discard pile. | `[calm]` |
+| 7 | Three policy tiles | 3 → burn 1 → chancellor enacts 1 | *(step 0 laws)* | | `[calm]` |
 
-Then Daniel `onboard.letsSit`: `بریم سر میز.` / `Let's sit.` The other
-four sit (slow), lobby chat, ready, start → **step 2**.
-
-No “this is a lesson table” in these lines.
+Then the hand starts. No “this is a lesson table” in these lines.
 
 ---
 
@@ -291,6 +288,12 @@ into these steps.
 Write full beat lists for 6–10 when step 2 is playable. Until then this
 table is the contract.
 
+Implemented: after the five-player win, Continue sits the next count.
+Each of 6–10 opens on a **delta** Continue (`onboard.nextSix` … `nextTen`)
+then one unique lock (six: term-limit nominate; seven: investigate then
+special election; nine: two investigates; eight/ten: the line is the
+lesson). Then the table auto-plays to a Liberal win. Player stays Liberal.
+
 ---
 
 ## Daniel — new clips
@@ -324,7 +327,15 @@ Do not use the word تمرین / practice / bot / ربات in any of these.
 | `onboard.peek` | whispering | سه تای بالای دسته رو ببینید. سر جاشون برگردونید. به میز دروغ بگید اگه لازم شد. | Look at the top three. Put them back. Lie to the table if you have to. |
 | `onboard.execute` | grave | یه نفر رو از میز بردارید. اگه هیتلر باشه، لیبرال‌ها می‌برن. نقشش رو کسی نمی‌بینه مگر اینکه هیتلر باشه. | Take someone off the table. If it is Hitler, the Liberals win. Nobody sees the role unless it is Hitler. |
 | `onboard.win` | warmly | لیبرال‌ها بردن. دست بعد کسی بهتون نمی‌گه کی دروغ می‌گه. گوش کنید کی حرف می‌زنه. | The Liberals win. Next hand nobody tells you who is lying. Listen to who talks. |
-| `onboard.nextSix` | calmly | … | *(write when step 3 is designed)* |
+| `onboard.winNext` | warmly | لیبرال‌ها بردن. میز بعدی فقط همون چیزی رو نشون می‌ده که عوض شده. | The Liberals win. The next table only shows what changed. |
+| `onboard.nextSix` | calmly | یه لیبرال اضافه اومد سر میز. تخته همون تختهٔ پنج‌نفره‌ست. تا شش نفر زنده‌ان، رئیس‌جمهور قبلی و صدراعظم قبلی قفلن. یکی بمیره و پنج نفر بمونن، فقط صدراعظم قبلی قفل می‌مونه. | One more Liberal sits down. Same small board as five. While six remain, last president and last chancellor are locked. If someone dies and five are left, only last chancellor stays locked. |
+| `onboard.termLimit` | calmly | نیما همین الان صدراعظم بود. دوباره نمی‌شه انتخابش کرد. تا شش نفر سر میزن، رئیس‌جمهور قبلی هم قفله. | Nima just sat as Chancellor. You cannot name them again. While six are alive, last president is locked too. |
+| `onboard.nextSeven` | calmly | از هفت نفر به بعد هیتلر شب فاشیست‌ها رو نمی‌بینه. تخته عوض می‌شه: اول تحقیق، بعد انتخابات ویژه. | From seven on, Hitler does not see the Fascists at night. The board changes: first investigate, then a special election. |
+| `onboard.investigate` | whispering | یه صندلی رو بزنید. فقط حزبش رو می‌بینید، نقشش رو نه. به میز دروغ بگید اگه لازم شد. | Tap a seat. You see their party, not their role. Lie to the table if you have to. |
+| `onboard.specialElection` | calmly | رئیس‌جمهور بعدی رو شما انتخاب می‌کنید — نوبت دور میز نیست. | You pick the next President — it does not walk around the table. |
+| `onboard.nextEight` | calmly | تخته همون تختهٔ هفت‌نفره‌ست. دو فاشیست دور یه هیتلر که شب چیزی ندید. میز شلوغ‌تره، رأی سخت‌تر. | Same board as seven. Two Fascists around a Hitler who saw nothing at night. More seats, noisier votes. |
+| `onboard.nextNine` | calmly | دو بار تحقیق می‌آد. سه فاشیست به‌علاوهٔ هیتلر. | Investigate twice. Three Fascists plus Hitler. |
+| `onboard.nextTen` | calmly | میز کامل. قدرتا همون‌هاست — صندلی بیشتر، حرف بیشتر. | Full table. Same powers — more seats, more talk. |
 
 Add these to [`ravi-script.md`](./ravi-script.md) when we implement. No
 second script file.
@@ -354,6 +365,7 @@ First-run plaque (if we ask before sitting) — still no bots:
 | Need | New? | Notes |
 |---|---|---|
 | Seats, boards, cards, votes, deck | No | Real table. Step 1 *is* those widgets. |
+| Lesson music + stings | **Yes** | Suno. Prompts in [`background-music.md`](./background-music.md). When they play: [`onboarding-audio.md`](./onboarding-audio.md). |
 | Portraits | No | Existing avatars, fixed names. |
 | Daniel cameo | No | Current Ravi dock. |
 | Mask + hole + gold ring | CSS | Not a PNG. Not `#000`. |
@@ -376,9 +388,10 @@ client/src/tutorial/
   TutorialService.ts     owns Room + GameEngine, drives the director
   TutorialDirector.ts    timed seat actions + chat, human delays
   Spotlight.tsx          mask + hole + lock
-  scripts/look.ts        step 1 beats
-  scripts/five.ts        step 2
-  scripts/six.ts … ten.ts  later
+  introSlides.ts         step 0
+  lookView.ts            step 1 beats
+  scriptedTable.ts       5–10 in-memory tables
+  cast.ts                companion names
 
 shared/                  GameEngine, Room.viewFor, stacked deck — unchanged
                          (optional: a TutorialScript type if it stays pure)
@@ -398,8 +411,9 @@ GameStateService         tutorial path feeds the same view() the live
   talk — or a small parallel list on the tutorial service if chat is
   socket-only today. Do not invent a server chat HTTP for this.
 - GameOver, night overlay, vote cards: the real components.
-- `flags.tutorial` ships dark, then on. First-run in
-  `TutorialPromptService` offers step 1 instead of only the video hub.
+- `FEATURE_ONBOARDING` / `flags.onboarding` ships dark, then on. First-run
+  SitOffer after splash offers step 0 instead of only the video hub.
+  Local `pnpm dev` skips that offer; a home icon opens the same table.
 
 This is the one place the client mutates a `Room`. It is a closed box.
 A tutorial table is never published, never in match history, never a
@@ -414,10 +428,8 @@ happens, …).
 
 ## Out of the first ship
 
-- Steps 6–10 scripts (stubs + the table above are enough until five
-  plays well).
 - Playing as Fascist / Hitler.
-- Voice chat.
+- Voice chat / Daniel `onboard.*` mp3s.
 - LLM seats.
 - Mid-step crash resume (seven minutes; start the step over).
 
@@ -428,7 +440,7 @@ happens, …).
 ### Step 0 — intro pages
 
 - [x] `INTRO_SLIDES` + `OnboardingIntroScreen` (one idea per page).
-- [x] Sit / Dev → `onboarding` screen → last Continue opens look.
+- [x] Sit / Dev home icon → `onboarding` screen → last Continue opens look.
 - [x] Titles + bodies in fa/en; Skip / Previous / progress.
 
 ### Step 1 + plumbing
@@ -444,11 +456,11 @@ happens, …).
 
 ### Step 2
 
-- [x] `fiveTable.ts` + `StackedDeck`: roles, stack, skip night.
+- [x] `scriptedTable.ts` + `StackedDeck`: roles, stack; five keeps night.
 - [x] Director: nominate → vote → burn → refuse → enact → auto toward win.
 - [x] Teaching locks; off-script taps ignored + retry line.
-- [ ] Peek + execute happen once; Liberal win (director path exists; needs
-      playtest polish).
+- [x] Peek + execute happen once; Liberal win (director prefers Fascist
+      laws until those powers fire).
 - [x] No “bot/practice” copy anywhere in fa/en.
 - [x] Tests for five table cast and first chancellor lock.
 
@@ -459,12 +471,13 @@ happens, …).
 
 ### Later counts
 
-- [ ] `six.ts` … `ten.ts` as in the table.
+- [x] Six–ten as delta sittings on `scriptedTable` (not a second lecture).
+- [x] After a win, Continue sits the next count; ten returns Home.
 - [ ] Guide hub: continue from last unfinished step.
 
 ### Ship
 
-- [ ] `flags.tutorial` off, then playtest on 430 px in Bale.
+- [ ] `FEATURE_ONBOARDING` off, then playtest on 430 px in Bale.
 - [ ] Changelog when players can see it. Flip the flag.
 
 ---

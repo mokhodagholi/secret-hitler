@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js';
+import { raviClipMs, RAVI_CLIP_MS, type RaviVoiceId } from '@secret-hitler/shared';
 import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 import type { MessageKey, MessageValues } from '../i18n';
 import type { I18nService } from './I18nService';
@@ -6,6 +7,10 @@ import type { PrefetchService } from './prefetch';
 import type { SettingsService } from './SettingsService';
 
 export type { RaviWho };
+
+function asVoiceId(who: RaviWho): RaviVoiceId {
+  return who in RAVI_CLIP_MS ? (who as RaviVoiceId) : 'daniel';
+}
 
 /** Catalog ids — same strings as `ravi-script.md` and the mp3 filenames. */
 export type RaviLineId =
@@ -97,6 +102,8 @@ export type RaviLineId =
   | 'private.enact';
 
 const HOLD_WITHOUT_CLIP_MS = 1_200;
+/** Finish typing slightly before the clip so the last word is not cut off. */
+const TYPE_LEAD_MS = 160;
 
 const canPlayAudio = typeof Audio !== 'undefined';
 
@@ -127,6 +134,11 @@ export class RaviService {
   private readonly speakingSignal = createSignal(false);
   readonly speaking = this.speakingSignal[0];
   private readonly setSpeaking = this.speakingSignal[1];
+
+  /** How long the current line should take to type (ms) — clip length for the active voice. */
+  private readonly lineDurationSignal = createSignal(HOLD_WITHOUT_CLIP_MS);
+  readonly lineDurationMs = this.lineDurationSignal[0];
+  private readonly setLineDurationMs = this.lineDurationSignal[1];
 
   private current: HTMLAudioElement | null = null;
   private generation = 0;
@@ -169,6 +181,13 @@ export class RaviService {
     this.cancel();
     this.setLine(null);
     this.setLineId(null);
+    this.setLineDurationMs(HOLD_WITHOUT_CLIP_MS);
+  }
+
+  /** Stop the current clip and subtitle immediately (DEV skip wait). */
+  skip(): void {
+    this.clear();
+    this.setLineDurationMs(0);
   }
 
   /**
@@ -186,10 +205,24 @@ export class RaviService {
     if (id) this.replayAfterUnlock(id);
   }
 
+  private catalogMs(id: RaviLineId): number {
+    return (
+      raviClipMs(asVoiceId(this.settings.settings.raviWho), id) ??
+      HOLD_WITHOUT_CLIP_MS
+    );
+  }
+
+  private setDurationForLine(id: RaviLineId, audioMs?: number): void {
+    const catalog = this.catalogMs(id);
+    const raw = audioMs != null && Number.isFinite(audioMs) && audioMs > 0 ? audioMs : catalog;
+    this.setLineDurationMs(Math.max(400, Math.round(raw) - TYPE_LEAD_MS));
+  }
+
   private deliver(id: RaviLineId, params?: MessageValues): Promise<void> {
     const subtitle = this.i18n.formatMessage(`ravi.${id}` as MessageKey, params);
     this.setLine(subtitle);
     this.setLineId(id);
+    this.setDurationForLine(id);
     this.generation += 1;
     const generation = this.generation;
     this.stopCurrent();
@@ -197,12 +230,22 @@ export class RaviService {
 
     const src = this.clipSrc(id);
     if (!canPlayAudio || !this.settings.settings.raviVoice || !src) {
-      return this.hold(generation);
+      return this.hold(generation, this.catalogMs(id));
     }
 
     this.playClip(id);
     const audio = this.current;
-    if (!audio) return this.hold(generation);
+    if (!audio) return this.hold(generation, this.catalogMs(id));
+
+    const syncDuration = () => {
+      if (this.generation !== generation) return;
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        this.setDurationForLine(id, audio.duration * 1000);
+      }
+    };
+    audio.addEventListener('loadedmetadata', syncDuration, { once: true });
+    syncDuration();
+
     return new Promise((resolve) => {
       const finish = () => {
         if (this.generation === generation) {
@@ -275,6 +318,13 @@ export class RaviService {
     const audio = this.current;
     if (!audio) return;
     this.setSpeaking(true);
+    this.setDurationForLine(id);
+    const syncDuration = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        this.setDurationForLine(id, audio.duration * 1000);
+      }
+    };
+    audio.addEventListener('loadedmetadata', syncDuration, { once: true });
     const played = audio.play() as Promise<void> | undefined;
     played
       ?.then(() => {
@@ -309,12 +359,12 @@ export class RaviService {
     this.current = null;
   }
 
-  private hold(generation: number): Promise<void> {
+  private hold(generation: number, durationMs: number): Promise<void> {
     return new Promise((resolve) => {
       window.setTimeout(() => {
         if (this.generation === generation) this.setSpeaking(false);
         resolve();
-      }, HOLD_WITHOUT_CLIP_MS);
+      }, durationMs);
     });
   }
 }

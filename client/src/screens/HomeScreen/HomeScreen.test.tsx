@@ -81,6 +81,30 @@ describe('HomeScreen', () => {
     expect(screen.queryByText('Guest')).toBeNull();
   });
 
+  it('Should open the onboarding table from the home icon', () => {
+    const harness = buildHarness();
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<div data-testid="onboarding-open" />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
+    );
+
+    const button = screen.queryByRole('button', { name: en.home.checkOnboarding });
+    if (!import.meta.env.DEV) {
+      expect(button).toBeNull();
+      return;
+    }
+    fireEvent.click(button!);
+    expect(harness.services.nav.screen()).toBe('onboarding');
+    expect(harness.services.tutorial.introducing()).toBe(true);
+  });
+
   it('Should open Settings from the gear', () => {
     const harness = buildHarness();
     renderWithApp(

@@ -1,0 +1,140 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.backdrop {
+  @include overlay-cover;
+  @include overlay-pad(18px);
+  z-index: 86;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 12, 22, 0.78);
+}
+
+.sheet {
+  @include card;
+  width: min(420px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  border-color: rgba($gold, 0.45);
+  background: linear-gradient(180deg, #2c2118, #1c140e);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid $line-soft;
+}
+
+.title {
+  @include display(0.95rem, 0.18em);
+  color: $gold;
+}
+
+.close {
+  @include pressable;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  color: $text-dim;
+  border: 1px solid $line-soft;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px 16px;
+  @include scroll-y;
+}
+
+.empty {
+  margin: 12px 4px;
+  color: $text-dim;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.round {
+  border: 1px solid $line-soft;
+  border-radius: $radius-sm;
+  background: rgba($navy-900, 0.45);
+  overflow: hidden;
+}
+
+.roundHeader {
+  @include pressable;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  text-align: start;
+  color: $text-light;
+}
+
+.roundTitle {
+  @include display(0.82rem, 0.08em);
+  color: $gold;
+  white-space: nowrap;
+}
+
+.roundSummary {
+  font-size: 0.78rem;
+  color: $text-dim;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roundBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 12px;
+  border-top: 1px solid $line-soft;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: $text-light;
+
+  p {
+    margin: 0;
+  }
+}
+
+.votesLabel {
+  margin-top: 4px !important;
+  color: $text-dim;
+  font-size: 0.78rem;
+}
+
+.ballots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ballots li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba($line-soft, 0.6);
+  font-size: 0.82rem;
+}
+
+.ballotVote {
+  color: $text-dim;
+  white-space: nowrap;
+}

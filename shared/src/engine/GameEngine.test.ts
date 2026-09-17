@@ -1,12 +1,14 @@
 import { describe, expect, it } from '@rstest/core';
 import { GameEngine } from './GameEngine';
-import { LEGISLATIVE_DEAL_MS, LEGISLATIVE_DURATION_MS, Phase } from '../types/GameState';
+import { BREATH_AFTER_VOTE_MS, LEGISLATIVE_DEAL_MS, LEGISLATIVE_DURATION_MS, Phase } from '../types/GameState';
 import {
   StackedDeck,
   electGovernment,
+  flushBreath,
   makeRoom,
   seatPlayers,
   startGame,
+  tickNominationTimeout,
 } from '../../test/test-utils';
 
 describe('GameEngine — lobby', () => {
@@ -552,6 +554,7 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.nominationEndsAt).toBeGreaterThan(0);
 
     expect(engine.handleCommand(president.id, { kind: 'endTurn' })).toBeNull();
+    flushBreath(engine);
     expect(room.electionTracker).toBe(1);
     expect(room.presidentId).toBe(ben.id);
   });
@@ -560,7 +563,7 @@ describe('GameEngine — nomination and voting', () => {
     const { engine, room } = startGame();
     expect(room.phase).toBe(Phase.Nomination);
 
-    engine.resolveNominationTimeout();
+    tickNominationTimeout(engine);
     expect(room.electionTracker).toBe(1);
     expect(room.phase).toBe(Phase.Nomination);
   });
@@ -569,19 +572,19 @@ describe('GameEngine — nomination and voting', () => {
     const deck = new StackedDeck(['liberal', 'fascist']);
     const game = startGame(['Ana', 'Ben', 'Cal'], deck);
 
-    game.engine.resolveNominationTimeout();
-    game.engine.resolveNominationTimeout();
+    tickNominationTimeout(game.engine);
+    tickNominationTimeout(game.engine);
     expect(game.room.liberalPolicies).toBe(0);
     expect(deck.peekTop(1)).toEqual(['liberal']);
 
-    game.engine.resolveNominationTimeout();
+    tickNominationTimeout(game.engine);
 
     expect(game.room.liberalPolicies).toBe(1);
     expect(game.room.electionTracker).toBe(0);
     expect(deck.peekTop(1)).toEqual(['fascist']);
 
-    game.engine.resolveNominationTimeout();
-    game.engine.resolveNominationTimeout();
+    tickNominationTimeout(game.engine);
+    tickNominationTimeout(game.engine);
     expect(game.room.electionTracker).toBe(2);
     expect(game.room.liberalPolicies).toBe(1);
     expect(deck.peekTop(1)).toEqual(['fascist']);
@@ -591,17 +594,17 @@ describe('GameEngine — nomination and voting', () => {
     const { engine, room } = startGame(['Ana', 'Ben', 'Cal']);
     const before = room.deck.drawCount;
 
-    engine.resolveNominationTimeout();
-    engine.resolveNominationTimeout();
+    tickNominationTimeout(engine);
+    tickNominationTimeout(engine);
     expect(room.deck.drawCount).toBe(before);
     expect(room.electionTracker).toBe(2);
 
-    engine.resolveNominationTimeout();
+    tickNominationTimeout(engine);
     expect(room.deck.drawCount).toBe(before - 1);
     expect(room.electionTracker).toBe(0);
 
-    engine.resolveNominationTimeout();
-    engine.resolveNominationTimeout();
+    tickNominationTimeout(engine);
+    tickNominationTimeout(engine);
     expect(room.deck.drawCount).toBe(before - 1);
     expect(room.electionTracker).toBe(2);
   });
@@ -659,12 +662,12 @@ describe('GameEngine — legislative session', () => {
 
   it('Should hold the choice clock until the public deal has landed', () => {
     const deck = new StackedDeck(['liberal', 'fascist', 'fascist']);
-    const game = startGame(['Ana', 'Ben', 'Cal'], deck);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck, { skipCeremony: false });
     const before = Date.now();
     electGovernment(game, game.players[1]);
 
     expect(game.room.legislativeStartedAt - before).toBeGreaterThanOrEqual(
-      LEGISLATIVE_DEAL_MS - 50,
+      BREATH_AFTER_VOTE_MS + LEGISLATIVE_DEAL_MS - 50,
     );
     expect(game.room.legislativeEndsAt - game.room.legislativeStartedAt).toBe(
       LEGISLATIVE_DURATION_MS,
@@ -691,6 +694,7 @@ describe('GameEngine — legislative session', () => {
     game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 0 });
     expect(game.room.phase).toBe(Phase.ChancellorLegislative);
     game.engine.resolveLegislativeTimeout();
+    flushBreath(game.engine);
 
     expect(game.room.liberalPolicies + game.room.fascistPolicies).toBe(1);
     expect(game.room.phase).not.toBe(Phase.ChancellorLegislative);
@@ -733,6 +737,7 @@ describe('GameEngine — legislative session', () => {
       kind: 'enactPolicy',
       index: 0,
     });
+    flushBreath(game.engine);
 
     expect(error).toBeNull();
     expect(game.room.liberalPolicies).toBe(1);
@@ -801,6 +806,7 @@ describe('GameEngine — legislative session', () => {
       index: 0,
     });
     game.engine.handleCommand(lastChancellor.id, { kind: 'enactPolicy', index: 0 });
+    flushBreath(game.engine);
 
     expect(game.room.phase).toBe(Phase.Nomination);
     expect(game.room.viewFor('x').ineligibleChancellors).toContain(
@@ -850,6 +856,7 @@ describe('GameEngine — veto', () => {
     expect(game.room.vetoRequested).toBe(true);
 
     game.engine.handleCommand(president.id, { kind: 'vetoConsent', agree: true });
+    flushBreath(game.engine);
     expect(game.room.drawnPolicies).toEqual([]);
     expect(game.room.phase).toBe(Phase.Nomination);
     expect(game.room.electionTracker).toBe(1);

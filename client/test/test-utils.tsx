@@ -104,7 +104,7 @@ export function buildHarness(
     initialPath?: string;
     flags?: Partial<FeatureFlags>;
     flagFetch?: typeof fetch;
-    /** False keeps Find Match dark until a test calls load/markReady. Default true. */
+    /** False keeps Join chrome on Create until a test calls load/markReady. Default true. */
     flagsReady?: boolean;
   } = {},
 ): Harness {
@@ -117,7 +117,7 @@ export function buildHarness(
   const game = new GameStateService(socket as unknown as WebSocketService);
   const i18n = new I18nService(() => settings.settings.language);
   const flags = new FeatureFlagService(options.flags, options.flagFetch);
-  // App tests skip BootGate's flags.load(); Home gates Find Match on ready.
+  // App tests skip BootGate's flags.load(); splash waits on ready for the salon.
   if (options.flagsReady !== false) flags.markReady();
   const prefetch = new PrefetchService();
   const services: AppServices = {
@@ -205,6 +205,7 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
     minPlayers: 3,
     maxPlayers: 10,
     kind: 'hosted',
+    adminPlay: false,
     startChoice: null,
     players,
     board: {
@@ -218,6 +219,8 @@ export function makeView(overrides: Partial<GameStateView> = {}): GameStateView 
       lastEnacted: [],
     },
     winner: null,
+    roundHistory: [],
+    breathDeadline: null,
     discussionDeadline: null,
     voteDeadline: null,
     legislativeDeadline: null,

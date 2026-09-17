@@ -13,7 +13,8 @@ import {
 import { useApp } from '../../services/AppContext';
 import { Screen } from '../../components/Screen/Screen';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
-import { INTRO_SLIDES } from '../../tutorial/introSlides';
+import { INTRO_SLIDES, effectForIntroVisual } from '../../tutorial/introSlides';
+import { tutorialYou } from '../../tutorial/cast';
 import { faNum } from '../../i18n/utils';
 import { CARD_BACK } from '../../assets/cards';
 import policyLiberal from '../../assets/table/policy/liberal.webp';
@@ -28,12 +29,18 @@ export const INTRO_REASSURE_MS = 3000;
  * Yes → look table. No → reassure, then restart from the first piece.
  */
 export function OnboardingIntroScreen() {
-  const { tutorial, nav, i18n, animation, settings } = useApp();
+  const { tutorial, nav, i18n, animation, settings, sound } = useApp();
   const { formatMessage } = i18n;
   const [reassuring, setReassuring] = createSignal(false);
   let reassureTimer: ReturnType<typeof setTimeout> | undefined;
 
   const slide = createMemo(() => INTRO_SLIDES[tutorial.introBeat()] ?? INTRO_SLIDES[0]);
+
+  createEffect(() => {
+    if (!tutorial.introducing()) return;
+    const effect = effectForIntroVisual(slide().visual);
+    if (effect) sound.play(effect);
+  });
   const atStart = () => tutorial.introBeat() === 0;
   const onCheck = () => slide().visual.kind === 'check';
   /** Separate bdi nodes — a single "۱ از ۱۰" string merges the digits under RTL bidi. Follow page dir (no forced ltr) so fa keeps current on the right. */
@@ -72,11 +79,13 @@ export function OnboardingIntroScreen() {
 
   function openLook(): void {
     tutorial.advanceIntro();
-    const you = {
-      name: settings.settings.profileName.trim() || formatMessage('game.you'),
-      avatar: settings.settings.avatar,
-    };
-    tutorial.startLook(you);
+    tutorial.startLook(
+      tutorialYou(
+        settings.settings.profileName.trim() || formatMessage('game.you'),
+        settings.settings.avatar,
+        formatMessage,
+      ),
+    );
     nav.navigate('game');
   }
 
@@ -105,7 +114,10 @@ export function OnboardingIntroScreen() {
   return (
     <Screen fill>
       <div
-        class={styles.page}
+        classList={{
+          [styles.page]: true,
+          [styles.pageWelcome]: slide().visual.kind === 'welcome',
+        }}
         ref={(element) => void animation.play(element, 'screen-enter')}
       >
         <header class={styles.top}>
@@ -121,6 +133,11 @@ export function OnboardingIntroScreen() {
 
         <div class={styles.stage}>
           <Switch>
+            <Match when={slide().visual.kind === 'welcome'}>
+              <div class={styles.welcome} aria-hidden="true">
+                {formatMessage('onboard.piece.welcomeTime')}
+              </div>
+            </Match>
             <Match when={slide().visual.kind === 'government'}>
               <div class={styles.government} aria-hidden="true" dir="ltr">
                 <span class={styles.badgePresident}>
@@ -132,13 +149,13 @@ export function OnboardingIntroScreen() {
                 </span>
               </div>
             </Match>
-            <Match when={slide().visual.kind === 'tracker' ? slide().visual : false}>
-              {(visual) => (
-                <IntroTracker
-                  marks={visual().kind === 'tracker' ? visual().marks : 1}
-                  label={formatMessage('game.electionTracker')}
-                />
-              )}
+            <Match when={slide().visual.kind === 'tracker'}>
+              <IntroTracker
+                marks={
+                  slide().visual.kind === 'tracker' ? slide().visual.marks : 1
+                }
+                label={formatMessage('game.electionTracker')}
+              />
             </Match>
             <Match when={slide().visual.kind === 'deck' ? slide().visual : false}>
               {(visual) => (
@@ -279,8 +296,8 @@ function CardStack(props: { count: number; burned?: boolean }) {
 }
 
 /** Fills marks one-by-one with the same pulse used on the live table. */
-function IntroTracker(props: { marks: 1 | 2 | 3; label: string }) {
-  const { animation } = useApp();
+function IntroTracker(props: { marks: 0 | 1 | 2 | 3; label: string }) {
+  const { animation, sound } = useApp();
   const [shown, setShown] = createSignal(0);
   let markEls: Array<HTMLElement | undefined> = [];
   let run = 0;
@@ -288,15 +305,19 @@ function IntroTracker(props: { marks: 1 | 2 | 3; label: string }) {
   createEffect(() => {
     const target = props.marks;
     const id = ++run;
-    setShown(0);
-    markEls = [];
+    const already = shown();
+    if (already > target) {
+      setShown(target);
+      return;
+    }
     void (async () => {
-      await animation.hold(280);
+      if (already === 0) await animation.hold(280);
       let current = shown();
       while (current < target && id === run) {
         setShown(current + 1);
         const element = markEls[current];
-        if (element) void animation.play(element, 'tracker-tick');
+        if (element) void animation.play(element, 'tracker-fill');
+        sound.play(current + 1 === 3 ? 'onboard-chaos' : 'onboard-tracker');
         await animation.hold(420);
         current += 1;
       }

@@ -21,10 +21,12 @@ export interface ChancellorRevealProps {
  */
 export function ChancellorReveal(props: ChancellorRevealProps) {
   const { formatMessage } = props;
-  const { animation, sound } = useApp();
+  const { animation, sound, tutorial } = useApp();
   const drag = useDialogDrag();
   const youOnTicket = () => props.presidentIsYou || props.chancellorIsYou;
-  onMount(() => sound.play('chancellor-seal'));
+  onMount(() => {
+    if (!tutorial.looking()) sound.play('chancellor-seal');
+  });
   return (
     <div
       class={styles.backdrop}

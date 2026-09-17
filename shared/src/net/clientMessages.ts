@@ -23,6 +23,7 @@ function isGameCommand(value: unknown): value is GameCommand {
       return Number.isInteger(command.index);
     case 'vetoRequest':
     case 'endTurn':
+    case 'skipTimer':
       return true;
     case 'vetoConsent':
       return typeof command.agree === 'boolean';

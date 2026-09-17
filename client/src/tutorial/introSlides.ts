@@ -8,9 +8,10 @@ import voteJa from '../assets/table/votes/ja.webp';
 import voteNein from '../assets/table/votes/nein.webp';
 
 export type IntroVisual =
+  | { kind: 'welcome' }
   | { kind: 'images'; srcs: string[]; layout: 'row' | 'stack' | 'trio' }
   | { kind: 'government' }
-  | { kind: 'tracker'; marks: 1 | 2 | 3 }
+  | { kind: 'tracker'; marks: 0 | 1 | 2 | 3 }
   | { kind: 'deck'; draw: number; discard: number }
   | { kind: 'laws' }
   | { kind: 'check' };
@@ -26,6 +27,11 @@ export interface IntroSlide {
  * Last slide asks if they got it, then step 1 (look) teaches how to play.
  */
 export const INTRO_SLIDES: readonly IntroSlide[] = [
+  {
+    titleKey: 'onboard.piece.welcomeTitle',
+    bodyKey: 'onboard.piece.welcome',
+    visual: { kind: 'welcome' },
+  },
   {
     titleKey: 'onboard.piece.rolesTitle',
     bodyKey: 'onboard.piece.roles',
@@ -57,6 +63,11 @@ export const INTRO_SLIDES: readonly IntroSlide[] = [
       layout: 'row',
       srcs: [voteJa, voteNein],
     },
+  },
+  {
+    titleKey: 'onboard.piece.trackerTitle',
+    bodyKey: 'onboard.piece.tracker',
+    visual: { kind: 'tracker', marks: 0 },
   },
   {
     titleKey: 'onboard.piece.trackerFail1Title',
@@ -91,3 +102,30 @@ export const INTRO_SLIDES: readonly IntroSlide[] = [
 ] as const;
 
 export const INTRO_SLIDE_COUNT = INTRO_SLIDES.length;
+
+/** Piece sting on this page. Tracker ticks live on the marks as they fill. */
+export type IntroSlideEffect =
+  | 'onboard-roles'
+  | 'onboard-boards'
+  | 'onboard-offices'
+  | 'onboard-vote'
+  | 'onboard-deck'
+  | 'onboard-laws';
+
+export function effectForIntroVisual(visual: IntroVisual): IntroSlideEffect | null {
+  switch (visual.kind) {
+    case 'images':
+      if (visual.layout === 'trio') return 'onboard-roles';
+      if (visual.layout === 'row') return 'onboard-vote';
+      if (visual.layout === 'stack') return 'onboard-boards';
+      return null;
+    case 'government':
+      return 'onboard-offices';
+    case 'deck':
+      return 'onboard-deck';
+    case 'laws':
+      return 'onboard-laws';
+    default:
+      return null;
+  }
+}

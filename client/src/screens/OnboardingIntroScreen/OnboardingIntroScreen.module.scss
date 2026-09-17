@@ -72,7 +72,9 @@
 
 .imagesStack {
   flex-direction: column;
+  align-items: stretch;
   gap: 12px;
+  width: min(92vw, 420px);
 }
 
 .imagesTrio {
@@ -93,8 +95,12 @@
 }
 
 .imagesStack .art {
-  max-width: min(92vw, 420px);
-  max-height: min(38vh, 230px);
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: min(22vh, 168px);
+  max-height: min(22vh, 168px);
+  object-fit: fill;
 }
 
 .imagesTrio .art {
@@ -164,9 +170,9 @@
 .deckRow {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: min(10vw, 40px);
-  width: min(92vw, 420px);
+  justify-content: center;
+  gap: 36px;
+  width: auto;
 }
 
 .deckPile {
@@ -223,6 +229,15 @@
   line-height: 1;
 }
 
+.welcome {
+  font-family: $font-display;
+  font-size: clamp(1.6rem, 8vw, 2.4rem);
+  font-weight: 700;
+  color: rgba($gold, 0.9);
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.02em;
+}
+
 .tracker {
   display: flex;
   flex-direction: column;
@@ -266,7 +281,7 @@
 }
 
 .copy {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -300,7 +315,24 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 22px;
+  margin-top: 16px;
+}
+
+/* First card: plaque + copy sit high; leftover space is above Continue. */
+.pageWelcome .stage {
+  flex: 1 1 0;
+  max-height: 48%;
+  padding: 8px 0 0;
+}
+
+.pageWelcome .copy {
+  padding: 0 4px;
+  margin-top: 12px;
+}
+
+.pageWelcome .chrome {
+  margin-top: auto;
+  padding-top: 32px;
 }
 
 .previous,

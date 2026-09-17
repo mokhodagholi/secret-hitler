@@ -5,14 +5,18 @@ import type { NavigationService } from '../services/NavigationService';
 import { TutorialDirector } from './TutorialDirector';
 import {
   fascistIndex,
-  fiveHandle,
-  fiveView,
   isAllowedChancellor,
+  isAllowedPowerTarget,
   liberalIndex,
-  startFiveTable,
-  type FiveLock,
-  type FiveTable,
-} from './fiveTable';
+  nextOnboardCount,
+  onboardStepForCount,
+  playHandle,
+  playView,
+  startScriptedTable,
+  type OnboardCount,
+  type PlayLock,
+  type ScriptedTable,
+} from './scriptedTable';
 import { LOOK_BEATS, buildLookView, type LookYou } from './lookView';
 import { INTRO_SLIDE_COUNT, INTRO_SLIDES } from './introSlides';
 import type { IntroSlide } from './introSlides';
@@ -27,6 +31,15 @@ export const ONBOARDING_STEP_KEY = 'sh:onboarding-step';
 
 export const ONBOARDING_DECLINE_KEY = 'sh:onboarding-declines';
 
+export interface TutorialTalk {
+  id: string;
+  playerId: string;
+  name: string;
+  key?: MessageKey;
+  text?: string;
+  at: number;
+}
+
 function parseCount(raw: string | null): number {
   if (raw == null) return 0;
   const value = Number.parseInt(raw, 10);
@@ -35,8 +48,8 @@ function parseCount(raw: string | null): number {
 }
 
 /**
- * Client-only onboarding: step 0 image pages, step 1 frozen look, then
- * step 2 five-player table. Never opens a socket.
+ * Client-only onboarding: intro pages, frozen look, then scripted tables
+ * at 5–10. Never opens a socket.
  */
 export class TutorialService {
   readonly announcing: Accessor<boolean>;
@@ -48,8 +61,9 @@ export class TutorialService {
   readonly beat: Accessor<number>;
   readonly lookView: Accessor<GameStateView | null>;
   readonly playView: Accessor<GameStateView | null>;
-  readonly lock: Accessor<FiveLock>;
+  readonly lock: Accessor<PlayLock>;
   readonly playHeadline: Accessor<MessageKey>;
+  readonly talk: Accessor<TutorialTalk[]>;
   private readonly setAnnouncing: Setter<boolean>;
   private readonly setOfferingSit: Setter<boolean>;
   private readonly setIntroducing: Setter<boolean>;
@@ -59,13 +73,14 @@ export class TutorialService {
   private readonly setBeat: Setter<number>;
   private readonly setLookView: Setter<GameStateView | null>;
   private readonly setPlayView: Setter<GameStateView | null>;
-  private readonly setLock: Setter<FiveLock>;
+  private readonly setLock: Setter<PlayLock>;
   private readonly setPlayHeadline: Setter<MessageKey>;
+  private readonly setTalk: Setter<TutorialTalk[]>;
 
   private lookSettled = false;
   private sitAsked = false;
   private lookYou: LookYou | null = null;
-  private table: FiveTable | null = null;
+  private table: ScriptedTable | null = null;
   private director: TutorialDirector | null = null;
 
   constructor() {
@@ -78,8 +93,9 @@ export class TutorialService {
     const [beat, setBeat] = createSignal(0);
     const [lookView, setLookView] = createSignal<GameStateView | null>(null);
     const [playView, setPlayView] = createSignal<GameStateView | null>(null);
-    const [lock, setLock] = createSignal<FiveLock>(null);
+    const [lock, setLock] = createSignal<PlayLock>(null);
     const [playHeadline, setPlayHeadline] = createSignal<MessageKey>('onboard.pick');
+    const [talk, setTalk] = createSignal<TutorialTalk[]>([]);
     this.announcing = announcing;
     this.setAnnouncing = setAnnouncing;
     this.offeringSit = offeringSit;
@@ -102,6 +118,8 @@ export class TutorialService {
     this.setLock = setLock;
     this.playHeadline = playHeadline;
     this.setPlayHeadline = setPlayHeadline;
+    this.talk = talk;
+    this.setTalk = setTalk;
   }
 
   /** Any onboarding path owns the client — GameScreen hides the server path. */
@@ -174,7 +192,7 @@ export class TutorialService {
 
   /** Step 0 — full-page image + text for each idea. */
   startIntro(you: LookYou): void {
-    this.stopFive();
+    this.stopPlay();
     this.endLook();
     this.setOfferingSit(false);
     this.lookYou = you;
@@ -219,7 +237,7 @@ export class TutorialService {
   }
 
   startLook(you: LookYou): void {
-    this.stopFive();
+    this.stopPlay();
     this.setIntroducing(false);
     this.setOfferingSit(false);
     this.lookSettled = false;
@@ -266,25 +284,65 @@ export class TutorialService {
     if (this.lookYou) this.setLookView(buildLookView(this.lookYou, previous));
   }
 
-  /** After look: open the scripted five-player hand on the same Game screen. */
+  /** After look: open a scripted table. Count 5 is the full small hand. */
   startFive(you: LookYou = this.lookYou ?? { name: 'You', avatar: 0 }): void {
+    this.startPlay(you, 5);
+  }
+
+  startPlay(
+    you: LookYou = this.lookYou ?? { name: 'You', avatar: 0 },
+    count: OnboardCount = 5,
+  ): void {
     this.lookYou = you;
+    this.director?.stop();
+    this.director = null;
     // Playing goes true before look ends so GameScreen never sees a gap
     // where onboarding is off and bounces to Play.
     this.setPlaying(true);
     this.endLook();
-    const table = startFiveTable(you);
+    const table = startScriptedTable(you, count);
     this.table = table;
-    this.setPlayView(fiveView(table));
+    this.setPlayView(playView(table));
+    this.setTalk([]);
     this.setLock(null);
     this.director = new TutorialDirector(table, {
       onView: () => this.refreshPlay(),
       onLock: (lock) => this.setLock(lock),
       onHeadline: (key) => this.setPlayHeadline(key as MessageKey),
-      onDone: () => this.finishFive(),
+      onTalk: (playerId, key) => this.appendTalk(playerId, key as MessageKey),
+      onDone: () => this.finishPlay(),
     });
     this.director.start();
     this.refreshPlay();
+  }
+
+  say(text: string): void {
+    if (!this.playing() || !this.table) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    this.pushTalk({
+      playerId: this.table.youId,
+      name: this.table.room.findPlayer(this.table.youId)?.name ?? '',
+      text: trimmed,
+    });
+  }
+
+  private appendTalk(playerId: string, key: MessageKey): void {
+    if (!this.table) return;
+    this.pushTalk({
+      playerId,
+      name: this.table.room.findPlayer(playerId)?.name ?? '',
+      key,
+    });
+  }
+
+  private pushTalk(line: Omit<TutorialTalk, 'id' | 'at'>): void {
+    const next: TutorialTalk = {
+      ...line,
+      id: `talk-${Date.now()}-${this.talk().length}`,
+      at: Date.now(),
+    };
+    this.setTalk((lines) => [...lines, next]);
   }
 
   skipLook(): void {
@@ -294,9 +352,14 @@ export class TutorialService {
   }
 
   skipFive(): void {
+    this.skipPlay();
+  }
+
+  skipPlay(): void {
     if (!this.playing()) return;
-    this.stopFive();
-    this.bumpDeclines();
+    const won = this.table?.room.winner != null;
+    this.stopPlay();
+    if (!won) this.bumpDeclines();
   }
 
   closeLook(): void {
@@ -309,14 +372,50 @@ export class TutorialService {
   closeActive(): void {
     if (this.introducing()) this.skipIntro();
     else if (this.looking()) this.closeLook();
-    else if (this.playing()) this.skipFive();
+    else if (this.playing()) this.skipPlay();
   }
 
   canNominate(targetId: string): boolean {
-    return this.lock() === 'nominate' && !!this.table && isAllowedChancellor(this.table, targetId);
+    return this.canSelectSeat(targetId);
   }
 
-  /** Player command on the five table. Rejects off-script taps. */
+  canSelectSeat(targetId: string): boolean {
+    if (!this.table) return false;
+    const lock = this.lock();
+    if (lock === 'nominate') return isAllowedChancellor(this.table, targetId);
+    if (lock === 'execute' || lock === 'investigate' || lock === 'specialElection') {
+      return isAllowedPowerTarget(this.table, lock, targetId);
+    }
+    return false;
+  }
+
+  /** Lift the teaching mask while bots play, and during night (its own overlay). */
+  maskLifted(): boolean {
+    if (!this.playing()) return false;
+    const lock = this.lock();
+    return (lock == null || lock === 'night') && this.playView()?.winner == null;
+  }
+
+  finishNight(): void {
+    if (this.lock() !== 'night' || !this.director) return;
+    this.director.afterPlayer('night');
+  }
+
+  acknowledgeDelta(): void {
+    if (this.lock() !== 'delta' || !this.director) return;
+    this.director.afterPlayer('delta');
+  }
+
+  /** After a win, sit the next count. False when the ladder is done. */
+  continueLadder(): boolean {
+    if (!this.playing() || !this.table?.room.winner) return false;
+    const next = nextOnboardCount(this.table.count);
+    if (next == null) return false;
+    this.startPlay(this.lookYou ?? { name: 'You', avatar: 0 }, next);
+    return true;
+  }
+
+  /** Player command on the scripted table. Rejects off-script taps. */
   handlePlay(command: GameCommand): boolean {
     if (!this.playing() || !this.table || !this.director) return false;
     const lock = this.lock();
@@ -324,10 +423,10 @@ export class TutorialService {
     if (command.kind === 'nominateChancellor') {
       if (lock !== 'nominate') return false;
       if (!isAllowedChancellor(this.table, command.targetId)) {
-        this.setPlayHeadline('onboard.pickRetry');
+        this.setPlayHeadline(this.table.count === 6 ? 'onboard.termLimit' : 'onboard.pickRetry');
         return false;
       }
-      const error = fiveHandle(this.table, command);
+      const error = playHandle(this.table, command);
       if (error) return false;
       this.refreshPlay();
       this.director.afterPlayer('nominate');
@@ -336,13 +435,13 @@ export class TutorialService {
 
     if (command.kind === 'castVote') {
       if (lock === 'voteJa' && command.vote === 'ja') {
-        fiveHandle(this.table, command);
+        playHandle(this.table, command);
         this.refreshPlay();
         this.director.afterPlayer('voteJa');
         return true;
       }
       if (lock === 'voteNein' && command.vote === 'nein') {
-        fiveHandle(this.table, command);
+        playHandle(this.table, command);
         this.refreshPlay();
         this.director.afterPlayer('voteNein');
         return true;
@@ -358,7 +457,7 @@ export class TutorialService {
         this.setPlayHeadline('onboard.draw');
         return false;
       }
-      fiveHandle(this.table, command);
+      playHandle(this.table, command);
       this.refreshPlay();
       this.director.afterPlayer('burnFascist');
       return true;
@@ -372,7 +471,7 @@ export class TutorialService {
         this.setPlayHeadline('onboard.chancellor');
         return false;
       }
-      fiveHandle(this.table, command);
+      playHandle(this.table, command);
       this.refreshPlay();
       this.director.afterPlayer('enactLiberal');
       return true;
@@ -380,26 +479,28 @@ export class TutorialService {
 
     if (command.kind === 'useSpecialPower') {
       if (lock === 'peek') {
-        fiveHandle(this.table, command);
+        playHandle(this.table, command);
         this.refreshPlay();
         this.director.afterPlayer('peek');
         return true;
       }
-      if (lock === 'execute') {
-        if (command.targetId === this.table.omidId) {
-          this.setPlayHeadline('onboard.execute');
+      if (lock === 'execute' || lock === 'investigate' || lock === 'specialElection') {
+        if (!isAllowedPowerTarget(this.table, lock, command.targetId)) {
+          if (lock === 'execute') this.setPlayHeadline('onboard.execute');
+          else if (lock === 'investigate') this.setPlayHeadline('onboard.investigate');
+          else this.setPlayHeadline('onboard.specialElection');
           return false;
         }
-        fiveHandle(this.table, command);
+        playHandle(this.table, command);
         this.refreshPlay();
-        this.director.afterPlayer('execute');
+        this.director.afterPlayer(lock);
         return true;
       }
       return false;
     }
 
     if (command.kind === 'endTurn') {
-      fiveHandle(this.table, command);
+      playHandle(this.table, command);
       this.refreshPlay();
       return true;
     }
@@ -409,36 +510,49 @@ export class TutorialService {
 
   private refreshPlay(): void {
     if (!this.table) return;
-    this.setPlayView(fiveView(this.table));
+    this.setPlayView(playView(this.table));
   }
 
-  private finishFive(): void {
+  private finishPlay(): void {
+    if (!this.table) return;
+    const step = Math.max(this.completedStep(), onboardStepForCount(this.table.count));
     try {
-      localStorage.setItem(ONBOARDING_STEP_KEY, '2');
+      localStorage.setItem(ONBOARDING_STEP_KEY, String(step));
     } catch {
       /* private-mode / quota */
     }
     this.director?.stop();
     this.director = null;
     this.setLock(null);
-    this.setPlayHeadline('onboard.win');
+    this.setPlayHeadline(this.table.count === 10 ? 'onboard.win' : 'onboard.winNext');
     this.refreshPlay();
   }
 
-  private stopFive(): void {
+  private stopPlay(): void {
     this.director?.stop();
     this.director = null;
     this.table = null;
     this.setPlaying(false);
     this.setPlayView(null);
     this.setLock(null);
+    this.setTalk([]);
   }
 
-  private lockTarget(lock: FiveLock): string {
-    if (lock === 'nominate' || lock === 'execute') return 'seats';
+  private lockTarget(lock: PlayLock): string {
+    if (
+      lock === 'nominate' ||
+      lock === 'execute' ||
+      lock === 'investigate' ||
+      lock === 'specialElection' ||
+      lock === 'delta' ||
+      lock === 'night'
+    ) {
+      return 'seats';
+    }
     if (lock === 'voteJa' || lock === 'voteNein') return 'vote';
-    if (lock === 'burnFascist' || lock === 'enactLiberal') return 'laws';
-    if (lock === 'peek') return 'laws';
+    if (lock === 'burnFascist' || lock === 'enactLiberal' || lock === 'peek') {
+      return 'laws';
+    }
     return 'seats';
   }
 

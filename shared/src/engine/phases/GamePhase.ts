@@ -28,8 +28,8 @@ export interface PhaseHost {
   closeDiscussion(): void;
   /** End discussion early and open the nomination window. */
   endDiscussion(): void;
-  /** Open the vote window and schedule its deadline on the server. */
-  openVote(): void;
+  /** Open the vote window (`delayMs` holds picks until Ravi's vote prompt ends). */
+  openVote(delayMs?: number): void;
   /** Close the vote window (vote resolved) and cancel its deadline. */
   closeVote(): void;
   /**
@@ -39,18 +39,45 @@ export interface PhaseHost {
   openLegislativeTimer(delayMs?: number): void;
   /** Close the legislative choice window and cancel its deadline. */
   closeLegislativeTimer(): void;
-  /** Open the nomination window and schedule its deadline. */
-  openNominationTimer(): void;
+  /**
+   * Open the nomination window (`delayMs` holds picks until Ravi's nominate
+   * prompt ends).
+   */
+  openNominationTimer(delayMs?: number): void;
   /** Close the nomination window and cancel its deadline. */
   closeNominationTimer(): void;
-  /** Open the executive-power window (`durationMs` defaults to the choose clock). */
-  openSpecialPowerTimer(durationMs?: number): void;
+  /**
+   * Open the executive-power window. `durationMs` is the choose clock;
+   * `delayMs` holds picks until Ravi's power prompt ends.
+   */
+  openSpecialPowerTimer(durationMs?: number, delayMs?: number): void;
   /** Close the executive-power window and cancel its deadline. */
   closeSpecialPowerTimer(): void;
   /** Enter the SpecialPower phase with the President's pending power. */
   grantPower(power: ExecutivePower): void;
   /** Special election: hand the presidency to `playerId` for the next round. */
   startSpecialElection(playerId: string): void;
+  /** Start an in-match history draft for the sitting President. */
+  beginRoundHistory(): void;
+  /** Record the Chancellor nominee on the open history draft. */
+  recordHistoryNomination(chancellorId: string): void;
+  /** Snapshot Ja/Nein (missing = Nein) after the vote window closes. */
+  recordHistoryVote(elected: boolean): void;
+  /** Record a veto both offices agreed to. */
+  recordHistoryVetoAgreed(): void;
+  /** Record an executive power on the open history draft. */
+  recordHistoryPower(kind: ExecutivePower, targetId?: string | null): void;
+  /** Push the open history draft into the finished list. */
+  finalizeRoundHistory(): void;
+  /**
+   * Hold briefly so Ravi can announce, then advance the presidency.
+   * `delayMs` defaults to the post-power breath.
+   */
+  scheduleAdvanceRound(delayMs?: number): void;
+  /** Hold briefly after a law, then open the executive power. */
+  scheduleGrantPower(power: ExecutivePower, delayMs?: number): void;
+  /** Hold briefly after a special election pick, then open the next nomination. */
+  scheduleSpecialElection(playerId: string, delayMs?: number): void;
 }
 
 /**

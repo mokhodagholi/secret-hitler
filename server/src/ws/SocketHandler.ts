@@ -70,6 +70,8 @@ export class SocketHandler {
   private readonly nominationTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room executive-power deadline timers. */
   private readonly specialPowerTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per-room announce-breath deadline timers. */
+  private readonly breathTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room table kick-vote deadline timers. */
   private readonly kickVoteTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Per-room public-table must-choose deadline timers. */
@@ -361,6 +363,14 @@ export class SocketHandler {
       }, Math.max(0, endsAt - Date.now()));
       this.specialPowerTimers.set(room.id, timer);
     });
+    engine.on('breathTimerChanged', ({ endsAt }) => {
+      this.stopBreathTimer(room.id);
+      if (endsAt == null) return;
+      const timer = setTimeout(() => {
+        this.repo.get(room.id)?.engine.resolveBreathTimeout();
+      }, Math.max(0, endsAt - Date.now()));
+      this.breathTimers.set(room.id, timer);
+    });
     engine.on('kickVoteTimerChanged', ({ endsAt }) => {
       this.stopKickVoteTimer(room.id);
       if (endsAt == null) return;
@@ -495,6 +505,11 @@ export class SocketHandler {
     this.armTimer(this.specialPowerTimers, room.id, room.specialPowerEndsAt, () => {
       this.repo.get(room.id)?.engine.resolveSpecialPowerTimeout();
     });
+    if (room.pendingBreath) {
+      this.armTimer(this.breathTimers, room.id, room.pendingBreath.endsAt, () => {
+        this.repo.get(room.id)?.engine.resolveBreathTimeout();
+      });
+    }
     if (room.startChoice) {
       this.armTimer(this.startChoiceTimers, room.id, room.startChoice.endsAt, () => {
         this.repo.get(room.id)?.engine.resolveStartChoiceTimeout();
@@ -587,6 +602,14 @@ export class SocketHandler {
     if (timer) {
       clearTimeout(timer);
       this.specialPowerTimers.delete(roomId);
+    }
+  }
+
+  private stopBreathTimer(roomId: string): void {
+    const timer = this.breathTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.breathTimers.delete(roomId);
     }
   }
 
@@ -1009,6 +1032,7 @@ export class SocketHandler {
     this.stopLegislativeTimer(roomId);
     this.stopNominationTimer(roomId);
     this.stopSpecialPowerTimer(roomId);
+    this.stopBreathTimer(roomId);
     this.stopKickVoteTimer(roomId);
     this.stopStartChoiceTimer(roomId);
     this.cancelHostGrace(roomId);

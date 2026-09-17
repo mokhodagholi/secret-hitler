@@ -1,0 +1,23 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.stage {
+  @include overlay-cover;
+  z-index: 94;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.seal {
+  width: min(88px, 22vw);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  opacity: 0;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}

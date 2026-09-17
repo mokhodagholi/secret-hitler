@@ -449,4 +449,21 @@ describe('play-game HTTP', () => {
     });
     expect(refused.status).toBe(403);
   });
+
+  it('Should open a test table without initData when allowDevPlay is on', async () => {
+    const { app, repo } = await buildServer({ allowDevPlay: true });
+    const seated = await httpJson<JoinRoomResponse>(app, 'POST', '/api/play-game', {
+      seat: 1,
+    });
+    expect(seated.status).toBe(200);
+    expect(seated.body.playerId).toBeTruthy();
+    expect(repo.get(seated.body.roomId)?.room.phase).not.toBe('lobby');
+    expect(repo.listPublic()).toEqual([]);
+  });
+
+  it('Should refuse unauthenticated play-game when allowDevPlay is off', async () => {
+    const { app } = await buildServer({ allowDevPlay: false });
+    const refused = await httpJson(app, 'POST', '/api/play-game', { seat: 1 });
+    expect(refused.status).toBe(401);
+  });
 });

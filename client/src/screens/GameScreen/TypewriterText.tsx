@@ -4,15 +4,19 @@ import { typeDelayMs } from './typewriter';
 
 export interface TypewriterTextProps {
   text: string;
+  /** Spoken / catalog length for this line — typing finishes with the voice. */
+  durationMs?: number;
 }
 
 const INSTANT =
   import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test';
 
+const FALLBACK_DURATION_MS = 1_200;
+
 /**
  * Types the Ravi line on. Motion-off and tests jump to the finished string
  * so the header never lags the table. Line changes clear instantly — no
- * rub-out exit — then type the next line.
+ * rub-out exit — then type the next line paced to {@link durationMs}.
  */
 export function TypewriterText(props: TypewriterTextProps) {
   const { animation } = useApp();
@@ -22,10 +26,12 @@ export function TypewriterText(props: TypewriterTextProps) {
 
   createEffect(() => {
     const target = props.text;
-    if (instant()) {
+    const requested = props.durationMs ?? FALLBACK_DURATION_MS;
+    if (instant() || requested <= 0) {
       setShown(target);
       return;
     }
+    const durationMs = Math.max(400, requested);
 
     let cancelled = false;
     const from = untrack(shown);
@@ -39,7 +45,7 @@ export function TypewriterText(props: TypewriterTextProps) {
         built.push(incoming[index]);
         setShown(built.join(''));
         if (index < incoming.length - 1) {
-          await animation.hold(typeDelayMs(index, incoming.length));
+          await animation.hold(typeDelayMs(index, incoming.length, durationMs));
         }
       }
     })();

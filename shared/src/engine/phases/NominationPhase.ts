@@ -14,6 +14,7 @@ export class NominationPhase implements GamePhase {
     const room = this.host.room;
     room.chancellorId = null;
     room.votes.clear();
+    this.host.beginRoundHistory();
     this.host.openDiscussion();
   }
 
@@ -54,6 +55,9 @@ export class NominationPhase implements GamePhase {
     if (playerId !== room.presidentId) {
       return err('INVALID_ACTION', 'Only the President can nominate.');
     }
+    if (Date.now() < room.nominationStartedAt) {
+      return err('INVALID_ACTION', 'Wait for the table to settle.');
+    }
     const target = room.findPlayer(command.targetId);
     if (!target || !target.isAlive || !target.connected || target.id === playerId) {
       return err('INVALID_ACTION', 'That player cannot be nominated.');
@@ -63,6 +67,7 @@ export class NominationPhase implements GamePhase {
     }
 
     room.chancellorId = target.id;
+    this.host.recordHistoryNomination(target.id);
     this.host.transitionTo(Phase.Voting);
     this.host.log('nominated', {
       president: room.findPlayer(playerId)?.name ?? '',

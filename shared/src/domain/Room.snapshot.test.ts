@@ -19,6 +19,32 @@ describe('Room snapshot', () => {
       needed: 2,
     };
     room.spentKickRequestIds.add(players[0].id);
+    room.roundHistory = [
+      {
+        round: 1,
+        presidentId: players[0].id,
+        presidentName: players[0].name,
+        chancellorId: players[1].id,
+        chancellorName: players[1].name,
+        ballots: [
+          {
+            playerId: players[0].id,
+            name: players[0].name,
+            vote: 'ja',
+            abstained: false,
+          },
+        ],
+        ja: 1,
+        nein: 0,
+        elected: true,
+        nominationFailed: false,
+        vetoAgreed: false,
+        chaos: false,
+        enacted: 'liberal',
+        power: null,
+      },
+    ];
+    room.nextRoundNumber = 2;
     const peek = room.deck.peekTop(3);
     room.peekedPolicies = peek;
 
@@ -41,6 +67,9 @@ describe('Room snapshot', () => {
     expect(restored.kickVote?.votes.get(players[0].id)).toBe(true);
     expect(restored.kickVote?.needed).toBe(2);
     expect([...restored.spentKickRequestIds]).toEqual([players[0].id]);
+    expect(restored.roundHistory).toHaveLength(1);
+    expect(restored.roundHistory[0]?.enacted).toBe('liberal');
+    expect(restored.nextRoundNumber).toBe(2);
     expect(restored.peekedPolicies).toEqual(peek);
     expect(restored.deck.drawCount).toBe(room.deck.drawCount);
     expect(restored.deck.discardCount).toBe(room.deck.discardCount);

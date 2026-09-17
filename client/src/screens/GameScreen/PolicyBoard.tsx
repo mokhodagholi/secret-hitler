@@ -1,7 +1,11 @@
 import { Index, Show } from 'solid-js';
-import type { BoardState } from '@secret-hitler/shared';
+import {
+  type BoardState,
+  type ExecutivePower,
+  powerForFascistPolicy,
+} from '@secret-hitler/shared';
 import type { FormatMessage } from '../../i18n';
-import { POLICY_FACE } from '../../assets/cards';
+import { POLICY_FACE, POWER_SEAL } from '../../assets/cards';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
@@ -9,6 +13,8 @@ import styles from './PolicyBoard.module.scss';
 
 export interface PolicyBoardProps {
   board: BoardState;
+  /** Living + dead seats — powers follow the seated count at deal. */
+  playerCount: number;
   formatMessage: FormatMessage;
 }
 
@@ -18,10 +24,14 @@ const FASCIST_SLOTS = 5;
 
 /**
  * Liberal and Fascist tracks, using the painted board art. Enacted policy
- * cards sit in the printed wells.
+ * cards sit in the printed wells. Empty Fascist wells that grant a power
+ * show that seal until a law covers them.
  */
 export function PolicyBoard(props: PolicyBoardProps) {
   const { formatMessage } = props;
+
+  const sealFor = (index: number): ExecutivePower | null =>
+    powerForFascistPolicy(props.playerCount, index + 1);
 
   return (
     <div class={styles.board}>
@@ -68,6 +78,11 @@ export function PolicyBoard(props: PolicyBoardProps) {
                   data-policy-party="fascist"
                   data-policy-well={`fascist-${index}`}
                   data-filled={index < props.board.fascistPolicies ? '' : undefined}
+                  data-power-seal={
+                    index >= props.board.fascistPolicies && sealFor(index)
+                      ? sealFor(index)!
+                      : undefined
+                  }
                 >
                   <Show when={index < props.board.fascistPolicies}>
                     <WarmImg
@@ -75,6 +90,22 @@ export function PolicyBoard(props: PolicyBoardProps) {
                       src={POLICY_FACE.fascist}
                       alt=""
                     />
+                  </Show>
+                  <Show
+                    when={
+                      index >= props.board.fascistPolicies
+                        ? sealFor(index)
+                        : false
+                    }
+                  >
+                    {(power) => (
+                      <WarmImg
+                        class={styles.slotSeal}
+                        src={POWER_SEAL[power()]}
+                        alt=""
+                        data-board-seal={power()}
+                      />
+                    )}
                   </Show>
                 </span>
               )}

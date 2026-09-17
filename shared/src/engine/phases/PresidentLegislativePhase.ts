@@ -1,4 +1,4 @@
-import { LEGISLATIVE_DEAL_MS, Phase } from '../../types/GameState';
+import { BREATH_AFTER_VOTE_MS, LEGISLATIVE_DEAL_MS, Phase } from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import type { GamePhase, PhaseHost } from './GamePhase';
@@ -13,7 +13,8 @@ export class PresidentLegislativePhase implements GamePhase {
   enter(): void {
     const room = this.host.room;
     room.drawnPolicies = room.deck.drawTiles(3);
-    this.host.openLegislativeTimer(LEGISLATIVE_DEAL_MS);
+    // Vote announce + card flight before the choice clock starts.
+    this.host.openLegislativeTimer(BREATH_AFTER_VOTE_MS + LEGISLATIVE_DEAL_MS);
     this.host.log('presidentDraws');
     this.host.changed();
   }
@@ -29,6 +30,9 @@ export class PresidentLegislativePhase implements GamePhase {
     const room = this.host.room;
     if (playerId !== room.presidentId) {
       return err('INVALID_ACTION', 'You are not discarding a policy.');
+    }
+    if (Date.now() < room.legislativeStartedAt) {
+      return err('INVALID_ACTION', 'Wait for the table to settle.');
     }
     if (command.index < 0 || command.index >= room.drawnPolicies.length) {
       return err('INVALID_ACTION', 'Invalid policy choice.');

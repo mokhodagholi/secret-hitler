@@ -144,6 +144,7 @@ These would make the table noisy or leak information.
 | Who voted Ja / Nein | Ballots stay anonymous. One shared tally sound. |
 | Colour of a burned / drawn law | Private hands stay silent on colour. |
 | Settings toggles, rules pages | No ceremony. |
+| Intro / look onboarding | Own Suno catalog (`onboard-*`, `look-theme`). Prompts in [`background-music.md`](./background-music.md). Do not reuse table foley. |
 
 ---
 

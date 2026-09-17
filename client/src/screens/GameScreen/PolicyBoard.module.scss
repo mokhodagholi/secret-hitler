@@ -79,3 +79,17 @@ $stack-gap: 8px;
   user-select: none;
   -webkit-user-drag: none;
 }
+
+.slotSeal {
+  width: 72%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  opacity: 0.92;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}

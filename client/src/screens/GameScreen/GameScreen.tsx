@@ -1,6 +1,7 @@
 import { For, Show, createEffect, createRenderEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import {
   Phase,
+  type ExecutivePower,
   type Policy,
   type PublicPlayer,
   type Vote,
@@ -20,6 +21,7 @@ import { TableSeat } from './TableSeat';
 import { ChatPanel } from './ChatPanel';
 import { PolicyBoard } from './PolicyBoard';
 import { PlayersModal } from './PlayersModal';
+import { RoundHistoryModal } from './RoundHistoryModal';
 import { PlayerActionsMenu } from './PlayerActionsMenu';
 import { GameMenu } from './GameMenu';
 import { LegislativeModal } from './LegislativeModal';
@@ -34,10 +36,15 @@ import { ChancellorReveal } from './ChancellorReveal';
 import { InvestigateOverlay } from './InvestigateOverlay';
 import { PeekOverlay } from './PeekOverlay';
 import { YouDiedOverlay } from './YouDiedOverlay';
+import { VetoBurnOverlay } from './VetoBurnOverlay';
+import { SealFlightOverlay } from './SealFlightOverlay';
+import { OfficeHandoffOverlay } from './OfficeHandoffOverlay';
 import { RaviNarrator } from './RaviNarrator';
 import { Spotlight } from './Spotlight';
+import { tutorialYou } from '../../tutorial/cast';
+import { effectForLookTarget } from '../../tutorial/lookView';
 import { tableSeatOrder } from './tableSeats';
-import { emptyWell, flyToTarget } from './cardFlight';
+import { emptyWell, flyToTarget, offsetFrom, pileEl } from './cardFlight';
 import styles from './GameScreen.module.scss';
 
 /**
@@ -56,11 +63,19 @@ export function GameScreen() {
     return game.view();
   };
   const onboarding = () => tutorial.active();
+
+  createEffect(() => {
+    if (!tutorial.looking()) return;
+    const effect = effectForLookTarget(tutorial.target());
+    if (effect) sound.play(effect);
+  });
+
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [playersOpen, setPlayersOpen] = createSignal(false);
+  const [historyOpen, setHistoryOpen] = createSignal(false);
   const [chatHeight, setChatHeight] = createSignal(280);
   const [inspectingRole, setInspectingRole] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
@@ -74,7 +89,14 @@ export function GameScreen() {
 
   const CEREMONY_GRACE_MS = CEREMONY_MS + 2_000;
   const [ceremonyOpen, setCeremonyOpen] = createSignal(false);
-  const [hideRevealedVotes, setHideRevealedVotes] = createSignal(false);
+  const [hideBallots, setHideBallots] = createSignal(false);
+  const [heldBallots, setHeldBallots] = createSignal<Record<string, Vote | 'back'>>(
+    {},
+  );
+  const BALLOT_HOLD_MS = 2_000;
+  let ballotHideTimer: ReturnType<typeof setTimeout> | undefined;
+  let ballotHideFromBoard = false;
+  let lastBallotPhase: string | null = null;
   let ceremonyRoomId: string | null = null;
   let ceremonyDecided = false;
 
@@ -92,21 +114,69 @@ export function GameScreen() {
     if (state.phase === Phase.Lobby) nav.returnTo('waiting-room');
   });
 
-  const VOTE_REVEAL_HOLD_MS = 5_000;
+  function cancelBallotHide(): void {
+    window.clearTimeout(ballotHideTimer);
+    ballotHideTimer = undefined;
+    ballotHideFromBoard = false;
+    setHideBallots(false);
+  }
+
+  function scheduleBallotHide(fromBoard = false): void {
+    if (ballotHideFromBoard && !fromBoard) return;
+    if (fromBoard) ballotHideFromBoard = true;
+    window.clearTimeout(ballotHideTimer);
+    ballotHideTimer = window.setTimeout(() => {
+      setHideBallots(true);
+      setHeldBallots({});
+      ballotHideFromBoard = false;
+      ballotHideTimer = undefined;
+    }, BALLOT_HOLD_MS);
+  }
+
   createEffect(() => {
-    if (onboarding()) {
-      setHideRevealedVotes(false);
+    const state = view();
+    if (!state || onboarding()) {
+      cancelBallotHide();
+      setHeldBallots({});
+      lastBallotPhase = state?.phase ?? null;
       return;
     }
-    const revealed = view()?.players.some((player) => player.vote != null) === true;
-    if (!revealed) {
-      setHideRevealedVotes(false);
-      return;
+    if (state.phase === Phase.Voting) {
+      cancelBallotHide();
+      if (!state.players.some((player) => player.hasVoted || player.vote != null)) {
+        setHeldBallots({});
+      }
     }
-    setHideRevealedVotes(false);
-    const timer = window.setTimeout(() => setHideRevealedVotes(true), VOTE_REVEAL_HOLD_MS);
-    onCleanup(() => window.clearTimeout(timer));
+    const next: Record<string, Vote | 'back'> = { ...heldBallots() };
+    let saw = false;
+    for (const player of state.players) {
+      if (player.vote != null) {
+        next[player.id] = player.vote;
+        saw = true;
+      } else if (player.hasVoted) {
+        next[player.id] = 'back';
+        saw = true;
+      }
+    }
+    if (saw) {
+      const previous = heldBallots();
+      const changed =
+        Object.keys(next).some((id) => next[id] !== previous[id]) ||
+        Object.keys(previous).length !== Object.keys(next).length;
+      if (changed) setHeldBallots(next);
+    }
+    const previousPhase = lastBallotPhase;
+    lastBallotPhase = state.phase;
+    if (
+      state.phase === Phase.Nomination &&
+      (previousPhase === Phase.Voting ||
+        previousPhase === Phase.ChancellorLegislative ||
+        previousPhase === Phase.PresidentLegislative)
+    ) {
+      scheduleBallotHide();
+    }
   });
+  onCleanup(() => window.clearTimeout(ballotHideTimer));
 
   onMount(() => {
     const handleBack = () => {
@@ -128,6 +198,10 @@ export function GameScreen() {
       }
       if (playersOpen()) {
         setPlayersOpen(false);
+        return;
+      }
+      if (historyOpen()) {
+        setHistoryOpen(false);
         return;
       }
       setConfirmingLeave((open) => !open);
@@ -165,7 +239,7 @@ export function GameScreen() {
   });
 
   createEffect(() => {
-    if (onboarding()) return;
+    if (tutorial.looking()) return;
     const state = view();
     if (!state) return;
     if (state.roomId !== ceremonyRoomId) {
@@ -175,7 +249,9 @@ export function GameScreen() {
     }
     if (ceremonyDecided) return;
     now();
-    const role = game.role() ?? state.you.role;
+    const role = tutorial.playing()
+      ? (tutorial.role() ?? state.you.role)
+      : (game.role() ?? state.you.role);
     const start = state.discussionDeadline?.startedAt ?? 0;
     const looksLikeStart =
       state.phase === Phase.Nomination &&
@@ -211,6 +287,7 @@ export function GameScreen() {
   // the policy total grew within the same room. (lastEnacted caps at 5 entries,
   // so its length is not a reliable counter.)
   const [revealedPolicy, setRevealedPolicy] = createSignal<Policy | null>(null);
+  const [chaosReveal, setChaosReveal] = createSignal(false);
   // Server counts update immediately; the well stays empty until the card lands.
   const [shownLiberal, setShownLiberal] = createSignal(0);
   const [shownFascist, setShownFascist] = createSignal(0);
@@ -224,6 +301,26 @@ export function GameScreen() {
   } | null>(null);
   let seenInvestigateLog = 0;
   let sawInvestigateBaseline = false;
+  const [vetoBurn, setVetoBurn] = createSignal<{ chancellorId: string } | null>(
+    null,
+  );
+  let seenVetoLog = 0;
+  let sawVetoBaseline = false;
+  const [sealFlight, setSealFlight] = createSignal<{
+    power: ExecutivePower;
+    wellIndex: number;
+    presidentId: string;
+  } | null>(null);
+  let seenActivePower: ExecutivePower | null | undefined = undefined;
+  const [officeHandoff, setOfficeHandoff] = createSignal<{
+    fromId: string | null;
+    toId: string;
+    kind: 'president' | 'chancellor';
+    special: boolean;
+  } | null>(null);
+  let seenPresidentId: string | null | undefined = undefined;
+  let seenChancellorId: string | null | undefined = undefined;
+  let pendingSpecialHandoff = false;
   const [killedOpen, setKilledOpen] = createSignal(false);
   let sawYouAlive = false;
   const [showRoles, setShowRoles] = createSignal(false);
@@ -250,8 +347,14 @@ export function GameScreen() {
       seenRoomId = state.roomId;
       seenPolicyTotal = total;
       seenElectionTracker = tracker;
+      seenActivePower = state.activePower;
+      seenPresidentId = state.board.president;
+      seenChancellorId = state.board.chancellor;
       setShownLiberal(state.board.liberalPolicies);
       setShownFascist(state.board.fascistPolicies);
+      setVetoBurn(null);
+      setSealFlight(null);
+      setOfficeHandoff(null);
       return;
     }
     const previousTotal = seenPolicyTotal ?? total;
@@ -260,9 +363,23 @@ export function GameScreen() {
     seenElectionTracker = tracker;
     const latest = state.board.lastEnacted[state.board.lastEnacted.length - 1];
     if (total > previousTotal && latest) {
-      revealEnactedPolicy(latest);
-      void ravi.speak(latest === 'liberal' ? 'law.liberal' : 'law.fascist');
-      sound.play(latest === 'liberal' ? 'law-liberal' : 'law-fascist');
+      // Chaos: tracker resets in the same snapshot as the top-of-deck law.
+      const chaos = tracker < previousTracker;
+      revealEnactedPolicy(latest, chaos);
+      void ravi.speak(
+        chaos
+          ? 'chaos.enacted'
+          : latest === 'liberal'
+            ? 'law.liberal'
+            : 'law.fascist',
+      );
+      sound.play(
+        chaos
+          ? 'chaos-enact'
+          : latest === 'liberal'
+            ? 'law-liberal'
+            : 'law-fascist',
+      );
     }
     // A failed government jolts the board (a reset to 0 is chaos, not a failure).
     if (tracker > previousTracker) {
@@ -320,6 +437,103 @@ export function GameScreen() {
       });
     }
     seenInvestigateLog = entries.length;
+  });
+
+  createEffect(() => {
+    const state = view();
+    const entries = game.logEntries();
+    if (!state) return;
+    if (!sawVetoBaseline) {
+      seenVetoLog = entries.length;
+      sawVetoBaseline = true;
+      return;
+    }
+    if (entries.length <= seenVetoLog) return;
+    for (const entry of entries.slice(seenVetoLog)) {
+      if (entry.code !== 'vetoAgreed') continue;
+      const chancellorId =
+        state.board.chancellor ??
+        state.roundHistory[state.roundHistory.length - 1]?.chancellorId ??
+        null;
+      if (!chancellorId) continue;
+      setVetoBurn({ chancellorId });
+    }
+    seenVetoLog = entries.length;
+  });
+
+  createEffect(() => {
+    const state = view();
+    if (!state) {
+      seenActivePower = undefined;
+      return;
+    }
+    const power = state.activePower;
+    if (seenActivePower === undefined) {
+      seenActivePower = power;
+      return;
+    }
+    const previous = seenActivePower;
+    seenActivePower = power;
+    if (previous === 'specialElection' && power == null) {
+      pendingSpecialHandoff = true;
+    }
+    if (power && previous == null && state.board.president) {
+      const wellIndex = Math.max(0, state.board.fascistPolicies - 1);
+      setSealFlight({
+        power,
+        wellIndex,
+        presidentId: state.board.president,
+      });
+    }
+  });
+
+  createEffect(() => {
+    const state = view();
+    if (!state) {
+      seenPresidentId = undefined;
+      return;
+    }
+    const next = state.board.president;
+    if (seenPresidentId === undefined) {
+      seenPresidentId = next;
+      return;
+    }
+    const previous = seenPresidentId;
+    seenPresidentId = next;
+    if (!next || next === previous) return;
+    // Opening night names the first President via ceremony — skip placard there.
+    if (ceremonyOpen()) return;
+    const special = pendingSpecialHandoff;
+    pendingSpecialHandoff = false;
+    setOfficeHandoff({
+      fromId: previous,
+      toId: next,
+      kind: 'president',
+      special,
+    });
+  });
+
+  createEffect(() => {
+    const state = view();
+    if (!state) {
+      seenChancellorId = undefined;
+      return;
+    }
+    const next = state.board.chancellor;
+    if (seenChancellorId === undefined) {
+      seenChancellorId = next;
+      return;
+    }
+    const previous = seenChancellorId;
+    seenChancellorId = next;
+    if (!next || next === previous) return;
+    if (ceremonyOpen()) return;
+    setOfficeHandoff({
+      fromId: previous ?? state.board.president,
+      toId: next,
+      kind: 'chancellor',
+      special: false,
+    });
   });
 
   createEffect(() => {
@@ -382,18 +596,60 @@ export function GameScreen() {
     if (previous == null) setShowRoles(true);
   });
 
-  function revealEnactedPolicy(policy: Policy): void {
+  function revealEnactedPolicy(policy: Policy, chaos = false): void {
     void animation.enqueue(async () => {
+      setChaosReveal(chaos);
       setRevealedPolicy(policy);
-      await animation.play(revealCard, 'policy-reveal');
+      await waitFrames(2);
+      if (chaos && revealCard) {
+        const start = offsetFrom(revealCard, pileEl('draw'));
+        if (start) {
+          sound.play('policy-draw');
+          await animation.playCustom(
+            revealCard,
+            [
+              {
+                opacity: 1,
+                transform: `translate(${start.x}px, ${start.y}px) scale(0.32) rotate(-14deg)`,
+              },
+              {
+                opacity: 1,
+                transform: 'translate(0px, 0px) scale(1.06) rotate(0deg)',
+                offset: 0.72,
+              },
+              { opacity: 1, transform: 'translate(0px, 0px) scale(1) rotate(0deg)' },
+            ],
+            { duration: 700, easing: 'ease-out' },
+          );
+        } else {
+          await animation.play(revealCard, 'policy-reveal');
+        }
+      } else {
+        await animation.play(revealCard, 'policy-reveal');
+      }
       await animation.hold(700);
       await flyToTarget(animation, revealCard, emptyWell(policy), {
         landScale: 0.46,
         duration: 620,
       });
       setRevealedPolicy(null);
+      setChaosReveal(false);
       if (policy === 'liberal') setShownLiberal((count) => count + 1);
       else setShownFascist((count) => count + 1);
+      scheduleBallotHide(true);
+    });
+  }
+
+  function waitFrames(count: number): Promise<void> {
+    return new Promise((resolve) => {
+      const step = (left: number) => {
+        if (left <= 0) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(() => step(left - 1));
+      };
+      step(count);
     });
   }
 
@@ -406,6 +662,7 @@ export function GameScreen() {
     const state = view();
     return (
       inNomination() &&
+      choiceOpen(state?.nominationDeadline) &&
       !state?.kickVote &&
       iAmPresident() &&
       player.isAlive &&
@@ -413,6 +670,40 @@ export function GameScreen() {
       player.id !== state!.you.id &&
       !state!.ineligibleChancellors.includes(player.id)
     );
+  };
+
+  /** Eligible seats sway while Ravi introduces the nomination (not yet tappable). */
+  const nominationAwaiting = (player: PublicPlayer) => {
+    const state = view();
+    if (!state || !inNomination() || choiceOpen(state.nominationDeadline)) return false;
+    if (!iAmPresident() || state.kickVote) return false;
+    return (
+      player.isAlive &&
+      player.connected &&
+      player.id !== state.you.id &&
+      !state.ineligibleChancellors.includes(player.id)
+    );
+  };
+
+  /** Eligible power targets sway while Ravi introduces the executive power. */
+  const powerAwaiting = (player: PublicPlayer) => {
+    const state = view();
+    if (
+      !state ||
+      state.kickVote ||
+      state.phase !== Phase.SpecialPower ||
+      !iAmPresident() ||
+      choiceOpen(state.specialPowerDeadline)
+    ) {
+      return false;
+    }
+    if (!player.isAlive || player.id === state.you.id) return false;
+    const power = state.activePower;
+    if (power === 'investigate') {
+      return state.you.investigation == null && player.party == null;
+    }
+    if (power === 'specialElection') return player.connected;
+    return power === 'execution';
   };
 
   const termLocked = (player: PublicPlayer) => {
@@ -424,6 +715,14 @@ export function GameScreen() {
       player.id !== state!.you.id &&
       state!.ineligibleChancellors.includes(player.id)
     );
+  };
+
+  /** Spectators (and President) see who cannot be Chancellor this round. */
+  const nominationDimmed = (player: PublicPlayer) => {
+    const state = view();
+    if (!state || !inNomination() || !player.isAlive) return false;
+    if (player.id === state.board.president) return true;
+    return state.ineligibleChancellors.includes(player.id);
   };
 
   const awayFromTable = (player: PublicPlayer) => {
@@ -439,7 +738,13 @@ export function GameScreen() {
 
   const canPowerTarget = (player: PublicPlayer) => {
     const state = view();
-    if (!state || state.kickVote || state.phase !== Phase.SpecialPower || !iAmPresident()) {
+    if (
+      !state ||
+      state.kickVote ||
+      state.phase !== Phase.SpecialPower ||
+      !iAmPresident() ||
+      !choiceOpen(state.specialPowerDeadline)
+    ) {
       return false;
     }
     if (!player.isAlive || player.id === state.you.id) return false;
@@ -466,17 +771,20 @@ export function GameScreen() {
 
   const seatSelectable = (player: PublicPlayer) => {
     if (tutorial.looking()) return false;
-    if (tutorial.playing()) return tutorial.canNominate(player.id);
+    if (tutorial.playing()) return tutorial.canSelectSeat(player.id);
     return canNominate(player) || canPowerTarget(player);
   };
 
+  function playYou() {
+    return tutorialYou(
+      settings.settings.profileName.trim() || formatMessage('game.you'),
+      settings.settings.avatar,
+      formatMessage,
+    );
+  }
+
   function continueLook(): void {
-    if (tutorial.advanceLook()) {
-      tutorial.startFive({
-        name: settings.settings.profileName.trim() || formatMessage('game.you'),
-        avatar: settings.settings.avatar,
-      });
-    }
+    if (tutorial.advanceLook()) tutorial.startPlay(playYou(), 5);
   }
 
   function leaveLook(): void {
@@ -508,15 +816,12 @@ export function GameScreen() {
   function nominate(player: PublicPlayer): void {
     game.sendCommand({ kind: 'nominateChancellor', targetId: player.id });
     setPlayersOpen(false);
+    setHistoryOpen(false);
   }
 
-  const voters = () =>
-    view()?.players.filter((player) => player.isAlive && player.connected) ?? [];
-  const votedCount = () => voters().filter((player) => player.hasVoted).length;
-  const voteSecondsLeft = () => {
-    const deadline = view()?.voteDeadline;
-    return deadline ? Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000)) : 0;
-  };
+  /** Choice clocks stay closed while Ravi's prompt hold is running. */
+  const choiceOpen = (deadline: { startedAt: number; endsAt: number } | null | undefined) =>
+    deadline != null && now() >= deadline.startedAt;
 
   const secondsUntil = (endsAt: number) =>
     Math.max(0, Math.ceil((endsAt - clockMs()) / 1000));
@@ -543,11 +848,18 @@ export function GameScreen() {
     view()?.phase === Phase.Nomination && view()?.nominationDeadline != null;
 
   const isLegislative = () => {
-    const phase = view()?.phase;
-    return (
-      phase === Phase.PresidentLegislative ||
-      phase === Phase.ChancellorLegislative
-    );
+    const state = view();
+    if (!state) return false;
+    const phase = state.phase;
+    if (
+      phase !== Phase.PresidentLegislative &&
+      phase !== Phase.ChancellorLegislative
+    ) {
+      return false;
+    }
+    // Post-law announce breath — keep the choose UI closed for the reveal.
+    if (state.breathDeadline) return false;
+    return true;
   };
   const myPolicies = () => view()?.you.policies ?? [];
   const legislativeSecondsLeft = () => {
@@ -559,6 +871,7 @@ export function GameScreen() {
   const specialPowerSecondsLeft = () => {
     const deadline = view()?.specialPowerDeadline;
     if (!deadline) return 0;
+    if (now() < deadline.startedAt) return 0;
     return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
   };
 
@@ -567,6 +880,7 @@ export function GameScreen() {
       continueLook();
       return;
     }
+    if (!choiceOpen(view()?.legislativeDeadline)) return;
     if (tutorial.playing()) {
       const phase = view()?.phase;
       if (phase === Phase.PresidentLegislative) {
@@ -605,6 +919,7 @@ export function GameScreen() {
     | 'over'
     | 'menu'
     | 'players'
+    | 'history'
     | 'chancellorReveal'
     | 'investigate'
     | 'vote'
@@ -622,9 +937,12 @@ export function GameScreen() {
     if (killedOpen()) return 'killed';
     if (confirmingLeave()) return 'leave';
     const state = view();
-    if (state?.phase === Phase.GameOver && state.winner) return 'over';
+    if (state?.phase === Phase.GameOver && state.winner && !onboarding()) {
+      return 'over';
+    }
     if (menuOpen()) return 'menu';
     if (playersOpen()) return 'players';
+    if (historyOpen()) return 'history';
     if (loyaltyCheck()) return 'investigate';
     // Look step: proposed government ticket, then the Ja / Nein cards.
     if (tutorial.looking() && tutorial.target() === 'government') {
@@ -634,8 +952,16 @@ export function GameScreen() {
     if (state?.phase === Phase.Voting) return 'vote';
     if (isLegislative() && state?.vetoRequested) return 'veto';
     if (isLegislative()) return 'legislative';
-    if (state?.phase === Phase.SpecialPower && state.activePower) return 'power';
-    if (ceremonyOpen() && game.role()) return 'night';
+    if (
+      state?.phase === Phase.SpecialPower &&
+      state.activePower &&
+      !state.breathDeadline
+    ) {
+      return 'power';
+    }
+    if (ceremonyOpen() && (tutorial.role() ?? game.role() ?? state?.you.role)) {
+      return 'night';
+    }
     return null;
   }
 
@@ -780,7 +1106,11 @@ export function GameScreen() {
     if (tutorial.playing()) {
       if (tutorial.lock() === 'nominate') {
         tutorial.handlePlay({ kind: 'nominateChancellor', targetId: player.id });
-      } else if (tutorial.lock() === 'execute') {
+      } else if (
+        tutorial.lock() === 'execute' ||
+        tutorial.lock() === 'investigate' ||
+        tutorial.lock() === 'specialElection'
+      ) {
         tutorial.handlePlay({ kind: 'useSpecialPower', targetId: player.id });
       }
       return;
@@ -841,12 +1171,25 @@ export function GameScreen() {
     nav.returnTo('play');
   }
 
+  function skipDevWait(): void {
+    ravi.skip();
+    game.sendCommand({ kind: 'skipTimer' });
+  }
+
   function seatBallot(player: PublicPlayer): Vote | 'back' | null {
-    if (hideRevealedVotes()) return null;
+    if (hideBallots()) return null;
     if (player.vote != null) return player.vote;
     if (player.hasVoted) return 'back';
-    return null;
+    return heldBallots()[player.id] ?? null;
   }
+
+  const suppressOffice = (player: PublicPlayer) => {
+    const hand = officeHandoff();
+    if (!hand || hand.toId !== player.id) return false;
+    return hand.kind === 'president'
+      ? player.isPresident
+      : player.isChancellor;
+  };
 
   return (
     <Screen fill>
@@ -859,7 +1202,7 @@ export function GameScreen() {
               [styles.sceneLooking]: onboarding(),
             }}
             style={{
-              '--chat-panel-height': `${onboarding() ? 0 : chatHeight()}px`,
+              '--chat-panel-height': `${tutorial.looking() ? 0 : chatHeight()}px`,
             }}
           >
             <GameEventHeader
@@ -868,6 +1211,7 @@ export function GameScreen() {
                   ? formatMessage(tutorial.headlineKey())
                   : (ravi.line() ?? helpMessage())
               }
+              durationMs={onboarding() ? undefined : ravi.lineDurationMs()}
             />
 
             <div class={styles.body}>
@@ -889,6 +1233,7 @@ export function GameScreen() {
                   liberalPolicies: shownLiberal(),
                   fascistPolicies: shownFascist(),
                 }}
+                playerCount={state().players.length}
                 formatMessage={formatMessage}
               />
 
@@ -901,6 +1246,9 @@ export function GameScreen() {
                         isYou={player.id === state().you.id}
                         isNext={player.id === nextPresidentId()}
                         selectable={seatSelectable(player)}
+                        awaitingPick={
+                          nominationAwaiting(player) || powerAwaiting(player)
+                        }
                         reportable={
                           canOpenPlayerMenu(player) && !seatSelectable(player)
                         }
@@ -909,9 +1257,11 @@ export function GameScreen() {
                           awayFromTable(player) ||
                           alreadyInvestigated(player)
                         }
+                        nominationDimmed={nominationDimmed(player)}
                         showPublicMarks={!ceremonyOpen()}
                         bubble={bubbleFor(player.id)}
                         ballot={seatBallot(player)}
+                        suppressOffice={suppressOffice(player)}
                         onSelect={() => onSeat(player)}
                         formatMessage={formatMessage}
                       />
@@ -923,33 +1273,16 @@ export function GameScreen() {
             <Show when={tableOverlay() === 'vote'}>
               <VotingOverlay
                 formatMessage={formatMessage}
-                prompt={formatMessage(
-                  iAmChancellor()
-                    ? 'game.votePromptYou'
-                    : iAmPresident()
-                      ? 'game.votePromptYouPresident'
-                      : 'game.votePrompt',
-                  {
-                    president: isolateBidi(ticketName(state().board.president)),
-                    chancellor: isolateBidi(ticketName(state().board.chancellor)),
-                  },
-                )}
                 presidentName={isolateBidi(ticketName(state().board.president))}
                 chancellorName={isolateBidi(ticketName(state().board.chancellor))}
                 presidentAvatar={playerAvatar(state().board.president)}
                 chancellorAvatar={playerAvatar(state().board.chancellor)}
                 canVote={
+                  choiceOpen(state().voteDeadline) &&
                   state().you.vote == null &&
                   (onboarding() || !!game.you()?.isAlive)
                 }
                 yourVote={state().you.vote}
-                votedCount={votedCount()}
-                totalVoters={voters().length}
-                youId={state().you.id}
-                showTimer
-                secondsLeft={voteSecondsLeft()}
-                startedAt={state().voteDeadline?.startedAt ?? Date.now()}
-                endsAt={state().voteDeadline?.endsAt ?? Date.now()}
                 onVote={castVote}
               />
             </Show>
@@ -992,7 +1325,7 @@ export function GameScreen() {
 
             </div>
 
-            <Show when={!onboarding()}>
+            <Show when={!tutorial.looking()}>
             <ChatPanel
               talkingAllowed={!ceremonyOpen()}
               actionLabel={
@@ -1013,25 +1346,43 @@ export function GameScreen() {
                   : undefined
               }
               onOpenPlayers={() => setPlayersOpen(true)}
+              onOpenHistory={() => setHistoryOpen(true)}
+              onSkipTimer={
+                import.meta.env.DEV &&
+                import.meta.env.MODE !== 'test' &&
+                state().adminPlay
+                  ? () => skipDevWait()
+                  : undefined
+              }
               onOpenMenu={() => setMenuOpen(true)}
               onHeightChange={setChatHeight}
             />
             </Show>
 
             <Show when={onboarding()}>
-              {/* Same role as ChatPanel: keep seats above the Skip / Continue bar. */}
-              <div class={styles.lookChromeSpacer} aria-hidden="true" />
+              <Show when={tutorial.looking()}>
+                <div class={styles.lookChromeSpacer} aria-hidden="true" />
+              </Show>
               <Spotlight
                 target={tutorial.target()}
+                lifted={tutorial.maskLifted()}
                 showContinue={
                   tutorial.looking() ||
+                  tutorial.lock() === 'delta' ||
+                  tutorial.lock() === 'night' ||
                   (tutorial.playing() && view()?.winner != null)
                 }
                 showPrevious={tutorial.looking() && tutorial.beat() > 0}
                 onPrevious={() => tutorial.retreatLook()}
                 onContinue={() => {
                   if (tutorial.looking()) continueLook();
-                  else if (tutorial.playing() && view()?.winner) leaveLook();
+                  else if (tutorial.lock() === 'delta') tutorial.acknowledgeDelta();
+                  else if (tutorial.lock() === 'night') {
+                    setCeremonyOpen(false);
+                    tutorial.finishNight();
+                  } else if (tutorial.playing() && view()?.winner) {
+                    if (!tutorial.continueLadder()) leaveLook();
+                  }
                 }}
                 onSkip={leaveLook}
                 formatMessage={formatMessage}
@@ -1064,6 +1415,7 @@ export function GameScreen() {
                   startedAt={state().discussionDeadline?.startedAt ?? Date.now()}
                   onDone={() => {
                     setCeremonyOpen(false);
+                    tutorial.finishNight();
                   }}
                 />
               )}
@@ -1083,8 +1435,45 @@ export function GameScreen() {
               {(policy) => (
                 <PolicyRevealOverlay
                   policy={policy()}
-                  label={formatMessage(`policyReveal.${policy()}`)}
+                  label={
+                    chaosReveal()
+                      ? formatMessage('ravi.chaos.enacted')
+                      : formatMessage(`policyReveal.${policy()}`)
+                  }
                   cardRef={(element) => (revealCard = element)}
+                />
+              )}
+            </Show>
+
+            <Show when={vetoBurn()}>
+              {(burn) => (
+                <VetoBurnOverlay
+                  chancellorId={burn().chancellorId}
+                  onDone={() => setVetoBurn(null)}
+                />
+              )}
+            </Show>
+
+            <Show when={sealFlight()}>
+              {(flight) => (
+                <SealFlightOverlay
+                  power={flight().power}
+                  wellIndex={flight().wellIndex}
+                  presidentId={flight().presidentId}
+                  onDone={() => setSealFlight(null)}
+                />
+              )}
+            </Show>
+
+            <Show when={officeHandoff()}>
+              {(hand) => (
+                <OfficeHandoffOverlay
+                  fromId={hand().fromId}
+                  toId={hand().toId}
+                  kind={hand().kind}
+                  special={hand().special}
+                  formatMessage={formatMessage}
+                  onDone={() => setOfficeHandoff(null)}
                 />
               )}
             </Show>
@@ -1248,6 +1637,13 @@ export function GameScreen() {
                 setReporting(player);
               }}
               onClose={() => setPlayersOpen(false)}
+            />
+
+            <RoundHistoryModal
+              open={tableOverlay() === 'history'}
+              rounds={state().roundHistory}
+              formatMessage={formatMessage}
+              onClose={() => setHistoryOpen(false)}
             />
 
             <Show when={playerMenu()}>

@@ -135,6 +135,16 @@ export function HomeScreen() {
             >
               <Icon name="gear" size={22} />
             </button>
+            <Show when={showDevOnboarding}>
+              <button
+                type="button"
+                class={styles.tool}
+                aria-label={formatMessage('home.checkOnboarding')}
+                onClick={openDevOnboarding}
+              >
+                <Icon name="hand" size={22} />
+              </button>
+            </Show>
             <button
               type="button"
               class={styles.guideChip}
@@ -157,19 +167,6 @@ export function HomeScreen() {
                 {formatMessage('home.history')}
               </span>
             </button>
-            <Show when={showDevOnboarding}>
-              <button
-                type="button"
-                class={styles.guideChip}
-                aria-label={formatMessage('home.checkOnboarding')}
-                onClick={openDevOnboarding}
-              >
-                <Icon name="hand" size={16} />
-                <span class={styles.guideLabel} dir="auto">
-                  {formatMessage('home.checkOnboarding')}
-                </span>
-              </button>
-            </Show>
           </div>
         </div>
 

@@ -15,8 +15,8 @@ describe('OnboardingIntroScreen', () => {
     harness.services.nav.navigate('onboarding');
     renderWithApp(() => <OnboardingIntroScreen />, harness);
 
-    expect(screen.getByText(en.onboard.piece.rolesTitle)).toBeTruthy();
-    expect(screen.getByText(en.onboard.piece.roles)).toBeTruthy();
+    expect(screen.getByText(en.onboard.piece.welcomeTitle)).toBeTruthy();
+    expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.continue })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
   });
@@ -72,7 +72,7 @@ describe('OnboardingIntroScreen', () => {
 
     expect(harness.services.tutorial.introBeat()).toBe(0);
     expect(harness.services.tutorial.introducing()).toBe(true);
-    expect(screen.getByText(en.onboard.piece.rolesTitle)).toBeTruthy();
+    expect(screen.getByText(en.onboard.piece.welcomeTitle)).toBeTruthy();
     expect(screen.getByText('1').parentElement?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       `1 / ${INTRO_SLIDES.length}`,
     );

@@ -87,20 +87,31 @@ snapshot of a room so a rejoin doesn't replay history.
 | Animation | Trigger |
 |---|---|
 | `screen-enter` | Every navigation — screen content rises in (`<Screen>`), paired with the swap-page sound |
-| `policy-reveal` → `policy-exit` | Policy total grew — centre-stage card sequence |
+| `policy-reveal` → well flight | Policy total grew — centre-stage card, or **chaos** from draw pile |
 | Deal backs (FLIP) | Game start — each face-down role card leaves the centre pile and flies to a `[data-seat-id]` seat, one after another |
 | `card-flip-in` | Your secret role card appears (night look) |
 | `pop-in` + `fade-in` | Voting overlay entrance |
-| `badge-pop` | President/Chancellor badge lands on a seat |
+| `badge-pop` | President/Chancellor office ribbon lands on a seat |
+| Office handoff ribbon | President or Chancellor changed — flies the previous seat's office anchor onto the next holder |
+| Power seal flight | `activePower` opens — seal lifts from Fascist well → President |
+| Veto burn | `vetoAgreed` — two backs Chancellor → discard |
 | `shake` | Failed election — the whole table jolts (tracker grew; a reset is not a failure) |
-| `card-flip-in` (staggered) | Game-over role cascade (`GameOverOverlay`) and the Policy Peek fan (`PowerPanel`) — `delay: index * step` + `fill: 'backwards'` to hold the hidden first frame through the delay |
+| `card-flip-in` (staggered) | Game-over role cascade (`GameOverOverlay`) and the Policy Peek fan (`PeekOverlay`) — `delay: index * step` + `fill: 'backwards'` to hold the hidden first frame through the delay |
 | `seat-death` | A player's execution — the seat swells, collapses and settles into its `.dead` styling |
 
 Hits that start on the same frame as these motions: [`docs/animation-sounds.md`](../../docs/animation-sounds.md).
 
-Planned (see CLAUDE.md "Animation Sequences to Build"): vote-reveal
-simultaneous flip (needs the server to disclose per-player votes at
-resolution — protocol change).
+Seat ballots stay on each portrait (large); they flip Ja/Nein when votes
+become public — no centre pile. They stay through the legislative window
+and clear about two seconds after the enacted law seats on the board.
+
+## Ravi header typewriter
+
+[`TypewriterText`](../src/screens/GameScreen/TypewriterText.tsx) types the
+current Ravi line paced to `RaviService.lineDurationMs` (live
+`audio.duration`, else the shared clip catalog). Motion-off and tests jump
+to the finished string. Choice UI stays in anticipation until
+`deadline.startedAt` — see [`docs/game-pacing.md`](../../docs/game-pacing.md).
 
 ## Testing
 

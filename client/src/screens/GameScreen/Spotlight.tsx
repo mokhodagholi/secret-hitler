@@ -9,6 +9,8 @@ export interface SpotlightProps {
   formatMessage: FormatMessage;
   /** Hide Continue while the player must do a table action. */
   showContinue?: boolean;
+  /** Hide the smoke while bots play. Skip stays. */
+  lifted?: boolean;
   /** Step back one look beat. Hidden on the first beat when omitted/false. */
   onPrevious?: () => void;
   showPrevious?: boolean;
@@ -124,6 +126,8 @@ export function Spotlight(props: SpotlightProps) {
 
   return (
     <div class={styles.root} ref={(element) => (overlay = element)}>
+      <Show when={!props.lifted}>
+        <>
       <div
         classList={{
           [styles.block]: true,
@@ -182,6 +186,8 @@ export function Spotlight(props: SpotlightProps) {
             />
           )}
         </For>
+      </Show>
+        </>
       </Show>
       <div class={styles.chrome}>
         <button type="button" class={styles.skip} onClick={() => props.onSkip()}>

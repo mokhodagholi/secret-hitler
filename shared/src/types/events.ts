@@ -26,7 +26,9 @@ export type GameCommand =
   | { kind: 'vetoRequest' }
   | { kind: 'vetoConsent'; agree: boolean }
   /** The President ends discussion early, or fails the election once nominating. */
-  | { kind: 'endTurn' };
+  | { kind: 'endTurn' }
+  /** Admin `/play-game` only — finish the open clock or announce breath now. */
+  | { kind: 'skipTimer' };
 
 // ---------------------------------------------------------------------------
 // Client -> Server

@@ -22,7 +22,7 @@
 .shift {
   position: relative;
   z-index: 1;
-  width: min(360px, 100%);
+  width: min(280px, 100%);
   max-width: 100%;
   min-width: 0;
   margin-inline: auto;
@@ -33,90 +33,33 @@
 .dialog {
   @include card;
   width: 100%;
-  padding: 12px 14px 14px;
+  padding: 8px 10px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border-color: rgba($gold, 0.5);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
-.title {
-  @include display(0.82rem, 0.22em);
-  color: $gold;
-}
-
-.prompt {
-  margin: 0;
-  font-size: 0.95rem;
-  color: $text-light;
-  text-align: center;
-  line-height: 1.4;
-}
-
-.timer {
-  position: relative;
-  width: 100%;
-  height: 20px;
-  border-radius: $radius;
-  background: $navy-900;
-  border: 1px solid $line-soft;
-  overflow: hidden;
-}
-
-.timerBar {
-  position: absolute;
-  inset-inline-start: 0;
-  top: 0;
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(90deg, $gold-dark, $gold-bright);
-  animation: drain-vote var(--vote-total, 0ms) linear
-    calc(-1 * var(--vote-elapsed, 0ms)) forwards;
-}
-
-.timerBarStatic {
-  animation: none;
-}
-
-@keyframes drain-vote {
-  from {
-    width: 100%;
-  }
-  to {
-    width: 0%;
-  }
-}
-
-.timerLabel {
-  @include display(0.7rem, 0.08em);
-  position: relative;
-  display: grid;
-  place-items: center;
-  height: 100%;
-  color: $cream;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
-}
-
 .buttons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   justify-content: center;
 }
 
 .ja,
 .nein {
-  @include display(0.92rem, 0.08em);
+  @include display(0.82rem, 0.08em);
   @include pressable;
   flex: 1 1 0;
-  max-width: 160px;
+  max-width: 124px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px 8px;
+  gap: 2px;
+  padding: 2px 4px 6px;
   border-radius: $radius-lg;
   color: $white;
   border: none;
@@ -135,7 +78,7 @@
 }
 
 .cardArt {
-  width: min(100%, 132px);
+  width: min(100%, 104px);
   aspect-ratio: 3 / 2;
   object-fit: contain;
   display: block;
@@ -151,77 +94,5 @@
 .selected .cardArt {
   mix-blend-mode: normal;
   filter: none;
-  opacity: 1;
-}
-
-.dimmed {
-  color: rgba($white, 0.45);
-}
-
-.dimmed .cardArt {
-  mix-blend-mode: normal;
-  filter: grayscale(1);
-  opacity: 0.4;
-}
-
-.waiting {
-  position: relative;
-  z-index: 1;
-  width: min(280px, 100%);
-  margin-inline: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-}
-
-.yourVote {
-  font-size: 0.82rem;
-  color: $text-light;
-}
-
-.progress {
-  font-size: 0.78rem;
-  color: $text-dim;
-}
-
-.felt {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  width: 100%;
-  min-height: 0;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-
-.pile {
-  position: relative;
-  width: 84px;
-  aspect-ratio: 3 / 2;
-}
-
-.pileFaced {
-  width: 112px;
-}
-
-.ballot {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  opacity: 0;
-  pointer-events: none;
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
-}
-
-.ballotFace {
-  z-index: 2;
-}
-
-.landed {
   opacity: 1;
 }

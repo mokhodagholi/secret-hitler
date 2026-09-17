@@ -1,4 +1,4 @@
-import { LEGISLATIVE_PASS_MS, Phase } from '../../types/GameState';
+import { BREATH_AFTER_LAW_MS, LEGISLATIVE_PASS_MS, Phase } from '../../types/GameState';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import {
@@ -34,6 +34,9 @@ export class ChancellorLegislativePhase implements GamePhase {
     if (playerId !== room.chancellorId) {
       return err('INVALID_ACTION', 'You are not enacting a policy.');
     }
+    if (Date.now() < room.legislativeStartedAt) {
+      return err('INVALID_ACTION', 'Wait for the table to settle.');
+    }
     if (command.index < 0 || command.index >= room.drawnPolicies.length) {
       return err('INVALID_ACTION', 'Invalid policy choice.');
     }
@@ -63,8 +66,8 @@ export class ChancellorLegislativePhase implements GamePhase {
       enacted === 'fascist'
         ? powerForFascistPolicy(room.players.length, room.fascistPolicies)
         : null;
-    if (power) this.host.grantPower(power);
-    else this.host.advanceRound();
+    if (power) this.host.scheduleGrantPower(power);
+    else this.host.scheduleAdvanceRound(BREATH_AFTER_LAW_MS);
     return null;
   }
 
@@ -101,6 +104,7 @@ export class ChancellorLegislativePhase implements GamePhase {
     room.deck.discardTiles(room.drawnPolicies);
     room.drawnPolicies = [];
     this.host.log('vetoAgreed');
+    this.host.recordHistoryVetoAgreed();
     this.host.failElection();
     return null;
   }

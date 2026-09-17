@@ -11,6 +11,8 @@ import {
   type Role,
   type RoomOptions,
   type RoomSummary,
+  type RoundHistoryEntry,
+  type PendingBreath,
   type Vote,
 } from '../types/GameState';
 import { PolicyDeck } from './PolicyDeck';
@@ -83,6 +85,14 @@ export class Room {
   startChoice: StartChoiceState | null = null;
   /** Join keys kicked mid-game — they cannot sit this room again. Lobby kicks do not land here. */
   bannedJoinKeys = new Set<string>();
+  /** Finished government cycles for the in-match history sheet (oldest first). */
+  roundHistory: RoundHistoryEntry[] = [];
+  /** Open draft for the round in progress; pushed into {@link roundHistory} when it ends. */
+  currentRound: RoundHistoryEntry | null = null;
+  /** Next round number to stamp onto {@link currentRound}. */
+  nextRoundNumber = 1;
+  /** Deferred phase hand-off while the table hears the last announce. */
+  pendingBreath: PendingBreath | null = null;
 
   constructor(args: {
     id: string;
@@ -215,12 +225,17 @@ export class Room {
       minPlayers: this.options.minPlayers,
       maxPlayers: this.options.maxPlayers,
       kind: this.options.kind === 'public' ? 'public' : 'hosted',
+      adminPlay: this.options.adminPlayUserId != null,
       startChoice: this.startChoice
         ? { startedAt: this.startChoice.startedAt, endsAt: this.startChoice.endsAt }
         : null,
       players,
       board: this.board(),
       winner: this.winner,
+      roundHistory: this.roundHistory.map((entry) => cloneRoundHistory(entry)),
+      breathDeadline: this.pendingBreath
+        ? { startedAt: this.pendingBreath.startedAt, endsAt: this.pendingBreath.endsAt }
+        : null,
       discussionDeadline:
         this.discussionEndsAt > 0
           ? { startedAt: this.discussionStartedAt, endsAt: this.discussionEndsAt }
@@ -348,6 +363,18 @@ export class Room {
         ? { startedAt: this.startChoice.startedAt, endsAt: this.startChoice.endsAt }
         : null,
       bannedJoinKeys: [...this.bannedJoinKeys],
+      roundHistory: this.roundHistory.map((entry) => cloneRoundHistory(entry)),
+      currentRound: this.currentRound
+        ? cloneRoundHistory(this.currentRound)
+        : null,
+      nextRoundNumber: this.nextRoundNumber,
+      pendingBreath: this.pendingBreath
+        ? {
+            startedAt: this.pendingBreath.startedAt,
+            endsAt: this.pendingBreath.endsAt,
+            action: { ...this.pendingBreath.action },
+          }
+        : null,
     };
   }
 
@@ -416,6 +443,20 @@ export class Room {
       ? { startedAt: snapshot.startChoice.startedAt, endsAt: snapshot.startChoice.endsAt }
       : null;
     room.bannedJoinKeys = new Set(snapshot.bannedJoinKeys ?? []);
+    room.roundHistory = (snapshot.roundHistory ?? []).map((entry) =>
+      cloneRoundHistory(entry),
+    );
+    room.currentRound = snapshot.currentRound
+      ? cloneRoundHistory(snapshot.currentRound)
+      : null;
+    room.nextRoundNumber = snapshot.nextRoundNumber ?? room.roundHistory.length + 1;
+    room.pendingBreath = snapshot.pendingBreath
+      ? {
+          startedAt: snapshot.pendingBreath.startedAt,
+          endsAt: snapshot.pendingBreath.endsAt,
+          action: { ...snapshot.pendingBreath.action },
+        }
+      : null;
     return room;
   }
 
@@ -493,6 +534,20 @@ export interface RoomSnapshot {
   startChoice?: { startedAt: number; endsAt: number } | null;
   /** Absent on rooms snapshotted before table bans. */
   bannedJoinKeys?: string[];
+  /** Absent on rooms snapshotted before in-match round history. */
+  roundHistory?: RoundHistoryEntry[];
+  currentRound?: RoundHistoryEntry | null;
+  nextRoundNumber?: number;
+  /** Absent on rooms snapshotted before announce breaths. */
+  pendingBreath?: PendingBreath | null;
+}
+
+function cloneRoundHistory(entry: RoundHistoryEntry): RoundHistoryEntry {
+  return {
+    ...entry,
+    ballots: entry.ballots?.map((ballot) => ({ ...ballot })) ?? null,
+    power: entry.power ? { ...entry.power } : null,
+  };
 }
 
 /** Authoritative kick-vote record kept on the room. */

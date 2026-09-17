@@ -72,6 +72,11 @@ export interface ServerOptions {
   voice?: VoiceHub | null;
   /** Who may run `/play-game`. Defaults to ADMIN_USER_IDS + your Bale id. */
   adminUserIds?: ReadonlySet<number>;
+  /**
+   * Allow unauthenticated `/api/play-game` (local browser + tests). Defaults
+   * on whenever `NODE_ENV` is not `production`.
+   */
+  allowDevPlay?: boolean;
   /** Funnel / lobby / blast / match health. Tests default to in-memory. */
   product?: ProductStore;
   /** Friend requests and table invites. Tests default to in-memory. */
@@ -185,6 +190,8 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     telegram,
     flags,
     adminUserIds: options.adminUserIds,
+    allowDevPlay:
+      options.allowDevPlay ?? process.env.NODE_ENV !== 'production',
     broadcastDelayMs: options.broadcastDelayMs,
     product,
     social,

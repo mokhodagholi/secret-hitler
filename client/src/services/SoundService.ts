@@ -63,6 +63,16 @@ const EFFECTS = {
   'role-cascade': { src: EFFECT_URLS['role-cascade'], volume: CEREMONY },
   'timer-tick': { src: EFFECT_URLS['timer-tick'], volume: CLOCK },
   'timer-urgent': { src: EFFECT_URLS['timer-urgent'], volume: 0.5 },
+  'onboard-turn': { src: EFFECT_URLS['onboard-turn'], volume: 0.45 },
+  'onboard-roles': { src: EFFECT_URLS['onboard-roles'], volume: HIT },
+  'onboard-seats': { src: EFFECT_URLS['onboard-seats'], volume: HIT },
+  'onboard-boards': { src: EFFECT_URLS['onboard-boards'], volume: HIT },
+  'onboard-offices': { src: EFFECT_URLS['onboard-offices'], volume: HIT },
+  'onboard-vote': { src: EFFECT_URLS['onboard-vote'], volume: HIT },
+  'onboard-tracker': { src: EFFECT_URLS['onboard-tracker'], volume: HIT },
+  'onboard-chaos': { src: EFFECT_URLS['onboard-chaos'], volume: HIT },
+  'onboard-deck': { src: EFFECT_URLS['onboard-deck'], volume: HIT },
+  'onboard-laws': { src: EFFECT_URLS['onboard-laws'], volume: HIT },
 } satisfies Record<string, SoundDefinition>;
 
 const MUSIC_FADE_MS = 600;
@@ -80,6 +90,8 @@ const MUSIC = {
   'chaos-theme': { src: MUSIC_URLS['chaos-theme'], volume: 0.28 },
   'over-dawn': { src: MUSIC_URLS['over-dawn'], volume: 0.32 },
   'over-dusk': { src: MUSIC_URLS['over-dusk'], volume: 0.32 },
+  'onboard-theme': { src: MUSIC_URLS['onboard-theme'], volume: 0.14 },
+  'look-theme': { src: MUSIC_URLS['look-theme'], volume: 0.11 },
 } satisfies Record<string, SoundDefinition>;
 
 export type SoundEffect = keyof typeof EFFECTS;

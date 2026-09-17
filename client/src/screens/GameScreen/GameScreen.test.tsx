@@ -39,6 +39,7 @@ function votingView() {
       investigation: null,
       canRequestKick: true,
     },
+    voteDeadline: { startedAt: 0, endsAt: Date.now() + 30_000 },
   });
 }
 
@@ -265,6 +266,39 @@ describe('GameScreen — voting', () => {
     expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
+  it('Should keep revealed ballots on seats through the legislative window', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      voteDeadline: null,
+      players: view.players.map((player) => ({
+        ...player,
+        hasVoted: true,
+        vote: player.id === 'cal' ? 'nein' : 'ja',
+      })),
+    });
+    harness.pushState({
+      ...view,
+      phase: Phase.ChancellorLegislative,
+      voteDeadline: null,
+      players: view.players.map((player) => ({
+        ...player,
+        hasVoted: true,
+        vote: player.id === 'cal' ? 'nein' : 'ja',
+      })),
+    });
+
+    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.ja,
+    );
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.nein,
+    );
+  });
+
   it('Should keep the secret role off the deck strip after the opening look', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -447,16 +481,23 @@ describe('GameScreen — voting', () => {
     ).toBeNull();
   });
 
-  it('Should ask the nominated chancellor to vote in the first person', () => {
+  it('Should show the government ticket and vote cards without a clock', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState(votingView());
 
     expect(
-      screen.getByText(
+      screen.queryByText(
         en.game.votePromptYou.replace('{president}', isolateBidi('Ana')),
       ),
-    ).toBeTruthy();
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        en.game.voteProgress.replace('{count}', '0').replace('{total}', '3'),
+      ),
+    ).toBeNull();
+    expect(screen.getByRole('button', { name: en.game.voteJa })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.voteNein })).toBeTruthy();
     expect(screen.getAllByText(en.game.president).length).toBeGreaterThan(0);
     expect(screen.getAllByText(en.game.chancellor).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
@@ -1383,7 +1424,7 @@ describe('GameScreen — help bar', () => {
 });
 
 describe('GameScreen — vote timer', () => {
-  it('Should show the vote countdown on the ballot', () => {
+  it('Should show the vote countdown in the chat chrome', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
     harness.pushState({
@@ -1391,7 +1432,8 @@ describe('GameScreen — vote timer', () => {
       voteDeadline: { startedAt: Date.now(), endsAt: Date.now() + 30_000 },
     });
 
-    expect(screen.getByText(SECONDS_PATTERN)).toBeTruthy();
+    expect(screen.getByText(/^0:3\d$/)).toBeTruthy();
+    expect(screen.queryByText(SECONDS_PATTERN)).toBeNull();
   });
 });
 

@@ -79,3 +79,14 @@ export {
 // Utilities
 export { TypedEmitter } from './util/TypedEmitter';
 export { makeId, makeRoomCode } from './util/ids';
+export {
+  NOMINATION_PROMPT_MS,
+  POWER_PROMPT_MS,
+  RAVI_CLIP_MS,
+  RAVI_HOLD_PAD_MS,
+  VOTE_PROMPT_MS,
+  ceremonyDelay,
+  raviClipMs,
+  raviHoldMs,
+} from './ravi/clipMs';
+export type { RaviClipId, RaviVoiceId } from './ravi/clipMs';

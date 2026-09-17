@@ -44,7 +44,7 @@ describe('GameScreen — look', () => {
     openLook(harness);
     renderWithApp(() => <LookRoutes />, harness);
 
-    expect(screen.getByText(en.onboard.idea.government)).toBeTruthy();
+    expect(screen.getByText(en.onboard.idea.welcome)).toBeTruthy();
     expect(screen.getByText('Nima')).toBeTruthy();
     expect(screen.getByText('Sara')).toBeTruthy();
     expect(screen.getByText('Reza')).toBeTruthy();
@@ -107,17 +107,6 @@ describe('GameScreen — look', () => {
     expect(screen.getByRole('button', { name: en.game.voteNein })).toBeTruthy();
   });
 
-  it('Should show face-up ballots on the seats for the ballots beat', () => {
-    const harness = buildHarness();
-    openLook(harness);
-    renderWithApp(() => <LookRoutes />, harness);
-
-    advanceTo('ballots');
-
-    expect(screen.getByText(en.onboard.idea.ballots)).toBeTruthy();
-    expect(document.querySelectorAll('[data-ballot-face="face"]').length).toBe(5);
-  });
-
   it('Should go home when Skip is pressed', () => {
     const harness = buildHarness();
     openLook(harness);
@@ -141,6 +130,6 @@ describe('GameScreen — look', () => {
     expect(harness.services.tutorial.looking()).toBe(false);
     expect(harness.services.tutorial.playing()).toBe(true);
     expect(localStorage.getItem(ONBOARDING_STEP_KEY)).toBe('1');
-    expect(screen.getByText(en.onboard.pick)).toBeTruthy();
+    expect(screen.getByText(en.onboard.nightDone)).toBeTruthy();
   });
 });

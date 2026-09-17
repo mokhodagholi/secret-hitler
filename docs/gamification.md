@@ -119,12 +119,17 @@ screen, so they do not bury the board.
 | Night, 7–10p | Closed-eyes wait | Fascists see each other + Hitler (Hitler sees a “raise your hand” self-mark, not the Fascists) | Liberals, and Hitler does not see Fascists |
 | Nomination | Ineligible seats dim | Eligible seats pulse + “صدراعظم رو انتخاب کنید” | — |
 | Vote pick | — | Two giant cards | — |
-| Vote flight | Face-down cards to centre | — | Colour of each ballot |
-| Vote count | Ja / Nein **totals** only | — | Who voted which way |
+| Vote on seats | Face-down ballot on each seat (large); flips Ja/Nein when the vote closes | — | Colour until count |
+| Vote count | Seat flips + totals; **history** keeps per-seat after close | — | — |
 | President draws | 3 backs: deck → President seat | 3 faces in the centre of *their* screen | Colour of the three |
 | President burns | 1 back → discard pile | — | Which colour burned |
 | Pass to Chancellor | 2 backs → Chancellor seat | Chancellor sees 2 faces | — |
 | Enact | Face-up law → correct well | — | — |
+| Chaos | Top of draw pile flips face-up → well (no power) | — | — |
+| Veto agreed | Both remaining backs burn to discard | — | Colours burned |
+| Power unlock | Seal lifts off Fascist well → President | Power UI | — |
+| Presidency handoff | Placard flies previous seat → new President | — | — |
+| Special election | Same placard flight (marked) | — | — |
 | Investigate | “President inspects {name}” | Party card of the target | The party colour |
 | Peek | “President looks at the deck” | Top 3, in order | Colours |
 | Execute | Seat death animation | — | Role stays hidden |
@@ -141,15 +146,16 @@ Night (first round only)
 Discussion          5 min, President may skip
 Nomination          30 s  (today: 10 s — too tight)
 Vote                25–30 s (today: 30 s, keep)
-Vote count          ~3 s, totals only, anonymous
+Vote count          seat ballots flip Ja/Nein (~3 s hold)
 Legislative
   3 backs to President     shared
   President discards 1     15 s  (today: 10 s)
   2 backs to Chancellor    shared
   Chancellor enacts 1      15 s  (today: 10 s)
   enacted law → well       shared
-Power (if any)      until used, with a generous timer
-Next President      clockwise (or special-election target)
+  (chaos: draw → well)     shared when tracker hits 3
+Power (if any)      seal flies to President, then generous timer
+Next President      placard handoff clockwise (or special-election target)
 ```
 
 Failed nomination or failed vote: tracker pawn advances, Ravi reads the
@@ -171,9 +177,11 @@ current office-holders.
 
 **Seats**
 
-- President ribbon / Chancellor ribbon (already there).
-- Eligible-for-nomination pulse, ineligible grey (President only).
-- No vote card on the portrait (ballots stay anonymous).
+- President ribbon / Chancellor ribbon (already there); ribbon **badge-pop**s
+  when office lands; presidency handoff flies a placard seat → seat.
+- Eligible-for-nomination pulse (President), ineligible grey for **everyone**.
+- Vote ballot sits **on the seat** (large card), face-down until the count,
+  then Ja / Nein. No centre pile.
 - Execution: existing `seat-death`, then a black ribbon, no role leak.
 - Chat bubble above the portrait, discussion only.
 
@@ -194,8 +202,8 @@ pawn. The three backs that leave the draw pile should actually decrement
 the pile count as they travel.
 
 **Ja / Nein** — full-screen pair, huge, one tap. After tap, your screen
-can dim to “در انتظار دیگران” plus the progress count. Centre pile stays
-face-down until the **count** (totals only).
+can dim to “در انتظار دیگران” plus the progress count. Each cast ballot
+sits face-down on that player’s seat until the count flips them.
 
 ## Motion rules
 
@@ -224,21 +232,8 @@ These are real, not cosmetic:
    roles via `Room.roleVisibleTo`. The client plays deal / private look /
    night glance off that snapshot and the deadline — it does not assign
    roles locally. When the clock ends, the engine opens discussion.
-2. **Anonymous vote resolution** — public snapshot gets Ja / Nein
-   *counts* only. Never per-player ballots.
-3. **Spectator legislative flights** — public message: “3 drawn, 1
-   burned, 2 passed” with no colours. The actor already gets `you.policies`.
-4. **Discussion length 5 minutes**, nomination window 30 s, legislative
-   window ~15 s.
+2. **Discussion length 5 minutes** vs live 3 min (product call: keep 3).
 
-## Suggested build order
-
-1. Server `Phase.Night` + role overlay / night glance (data from the
-   snapshot; motion on the client).
-2. Ravi subtitles wired to existing log codes (no audio yet).
-3. Ja / Nein cards + centre flight + **anonymous count**.
-4. Shared legislative flights + enact-to-well.
-5. Tracker pawn + power-seal lift.
-6. Pre-recorded Ravi clips for the 10-line pilot, then the rest.
-
-Do not start with voice. The table has to *read* before it can listen.
+Shipped theater (client): seat ballots, shared legislative flights,
+enact-to-well, chaos draw flip, veto burn, power-seal lift, presidency
+handoff placard.

@@ -9,9 +9,11 @@ Table one-shots stay in [`sound-effects.md`](./sound-effects.md). Spoken
 lines stay in [`ravi-script.md`](./ravi-script.md). This doc is which
 loops to bake, when they play, and how to make them in Suno.
 
-**Ceiling: 20 files. This catalog is 12.** One loop per room, not one
+**Ceiling: 20 files. Table rooms are 12. Lesson rooms are 2 more**
+(`onboard-theme`, `look-theme`). One loop per room, not one
 per animation. Most ceremony beats **Keep** the current bed; only a
-room change starts a new file.
+room change starts a new file. Lesson sting prompts (Suno, not table
+foley) live in this file so you bake one sitting.
 
 ## Three layers (locked)
 
@@ -59,8 +61,17 @@ Bake **P0** first (six files). Skip `discuss-late` until late games feel
 flat. Reuse `menu-theme` on Play if you have not baked `play-theme` yet.
 Reuse `legislative-theme` for powers until `power-theme` exists.
 
+**Lesson rooms** are not a 13th table file. They never share a table loop
+so the first live hand still sounds like sitting down.
+
+| # | Id | Title | Lead (must hear) | Tempo / density | Forbidden on this file | Vol | P |
+|---|---|---|---|---|---|---|---|
+| 13 | `onboard-theme` | Lesson pages | Soft felt grand, warm major sevenths | almost no pulse | ringtone, music box, melody hook, drums | 0.14 | 0 |
+| 14 | `look-theme` | Lesson table | Same piano, almost a pad | drone | melody, pulse, foyer sax | 0.11 | 0 |
+
 Files live in `client/src/assets/sounds/music/{id}.mp3`. Stereo mp3,
-128 kbps. Target **−26 LUFS**, true peak **−1.5 dB**.
+128 kbps. Table loops: **−26 LUFS**, true peak **−1.5 dB**. Lesson loops
+(`onboard-theme`, `look-theme`): **−30 LUFS**, true peak **−2 dB**.
 
 ## Suno (V4.5 / V5 / V5.5)
 
@@ -291,6 +302,235 @@ Dusk in a closed cabinet. Reed organ and cello, minor. Same slow shape as the da
 
 ---
 
+## Prompts — lesson (2 loops + 10 stings)
+
+Bake in the web app. Free Suno has **no API**. Custom. Instrumental on.
+Title = the `id`. Style Influence ~70%. Weirdness ~28% on loops, **~40%**
+on stings so they do not all come out the same plink.
+
+Lesson Exclude Styles (165 / 200) — paste these instead of the table fence:
+
+```
+vocals, choir, lyrics, rap, EDM, drums, orchestra, guitar, chiptune, explosion, siren, anthem, saxophone, trumpet, gavel, foley, cartoon, music box, ringtone, chorus
+```
+
+**Loops:** generate ~2:00. Crop ~36s. If you can hum a figure, reject.
+Target **−30 LUFS**, true peak **−2 dB**. Files:
+`client/src/assets/sounds/music/{id}.mp3`.
+
+**Stings:** shortest take (~0:15). Crop **one motif + decay**. Playback is
+`SoundService.play`, files in `client/src/assets/sounds/effects/{id}.mp3`,
+**−21 LUFS**, true peak **−1.5 dB**. Wiring:
+[`onboarding-audio.md`](./onboarding-audio.md).
+
+```bash
+ffmpeg -y -i raw.mp3 \
+  -af "loudnorm=I=-30:TP=-2:LRA=5" \
+  -ac 2 -b:a 128k \
+  client/src/assets/sounds/music/{id}.mp3
+```
+
+```bash
+ffmpeg -y -i raw.mp3 \
+  -af "adelay=40:all=1,apad=pad_dur=0.12,loudnorm=I=-21:TP=-1.5:LRA=8" \
+  -ac 1 -b:a 96k \
+  client/src/assets/sounds/effects/{id}.mp3
+```
+
+### 13. `onboard-theme` — Lesson pages
+
+**Style** (203 / 1000)
+
+```
+soft felt grand piano, Gymnopedie, slow warm major sevenths, Cmaj7 G Am F, enjoyable, easy to sit with, wooden cabinet, analog hiss, instrumental seamless loop, 1930s, no ringtone, no music box, no drums
+```
+
+**Lyrics** (289 / 5000)
+
+```
+[Instrumental]
+[Loop bed]
+A quiet felt piano in a small wooden room. Slow overlapping chords, warm and pleasant, never a tune you wait for. Someone is teaching a game at a cabinet table. Soft hammer, wool on the strings. Easy to stay with for minutes. Same texture the whole way. Seamless.
+```
+
+### 14. `look-theme` — Lesson table
+
+**Style** (238 / 1000)
+
+```
+soft felt grand piano pad, Gymnopedie, two notes held, warm C major fifth, quieter than a lesson page, enjoyable, speech sits on top, wooden cabinet, almost no pulse, instrumental seamless loop, 1930s, no melody, no ringtone, no music box
+```
+
+**Lyrics** (177 / 5000)
+
+```
+[Instrumental]
+[Loop bed]
+The same felt piano, even quieter, almost a pad. Long warm fifths. Someone is pointing at a table. No figure. No fill. Comfortable. Seamless, no swell.
+```
+
+### `onboard-turn`
+
+**Style** (141 / 1000)
+
+```
+one soft felt-piano tap, middle register, wooden room, 0.9 seconds, comforting UI chime, then complete silence, instrumental sting, no melody
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+One soft piano tap, like turning a page at a cabinet table. The note dies. Then silence. Not a song.
+```
+
+### `onboard-roles`
+
+**Style** (166 / 1000)
+
+```
+three felt-piano notes fanned like secret identity cards on walnut, rolled C E G, 1.6 seconds, mysterious but warm, then silence, instrumental sting, no second phrase
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+Three piano notes spread like three facedown cards. Last note rings. Then silence. Not a fanfare.
+```
+
+### `onboard-seats`
+
+**Style** (125 / 1000)
+
+```
+warm felt-piano open fifth, chairs around a cabinet table, 1.3 seconds, inviting, then silence, instrumental sting, no melody
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+One open fifth, five seats around a table. Warm wood. The chord dies. Then silence.
+```
+
+### `onboard-boards`
+
+**Style** (145 / 1000)
+
+```
+two felt-piano fifths, first cream and hopeful, second darker wood, two coloured tracks on a table, 1.6 seconds, instrumental sting, then silence
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+A bright fifth, then a darker fifth. Two boards on a table. Then silence. Not a jingle.
+```
+
+### `onboard-offices`
+
+**Style** (138 / 1000)
+
+```
+two-note felt-piano grant, lower seat then a higher seat, wooden placards, 1.4 seconds, not a brass bell, instrumental sting, then silence
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+Low piano seat, then a higher piano seat. Two offices handed over. Then silence.
+```
+
+### `onboard-vote`
+
+**Style** (134 / 1000)
+
+```
+two felt-piano notes, a questioning rise then a falling no, yes-or-no ballots, 1.2 seconds, instrumental sting, then silence, no choir
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+One note asks, the next note falls. A ballot. Then silence. Not a drum hit.
+```
+
+### `onboard-tracker`
+
+**Style** (117 / 1000)
+
+```
+three walking felt-piano notes, small wooden marker, one pip at a time, 1.1 seconds, instrumental sting, then silence
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+Three short piano steps, a marker moving. Then silence. Not a clock.
+```
+
+### `onboard-chaos`
+
+**Style** (132 / 1000)
+
+```
+low dissonant felt-piano rumble, inside the piano, third failure, grave, 1.5 seconds, no explosion, instrumental sting, then silence
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+Low clustered piano, the table fails a third time. Grave, not loud. Then silence. No boom.
+```
+
+### `onboard-deck`
+
+**Style** (141 / 1000)
+
+```
+four-note felt-piano deal upward, a small deck of law cards, last note rings, 1.4 seconds, instrumental sting, then silence, not a harp gliss
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+Four soft notes dealt upward. Last note rings in a wooden room. Then silence. Not a shuffle foley.
+```
+
+### `onboard-laws`
+
+**Style** (112 / 1000)
+
+```
+three felt-piano tiles placed on a board, rising, 1.4 seconds, not a wax stamp, instrumental sting, then silence
+```
+
+**Lyrics**
+
+```
+[Instrumental]
+[Short sting]
+Three piano tiles set on a board, rising. Then silence. Not a stamp, not a gavel.
+```
+
+---
+
 ## When to play which (map, not extra files)
 
 **Play** starts the file. **Keep** = do not call `playMusic`. **Crossfade**
@@ -315,12 +555,18 @@ replaces the loop (~600 ms).
 | Role cascade | `over-dawn` or `over-dusk` | Keep |
 | Chat, game menu, players, leave overlay | *(current)* | Keep |
 | Room closed | `menu-theme` | Stop, then Play |
+| Onboarding intro (step 0) | `onboard-theme` | Play — not the foyer |
+| Look table (step 1) | `look-theme` | Play — one bed for the whole walk |
+| Scripted match (steps 2–7) | same as live | from `playView` |
 
 Late board uses `discuss-late` **only** on discussion / nomination. Vote
-and desk stay the same.
+and desk stay the same. Onboarding intro/look never share a table file.
+Sting wiring (which piece plays which `onboard-*`) is
+[`onboarding-audio.md`](./onboarding-audio.md).
 
-Do not add a 13th file for 30 s warn, Ja vs Nein, or a victim-only
-death bed. Those are SFX, or they leak.
+Do not add a 13th **table** file for 30 s warn, Ja vs Nein, or a victim-only
+death bed. Those are SFX, or they leak. Lesson beds are `onboard-theme` /
+`look-theme`, not a 13th table room.
 
 ## Wiring
 
@@ -336,6 +582,8 @@ const MUSIC = {
 | Hook | Call |
 |---|---|
 | `home` / `rules` / `how-to-play` / `settings` / `about` | `playMusic('menu-theme')` |
+| onboarding intro | `playMusic('onboard-theme')` |
+| look table | `playMusic('look-theme')` |
 | `play` / `create-room` / `join-game` | `playMusic('play-theme')` |
 | `waiting-room` | `playMusic('lobby-theme')` |
 | Night overlay / `room-start` | `playMusic('night-ambient')` |
@@ -352,8 +600,9 @@ const MUSIC = {
 ## Bake order
 
 1. **P0 (6):** `menu-theme`, `lobby-theme`, `night-ambient`, `discuss-theme`, `vote-theme`, `legislative-theme`
-2. **P1 (5):** `play-theme`, `power-theme`, `chaos-theme`, `over-dawn`, `over-dusk`
-3. **P2 (1):** `discuss-late`
+2. **Lesson (2 + 10):** `onboard-theme`, `look-theme`, then the ten `onboard-*` stings
+3. **P1 (5):** `play-theme`, `power-theme`, `chaos-theme`, `over-dawn`, `over-dusk`
+4. **P2 (1):** `discuss-late`
 
 Listen on a phone with Ravi Voice on, then off. If a bed fights
 speech, lower volume before rewriting the prompt. **If two files

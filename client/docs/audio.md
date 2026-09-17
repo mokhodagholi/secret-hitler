@@ -97,6 +97,10 @@ The catalog of those one-shots — what to bake, when they fire, and how to
 generate the files — is [`docs/sound-effects.md`](../../docs/sound-effects.md).
 Bake with `scripts/generate-sound-effects.py`. Looping beds (Suno prompts,
 when to switch tracks) are [`docs/background-music.md`](../../docs/background-music.md).
+Intro and look use a **different** Suno catalog (prompts in
+[`docs/background-music.md`](../../docs/background-music.md), when they
+play in [`docs/onboarding-audio.md`](../../docs/onboarding-audio.md)).
+Do not play gavel / wax / vote-theme during the lesson.
 Spoken table lines stay in
 [`docs/ravi-script.md`](../../docs/ravi-script.md); do not put words in an SFX.
 

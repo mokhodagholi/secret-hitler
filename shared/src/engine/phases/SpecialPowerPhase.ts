@@ -5,6 +5,7 @@ import {
   partyOf,
   type Player,
 } from '../../types/GameState';
+import { POWER_PROMPT_MS, ceremonyDelay } from '../../ravi/clipMs';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import type { GamePhase, PhaseHost } from './GamePhase';
@@ -16,7 +17,10 @@ export class SpecialPowerPhase implements GamePhase {
   constructor(private readonly host: PhaseHost) {}
 
   enter(): void {
-    this.host.openSpecialPowerTimer(SPECIAL_POWER_DURATION_MS);
+    this.host.openSpecialPowerTimer(
+      SPECIAL_POWER_DURATION_MS,
+      ceremonyDelay(this.host.room.options.skipCeremony, POWER_PROMPT_MS),
+    );
   }
 
   exit(): void {
@@ -35,11 +39,15 @@ export class SpecialPowerPhase implements GamePhase {
     if (playerId !== room.presidentId) {
       return err('INVALID_ACTION', 'Only the President can use this power.');
     }
+    if (Date.now() < room.specialPowerStartedAt) {
+      return err('INVALID_ACTION', 'Wait for the table to settle.');
+    }
 
     switch (room.activePower) {
       case 'policyPeek':
         // The President has seen the top three; acknowledge and continue.
-        this.host.advanceRound();
+        this.host.recordHistoryPower('policyPeek');
+        this.host.scheduleAdvanceRound();
         return null;
       case 'investigate':
         return this.investigate(playerId, command.targetId);
@@ -56,22 +64,23 @@ export class SpecialPowerPhase implements GamePhase {
   timeout(): void {
     const room = this.host.room;
     if (room.activePower === 'investigate' && room.investigation) {
-      this.host.advanceRound();
+      this.host.scheduleAdvanceRound();
       return;
     }
     const presidentId = room.presidentId;
     if (!presidentId) {
-      this.host.advanceRound();
+      this.host.scheduleAdvanceRound();
       return;
     }
     switch (room.activePower) {
       case 'policyPeek':
-        this.host.advanceRound();
+        this.host.recordHistoryPower('policyPeek');
+        this.host.scheduleAdvanceRound();
         return;
       case 'investigate': {
         const target = this.randomInvestigateTarget(presidentId);
         if (!target) {
-          this.host.advanceRound();
+          this.host.scheduleAdvanceRound();
           return;
         }
         this.investigate(presidentId, target.id);
@@ -80,7 +89,7 @@ export class SpecialPowerPhase implements GamePhase {
       case 'execution': {
         const target = this.randomLivingTarget(presidentId);
         if (!target) {
-          this.host.advanceRound();
+          this.host.scheduleAdvanceRound();
           return;
         }
         this.execute(presidentId, target.id);
@@ -89,14 +98,14 @@ export class SpecialPowerPhase implements GamePhase {
       case 'specialElection': {
         const target = this.randomConnectedTarget(presidentId);
         if (!target) {
-          this.host.advanceRound();
+          this.host.scheduleAdvanceRound();
           return;
         }
         this.specialElection(presidentId, target.id);
         return;
       }
       default:
-        this.host.advanceRound();
+        this.host.scheduleAdvanceRound();
     }
   }
 
@@ -104,7 +113,7 @@ export class SpecialPowerPhase implements GamePhase {
     const room = this.host.room;
     // Two steps: first pick the target, then acknowledge the revealed result.
     if (room.investigation) {
-      this.host.advanceRound();
+      this.host.scheduleAdvanceRound();
       return null;
     }
     const target = this.livingTarget(playerId, targetId);
@@ -121,6 +130,7 @@ export class SpecialPowerPhase implements GamePhase {
       targetId: target.id,
       party,
     });
+    this.host.recordHistoryPower('investigate', target.id);
     this.host.openSpecialPowerTimer(INVESTIGATION_HOLD_MS);
     this.host.changed();
     // Log after the private snapshot so the President overlay already has the party.
@@ -132,13 +142,14 @@ export class SpecialPowerPhase implements GamePhase {
     const target = this.livingTarget(playerId, targetId);
     if (!target) return err('INVALID_ACTION', 'That player cannot be executed.');
     target.isAlive = false;
+    this.host.recordHistoryPower('execution', target.id);
     this.host.log('executed', { name: target.name });
     if (target.role === 'hitler') {
       this.host.log('hitlerExecuted');
       this.host.endGame('liberal');
       return null;
     }
-    this.host.advanceRound();
+    this.host.scheduleAdvanceRound();
     return null;
   }
 
@@ -147,7 +158,7 @@ export class SpecialPowerPhase implements GamePhase {
     if (!target?.connected) {
       return err('INVALID_ACTION', 'That player cannot be chosen.');
     }
-    this.host.startSpecialElection(target.id);
+    this.host.scheduleSpecialElection(target.id);
     return null;
   }
 

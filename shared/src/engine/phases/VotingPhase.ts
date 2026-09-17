@@ -28,8 +28,17 @@ export class VotingPhase implements GamePhase {
     if (!player?.isAlive) {
       return err('INVALID_ACTION', 'You cannot vote in this election.');
     }
+    if (Date.now() < room.voteStartedAt) {
+      return err('INVALID_ACTION', 'Wait for the table to settle.');
+    }
 
     room.votes.set(playerId, command.vote);
+    // Admin play table: every dummy seat follows this device so Ja elects and Nein fails.
+    if (room.options.adminPlayUserId != null) {
+      for (const voter of this.voters()) {
+        room.votes.set(voter.id, command.vote);
+      }
+    }
     if (!this.resolveIfComplete()) this.host.changed();
     return null;
   }
@@ -63,6 +72,7 @@ export class VotingPhase implements GamePhase {
     const ja = voters.filter((p) => room.votes.get(p.id) === 'ja').length;
     const elected = ja * 2 > voters.length;
     const chancellor = room.findPlayer(room.chancellorId ?? '');
+    this.host.recordHistoryVote(elected);
     this.host.log(elected ? 'votePassed' : 'voteFailed', {
       ja,
       total: voters.length,

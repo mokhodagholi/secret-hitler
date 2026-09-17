@@ -15,8 +15,12 @@ export interface TableSeatProps {
   isNext: boolean;
   /** Eligible pick — sways so the President can see who to tap. */
   selectable: boolean;
+  /** Eligible seat during Ravi's nominate prompt — sway, not yet tappable. */
+  awaitingPick?: boolean;
   /** Previous-government lock: clickable so we can explain why not. */
   termLocked: boolean;
+  /** Public nomination: ineligible seats dim for the whole table. */
+  nominationDimmed?: boolean;
   /** Tap opens the player sheet (report / mute) when no table action applies. */
   reportable?: boolean;
   /** Seat numbers and office ribbons — hidden until the opening night ends. */
@@ -24,6 +28,8 @@ export interface TableSeatProps {
   bubble?: string;
   /** Face-down or revealed election ballot sitting on this seat. */
   ballot?: Vote | 'back' | null;
+  /** Hide the office ribbon while a matching handoff is in the air. */
+  suppressOffice?: boolean;
   onSelect: () => void;
   formatMessage: FormatMessage;
 }
@@ -35,7 +41,7 @@ export interface TableSeatProps {
  */
 export function TableSeat(props: TableSeatProps) {
   const { formatMessage } = props;
-  const { flags, voice, sound, tutorial } = useApp();
+  const { animation, flags, voice, sound, tutorial } = useApp();
   let lastBallot: Vote | 'back' | null = null;
 
   createEffect(() => {
@@ -95,8 +101,10 @@ export function TableSeat(props: TableSeatProps) {
         [styles.offline]: !props.player.connected,
         [styles.you]: props.isYou,
         [styles.selectable]: props.selectable,
+        [styles.awaitingPick]: props.awaitingPick === true && !props.selectable,
         [styles.reportable]: props.reportable === true && !props.selectable,
         [styles.termLocked]: props.termLocked,
+        [styles.nominationDimmed]: props.nominationDimmed === true,
         [styles.voted]: props.player.hasVoted,
         [styles.speaking]: speaking(),
         [styles.tableMuted]: tableMuted(),
@@ -120,6 +128,8 @@ export function TableSeat(props: TableSeatProps) {
         </span>
       </Show>
 
+      <span class={styles.officeAnchor} data-office-anchor aria-hidden="true" />
+
       <Show when={office()}>
         {(kind) => (
           <span
@@ -127,6 +137,12 @@ export function TableSeat(props: TableSeatProps) {
               [styles.office]: true,
               [styles.officePresident]: kind() === 'president',
               [styles.officeChancellor]: kind() === 'chancellor',
+              [styles.officeHidden]: props.suppressOffice === true,
+            }}
+            data-office={kind()}
+            ref={(element) => {
+              if (props.suppressOffice) return;
+              void animation.play(element, 'badge-pop');
             }}
           >
             {formatMessage(

@@ -1,0 +1,39 @@
+@use '../../styles/vars' as *;
+@use '../../styles/mixins' as *;
+
+.stage {
+  @include overlay-cover;
+  z-index: 94;
+  pointer-events: none;
+}
+
+.placard {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-family: $font-body;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.president {
+  background: linear-gradient(180deg, #f3d27a, #c9a14a);
+  color: #1a1208;
+}
+
+.chancellor {
+  background: linear-gradient(180deg, #e2603f, #8a2f23);
+  color: $cream;
+}
+
+.special {
+  background: linear-gradient(180deg, #f0c36a, #b8732a);
+}

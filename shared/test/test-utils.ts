@@ -43,6 +43,8 @@ export function makeRoom(
       maxPlayers: 10,
       timerEnabled: false,
       confirmActions: false,
+      // Collapse Ravi/deal holds unless a suite opts into real ceremony timing.
+      skipCeremony: true,
       ...options,
     },
   });
@@ -73,9 +75,12 @@ export function skipOpeningNight(room: Room): void {
 export function startGame(
   names: string[] = ['Ana', 'Ben', 'Cal'],
   deck?: PolicyDeck,
-  opts?: { keepOpeningNight?: boolean },
+  opts?: { keepOpeningNight?: boolean; skipCeremony?: boolean },
 ): RunningGame {
-  const room = makeRoom({}, deck);
+  const room = makeRoom(
+    opts?.skipCeremony === false ? { skipCeremony: false } : {},
+    deck,
+  );
   const engine = new GameEngine(room);
   const players = seatPlayers(engine, names);
   for (const player of players) engine.setReady(player.id, true);
@@ -90,13 +95,56 @@ export function electGovernment(game: RunningGame, chancellor: Player): void {
   const { engine, room } = game;
   const president = room.findPlayer(room.presidentId ?? '');
   if (!president) throw new Error('no president');
+  // Prompt holds are for ceremony; tests act immediately.
+  releaseChoiceHolds(room);
   const nominate = engine.handleCommand(president.id, {
     kind: 'nominateChancellor',
     targetId: chancellor.id,
   });
   if (nominate) throw new Error(`nomination failed: ${nominate.code}`);
+  releaseChoiceHolds(room);
   for (const player of room.players.filter((p) => p.isAlive && p.connected)) {
     const vote = engine.handleCommand(player.id, { kind: 'castVote', vote: 'ja' });
     if (vote) throw new Error(`vote failed: ${vote.code}`);
   }
+}
+
+/** Snap future choice `startedAt` values so unit tests can act now. */
+export function releaseChoiceHolds(room: Room): void {
+  const now = Date.now();
+  if (room.nominationEndsAt > 0 && now < room.nominationStartedAt) {
+    const windowMs = room.nominationEndsAt - room.nominationStartedAt;
+    room.nominationStartedAt = now;
+    room.nominationEndsAt = now + windowMs;
+  }
+  if (room.voteEndsAt > 0 && now < room.voteStartedAt) {
+    const windowMs = room.voteEndsAt - room.voteStartedAt;
+    room.voteStartedAt = now;
+    room.voteEndsAt = now + windowMs;
+  }
+  if (room.legislativeEndsAt > 0 && now < room.legislativeStartedAt) {
+    const windowMs = room.legislativeEndsAt - room.legislativeStartedAt;
+    room.legislativeStartedAt = now;
+    room.legislativeEndsAt = now + windowMs;
+  }
+  if (room.specialPowerEndsAt > 0 && now < room.specialPowerStartedAt) {
+    const windowMs = room.specialPowerEndsAt - room.specialPowerStartedAt;
+    room.specialPowerStartedAt = now;
+    room.specialPowerEndsAt = now + windowMs;
+  }
+}
+
+/** Run every pending announce breath so tests can assert the next phase. */
+export function flushBreath(engine: GameEngine): void {
+  let guard = 0;
+  while (engine.room.pendingBreath && guard < 10) {
+    engine.resolveBreathTimeout();
+    guard += 1;
+  }
+}
+
+/** Fail the open nomination (or discussion) and finish the announce breath. */
+export function tickNominationTimeout(engine: GameEngine): void {
+  engine.resolveNominationTimeout();
+  flushBreath(engine);
 }

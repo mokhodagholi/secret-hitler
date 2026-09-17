@@ -100,6 +100,49 @@ export function flyToTarget(
     });
 }
 
+/**
+ * Office ribbon: previous seat → next, no card spin. The ribbon is pinned to
+ * the destination in viewport space, then translated from the origin.
+ */
+export function flyRibbon(
+  animation: AnimationService,
+  ribbon: HTMLElement | undefined,
+  from: Element | null,
+  to: Element | null,
+): Promise<void> {
+  if (!ribbon || !to) return Promise.resolve();
+  const dest = centerOf(to);
+  const start = from ? centerOf(from) : dest;
+  ribbon.style.left = `${dest.x}px`;
+  ribbon.style.top = `${dest.y}px`;
+  const dx = start.x - dest.x;
+  const dy = start.y - dest.y;
+  ribbon.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+  ribbon.style.opacity = '1';
+  return animation
+    .playCustom(
+      ribbon,
+      [
+        {
+          opacity: 1,
+          transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px)`,
+        },
+        { opacity: 1, transform: 'translate(-50%, -50%) translate(0px, 0px)' },
+      ],
+      { duration: 560, easing: 'ease-in-out', fill: 'forwards' },
+    )
+    .then(() => {
+      ribbon.style.transform = 'translate(-50%, -50%)';
+    });
+}
+
+export function officeAnchor(seatId: string): Element | null {
+  return (
+    document.querySelector(`[data-seat-id="${seatId}"] [data-office-anchor]`) ??
+    document.querySelector(`[data-seat-id="${seatId}"]`)
+  );
+}
+
 export function pileEl(pile: 'draw' | 'discard'): Element | null {
   return document.querySelector(`[data-pile="${pile}"]`);
 }

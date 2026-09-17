@@ -434,9 +434,9 @@ Bad `N`: `شماره صندلی ۱ تا ۵ رو بنویس، مثلاً:` `/play
 ### Local `pnpm dev`
 
 Non-production servers set `allowDevPlay` so the browser can call
-`POST /api/play-game` with `{ seat: 1 }` and no mini-app `initData`. The
-client auto-claims seat 1 on boot (same 5-seat `میز آزمایش` as the bot
-command). Add `?home=1` to the URL to stay on the lobby instead.
+`POST /api/play-game` with `{ seat: 1 }` and no mini-app `initData` (same
+5-seat `میز آزمایش` as the bot command). Boot stays on Home — a hand
+icon there opens the client-only onboarding table.
 
 On that table:
 

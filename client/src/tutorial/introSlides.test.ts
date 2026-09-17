@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
-import { INTRO_SLIDE_COUNT, INTRO_SLIDES } from './introSlides';
+import { INTRO_SLIDE_COUNT, INTRO_SLIDES, effectForIntroVisual } from './introSlides';
 import { TutorialService } from './TutorialService';
 
 describe('TutorialService — intro', () => {
@@ -29,6 +29,13 @@ describe('TutorialService — intro', () => {
     expect(tutorial.retreatIntro()).toBe(false);
   });
 
+  it('Should introduce the empty tracker before the fail marks', () => {
+    const marks = INTRO_SLIDES.filter(
+      (slide) => slide.visual.kind === 'tracker',
+    ).map((slide) => (slide.visual.kind === 'tracker' ? slide.visual.marks : -1));
+    expect(marks).toEqual([0, 1, 2, 3]);
+  });
+
   it('Should restart intro at the first piece', () => {
     const tutorial = new TutorialService();
     tutorial.startIntro({ name: 'You', avatar: 0 });
@@ -48,5 +55,25 @@ describe('TutorialService — intro', () => {
     expect(tutorial.introducing()).toBe(false);
     expect(tutorial.declineCount()).toBe(1);
     expect(tutorial.shouldOffer()).toBe(true);
+  });
+
+  it('Should name a lesson sting for each intro piece', () => {
+    expect(effectForIntroVisual({ kind: 'welcome' })).toBeNull();
+    expect(
+      effectForIntroVisual({ kind: 'images', layout: 'trio', srcs: [] }),
+    ).toBe('onboard-roles');
+    expect(
+      effectForIntroVisual({ kind: 'images', layout: 'stack', srcs: [] }),
+    ).toBe('onboard-boards');
+    expect(effectForIntroVisual({ kind: 'government' })).toBe('onboard-offices');
+    expect(
+      effectForIntroVisual({ kind: 'images', layout: 'row', srcs: [] }),
+    ).toBe('onboard-vote');
+    expect(effectForIntroVisual({ kind: 'tracker', marks: 1 })).toBeNull();
+    expect(effectForIntroVisual({ kind: 'deck', draw: 4, discard: 2 })).toBe(
+      'onboard-deck',
+    );
+    expect(effectForIntroVisual({ kind: 'laws' })).toBe('onboard-laws');
+    expect(effectForIntroVisual({ kind: 'check' })).toBeNull();
   });
 });

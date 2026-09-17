@@ -4,7 +4,6 @@ import {
   type GameStateView,
   type Policy,
   type PublicPlayer,
-  type Vote,
 } from '@secret-hitler/shared';
 import type { MessageKey } from '../i18n';
 
@@ -23,22 +22,50 @@ export const LOOK_SEAT = {
  * Step 0 already named the pieces; here Daniel walks the moves.
  */
 export const LOOK_BEATS = [
+  { target: 'seats', headline: 'onboard.idea.welcome' },
+  { target: 'boards', headline: 'onboard.idea.boards' },
   { target: 'government', headline: 'onboard.idea.government' },
   { target: 'vote', headline: 'onboard.idea.vote' },
-  { target: 'ballots', headline: 'onboard.idea.ballots' },
-  { target: 'tracker', headline: 'onboard.idea.trackerFail1' },
-  { target: 'nextPresident', headline: 'onboard.idea.nextPresident' },
-  { target: 'tracker', headline: 'onboard.idea.trackerFail2' },
-  { target: 'tracker', headline: 'onboard.idea.trackerChaos' },
+  { target: 'tracker', headline: 'onboard.idea.tracker' },
   { target: 'deck', headline: 'onboard.idea.deck' },
   { target: 'laws', headline: 'onboard.idea.laws' },
-  { target: 'seats', headline: 'onboard.letsSit' },
 ] as const satisfies ReadonlyArray<{
   target: string;
   headline: MessageKey;
 }>;
 
 export type LookBeat = (typeof LOOK_BEATS)[number];
+
+/** Lesson sting for the punched-out widget. Not live-table foley. */
+export type LookBeatEffect =
+  | 'onboard-seats'
+  | 'onboard-boards'
+  | 'onboard-offices'
+  | 'onboard-vote'
+  | 'onboard-tracker'
+  | 'onboard-deck'
+  | 'onboard-laws';
+
+export function effectForLookTarget(target: string): LookBeatEffect | null {
+  switch (target) {
+    case 'seats':
+      return 'onboard-seats';
+    case 'boards':
+      return 'onboard-boards';
+    case 'government':
+      return 'onboard-offices';
+    case 'vote':
+      return 'onboard-vote';
+    case 'tracker':
+      return 'onboard-tracker';
+    case 'deck':
+      return 'onboard-deck';
+    case 'laws':
+      return 'onboard-laws';
+    default:
+      return null;
+  }
+}
 
 const COMPANIONS: ReadonlyArray<{
   id: (typeof LOOK_SEAT)[keyof typeof LOOK_SEAT];
@@ -53,18 +80,11 @@ const COMPANIONS: ReadonlyArray<{
 
 const LOOK_DEADLINE_MS = 60_000;
 
-/** Majority Nein on a 5-seat table (half + 1). */
-const FAILED_VOTES: Record<string, Vote> = {
-  [LOOK_SEAT.you]: 'nein',
-  [LOOK_SEAT.nima]: 'nein',
-  [LOOK_SEAT.sara]: 'nein',
-  [LOOK_SEAT.reza]: 'ja',
-  [LOOK_SEAT.omid]: 'ja',
-};
-
 export interface LookYou {
   name: string;
   avatar: number;
+  /** Localized companion names, seat 1…n. English defaults if omitted. */
+  companions?: readonly string[];
 }
 
 /**
@@ -74,12 +94,7 @@ export interface LookYou {
 export function buildLookView(you: LookYou, beatIndex = 0): GameStateView {
   const beat = LOOK_BEATS[Math.max(0, Math.min(beatIndex, LOOK_BEATS.length - 1))];
   const target = beat.target;
-  const headline = beat.headline;
-  const withOffices =
-    target === 'government' ||
-    target === 'vote' ||
-    target === 'ballots' ||
-    target === 'laws';
+  const withOffices = target === 'government' || target === 'vote' || target === 'laws';
 
   const avatars = companionAvatars(you.avatar);
   const players: PublicPlayer[] = [
@@ -93,26 +108,26 @@ export function buildLookView(you: LookYou, beatIndex = 0): GameStateView {
     }),
     seat({
       id: LOOK_SEAT.nima,
-      name: COMPANIONS[0].name,
+      name: you.companions?.[0] ?? COMPANIONS[0].name,
       avatar: avatars[0],
       seat: COMPANIONS[0].seat,
       isChancellor: withOffices,
     }),
     seat({
       id: LOOK_SEAT.sara,
-      name: COMPANIONS[1].name,
+      name: you.companions?.[1] ?? COMPANIONS[1].name,
       avatar: avatars[1],
       seat: COMPANIONS[1].seat,
     }),
     seat({
       id: LOOK_SEAT.reza,
-      name: COMPANIONS[2].name,
+      name: you.companions?.[2] ?? COMPANIONS[2].name,
       avatar: avatars[2],
       seat: COMPANIONS[2].seat,
     }),
     seat({
       id: LOOK_SEAT.omid,
-      name: COMPANIONS[3].name,
+      name: you.companions?.[3] ?? COMPANIONS[3].name,
       avatar: avatars[3],
       seat: COMPANIONS[3].seat,
     }),
@@ -121,11 +136,6 @@ export function buildLookView(you: LookYou, beatIndex = 0): GameStateView {
   const base = emptyView(players, withOffices);
 
   if (target === 'vote') return votingStage(base);
-  if (headline === 'onboard.idea.trackerFail1') return failTrackerStage(base, 1);
-  if (headline === 'onboard.idea.nextPresident') return nextPresidentStage(base);
-  if (headline === 'onboard.idea.trackerFail2') return failTrackerStage(base, 2);
-  if (headline === 'onboard.idea.trackerChaos') return failTrackerStage(base, 3);
-  if (target === 'ballots') return ballotsStage(base);
   if (target === 'laws') return lawsStage(base);
   return base;
 }
@@ -140,6 +150,7 @@ function emptyView(players: PublicPlayer[], withOffices: boolean): GameStateView
     minPlayers: 5,
     maxPlayers: 10,
     kind: 'hosted',
+    adminPlay: false,
     startChoice: null,
     players,
     board: {
@@ -153,6 +164,8 @@ function emptyView(players: PublicPlayer[], withOffices: boolean): GameStateView
       lastEnacted: [],
     },
     winner: null,
+    roundHistory: [],
+    breathDeadline: null,
     discussionDeadline: null,
     voteDeadline: null,
     legislativeDeadline: null,
@@ -183,74 +196,6 @@ function votingStage(base: GameStateView): GameStateView {
     ...base,
     phase: Phase.Voting,
     voteDeadline: { startedAt: now, endsAt: now + LOOK_DEADLINE_MS },
-    you: { ...base.you, vote: null },
-  };
-}
-
-/** Face-up Ja / Nein cards on the seats after the table has voted. */
-function ballotsStage(base: GameStateView): GameStateView {
-  const votes: Record<string, Vote> = {
-    [LOOK_SEAT.you]: 'ja',
-    [LOOK_SEAT.nima]: 'ja',
-    [LOOK_SEAT.sara]: 'ja',
-    [LOOK_SEAT.reza]: 'nein',
-    [LOOK_SEAT.omid]: 'ja',
-  };
-  return {
-    ...base,
-    phase: Phase.Nomination,
-    players: base.players.map((player) => ({
-      ...player,
-      hasVoted: true,
-      vote: votes[player.id] ?? null,
-    })),
-    you: { ...base.you, vote: 'ja' },
-  };
-}
-
-/**
- * Failed government: majority Nein (half + 1), tracker advanced, offices clear.
- * marks = 1 | 2 | 3 (third mark = chaos threshold).
- */
-function failTrackerStage(base: GameStateView, marks: 1 | 2 | 3): GameStateView {
-  return {
-    ...base,
-    phase: Phase.Nomination,
-    board: {
-      ...base.board,
-      electionTracker: marks,
-      president: null,
-      chancellor: null,
-    },
-    players: base.players.map((player) => ({
-      ...player,
-      isPresident: false,
-      isChancellor: false,
-      hasVoted: true,
-      vote: FAILED_VOTES[player.id] ?? 'nein',
-    })),
-    you: { ...base.you, vote: 'nein' },
-  };
-}
-
-/** Presidency rotated to the next seat after a failed vote. */
-function nextPresidentStage(base: GameStateView): GameStateView {
-  return {
-    ...base,
-    phase: Phase.Nomination,
-    board: {
-      ...base.board,
-      electionTracker: 1,
-      president: LOOK_SEAT.nima,
-      chancellor: null,
-    },
-    players: base.players.map((player) => ({
-      ...player,
-      isPresident: player.id === LOOK_SEAT.nima,
-      isChancellor: false,
-      hasVoted: false,
-      vote: null,
-    })),
     you: { ...base.you, vote: null },
   };
 }

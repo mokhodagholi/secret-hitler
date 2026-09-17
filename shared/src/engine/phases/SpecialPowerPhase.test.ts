@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
-import { Phase, type Role } from '../../types/GameState';
-import { StackedDeck, electGovernment, startGame } from '../../../test/test-utils';
+import { Phase, SPECIAL_POWER_DURATION_MS, type Role } from '../../types/GameState';
+import { StackedDeck, electGovernment, flushBreath, releaseChoiceHolds, startGame } from '../../../test/test-utils';
 import type { RunningGame } from '../../../test/test-utils';
 
 const FIVE = ['Ana', 'Ben', 'Cal', 'Dan', 'Eve'];
@@ -24,6 +24,8 @@ function enactFascist(game: RunningGame, priorFascist: number): void {
     index: 1,
   });
   game.engine.handleCommand(chancellor.id, { kind: 'enactPolicy', index: 0 });
+  flushBreath(game.engine);
+  releaseChoiceHolds(game.room);
 }
 
 describe('SpecialPowerPhase', () => {
@@ -50,6 +52,7 @@ describe('SpecialPowerPhase', () => {
       kind: 'useSpecialPower',
       targetId: '',
     });
+    flushBreath(game.engine);
     expect(game.room.phase).toBe(Phase.Nomination);
   });
 
@@ -82,6 +85,7 @@ describe('SpecialPowerPhase', () => {
       kind: 'useSpecialPower',
       targetId: liberal.id,
     });
+    flushBreath(game.engine);
 
     expect(liberal.isAlive).toBe(false);
     expect(game.room.phase).toBe(Phase.Nomination);
@@ -125,6 +129,7 @@ describe('SpecialPowerPhase — 7-player powers', () => {
     });
     // Acknowledging the result advances the round.
     expect(repeat).toBeNull();
+    flushBreath(game.engine);
     expect(game.room.phase).toBe(Phase.Nomination);
     expect(
       game.room.viewFor(investigatorId).players.find((p) => p.id === target.id)
@@ -132,14 +137,14 @@ describe('SpecialPowerPhase — 7-player powers', () => {
     ).toBe('fascist');
   });
 
-  it('Should open a 15-second choose window when Investigate begins', () => {
+  it('Should open a choose window when Investigate begins', () => {
     const game = startGame(SEVEN, new StackedDeck(['fascist', 'liberal', 'liberal']));
     setRoles(game);
     enactFascist(game, 1);
 
     expect(game.room.phase).toBe(Phase.SpecialPower);
     expect(game.room.specialPowerEndsAt - game.room.specialPowerStartedAt).toBe(
-      15_000,
+      SPECIAL_POWER_DURATION_MS,
     );
   });
 
@@ -157,6 +162,7 @@ describe('SpecialPowerPhase — 7-player powers', () => {
     expect(game.room.investigation).not.toBeNull();
 
     game.engine.resolveSpecialPowerTimeout();
+    flushBreath(game.engine);
     expect(game.room.phase).toBe(Phase.Nomination);
   });
 
@@ -171,6 +177,7 @@ describe('SpecialPowerPhase — 7-player powers', () => {
       kind: 'useSpecialPower',
       targetId: pick.id,
     });
+    flushBreath(game.engine);
 
     expect(game.room.phase).toBe(Phase.Nomination);
     expect(game.room.presidentId).toBe(pick.id);
