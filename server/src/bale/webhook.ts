@@ -314,7 +314,7 @@ export async function handleMessengerWebhook(
   const message = body.message;
   const text = message?.text?.trim();
   const chat = message?.chat;
-  if (!message || !text) {
+  if (!message || !text || !chat) {
     return reply.code(200).send({ ok: true });
   }
 
