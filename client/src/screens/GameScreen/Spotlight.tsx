@@ -9,6 +9,8 @@ export interface SpotlightProps {
   formatMessage: FormatMessage;
   /** Hide Continue while the player must do a table action. */
   showContinue?: boolean;
+  /** Hide Skip while Daniel's header is still typing. Defaults to shown. */
+  showSkip?: boolean;
   /** Hide the smoke while bots play. Skip stays. */
   lifted?: boolean;
   /** Step back one look beat. Hidden on the first beat when omitted/false. */
@@ -284,9 +286,11 @@ export function Spotlight(props: SpotlightProps) {
         </>
       </Show>
       <div class={styles.chrome}>
-        <button type="button" class={styles.skip} onClick={() => props.onSkip()}>
-          {props.formatMessage('onboard.skip')}
-        </button>
+        <Show when={props.showSkip !== false}>
+          <button type="button" class={styles.skip} onClick={() => props.onSkip()}>
+            {props.formatMessage('onboard.skip')}
+          </button>
+        </Show>
         <div class={styles.nav}>
           <Show when={props.showPrevious}>
             <button

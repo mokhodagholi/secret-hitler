@@ -1435,7 +1435,10 @@ export function GameScreen() {
                   tutorial.lock() === 'night' ||
                   (tutorial.playing() && view()?.winner != null)
                 }
-                showPrevious={tutorial.looking() && tutorial.beat() > 0}
+                showSkip={!tutorial.looking() || lookHeadlineReady()}
+                showPrevious={
+                  tutorial.looking() && tutorial.beat() > 0 && lookHeadlineReady()
+                }
                 onPrevious={() => tutorial.retreatLook()}
                 onContinue={() => {
                   if (tutorial.looking()) continueLook();

@@ -132,9 +132,10 @@ when it first opens. The composer ring is only for the write beat
 while they type. Continue on the talk beats sits a little onto the chat
 handle — it must not sit on the gold border.
 
-Continue is hidden while the campaign plays, while they write, and while
-Nima names them in chat. Previous still works. The last Continue is
-«ببینیم» / “Let's see”, not «ادامه».
+Continue, Previous, and Skip are hidden while Daniel's header is still
+typing. Continue also stays off while the campaign plays, while they
+write, and while Nima names them in chat. The last Continue is «ببینیم»
+/ “Let's see”, not «ادامه».
 
 The write beat is two tries. First ghost is a **bad** line — even copying
 it is rejected («این جمله کمکتون نمی‌کنه.»). Then another campaign and
@@ -207,9 +208,10 @@ Not a black dimmer and not a tutorial cartoon.
   optional gold ring. President + chancellor share a single hole.
 - The punched-out control is the only pressable hit target.
 - Ravi / Daniel plaque sits **above** the mask (never covered).
-- Continue / Skip / Previous sit in the safe area, also above the mask.
-  On chat beats they overlap the chat handle a little so they are not
-  sitting on the gold ring. Previous is hidden on the first beat.
+- Continue / Skip / Previous sit in the safe area, also above the mask,
+  and stay off while the header line is still typing. On chat beats they
+  overlap the chat handle a little so they are not sitting on the gold
+  ring. Previous is hidden on the first beat.
 - Reduce-motion: no pulse; hole still moves.
 
 Same overlay for step 1 and for teaching beats inside a match. When
