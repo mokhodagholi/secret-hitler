@@ -31,9 +31,6 @@ export class PresidentLegislativePhase implements GamePhase {
     if (playerId !== room.presidentId) {
       return err('INVALID_ACTION', 'You are not discarding a policy.');
     }
-    if (Date.now() < room.legislativeStartedAt) {
-      return err('INVALID_ACTION', 'Wait for the table to settle.');
-    }
     if (command.index < 0 || command.index >= room.drawnPolicies.length) {
       return err('INVALID_ACTION', 'Invalid policy choice.');
     }

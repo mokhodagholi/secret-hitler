@@ -28,9 +28,6 @@ export class VotingPhase implements GamePhase {
     if (!player?.isAlive) {
       return err('INVALID_ACTION', 'You cannot vote in this election.');
     }
-    if (Date.now() < room.voteStartedAt) {
-      return err('INVALID_ACTION', 'Wait for the table to settle.');
-    }
 
     room.votes.set(playerId, command.vote);
     // Admin play table: every dummy seat follows this device so Ja elects and Nein fails.

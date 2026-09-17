@@ -55,9 +55,6 @@ export class NominationPhase implements GamePhase {
     if (playerId !== room.presidentId) {
       return err('INVALID_ACTION', 'Only the President can nominate.');
     }
-    if (Date.now() < room.nominationStartedAt) {
-      return err('INVALID_ACTION', 'Wait for the table to settle.');
-    }
     const target = room.findPlayer(command.targetId);
     if (!target || !target.isAlive || !target.connected || target.id === playerId) {
       return err('INVALID_ACTION', 'That player cannot be nominated.');

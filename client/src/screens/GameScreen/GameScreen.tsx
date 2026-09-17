@@ -662,7 +662,6 @@ export function GameScreen() {
     const state = view();
     return (
       inNomination() &&
-      choiceOpen(state?.nominationDeadline) &&
       !state?.kickVote &&
       iAmPresident() &&
       player.isAlive &&
@@ -742,8 +741,7 @@ export function GameScreen() {
       !state ||
       state.kickVote ||
       state.phase !== Phase.SpecialPower ||
-      !iAmPresident() ||
-      !choiceOpen(state.specialPowerDeadline)
+      !iAmPresident()
     ) {
       return false;
     }
@@ -819,7 +817,7 @@ export function GameScreen() {
     setHistoryOpen(false);
   }
 
-  /** Choice clocks stay closed while Ravi's prompt hold is running. */
+  /** True once the auto-timeout clock is running (Ravi/deal hold has elapsed). */
   const choiceOpen = (deadline: { startedAt: number; endsAt: number } | null | undefined) =>
     deadline != null && now() >= deadline.startedAt;
 
@@ -880,7 +878,6 @@ export function GameScreen() {
       continueLook();
       return;
     }
-    if (!choiceOpen(view()?.legislativeDeadline)) return;
     if (tutorial.playing()) {
       const phase = view()?.phase;
       if (phase === Phase.PresidentLegislative) {
@@ -1278,7 +1275,6 @@ export function GameScreen() {
                 presidentAvatar={playerAvatar(state().board.president)}
                 chancellorAvatar={playerAvatar(state().board.chancellor)}
                 canVote={
-                  choiceOpen(state().voteDeadline) &&
                   state().you.vote == null &&
                   (onboarding() || !!game.you()?.isAlive)
                 }

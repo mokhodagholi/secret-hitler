@@ -92,3 +92,105 @@ describe('GameEngine — announce breath', () => {
     expect(error?.code).toBe('INVALID_ACTION');
   });
 });
+
+describe('GameEngine — actor picks skip the prompt hold', () => {
+  it('Should discard as soon as the President picks during the deal hold', () => {
+    const deck = new StackedDeck(['liberal', 'fascist', 'fascist']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck, { skipCeremony: false });
+    const [president, chancellor] = game.players;
+    electGovernment(game, chancellor);
+
+    expect(Date.now() < game.room.legislativeStartedAt).toBe(true);
+    const error = game.engine.handleCommand(president.id, {
+      kind: 'discardPolicy',
+      index: 0,
+    });
+    expect(error).toBeNull();
+    expect(game.room.phase).toBe(Phase.ChancellorLegislative);
+    expect(game.room.legislativeStartedAt).toBeGreaterThan(Date.now());
+  });
+
+  it('Should enact as soon as the Chancellor picks during the pass hold', () => {
+    const deck = new StackedDeck(['liberal', 'fascist', 'fascist']);
+    const game = startGame(['Ana', 'Ben', 'Cal'], deck, { skipCeremony: false });
+    const [president, chancellor] = game.players;
+    electGovernment(game, chancellor);
+    game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 0 });
+
+    expect(Date.now() < game.room.legislativeStartedAt).toBe(true);
+    const error = game.engine.handleCommand(chancellor.id, {
+      kind: 'enactPolicy',
+      index: 0,
+    });
+    expect(error).toBeNull();
+    expect(game.room.pendingBreath).not.toBeNull();
+    expect(game.room.legislativeEndsAt).toBe(0);
+  });
+
+  it('Should nominate during the Ravi prompt hold', () => {
+    const { engine, room, players } = startGame(undefined, undefined, {
+      skipCeremony: false,
+    });
+    skipOpeningNight(room);
+    engine.endDiscussion();
+
+    expect(Date.now() < room.nominationStartedAt).toBe(true);
+    const error = engine.handleCommand(players[0].id, {
+      kind: 'nominateChancellor',
+      targetId: players[1].id,
+    });
+    expect(error).toBeNull();
+    expect(room.phase).toBe(Phase.Voting);
+    expect(room.nominationEndsAt).toBe(0);
+  });
+
+  it('Should accept a vote during the Ravi prompt hold', () => {
+    const { engine, room, players } = startGame(undefined, undefined, {
+      skipCeremony: false,
+    });
+    skipOpeningNight(room);
+    engine.endDiscussion();
+    engine.handleCommand(players[0].id, {
+      kind: 'nominateChancellor',
+      targetId: players[1].id,
+    });
+
+    expect(Date.now() < room.voteStartedAt).toBe(true);
+    const error = engine.handleCommand(players[0].id, {
+      kind: 'castVote',
+      vote: 'ja',
+    });
+    expect(error).toBeNull();
+    expect(room.votes.get(players[0].id)).toBe('ja');
+    expect(room.phase).toBe(Phase.Voting);
+  });
+
+  it('Should use a power during the Ravi prompt hold', () => {
+    const deck = new StackedDeck([
+      'fascist',
+      'liberal',
+      'liberal',
+      'liberal',
+      'fascist',
+      'liberal',
+    ]);
+    const game = startGame(['Ana', 'Ben', 'Cal', 'Dan', 'Eve'], deck, {
+      skipCeremony: false,
+    });
+    game.room.fascistPolicies = 2;
+    const [president, chancellor] = game.players;
+    electGovernment(game, chancellor);
+    game.engine.handleCommand(president.id, { kind: 'discardPolicy', index: 1 });
+    game.engine.handleCommand(chancellor.id, { kind: 'enactPolicy', index: 0 });
+    flushBreath(game.engine);
+
+    expect(game.room.phase).toBe(Phase.SpecialPower);
+    expect(Date.now() < game.room.specialPowerStartedAt).toBe(true);
+    const error = game.engine.handleCommand(president.id, {
+      kind: 'useSpecialPower',
+      targetId: '',
+    });
+    expect(error).toBeNull();
+    expect(game.room.specialPowerEndsAt).toBe(0);
+  });
+});

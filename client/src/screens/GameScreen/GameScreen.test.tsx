@@ -61,6 +61,24 @@ describe('GameScreen — voting', () => {
     expect(screen.queryByRole('button', { name: 'Ja!' })).toBeNull();
   });
 
+  it('Should send a Ja vote during the Ravi prompt hold', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState({
+      ...votingView(),
+      voteDeadline: {
+        startedAt: Date.now() + 8_000,
+        endsAt: Date.now() + 38_000,
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ja!' }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'castVote', vote: 'ja' },
+    });
+  });
+
   it('Should send a Nein vote when the player picks it', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -631,6 +649,24 @@ describe('GameScreen — nomination', () => {
     });
   });
 
+  it('Should nominate during the Ravi prompt hold', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState({
+      ...nominationView(),
+      nominationDeadline: {
+        startedAt: Date.now() + 8_000,
+        endsAt: Date.now() + 18_000,
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'nominateChancellor', targetId: 'cal' },
+    });
+  });
+
   it('Should play a stamp when the President nominates from the table', () => {
     const harness = buildHarness({ seated: true });
     const play = rs.spyOn(harness.services.sound, 'play');
@@ -787,6 +823,28 @@ describe('GameScreen — presidential power', () => {
       phase: Phase.SpecialPower,
       activePower: 'investigate',
       board: { ...view.board, president: 'you', chancellor: 'cal' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'useSpecialPower', targetId: 'cal' },
+    });
+  });
+
+  it('Should investigate during the Ravi prompt hold', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'investigate',
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      specialPowerDeadline: {
+        startedAt: Date.now() + 8_000,
+        endsAt: Date.now() + 23_000,
+      },
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Cal/ }));
@@ -1033,6 +1091,60 @@ describe('GameScreen — legislative modal', () => {
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
       command: { kind: 'discardPolicy', index: 0 },
+    });
+  });
+
+  it('Should send a discard during the deal hold', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      legislativeDeadline: {
+        startedAt: Date.now() + 8_000,
+        endsAt: Date.now() + 28_000,
+      },
+      you: {
+        ...view.you,
+        policies: ['liberal', 'fascist', 'fascist'],
+      },
+    });
+
+    const liberal = await waitFor(() =>
+      screen.getByRole('button', { name: en.game.liberal }),
+    );
+    fireEvent.click(liberal);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'discardPolicy', index: 0 },
+    });
+  });
+
+  it('Should send an enact during the pass hold', async () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.ChancellorLegislative,
+      board: { ...view.board, president: 'pres', chancellor: 'you' },
+      legislativeDeadline: {
+        startedAt: Date.now() + 8_000,
+        endsAt: Date.now() + 28_000,
+      },
+      you: {
+        ...view.you,
+        policies: ['liberal', 'fascist'],
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'enactPolicy', index: 0 },
     });
   });
 

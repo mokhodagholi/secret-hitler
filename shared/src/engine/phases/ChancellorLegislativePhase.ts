@@ -34,9 +34,6 @@ export class ChancellorLegislativePhase implements GamePhase {
     if (playerId !== room.chancellorId) {
       return err('INVALID_ACTION', 'You are not enacting a policy.');
     }
-    if (Date.now() < room.legislativeStartedAt) {
-      return err('INVALID_ACTION', 'Wait for the table to settle.');
-    }
     if (command.index < 0 || command.index >= room.drawnPolicies.length) {
       return err('INVALID_ACTION', 'Invalid policy choice.');
     }

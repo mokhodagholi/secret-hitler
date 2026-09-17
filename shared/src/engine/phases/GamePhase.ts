@@ -28,27 +28,27 @@ export interface PhaseHost {
   closeDiscussion(): void;
   /** End discussion early and open the nomination window. */
   endDiscussion(): void;
-  /** Open the vote window (`delayMs` holds picks until Ravi's vote prompt ends). */
+  /** Open the vote window (`delayMs` delays the auto-timeout, not a committed vote). */
   openVote(delayMs?: number): void;
   /** Close the vote window (vote resolved) and cancel its deadline. */
   closeVote(): void;
   /**
    * Open the legislative choice window and schedule its deadline.
-   * `delayMs` holds the clock until the public deal/pass has landed.
+   * `delayMs` delays the auto-timeout until the public deal/pass has landed.
    */
   openLegislativeTimer(delayMs?: number): void;
   /** Close the legislative choice window and cancel its deadline. */
   closeLegislativeTimer(): void;
   /**
-   * Open the nomination window (`delayMs` holds picks until Ravi's nominate
-   * prompt ends).
+   * Open the nomination window (`delayMs` delays the auto-timeout for Ravi's
+   * nominate prompt).
    */
   openNominationTimer(delayMs?: number): void;
   /** Close the nomination window and cancel its deadline. */
   closeNominationTimer(): void;
   /**
    * Open the executive-power window. `durationMs` is the choose clock;
-   * `delayMs` holds picks until Ravi's power prompt ends.
+   * `delayMs` delays the auto-timeout for Ravi's power prompt.
    */
   openSpecialPowerTimer(durationMs?: number, delayMs?: number): void;
   /** Close the executive-power window and cancel its deadline. */

@@ -39,9 +39,6 @@ export class SpecialPowerPhase implements GamePhase {
     if (playerId !== room.presidentId) {
       return err('INVALID_ACTION', 'Only the President can use this power.');
     }
-    if (Date.now() < room.specialPowerStartedAt) {
-      return err('INVALID_ACTION', 'Wait for the table to settle.');
-    }
 
     switch (room.activePower) {
       case 'policyPeek':
