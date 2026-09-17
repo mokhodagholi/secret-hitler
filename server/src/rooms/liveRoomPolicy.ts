@@ -5,26 +5,39 @@ export function isInProgressLiveGame(room: Room): boolean {
   return room.phase !== Phase.Lobby && room.phase !== Phase.GameOver;
 }
 
-/**
- * What belongs on disk across a restart: the evergreen public lobby (even
- * empty), occupied or not, and tables that are mid-game so seats can
- * reconnect. Hosted waiting rooms and finished games are cheap to recreate
- * and look empty after a boot.
- */
-export function shouldPersistLiveRoom(room: Room): boolean {
-  if (isPublicTable(room.options) && room.phase === Phase.Lobby) {
-    return true;
-  }
-  return isInProgressLiveGame(room);
+/** Waiting room with seats — a deploy should not wipe the table. */
+export function isOccupiedLobby(room: Room): boolean {
+  return room.phase === Phase.Lobby && room.players.length > 0;
 }
 
 /**
- * The public salon stays listed at 0 seats. An in-progress match stays only
- * while post-restart reconnect grace is open.
+ * What belongs on disk across a restart: the evergreen public lobby (even
+ * empty), occupied waiting rooms, and tables that are mid-game so seats can
+ * reconnect. Empty hosted lobbies and finished games are cheap to recreate.
+ */
+export function shouldPersistLiveRoom(room: Room): boolean {
+  if (room.options.adminPlayUserId != null && room.phase === Phase.Lobby) {
+    return false;
+  }
+  if (isPublicTable(room.options) && room.phase === Phase.Lobby) {
+    return true;
+  }
+  if (isOccupiedLobby(room)) return true;
+  return isInProgressLiveGame(room);
+}
+
+/** Restored seats are all disconnected; keep the table until they return. */
+export function needsReconnectGrace(room: Room): boolean {
+  return isInProgressLiveGame(room) || isOccupiedLobby(room);
+}
+
+/**
+ * The public salon stays listed at 0 seats. Occupied lobbies and in-progress
+ * matches stay only while post-restart reconnect grace is open.
  */
 export function shouldKeepEmptyRoom(room: Room, reconnectGrace: boolean): boolean {
   if (isPublicTable(room.options) && room.phase === Phase.Lobby) {
     return true;
   }
-  return reconnectGrace && isInProgressLiveGame(room);
+  return reconnectGrace && needsReconnectGrace(room);
 }

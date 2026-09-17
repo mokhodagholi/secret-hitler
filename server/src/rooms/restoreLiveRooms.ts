@@ -6,9 +6,9 @@ import type { SocketHandler } from '../ws/SocketHandler';
 import type { LiveRoomStore } from './LiveRoomStore';
 
 /**
- * Rebuild engines from the last durable snapshot. Hosted lobbies and
- * finished games are adopted then dropped (they look empty after boot).
- * One bad row must not prevent the rest of the tables from coming back.
+ * Rebuild engines from the last durable snapshot. Occupied lobbies and
+ * in-progress matches stay for reconnect; finished games are adopted then
+ * dropped. One bad row must not prevent the rest of the tables from coming back.
  */
 export async function restoreLiveRooms(args: {
   repo: RoomRepository;

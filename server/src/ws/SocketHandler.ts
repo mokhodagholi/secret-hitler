@@ -27,7 +27,7 @@ import { ConnectionRegistry } from './ConnectionRegistry';
 import { RateLimiter } from '../util/RateLimiter';
 import type { RoomEntry, RoomRepository } from '../rooms/RoomRepository';
 import {
-  isInProgressLiveGame,
+  needsReconnectGrace,
   shouldKeepEmptyRoom,
   shouldPersistLiveRoom,
 } from '../rooms/liveRoomPolicy';
@@ -415,14 +415,13 @@ export class SocketHandler {
   }
 
   /**
-   * Wire a room that survived a process restart. In-progress matches get a
-   * reconnect window so `isEmpty` does not delete them before anyone returns.
-   * Hosted lobbies and finished games are already empty (every socket is gone)
-   * and are dropped immediately.
+   * Wire a room that survived a process restart. Occupied lobbies and
+   * in-progress matches get a reconnect window so `isEmpty` does not delete
+   * them before anyone returns. Finished games look empty and are dropped.
    */
   adoptRestored(entry: RoomEntry): void {
     this.registerEngine(entry);
-    if (isInProgressLiveGame(entry.room)) {
+    if (needsReconnectGrace(entry.room)) {
       this.beginReconnectGrace(entry.room.id);
     } else if (this.dropEmptyRoomIfUnkept(entry.room.id)) {
       return;
@@ -525,7 +524,11 @@ export class SocketHandler {
     player: RoomEntry['room']['players'][number],
   ): number | null {
     if (room.phase !== Phase.Lobby || player.unreadySince == null) return null;
-    if (!player.connected) return player.unreadySince + LOBBY_DISCONNECT_MS;
+    // Deploy looks like every seat disconnected; wait for reconnect grace.
+    if (!player.connected) {
+      if (this.reconnectGrace.has(room.id)) return null;
+      return player.unreadySince + LOBBY_DISCONNECT_MS;
+    }
     if (room.startChoice != null || room.kickVote != null) return null;
     const idle = isPublicTable(room.options) ? !player.wantsStart : !player.ready;
     if (!idle || player.isHost || player.id === room.hostId) return null;
@@ -552,9 +555,24 @@ export class SocketHandler {
     this.clearReconnectGrace(roomId);
     const timer = setTimeout(() => {
       this.reconnectGrace.delete(roomId);
+      this.dropUnrestoredLobbySeats(roomId);
       this.dropEmptyRoomIfUnkept(roomId);
     }, LIVE_ROOM_RECONNECT_GRACE_MS);
     this.reconnectGrace.set(roomId, timer);
+  }
+
+  /** Seats that never came back after a restart leave the waiting room. */
+  private dropUnrestoredLobbySeats(roomId: string): void {
+    const entry = this.repo.get(roomId);
+    if (!entry || entry.room.phase !== Phase.Lobby) return;
+    const staleIds = entry.room.players
+      .filter((player) => !player.connected)
+      .map((player) => player.id);
+    for (const playerId of staleIds) {
+      const remaining = this.repo.get(roomId);
+      if (!remaining) return;
+      this.dropSeat(remaining, playerId);
+    }
   }
 
   private clearReconnectGrace(roomId: string): void {
@@ -1075,7 +1093,10 @@ export class SocketHandler {
 
     this.connections.bind(player.id, ws);
     this.socketRoom.set(ws, entry.room.id);
-    this.clearReconnectGrace(entry.room.id);
+    // Lobby sitters reconnect on different clocks after a deploy.
+    if (entry.room.phase !== Phase.Lobby) {
+      this.clearReconnectGrace(entry.room.id);
+    }
     if (player.id === entry.room.hostId) {
       this.cancelHostGrace(entry.room.id);
     } else if (!entry.room.findPlayer(entry.room.hostId)?.connected) {

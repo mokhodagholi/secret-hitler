@@ -42,7 +42,7 @@ async function dealHostedTable(built: BuiltServer, roomId: string): Promise<void
 }
 
 describe('live room persistence', () => {
-  it('Should not restore a hosted lobby after a process restart', async () => {
+  it('Should restore a hosted lobby after a process restart', async () => {
     const live = new InMemoryLiveRoomStore();
     const first = await buildServer({ minPlayers: 3, live });
     const created = await httpJson<CreateRoomResponse>(first.app, 'POST', '/api/rooms', {
@@ -50,16 +50,40 @@ describe('live room persistence', () => {
       hostName: 'Ana',
     });
     expect(created.status).toBe(201);
+    const entry = first.repo.get(created.body.roomId)!;
+    expect('id' in entry.engine.addPlayer('Ben')).toBe(true);
     await first.sockets.persistRoom(created.body.roomId);
     await first.app.close();
 
     const second = await buildServer({ minPlayers: 3, live });
-    expect(second.repo.get(created.body.roomId)).toBeUndefined();
-    expect(second.tokens.lookup(created.body.token)).toBeUndefined();
+    const restored = second.repo.get(created.body.roomId)?.room;
+    expect(restored?.phase).toBe(Phase.Lobby);
+    expect(restored?.code).toBe(created.body.code);
+    expect(restored?.players).toHaveLength(2);
+    expect(second.tokens.lookup(created.body.token)?.playerId).toBe(created.body.playerId);
     await second.app.close();
   });
 
-  it('Should drop a hosted lobby snapshotted under the old persist policy', async () => {
+  it('Should let a host reconnect to a restored lobby', async () => {
+    const live = new InMemoryLiveRoomStore();
+    const first = await listenServer(3, { live });
+    const created = await httpJson<CreateRoomResponse>(first.app, 'POST', '/api/rooms', {
+      name: 'Friday Night',
+      hostName: 'Ana',
+    });
+    await first.sockets.persistRoom(created.body.roomId);
+    await first.close();
+
+    const second = await listenServer(3, { live });
+    const client = await TestClient.connect(second.port);
+    const playerId = await client.auth(created.body.token);
+    expect(playerId).toBe(created.body.playerId);
+    expect(second.repo.get(created.body.roomId)?.room.players[0].connected).toBe(true);
+    client.close();
+    await second.close();
+  });
+
+  it('Should keep restored lobby guests seated through reconnect grace', async () => {
     const live = new InMemoryLiveRoomStore();
     const first = await buildServer({ minPlayers: 3, live });
     const created = await httpJson<CreateRoomResponse>(first.app, 'POST', '/api/rooms', {
@@ -67,16 +91,14 @@ describe('live room persistence', () => {
       hostName: 'Ana',
     });
     const entry = first.repo.get(created.body.roomId)!;
+    const guest = entry.engine.addPlayer('Ben');
+    expect('id' in guest).toBe(true);
     await first.sockets.persistRoom(created.body.roomId);
-    await live.save(entry.room.id, entry.room.code, {
-      room: entry.room.toSnapshot(),
-      tokens: first.tokens.listForRoom(entry.room.id),
-    });
     await first.app.close();
 
     const second = await buildServer({ minPlayers: 3, live });
-    expect(second.repo.get(created.body.roomId)).toBeUndefined();
-    expect(await live.loadAll()).toHaveLength(0);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(second.repo.get(created.body.roomId)?.room.players).toHaveLength(2);
     await second.app.close();
   });
 
