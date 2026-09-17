@@ -9,6 +9,7 @@ export const FLAG_NAMES = [
   'onboarding',
   'roomPassword',
   'lobbyFill',
+  'bots',
 ] as const;
 
 export type FlagName = (typeof FLAG_NAMES)[number];
@@ -23,6 +24,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   onboarding: false,
   roomPassword: false,
   lobbyFill: false,
+  bots: false,
 };
 
 export interface FlagsResponse {

@@ -194,6 +194,7 @@ export class Room {
       hasVoted: this.votes.has(p.id),
       vote: this.phase === Phase.Voting ? null : (this.votes.get(p.id) ?? null),
       wantsContinue: p.wantsContinue,
+      isBot: p.isBot ?? false,
       role: this.roleVisibleTo(viewer, p),
       party: this.partyVisibleTo(viewer.id, p.id),
       selfMuted: false,
