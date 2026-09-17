@@ -1,6 +1,38 @@
 {
   "releases": [
     {
+      "version": "0.8.2",
+      "bump": "patch",
+      "date": "2026-09-18",
+      "changes": [
+        {
+          "kind": "fix",
+          "fa": "اگر دولت رأی نیاورد، رأی هر نفر روی صندلی‌اش می‌ماند تا دور بعد.",
+          "en": "When a government is voted down, each seat still shows how they voted."
+        },
+        {
+          "kind": "fix",
+          "fa": "قدرت فاشیست‌ها دیگر پنجره باز نمی‌کند؛ همان بالا می‌گوید چه کار کنید و روی صندلی بزنید.",
+          "en": "Fascist powers no longer open a picker — the header tells you what to do, and you tap a seat."
+        },
+        {
+          "kind": "fix",
+          "fa": "اگر اعدام شدید و برای تماشا ماندید، دیگر نمی‌توانید در چت بنویسید؛ فقط پیام بقیه را می‌بینید.",
+          "en": "If you are executed and stay to watch, you can read the table chat but you cannot send."
+        },
+        {
+          "kind": "fix",
+          "fa": "اگر بعد از پایان بازی بمانید، در لابی نقش قبلی همه را می‌بینید و چت از نو خالی است.",
+          "en": "If you stay after a win, the next lobby shows last-game roles and starts with empty chat."
+        },
+        {
+          "kind": "fix",
+          "fa": "وقتی چت میز را دوباره باز می‌کنید، از آخرین پیام‌ها باز می‌شود، نه از اول.",
+          "en": "Reopening table chat lands on the latest messages, not the top."
+        }
+      ]
+    },
+    {
       "version": "0.8.1",
       "bump": "patch",
       "date": "2026-09-17",

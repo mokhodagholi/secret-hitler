@@ -1,6 +1,12 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase } from '../types/GameState';
-import { StackedDeck, electGovernment, startGame } from '../../test/test-utils';
+import {
+  StackedDeck,
+  electGovernment,
+  releaseChoiceHolds,
+  skipOpeningNight,
+  startGame,
+} from '../../test/test-utils';
 
 describe('Room.viewFor — information hiding', () => {
   it('Should hide other players\' roles while the game is running', () => {
@@ -43,6 +49,22 @@ describe('Room.viewFor — information hiding', () => {
     expect(view.players.every((p) => p.role === 'liberal')).toBe(true);
   });
 
+  it('Should reveal last-game roles in the rematch lobby after a player stays', () => {
+    const { engine, room, players } = startGame();
+    const lastGameRoles = new Map(
+      room.players.map((player) => [player.id, player.role]),
+    );
+    engine.endGame('fascist');
+    expect(engine.continuePlaying(players[0].id)).toBeNull();
+    expect(room.phase).toBe(Phase.Lobby);
+
+    const view = room.viewFor(players[0].id);
+    for (const publicPlayer of view.players) {
+      expect(publicPlayer.role).toBe(lastGameRoles.get(publicPlayer.id));
+      expect(publicPlayer.role).not.toBeNull();
+    }
+  });
+
   it('Should expose who voted but never what they voted', () => {
     const game = startGame();
     const { engine, room, players } = game;
@@ -70,6 +92,30 @@ describe('Room.viewFor — information hiding', () => {
     const view = room.viewFor(players[0].id);
     expect(view.phase).not.toBe(Phase.Voting);
     expect(view.players.every((player) => player.vote === 'ja')).toBe(true);
+  });
+
+  it('Should reveal each vote after a failed election, during the fail breath', () => {
+    const { engine, room, players } = startGame(undefined, undefined, {
+      skipCeremony: false,
+    });
+    skipOpeningNight(room);
+    engine.endDiscussion();
+    releaseChoiceHolds(room);
+    engine.handleCommand(players[0].id, {
+      kind: 'nominateChancellor',
+      targetId: players[1].id,
+    });
+    releaseChoiceHolds(room);
+    engine.handleCommand(players[0].id, { kind: 'castVote', vote: 'nein' });
+    engine.handleCommand(players[1].id, { kind: 'castVote', vote: 'nein' });
+    engine.handleCommand(players[2].id, { kind: 'castVote', vote: 'nein' });
+
+    expect(room.phase).toBe(Phase.Voting);
+    expect(room.pendingBreath).not.toBeNull();
+    for (const viewer of players) {
+      const view = room.viewFor(viewer.id);
+      expect(view.players.every((player) => player.vote === 'nein')).toBe(true);
+    }
   });
 
   it('Should only show the legislative hand to the active legislator', () => {

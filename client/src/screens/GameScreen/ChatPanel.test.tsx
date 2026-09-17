@@ -230,6 +230,28 @@ describe('ChatPanel', () => {
     expect(harness.socket.lastSent('chat:message')).toBeUndefined();
   });
 
+  it('Should hide the composer for a dead spectator and still show messages', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(
+      () => (
+        <ChatPanel
+          composerEnabled={false}
+          onOpenPlayers={() => {}}
+          onOpenHistory={() => {}}
+          onOpenMenu={() => {}}
+        />
+      ),
+      harness,
+    );
+    harness.pushState(seatedView());
+    emitChat(harness, 'table still talking');
+
+    expect(screen.getByText('table still talking')).toBeTruthy();
+    expect(screen.queryByPlaceholderText(en.game.chatPlaceholder)).toBeNull();
+    expect(screen.queryByPlaceholderText(en.game.chatSilentPlaceholder)).toBeNull();
+    expect(screen.queryByRole('button', { name: en.game.send })).toBeNull();
+  });
+
   it('Should put the viewer’s messages on the right and others on the left', () => {
     const harness = buildHarness({ seated: true });
     renderPanel(harness);
@@ -311,6 +333,24 @@ describe('ChatPanel', () => {
     fireEvent.dblClick(screen.getByRole('separator'));
     expect(screen.queryByPlaceholderText(en.game.chatPlaceholder)).toBeNull();
     expect(screen.queryByText(en.game.chat)).toBeNull();
+  });
+
+  it('Should show the latest messages again after the panel is reopened from the header', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    harness.pushState(seatedView());
+    emitChat(harness, 'earlier line');
+    emitChat(harness, 'latest line', 'm2');
+
+    const handle = screen.getByRole('separator');
+    fireEvent.dblClick(handle);
+    fireEvent.dblClick(handle);
+    expect(screen.queryByText('latest line')).toBeNull();
+
+    fireEvent.dblClick(handle);
+    expect(screen.getByText('earlier line')).toBeTruthy();
+    expect(screen.getByText('latest line')).toBeTruthy();
+    expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
   });
 
   it('Should keep the microphone off the chrome while the voice flag is off', () => {

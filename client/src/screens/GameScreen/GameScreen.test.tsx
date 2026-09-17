@@ -302,6 +302,70 @@ describe('GameScreen — voting', () => {
     expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
+  it('Should show ja and nein on seats during the failed-election breath', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Voting,
+      voteDeadline: null,
+      breathDeadline: { startedAt: Date.now(), endsAt: Date.now() + 3_000 },
+      players: view.players.map((player) => ({
+        ...player,
+        hasVoted: true,
+        vote: player.id === 'cal' ? 'nein' : 'ja',
+      })),
+    });
+
+    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.ja,
+    );
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.nein,
+    );
+    expect(
+      document.querySelector('[data-ballot="you"]')?.getAttribute('src'),
+    ).not.toBe(VOTE_BACK);
+  });
+
+  it('Should keep failed-election ballots on seats after nomination resumes', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Voting,
+      voteDeadline: null,
+      breathDeadline: { startedAt: Date.now(), endsAt: Date.now() + 3_000 },
+      players: view.players.map((player) => ({
+        ...player,
+        hasVoted: true,
+        vote: player.id === 'cal' ? 'nein' : 'ja',
+      })),
+    });
+    harness.pushState({
+      ...view,
+      phase: Phase.Nomination,
+      voteDeadline: null,
+      breathDeadline: null,
+      board: { ...view.board, chancellor: null },
+      players: view.players.map((player) => ({
+        ...player,
+        hasVoted: false,
+        vote: null,
+        isChancellor: false,
+      })),
+    });
+
+    expect(document.querySelector('[data-ballot="you"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.ja,
+    );
+    expect(document.querySelector('[data-ballot="cal"]')?.getAttribute('src')).toBe(
+      VOTE_FACE.nein,
+    );
+  });
+
   it('Should keep revealed ballots on seats through the legislative window', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -866,6 +930,20 @@ describe('GameScreen — presidential power', () => {
       type: 'command',
       command: { kind: 'useSpecialPower', targetId: 'cal' },
     });
+  });
+
+  it('Should keep the investigate prompt in the header instead of a power dock', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'investigate',
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+    });
+
+    expect(screen.getAllByText(en.game.power.investigateHint).length).toBeLessThanOrEqual(1);
   });
 
   it('Should investigate during the Ravi prompt hold', () => {
@@ -1847,6 +1925,22 @@ describe('GameScreen — execution', () => {
     expect(screen.getByText(en.game.killed.title)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.game.killed.stay }));
     expect(screen.queryByText(en.game.killed.title)).toBeNull();
+    expect(screen.queryByPlaceholderText(en.game.chatPlaceholder)).toBeNull();
+    expect(screen.queryByPlaceholderText(en.game.chatSilentPlaceholder)).toBeNull();
+
+    harness.socket.emit({
+      type: 'chat',
+      message: {
+        id: 'watch-1',
+        playerId: 'cal',
+        name: 'Cal',
+        text: 'stay and watch this',
+        at: Date.now(),
+      },
+    });
+    expect(
+      within(screen.getByLabelText(en.game.chat)).getByText('stay and watch this'),
+    ).toBeTruthy();
   });
 });
 
@@ -1929,13 +2023,29 @@ describe('GameScreen — game over', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: en.game.over.stay }));
+    harness.socket.emit({
+      type: 'chat',
+      message: {
+        id: 'gg-1',
+        playerId: 'cal',
+        name: 'Cal',
+        text: 'good game',
+        at: Date.now(),
+      },
+    });
+    expect(harness.services.game.chatMessages()).toHaveLength(1);
     harness.pushState(
       makeView({
         phase: Phase.Lobby,
         hostId: 'you',
         players: view.players.map((player) => ({
           ...player,
-          role: null,
+          role:
+            player.id === 'pres'
+              ? 'hitler'
+              : player.id === 'cal'
+                ? 'fascist'
+                : 'liberal',
           isPresident: false,
           isChancellor: false,
           ready: player.id === 'you',
@@ -1944,5 +2054,7 @@ describe('GameScreen — game over', () => {
     );
 
     expect(harness.services.nav.screen()).toBe('waiting-room');
+    expect(harness.services.game.chatMessages()).toEqual([]);
+    expect(harness.services.game.unreadChat()).toBe(0);
   });
 });

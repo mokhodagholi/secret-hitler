@@ -27,7 +27,6 @@ import { GameMenu } from './GameMenu';
 import { LegislativeModal } from './LegislativeModal';
 import { VotingOverlay } from './VotingOverlay';
 import { KickVoteOverlay } from './KickVoteOverlay';
-import { PowerPanel } from './PowerPanel';
 import { GameOverOverlay } from './GameOverOverlay';
 import { PolicyRevealOverlay } from './PolicyRevealOverlay';
 import { CEREMONY_MS, NightOverlay } from './NightOverlay';
@@ -79,6 +78,14 @@ export function GameScreen() {
   const [historyOpen, setHistoryOpen] = createSignal(false);
   const [chatHeight, setChatHeight] = createSignal(280);
   const [inspectingRole, setInspectingRole] = createSignal(false);
+  const [lookHeadlineTyped, setLookHeadlineTyped] = createSignal<{
+    text: string;
+    done: boolean;
+  }>({ text: '', done: false });
+  const lookHeadlineText = () => formatMessage(tutorial.headlineKey());
+  const lookHeadlineReady = () =>
+    tutorial.lookBlurred() ||
+    (lookHeadlineTyped().done && lookHeadlineTyped().text === lookHeadlineText());
   const [now, setNow] = createSignal(Date.now());
   const clockMs = () => view()?.kickVote?.startedAt ?? now();
   const [drawHold, setDrawHold] = createSignal(0);
@@ -169,10 +176,10 @@ export function GameScreen() {
     }
     const previousPhase = lastBallotPhase;
     lastBallotPhase = state.phase;
+    // Failed governments go Voting → Nomination; keep Ja/Nein until the next vote.
     if (
       state.phase === Phase.Nomination &&
-      (previousPhase === Phase.Voting ||
-        previousPhase === Phase.ChancellorLegislative ||
+      (previousPhase === Phase.ChancellorLegislative ||
         previousPhase === Phase.PresidentLegislative)
     ) {
       scheduleBallotHide();
@@ -785,6 +792,7 @@ export function GameScreen() {
 
   function continueLook(): void {
     if (!tutorial.canContinueLook()) return;
+    if (!tutorial.lookBlurred() && !lookHeadlineReady()) return;
     if (tutorial.advanceLook()) tutorial.startPlay(playYou(), 5);
   }
 
@@ -887,13 +895,6 @@ export function GameScreen() {
     if (now() < deadline.startedAt) return 0;
     return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
   };
-  const specialPowerSecondsLeft = () => {
-    if (actionCommitted()) return 0;
-    const deadline = view()?.specialPowerDeadline;
-    if (!deadline) return 0;
-    if (now() < deadline.startedAt) return 0;
-    return Math.max(0, Math.ceil((deadline.endsAt - clockMs()) / 1000));
-  };
 
   function chooseLegislative(index: number, mode: 'discard' | 'enact'): void {
     if (tutorial.looking()) {
@@ -971,7 +972,7 @@ export function GameScreen() {
     if (isLegislative()) return 'legislative';
     if (
       state?.phase === Phase.SpecialPower &&
-      state.activePower &&
+      state.activePower === 'policyPeek' &&
       !state.breathDeadline
     ) {
       return 'power';
@@ -1204,8 +1205,11 @@ export function GameScreen() {
   function seatBallot(player: PublicPlayer): Vote | 'back' | null {
     if (hideBallots()) return null;
     if (player.vote != null) return player.vote;
+    const held = heldBallots()[player.id];
+    // Fail-breath snapshots may keep hasVoted after the face is already held.
+    if (held != null && held !== 'back') return held;
     if (player.hasVoted) return 'back';
-    return heldBallots()[player.id] ?? null;
+    return held ?? null;
   }
 
   const suppressOffice = (player: PublicPlayer) => {
@@ -1240,6 +1244,11 @@ export function GameScreen() {
                   : (ravi.line() ?? helpMessage())
               }
               durationMs={onboarding() ? undefined : ravi.lineDurationMs()}
+              onTyped={
+                tutorial.looking()
+                  ? (done, text) => setLookHeadlineTyped({ text, done })
+                  : undefined
+              }
             />
             </Show>
 
@@ -1355,6 +1364,7 @@ export function GameScreen() {
 
             <Show when={!tutorial.looking() || tutorial.lookChat()}>
             <ChatPanel
+              composerEnabled={onboarding() || game.you()?.isAlive !== false}
               talkingAllowed={
                 !ceremonyOpen() &&
                 (!tutorial.looking() || tutorial.lookWait() === 'say')
@@ -1418,7 +1428,9 @@ export function GameScreen() {
                     : undefined
                 }
                 showContinue={
-                  (tutorial.looking() && tutorial.canContinueLook()) ||
+                  (tutorial.looking() &&
+                    tutorial.canContinueLook() &&
+                    lookHeadlineReady()) ||
                   tutorial.lock() === 'delta' ||
                   tutorial.lock() === 'night' ||
                   (tutorial.playing() && view()?.winner != null)
@@ -1632,7 +1644,7 @@ export function GameScreen() {
               />
             </Show>
 
-            <Show when={tableOverlay() === 'power' && state().activePower === 'policyPeek'}>
+            <Show when={tableOverlay() === 'power'}>
               <PeekOverlay
                 policies={state().you.peek}
                 formatMessage={formatMessage}
@@ -1640,19 +1652,6 @@ export function GameScreen() {
                   if (iAmPresident()) usePower('');
                 }}
               />
-            </Show>
-
-            <Show when={tableOverlay() === 'power' && state().activePower !== 'policyPeek'}>
-              <div class={styles.powerDock}>
-                <PowerPanel
-                  formatMessage={formatMessage}
-                  power={state().activePower!}
-                  isPresident={iAmPresident()}
-                  presidentName={playerName(state().board.president)}
-                  investigation={state().you.investigation}
-                  secondsLeft={specialPowerSecondsLeft()}
-                />
-              </div>
             </Show>
 
             <Show when={game.lastError()}>

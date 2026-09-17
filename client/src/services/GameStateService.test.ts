@@ -147,6 +147,40 @@ describe('GameStateService — table chat', () => {
       socket.sent.filter((message) => message.type === 'chat:message'),
     ).toHaveLength(2);
   });
+
+  it('Should clear table chat when the room returns from game over to the lobby', () => {
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    const over = makeView({ phase: Phase.GameOver, winner: 'liberal' });
+    socket.emit({ type: 'state', state: over });
+    socket.emit({
+      type: 'chat',
+      message: { id: 'gg-1', playerId: 'other', name: 'Other', text: 'gg', at: 0 },
+    });
+    expect(game.chatMessages()).toHaveLength(1);
+    expect(game.unreadChat()).toBe(1);
+
+    socket.emit({
+      type: 'state',
+      state: makeView({ phase: Phase.Lobby, roomId: over.roomId }),
+    });
+    expect(game.chatMessages()).toEqual([]);
+    expect(game.unreadChat()).toBe(0);
+  });
+
+  it('Should keep lobby chat when the lobby snapshot refreshes', () => {
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    const lobby = makeView({ phase: Phase.Lobby });
+    socket.emit({ type: 'state', state: lobby });
+    socket.emit({
+      type: 'chat',
+      message: { id: 'hi-1', playerId: 'other', name: 'Other', text: 'hello', at: 0 },
+    });
+    socket.emit({ type: 'state', state: { ...lobby, players: [...lobby.players] } });
+    expect(game.chatMessages()).toHaveLength(1);
+    expect(game.chatMessages()[0]?.text).toBe('hello');
+  });
 });
 
 describe('GameStateService — seat identity', () => {

@@ -147,13 +147,13 @@ export class Room {
     };
   }
 
-  /** Roles are visible to a viewer if they're the player or the game is over.
+  /** Own role always; GameOver and rematch Lobby show last-game seats.
    *  Fascists see each other and Hitler; in 5–6 player games Hitler also sees
-   *  the Fascists. Liberals never see anyone. */
+   *  the Fascists. Liberals never see anyone mid-game. */
   private roleVisibleTo(viewer: Player, target: Player): Role | null {
     if (target.role == null) return null;
     if (viewer.id === target.id) return target.role;
-    if (this.phase === Phase.GameOver) {
+    if (this.phase === Phase.GameOver || this.phase === Phase.Lobby) {
       return target.role;
     }
     const fascistView =
@@ -192,7 +192,11 @@ export class Room {
       isPresident: p.id === this.presidentId,
       isChancellor: p.id === this.chancellorId,
       hasVoted: this.votes.has(p.id),
-      vote: this.phase === Phase.Voting ? null : (this.votes.get(p.id) ?? null),
+      // Fail breath stays in Voting after closeVote; hide only while the window is open.
+      vote:
+        this.phase === Phase.Voting && this.voteEndsAt > 0
+          ? null
+          : (this.votes.get(p.id) ?? null),
       wantsContinue: p.wantsContinue,
       role: this.roleVisibleTo(viewer, p),
       party: this.partyVisibleTo(viewer.id, p.id),

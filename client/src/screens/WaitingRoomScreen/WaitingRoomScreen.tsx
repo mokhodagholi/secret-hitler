@@ -552,6 +552,7 @@ export function WaitingRoomScreen() {
                 ready: props.state.kind === 'public' ? true : player.ready,
                 wantsStart: player.wantsStart,
                 connected: player.connected,
+                role: player.role,
               }}
               awaitingLabel={formatMessage('waiting.waitingForPlayers')}
               seatLabel={formatMessage('waiting.seatLabel', {
@@ -559,6 +560,11 @@ export function WaitingRoomScreen() {
               })}
               isYou={player.id === props.state.you.id}
               youLabel={formatMessage('game.you')}
+              roleLabel={
+                player.role
+                  ? formatMessage(`role.${player.role}`)
+                  : undefined
+              }
               onSelect={
                 canReportLobby(player, props.state)
                   ? () => {

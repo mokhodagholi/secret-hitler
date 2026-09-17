@@ -92,6 +92,7 @@ describe('GameScreen — look', () => {
     clickContinue();
     expect(screen.getByText(en.onboard.idea.talkAbout)).toBeTruthy();
     clickContinue();
+    expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
 
     await waitFor(() => {
       expect(screen.getByText(en.onboard.idea.yourTurn)).toBeTruthy();

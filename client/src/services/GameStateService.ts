@@ -467,6 +467,15 @@ export class GameStateService {
             : { ...message.state, players };
         this.setView(state);
         if (state.you.role) this.setRole(state.you.role);
+        // Rematch lobby is a new table conversation; keep the old game log.
+        if (
+          previous?.phase === Phase.GameOver &&
+          state.phase === Phase.Lobby &&
+          previous.roomId === state.roomId
+        ) {
+          this.setChatMessages([]);
+          this.setUnreadChat(0);
+        }
       })
       .on('private', (message) => this.setRole(message.role))
       .on('chat', (message) => {

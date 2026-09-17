@@ -638,6 +638,17 @@ describe('GameEngine — nomination and voting', () => {
     expect(heard).toEqual([]);
   });
 
+  it('Should ignore chat from a dead spectator', () => {
+    const { engine, players } = startGame();
+    const [, ben] = players;
+    ben.isAlive = false;
+    const heard: string[] = [];
+    engine.on('chat', ({ message }) => heard.push(message.text));
+
+    engine.postChat(ben.id, 'psst');
+    expect(heard).toEqual([]);
+  });
+
   it('Should keep the President from skipping the opening night', () => {
     const { engine, room, players } = startGame(['Ana', 'Ben', 'Cal'], undefined, {
       keepOpeningNight: true,

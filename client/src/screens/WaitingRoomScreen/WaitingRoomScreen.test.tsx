@@ -111,6 +111,44 @@ describe('WaitingRoomScreen', () => {
     });
   });
 
+  it('Should show each seat’s revealed role after a rematch returns to the lobby', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        players: [
+          makePlayer({
+            id: 'you',
+            name: 'You',
+            seat: 0,
+            isHost: true,
+            ready: true,
+            role: 'liberal',
+          }),
+          makePlayer({
+            id: 'ben',
+            name: 'Ben',
+            seat: 1,
+            ready: false,
+            role: 'fascist',
+          }),
+          makePlayer({
+            id: 'cal',
+            name: 'Cal',
+            seat: 2,
+            ready: false,
+            role: 'hitler',
+          }),
+        ],
+      }),
+    );
+
+    expect(screen.getByText(en.role.liberal)).toBeTruthy();
+    expect(screen.getByText(en.role.fascist)).toBeTruthy();
+    expect(screen.getByText(en.role.hitler)).toBeTruthy();
+  });
+
   it('Should tell the host why the game cannot start yet', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <WaitingRoomScreen />, harness);

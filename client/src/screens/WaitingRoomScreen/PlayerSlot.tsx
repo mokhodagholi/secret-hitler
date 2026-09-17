@@ -1,4 +1,5 @@
 import { Show } from 'solid-js';
+import type { Role } from '@secret-hitler/shared';
 import { avatarImage, PAPER_FRAME } from '../../assets/avatars';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import styles from './PlayerSlot.module.scss';
@@ -10,6 +11,7 @@ export interface SlotPlayer {
   ready: boolean;
   wantsStart?: boolean;
   connected: boolean;
+  role?: Role | null;
 }
 
 export interface PlayerSlotProps {
@@ -23,6 +25,8 @@ export interface PlayerSlotProps {
   youLabel?: string;
   /** Fill the parent — the unready-kick dialog, not the lobby grid. */
   compact?: boolean;
+  /** Revealed rematch-lobby role, already localized. */
+  roleLabel?: string;
 }
 
 /**
@@ -74,12 +78,27 @@ export function PlayerSlot(props: PlayerSlotProps) {
               />
             </span>
             <span class={styles.caption} dir="ltr">
-              <span class={styles.badge} dir="auto">
-                {props.seatLabel ?? player().seat + 1}
+              <span class={styles.captionLine}>
+                <span class={styles.badge} dir="auto">
+                  {props.seatLabel ?? player().seat + 1}
+                </span>
+                <span class={styles.name} dir="auto">
+                  {shownName()}
+                </span>
               </span>
-              <span class={styles.name} dir="auto">
-                {shownName()}
-              </span>
+              <Show when={props.roleLabel}>
+                <span
+                  classList={{
+                    [styles.role]: true,
+                    [styles.roleLiberal]: player().role === 'liberal',
+                    [styles.roleFascist]: player().role === 'fascist',
+                    [styles.roleHitler]: player().role === 'hitler',
+                  }}
+                  dir="auto"
+                >
+                  {props.roleLabel}
+                </span>
+              </Show>
             </span>
           </>
         );

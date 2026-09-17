@@ -368,7 +368,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (this.inOpeningNight()) return;
     const player = this.room.findPlayer(playerId);
     const body = text.trim();
-    if (!player || !body) return;
+    if (!player || !body || !player.isAlive) return;
     const message: ChatMessage = {
       id: makeId(),
       playerId: player.id,
@@ -1449,7 +1449,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     seated.forEach((player, seat) => {
       player.seat = seat;
       player.isAlive = true;
-      player.role = null;
+      // Last-game roles stay until dealRoles overwrites them for the rematch.
       player.wantsContinue = false;
       player.wantsStart = false;
       player.wantStartAt = null;

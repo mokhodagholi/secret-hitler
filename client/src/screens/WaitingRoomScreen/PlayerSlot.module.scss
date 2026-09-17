@@ -116,13 +116,22 @@
 
 .caption {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 0 2px;
+}
+
+.captionLine {
+  display: flex;
   flex-direction: row;
   align-items: baseline;
   justify-content: center;
   gap: 5px;
   max-width: 100%;
-  margin-top: 6px;
-  padding: 0 2px;
 }
 
 .badge {
@@ -144,6 +153,29 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.role {
+  max-width: 100%;
+  font-size: clamp(0.52rem, calc(var(--slot-size, 136px) * 0.1), 0.7rem);
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.roleLiberal {
+  color: $blue-liberal;
+}
+
+.roleFascist {
+  color: $red-bright;
+}
+
+.roleHitler {
+  color: $gold-bright;
 }
 
 .paperYou ~ .caption .badge,

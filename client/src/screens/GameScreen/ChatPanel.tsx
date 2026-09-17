@@ -13,7 +13,7 @@ import { Icon } from '../../components/Icon/Icon';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import { nativeFieldAttrs } from '../../components/nativeField';
 import { growComposerHeight } from '../../services/KeyboardService';
-import { isChatNearBottom, scrollChatToBottom } from '../chatScroll';
+import { isChatNearBottom, scrollChatToBottom, stickAfterFeedScroll } from '../chatScroll';
 import { commitOnPress } from './commitOnPress';
 import styles from './ChatPanel.module.scss';
 
@@ -30,6 +30,8 @@ const COMPOSER_SNAP_SLACK = 36;
 
 export interface ChatPanelProps {
   talkingAllowed?: boolean;
+  /** Hide the textarea and send — dead spectators still read the feed. */
+  composerEnabled?: boolean;
   actionLabel?: string;
   onAction?: () => void;
   onOpenPlayers: () => void;
@@ -62,6 +64,7 @@ export function ChatPanel(props: ChatPanelProps) {
   let panelEl: HTMLElement | undefined;
   let feedScroller: HTMLDivElement | undefined;
   let stickToBottom = true;
+  let feedWasOpen = false;
   let inputEl: HTMLTextAreaElement | undefined;
   let dragStartY = 0;
   let dragStartHeight = CHAT_DEFAULT;
@@ -70,6 +73,7 @@ export function ChatPanel(props: ChatPanelProps) {
   let micHandledByPointer = false;
 
   const talkingAllowed = () => props.talkingAllowed !== false;
+  const composerEnabled = () => props.composerEnabled !== false;
   const tableView = () => {
     if (tutorial.looking()) return tutorial.lookView();
     if (tutorial.playing()) return tutorial.playView();
@@ -85,9 +89,15 @@ export function ChatPanel(props: ChatPanelProps) {
     return Math.max(0, Math.ceil((until - now()) / 1000));
   };
   const canSend = () =>
-    talkingAllowed() && slowSecondsLeft() === 0 && chatDraft().trim() !== '';
-  const showComposer = () => height() >= CHAT_COMPOSER - COMPOSER_SNAP_SLACK;
-  const feedOpen = () => height() > CHAT_COMPOSER + 8;
+    composerEnabled() &&
+    talkingAllowed() &&
+    slowSecondsLeft() === 0 &&
+    chatDraft().trim() !== '';
+  const bodyOpen = () => height() >= CHAT_COMPOSER - COMPOSER_SNAP_SLACK;
+  const showComposer = () => composerEnabled() && bodyOpen();
+  // Without a composer, the composer-step height is still tall enough for the feed.
+  const feedOpen = () =>
+    composerEnabled() ? height() > CHAT_COMPOSER + 8 : bodyOpen();
 
   const clampHeight = (next: number) => {
     const available = panelEl?.parentElement?.clientHeight ?? 0;
@@ -144,6 +154,15 @@ export function ChatPanel(props: ChatPanelProps) {
   createEffect(() => {
     chatLines();
     if (feedScroller && stickToBottom) scrollChatToBottom(feedScroller);
+  });
+
+  createEffect(() => {
+    const open = feedOpen();
+    if (open && !feedWasOpen) {
+      if (feedScroller) scrollChatToBottom(feedScroller);
+      stickToBottom = true;
+    }
+    feedWasOpen = open;
   });
 
   const autosizeInput = () => {
@@ -207,7 +226,7 @@ export function ChatPanel(props: ChatPanelProps) {
     });
 
   function sendChat(): void {
-    if (!talkingAllowed() || !canSend()) return;
+    if (!composerEnabled() || !talkingAllowed() || !canSend()) return;
     if (tutorial.looking()) tutorial.say(chatDraft(), props.composeHint);
     else if (tutorial.playing()) tutorial.say(chatDraft());
     else game.sendChat(chatDraft());
@@ -242,11 +261,11 @@ export function ChatPanel(props: ChatPanelProps) {
   }
 
   function onResizeToggle(): void {
-    if (feedOpen()) {
+    if (height() > CHAT_COMPOSER + 8) {
       applyHeight(CHAT_COMPOSER, true);
       return;
     }
-    if (showComposer()) {
+    if (bodyOpen()) {
       applyHeight(CHAT_MIN, true);
       return;
     }
@@ -399,16 +418,27 @@ export function ChatPanel(props: ChatPanelProps) {
         </Show>
       </header>
 
-      <Show when={showComposer()}>
+      <Show when={bodyOpen()}>
         <div
           classList={{
             [styles.feed]: true,
             [styles.feedCollapsed]: !feedOpen(),
           }}
-          ref={feedScroller}
+          ref={(element) => {
+            feedScroller = element;
+            if (feedOpen()) {
+              scrollChatToBottom(element);
+              stickToBottom = true;
+            }
+          }}
           aria-hidden={!feedOpen()}
           onScroll={() => {
-            if (feedScroller) stickToBottom = isChatNearBottom(feedScroller);
+            if (!feedScroller) return;
+            stickToBottom = stickAfterFeedScroll(
+              feedOpen(),
+              isChatNearBottom(feedScroller),
+              stickToBottom,
+            );
           }}
         >
           <For each={chatLines()}>
@@ -454,6 +484,7 @@ export function ChatPanel(props: ChatPanelProps) {
           </For>
         </div>
 
+        <Show when={showComposer()}>
         <div
           classList={{
             [styles.composer]: true,
@@ -537,6 +568,7 @@ export function ChatPanel(props: ChatPanelProps) {
             </Show>
           </button>
         </div>
+        </Show>
       </Show>
     </section>
   );

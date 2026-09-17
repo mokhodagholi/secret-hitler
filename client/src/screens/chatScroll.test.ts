@@ -1,5 +1,10 @@
 import { describe, expect, it } from '@rstest/core';
-import { CHAT_STICK_BOTTOM_PX, isChatNearBottom } from './chatScroll';
+import {
+  CHAT_STICK_BOTTOM_PX,
+  isChatNearBottom,
+  scrollChatToBottom,
+  stickAfterFeedScroll,
+} from './chatScroll';
 
 function scroller(scrollTop: number, scrollHeight = 500, clientHeight = 100): HTMLElement {
   const element = document.createElement('div');
@@ -20,5 +25,28 @@ describe('isChatNearBottom', () => {
 
   it('Should let go once the reader has scrolled further up', () => {
     expect(isChatNearBottom(scroller(400 - CHAT_STICK_BOTTOM_PX - 1))).toBe(false);
+  });
+});
+
+describe('scrollChatToBottom', () => {
+  it('Should jump the scroller to the latest line', () => {
+    const feed = scroller(0);
+    scrollChatToBottom(feed);
+    expect(feed.scrollTop).toBe(500);
+  });
+});
+
+describe('stickAfterFeedScroll', () => {
+  it('Should ignore scroll while the feed is collapsed', () => {
+    expect(stickAfterFeedScroll(false, false, true)).toBe(true);
+    expect(stickAfterFeedScroll(false, true, false)).toBe(false);
+  });
+
+  it('Should follow the latest line while the open feed is near the bottom', () => {
+    expect(stickAfterFeedScroll(true, true, false)).toBe(true);
+  });
+
+  it('Should unpin when the reader scrolls up in an open feed', () => {
+    expect(stickAfterFeedScroll(true, false, true)).toBe(false);
   });
 });

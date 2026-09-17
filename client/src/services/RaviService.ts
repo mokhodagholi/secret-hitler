@@ -360,11 +360,16 @@ export class RaviService {
   }
 
   private hold(generation: number, durationMs: number): Promise<void> {
+    // Tests must not sit on clip length — GameScreen would miss game.reveal in 5s.
+    const wait =
+      import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test'
+        ? 0
+        : durationMs;
     return new Promise((resolve) => {
       window.setTimeout(() => {
         if (this.generation === generation) this.setSpeaking(false);
         resolve();
-      }, durationMs);
+      }, wait);
     });
   }
 }

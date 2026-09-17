@@ -12,12 +12,20 @@ describe('GameEngine — game over continue', () => {
 
   it('Should return the same room to lobby as soon as a player stays', () => {
     const { engine, room, players } = startGame();
+    const lastGameRoles = new Map(
+      room.players.map((player) => [player.id, player.role]),
+    );
     engine.endGame('fascist');
     expect(engine.continuePlaying(players[0].id)).toBeNull();
     expect(room.phase).toBe(Phase.Lobby);
     expect(room.winner).toBeNull();
     expect(room.players).toHaveLength(3);
-    expect(room.players.every((player) => player.role === null)).toBe(true);
+    expect(
+      room.players.every(
+        (player) => player.role === lastGameRoles.get(player.id),
+      ),
+    ).toBe(true);
+    expect(room.players.every((player) => player.role != null)).toBe(true);
     expect(room.players.every((player) => player.isAlive)).toBe(true);
     expect(room.players.every((player) => !player.wantsContinue)).toBe(true);
     expect(room.hostId).toBe(players[0].id);

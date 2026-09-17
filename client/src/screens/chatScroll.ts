@@ -11,3 +11,16 @@ export function isChatNearBottom(
 export function scrollChatToBottom(scroller: HTMLElement): void {
   scroller.scrollTop = scroller.scrollHeight;
 }
+
+/**
+ * A collapsed feed has no height and fires scroll as if the reader left the
+ * latest line. Ignore those; only unpin while the feed is actually open.
+ */
+export function stickAfterFeedScroll(
+  feedOpen: boolean,
+  nearBottom: boolean,
+  previousStick: boolean,
+): boolean {
+  if (!feedOpen) return previousStick;
+  return nearBottom;
+}
