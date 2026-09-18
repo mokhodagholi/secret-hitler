@@ -140,6 +140,37 @@ function buildWinningScenarios(formatMessage: FormatMessage): RuleStepProps[] {
   ];
 }
 
+function buildOnlineDiffs(formatMessage: FormatMessage): RuleStepProps[] {
+  return [
+    {
+      icon: 'people',
+      title: formatMessage('rules.online.vote.title'),
+      body: formatMessage('rules.online.vote.body'),
+    },
+    {
+      icon: 'crown',
+      title: formatMessage('rules.online.office.title'),
+      body: formatMessage('rules.online.office.body'),
+    },
+    {
+      icon: 'door',
+      title: formatMessage('rules.online.leave.title'),
+      body: formatMessage('rules.online.leave.body'),
+    },
+    {
+      icon: 'clock',
+      title: formatMessage('rules.online.clocks.title'),
+      body: formatMessage('rules.online.clocks.body'),
+      items: [
+        formatMessage('rules.online.clocks.vote'),
+        formatMessage('rules.online.clocks.veto'),
+        formatMessage('rules.online.clocks.law'),
+        formatMessage('rules.online.clocks.why'),
+      ],
+    },
+  ];
+}
+
 function RoundLesson(props: { formatMessage: FormatMessage }) {
   const roundSteps = () => buildRoundSteps(props.formatMessage);
   return (
@@ -217,6 +248,14 @@ function LessonBody(props: { topicId: TopicId; formatMessage: FormatMessage }) {
           <br />
           <strong>{props.formatMessage('rules.trustNoOne')}</strong>
         </p>
+      </Match>
+      <Match when={props.topicId === 'online'}>
+        {paragraph('rules.online.lead')}
+        <ul class={styles.steps}>
+          <For each={buildOnlineDiffs(props.formatMessage)}>
+            {(diff) => <RuleStep {...diff} />}
+          </For>
+        </ul>
       </Match>
     </Switch>
   );

@@ -135,6 +135,9 @@ export const POWER_PROMPT_MS = raviHoldMs(
   'power.execution',
 );
 
+/** Prompt before the President may answer a veto. */
+export const VETO_CONSENT_PROMPT_MS = raviHoldMs('law.vetoOffered');
+
 /** Collapse ceremony waits on unit-test tables (`RoomOptions.skipCeremony`). */
 export function ceremonyDelay(skipCeremony: boolean | undefined, ms: number): number {
   return skipCeremony ? 0 : ms;

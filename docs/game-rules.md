@@ -1,8 +1,8 @@
 # Secret Hitler — Official Rules
 
 A faithful reference of the rules as written in `Secret-Hitler.pdf` (the Persian
-rulebook). This describes the tabletop game itself; it is not implementation
-notes.
+rulebook). This describes the tabletop game itself. The live app adds a few
+procedures the box never had — see [Online table](#online-table) at the end.
 
 ## Setting
 
@@ -73,8 +73,8 @@ takes any **executive action** the enacted policy granted.
 
 ### 1. Presidential candidate
 
-At the start of each round the role of presidential candidate passes **clockwise**
-to the next player.
+The first presidential candidate is chosen **at random**. After that, at the
+start of each round the role passes **clockwise** to the next player.
 
 ### 2. Nominate a Chancellor
 
@@ -141,9 +141,9 @@ depends on the player count:
   their **party membership card** (Liberal or Fascist; Hitler's reads Fascist) —
   *not* their secret role. The President may share or lie about the result. No
   player may be investigated more than once.
-- **Call Special Election** — the President names any player as the next
-  presidential candidate. After that special round, the candidacy returns to the
-  normal clockwise rotation from where it left off.
+- **Call Special Election** — the President names any **other** player as the
+  next presidential candidate (not themselves). After that special round, the
+  candidacy returns to the normal clockwise rotation from where it left off.
 - **Policy Peek** — the President secretly looks at the top **3** tiles of the
   draw pile and returns them in the same order.
 - **Execution** — the President formally executes a player, who leaves the game.
@@ -181,3 +181,19 @@ one of the two tiles as normal.
 - After a **special election**, the presidency returns to its normal rotation.
 - **Executed players** stay at the table but cannot vote, speak as a player, or
   be nominated.
+
+## Online table
+
+This app plays the same board game. Wins, powers, veto, and the tracker follow
+the printed rules above. Phones drop and people stall, so a live table has a
+few extra procedures the box never needed — otherwise a round could freeze.
+
+- **Who votes.** Only living, **connected** seats vote. A disconnected player
+  is skipped so the election can finish.
+- **Empty office.** The presidency walks past a disconnected seat. The table
+  does not wait for them to reconnect.
+- **Leave or kick.** If a player leaves or is removed, that seat is out: no
+  vote, no nomination, no office. (Printed rules only cover **execution**.)
+- **Clocks.** Every action has a timer. Silence auto-resolves: a missed vote
+  is Nein, an unanswered veto is refused, and a law is burned or enacted at
+  random so one stalled phone cannot lock the table.

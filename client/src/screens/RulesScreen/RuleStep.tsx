@@ -1,4 +1,4 @@
-import { Show } from 'solid-js';
+import { For, Show } from 'solid-js';
 import { useApp } from '../../services/AppContext';
 import { Icon, type IconName } from '../../components/Icon/Icon';
 import styles from './RulesScreen.module.scss';
@@ -9,6 +9,7 @@ export interface RuleStepProps {
   icon?: IconName;
   title: string;
   body: string;
+  items?: string[];
 }
 
 /** One rule entry: optional icon or number badge, gold heading, description. */
@@ -40,6 +41,13 @@ export function RuleStep(props: RuleStepProps) {
       <div>
         <h3 class={styles.stepTitle}>{props.title}</h3>
         <p class={styles.stepBody}>{props.body}</p>
+        <Show when={props.items}>
+          {(items) => (
+            <ul class={styles.stepList}>
+              <For each={items()}>{(item) => <li>{item}</li>}</For>
+            </ul>
+          )}
+        </Show>
       </div>
     </li>
   );

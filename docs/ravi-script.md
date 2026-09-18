@@ -427,6 +427,13 @@ word already means “or”, so «یا یا نِین» is noise.
 - **Tone:** `[calm]`
 - **President-only (whisper):** `private.discard` — `یه قانون رو بسوزونید.`
 
+### `law.silence`
+- **When:** A legislative session is open and this seat is not burning or
+  enacting. Header + subtitle. **No mp3 yet** — bake with Daniel later.
+- **FA:** ساکت. دارن قانون برمی‌دارن.
+- **EN:** Quiet. They're choosing the laws.
+- **Tone:** `[firm]`
+
 ### `law.burned`
 - **When:** One back lands on the discard pile.
 - **FA:** یه قانون سوخت.
@@ -663,6 +670,7 @@ table is the **spoken** line.
 | `law.draw` | `[calm]` | سه تا قانون می‌اد دست رئیس‌جمهور. |
 | `law.drawYou` | `[whispering]` | سه تا قانون می‌اد دستتون. *(President only)* |
 | `law.presidentChoosing` | `[calm]` | رئیس جمهور یه کارت رو می‌سوزونه. |
+| `law.silence` | `[firm]` | ساکت. دارن قانون برمی‌دارن. *(subtitle only until bake)* |
 | `private.discard` | `[whispering]` | یه قانون رو بسوزونید. *(President only)* |
 | `law.burned` | `[calm]` | یه قانون سوخت. |
 | `law.pass` | `[calm]` | دو تا قانون می‌اد دست صدراعظم. |

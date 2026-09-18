@@ -795,6 +795,15 @@ export function GameScreen() {
     if (tutorial.advanceLook()) tutorial.startPlay(playYou(), 5);
   }
 
+  function skipOnboarding(): void {
+    if (tutorial.looking()) {
+      if (tutorial.skipLookBeat()) tutorial.startPlay(playYou(), 5);
+      return;
+    }
+    if (tutorial.playing() && tutorial.skipToNextPlay()) return;
+    leaveLook();
+  }
+
   function leaveLook(): void {
     tutorial.closeActive();
     nav.returnTo('home');
@@ -857,6 +866,26 @@ export function GameScreen() {
 
   const inNomination = () =>
     view()?.phase === Phase.Nomination && view()?.nominationDeadline != null;
+
+  const legislativeTalkLocked = () => {
+    const phase = view()?.phase;
+    return (
+      phase === Phase.PresidentLegislative ||
+      phase === Phase.ChancellorLegislative
+    );
+  };
+
+  const legislativeActor = () => {
+    const state = view();
+    if (!state) return false;
+    if (state.phase === Phase.PresidentLegislative) {
+      return state.you.id === state.board.president;
+    }
+    if (state.phase === Phase.ChancellorLegislative) {
+      return state.you.id === state.board.chancellor;
+    }
+    return false;
+  };
 
   const isLegislative = () => {
     const state = view();
@@ -1138,6 +1167,8 @@ export function GameScreen() {
   function eventHeadline(): string {
     if (onboarding()) return formatMessage(tutorial.headlineKey());
     if (powerHeadline()) return helpMessage();
+    if (legislativeActor()) return helpMessage();
+    if (legislativeTalkLocked()) return formatMessage('ravi.law.silence');
     return ravi.line() ?? helpMessage();
   }
 
@@ -1250,7 +1281,6 @@ export function GameScreen() {
             }}
             style={{
               '--chat-panel-height': `${tutorial.looking() && !tutorial.lookChat() ? 0 : chatHeight()}px`,
-              '--look-chrome-nudge': tutorial.lookChat() ? '40px' : '0px',
             }}
           >
             <Show when={!tutorial.lookBlurred()}>
@@ -1263,7 +1293,10 @@ export function GameScreen() {
               }
               onTyped={
                 tutorial.looking()
-                  ? (done, text) => setLookHeadlineTyped({ text, done })
+                  ? (done, text) => {
+                      setLookHeadlineTyped({ text, done });
+                      if (done) tutorial.lookHeadlineFinished();
+                    }
                   : undefined
               }
             />
@@ -1384,7 +1417,8 @@ export function GameScreen() {
               composerEnabled={onboarding() || game.you()?.isAlive !== false}
               talkingAllowed={
                 !ceremonyOpen() &&
-                (!tutorial.looking() || tutorial.lookWait() === 'say')
+                !legislativeTalkLocked() &&
+                (!tutorial.looking() || tutorial.lookTyping())
               }
               composeHint={
                 tutorial.lookComposeHint()
@@ -1424,9 +1458,11 @@ export function GameScreen() {
             </Show>
 
             <Show when={onboarding()}>
-              <Show when={tutorial.looking() && !tutorial.lookChat()}>
-                <div class={styles.lookChromeSpacer} aria-hidden="true" />
-              </Show>
+              <div
+                class={styles.lookChromeSpacer}
+                data-look-chrome-spacer
+                aria-hidden="true"
+              />
               <Show when={tutorial.lookBlurred()}>
                 <div class={styles.lookSeeNext} aria-live="polite">
                   <p class={styles.lookSeeNextText} dir="auto">
@@ -1438,7 +1474,7 @@ export function GameScreen() {
                 target={tutorial.target()}
                 lifted={tutorial.maskLifted() || tutorial.lookBlurred()}
                 passHole={tutorial.lookPassHole()}
-                layoutKey={chatHeight()}
+                layoutKey={chatHeight() + tutorial.talk().length}
                 continueLabel={
                   tutorial.looking()
                     ? formatMessage(tutorial.lookContinueKey())
@@ -1467,7 +1503,7 @@ export function GameScreen() {
                     if (!tutorial.continueLadder()) leaveLook();
                   }
                 }}
-                onSkip={leaveLook}
+                onSkip={skipOnboarding}
                 formatMessage={formatMessage}
               />
             </Show>
@@ -1630,6 +1666,13 @@ export function GameScreen() {
                         {formatMessage('game.veto.reject')}
                       </button>
                     </div>
+                  </Show>
+                  <Show when={legislativeSecondsLeft() > 0}>
+                    <span class={styles.voteWaiting}>
+                      {formatMessage('game.secondsLeft', {
+                        seconds: legislativeSecondsLeft(),
+                      })}
+                    </span>
                   </Show>
                 </div>
                 </div>

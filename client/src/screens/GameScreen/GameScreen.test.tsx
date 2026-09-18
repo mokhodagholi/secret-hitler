@@ -1334,6 +1334,37 @@ describe('GameScreen — legislative modal', () => {
     });
   });
 
+  it('Should send a veto refusal from the consent overlay before the clock runs out', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.ChancellorLegislative,
+      vetoRequested: true,
+      vetoUnlocked: true,
+      voteDeadline: null,
+      legislativeDeadline: {
+        startedAt: Date.now() - 1_000,
+        endsAt: Date.now() + 30_000,
+      },
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      players: view.players.map((player) => ({
+        ...player,
+        isPresident: player.id === 'you',
+        isChancellor: player.id === 'cal',
+      })),
+      you: { ...view.you, policies: [] },
+    });
+
+    expect(screen.getByText(SECONDS_PATTERN)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.game.veto.reject }));
+    expect(harness.socket.lastSent('command')).toEqual({
+      type: 'command',
+      command: { kind: 'vetoConsent', agree: false },
+    });
+  });
+
   it('Should hide leftover choice time as soon as the President discards', async () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(() => <GameScreen />, harness);
@@ -1679,6 +1710,21 @@ describe('GameScreen — docked chat', () => {
     expect(screen.getByPlaceholderText(en.game.chatPlaceholder)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.game.playersTitle })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.settings.title })).toBeTruthy();
+  });
+
+  it('Should lock chat and tell the table to stay quiet while laws are chosen', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      voteDeadline: null,
+    });
+
+    const input = screen.getByPlaceholderText(en.game.chatLawSilentPlaceholder);
+    expect(input).toHaveProperty('disabled', true);
+    expect(screen.getByText(en.ravi.law.silence)).toBeTruthy();
   });
 
   it('Should show an incoming message on the docked panel', () => {

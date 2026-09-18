@@ -1,6 +1,6 @@
-import { describe, expect, it } from '@rstest/core';
+import { describe, expect, it, rs } from '@rstest/core';
 import { GameEngine } from './GameEngine';
-import { BREATH_AFTER_VOTE_MS, LEGISLATIVE_DEAL_MS, LEGISLATIVE_DURATION_MS, Phase } from '../types/GameState';
+import { BREATH_AFTER_VOTE_MS, LEGISLATIVE_DEAL_MS, LEGISLATIVE_DURATION_MS, Phase, VETO_CONSENT_DURATION_MS } from '../types/GameState';
 import {
   StackedDeck,
   electGovernment,
@@ -366,7 +366,7 @@ describe('GameEngine — nomination and voting', () => {
     expect(room.phase).toBe(Phase.Nomination);
   });
 
-  it('Should hand the Fascists victory next round when leavers tie the table', () => {
+  it('Should keep playing next round when disconnected Liberals would tie the table', () => {
     const { engine, room, players } = startGame([
       'Ana',
       'Ben',
@@ -384,11 +384,11 @@ describe('GameEngine — nomination and voting', () => {
     engine.handleCommand(president.id, { kind: 'endTurn' });
     engine.handleCommand(president.id, { kind: 'endTurn' });
 
-    expect(room.winner).toBe('fascist');
-    expect(room.phase).toBe(Phase.GameOver);
+    expect(room.winner).toBeNull();
+    expect(room.phase).toBe(Phase.Nomination);
   });
 
-  it('Should hand the Fascists victory next round when leavers leave Fascists ahead', () => {
+  it('Should keep playing next round when disconnected Liberals leave Fascists ahead', () => {
     const { engine, room, players } = startGame([
       'Ana',
       'Ben',
@@ -410,8 +410,8 @@ describe('GameEngine — nomination and voting', () => {
     engine.handleCommand(president.id, { kind: 'endTurn' });
     engine.handleCommand(president.id, { kind: 'endTurn' });
 
-    expect(room.winner).toBe('fascist');
-    expect(room.phase).toBe(Phase.GameOver);
+    expect(room.winner).toBeNull();
+    expect(room.phase).toBe(Phase.Nomination);
   });
 
   it('Should keep playing when a Fascist leaves and Liberals still lead', () => {
@@ -646,6 +646,25 @@ describe('GameEngine — nomination and voting', () => {
     engine.on('chat', ({ message }) => heard.push(message.text));
 
     engine.postChat(ben.id, 'psst');
+    expect(heard).toEqual([]);
+  });
+
+  it('Should pick the first President at random among living seats', () => {
+    const random = rs.spyOn(Math, 'random').mockReturnValue(0.99);
+    const { room, players } = startGame(['Ana', 'Ben', 'Cal'], undefined, {
+      keepRandomPresident: true,
+    });
+    expect(room.presidentId).toBe(players[2].id);
+    random.mockRestore();
+  });
+
+  it('Should ignore chat during the legislative session', () => {
+    const game = startGame();
+    electGovernment(game, game.players[1]);
+    expect(game.room.phase).toBe(Phase.PresidentLegislative);
+    const heard: string[] = [];
+    game.engine.on('chat', ({ message }) => heard.push(message.text));
+    game.engine.postChat(game.players[2].id, 'psst');
     expect(heard).toEqual([]);
   });
 
@@ -886,6 +905,43 @@ describe('GameEngine — veto', () => {
     });
     expect(error).toBeNull();
     expect(game.room.liberalPolicies).toBe(1);
+  });
+
+  it('Should open a consent clock when the Chancellor proposes a veto', () => {
+    const { game, chancellor } = reachChancellorLegislative();
+    const before = Date.now();
+    game.engine.handleCommand(chancellor.id, { kind: 'vetoRequest' });
+    expect(game.room.vetoRequested).toBe(true);
+    expect(game.room.legislativeEndsAt).toBeGreaterThan(before);
+    expect(game.room.legislativeEndsAt - game.room.legislativeStartedAt).toBe(
+      VETO_CONSENT_DURATION_MS,
+    );
+  });
+
+  it('Should refuse the veto when the President lets the consent clock run out', () => {
+    const { game, chancellor } = reachChancellorLegislative();
+    game.engine.handleCommand(chancellor.id, { kind: 'vetoRequest' });
+    game.engine.resolveLegislativeTimeout();
+
+    expect(game.room.vetoRequested).toBe(false);
+    expect(game.room.phase).toBe(Phase.ChancellorLegislative);
+    expect(game.room.drawnPolicies).toHaveLength(2);
+    const error = game.engine.handleCommand(chancellor.id, {
+      kind: 'enactPolicy',
+      index: 0,
+    });
+    expect(error).toBeNull();
+    expect(game.room.liberalPolicies).toBe(1);
+  });
+
+  it('Should refuse the veto if the President disconnects without answering', () => {
+    const { game, president, chancellor } = reachChancellorLegislative();
+    game.engine.handleCommand(chancellor.id, { kind: 'vetoRequest' });
+    game.engine.setConnected(president.id, false);
+
+    expect(game.room.vetoRequested).toBe(false);
+    expect(game.room.phase).toBe(Phase.ChancellorLegislative);
+    expect(game.room.drawnPolicies).toHaveLength(2);
   });
 
   it('Should reject a veto before five fascist policies', () => {

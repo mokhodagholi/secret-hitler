@@ -15,6 +15,7 @@ export type ScreenName =
   | 'rules-failed-government'
   | 'rules-powers'
   | 'rules-how-to-win'
+  | 'rules-online'
   | 'settings'
   | 'changelog'
   | 'support'

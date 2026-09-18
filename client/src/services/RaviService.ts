@@ -68,6 +68,7 @@ export type RaviLineId =
   | 'law.pass'
   | 'law.passYou'
   | 'law.chancellorChoosing'
+  | 'law.silence'
   | 'law.liberal'
   | 'law.fascist'
   | 'law.vetoOffered'

@@ -35,18 +35,23 @@ export class PolicyDeck {
 
   /** Draw `count` tiles, reshuffling the discard pile in if needed. */
   drawTiles(count: number): Policy[] {
+    this.ensureThreeInDraw();
     if (this.draw.length < count) this.reshuffleDiscard();
-    return this.draw.splice(0, count);
+    const tiles = this.draw.splice(0, count);
+    this.ensureThreeInDraw();
+    return tiles;
   }
 
   /** Look at the top `count` tiles without removing them (Policy Peek). */
   peekTop(count: number): Policy[] {
+    this.ensureThreeInDraw();
     if (this.draw.length < count) this.reshuffleDiscard();
     return this.draw.slice(0, count);
   }
 
   discardTiles(tiles: Policy[]): void {
     this.discard.push(...tiles);
+    this.ensureThreeInDraw();
   }
 
   toSnapshot(): { draw: Policy[]; discard: Policy[] } {
@@ -57,6 +62,11 @@ export class PolicyDeck {
   restore(draw: Policy[], discard: Policy[]): void {
     this.draw = [...draw];
     this.discard = [...discard];
+  }
+
+  /** Official: whenever fewer than three remain, shuffle discard back in. */
+  private ensureThreeInDraw(): void {
+    if (this.draw.length < 3 && this.discard.length > 0) this.reshuffleDiscard();
   }
 
   private reshuffleDiscard(): void {

@@ -84,6 +84,7 @@ export {
   POWER_PROMPT_MS,
   RAVI_CLIP_MS,
   RAVI_HOLD_PAD_MS,
+  VETO_CONSENT_PROMPT_MS,
   VOTE_PROMPT_MS,
   ceremonyDelay,
   raviClipMs,

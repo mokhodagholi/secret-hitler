@@ -1,4 +1,10 @@
-import { BREATH_AFTER_LAW_MS, LEGISLATIVE_PASS_MS, Phase } from '../../types/GameState';
+import {
+  BREATH_AFTER_LAW_MS,
+  LEGISLATIVE_PASS_MS,
+  Phase,
+  VETO_CONSENT_DURATION_MS,
+} from '../../types/GameState';
+import { VETO_CONSENT_PROMPT_MS } from '../../ravi/clipMs';
 import type { GameCommand } from '../../types/events';
 import { type EngineError, err } from '../errors';
 import {
@@ -40,10 +46,22 @@ export class ChancellorLegislativePhase implements GamePhase {
     return this.enactAt(command.index);
   }
 
-  /** No choice in time — the engine enacts a random tile (never on a pending veto). */
+  /** A disconnect can leave the President unable to answer a veto. */
+  presenceChanged(): void {
+    const room = this.host.room;
+    if (!room.vetoRequested || !room.presidentId) return;
+    const president = room.findPlayer(room.presidentId);
+    if (president?.connected) return;
+    this.consentVeto(room.presidentId, false);
+  }
+
+  /** No choice in time — refuse a pending veto, otherwise enact a random tile. */
   timeout(): void {
     const room = this.host.room;
-    if (room.vetoRequested) return;
+    if (room.vetoRequested) {
+      if (room.presidentId) this.consentVeto(room.presidentId, false);
+      return;
+    }
     const count = room.drawnPolicies.length;
     if (count > 0) this.enactAt(Math.floor(Math.random() * count));
   }
@@ -77,8 +95,11 @@ export class ChancellorLegislativePhase implements GamePhase {
       return err('INVALID_ACTION', 'Veto is not available yet.');
     }
     room.vetoRequested = true;
-    // The Chancellor has acted — pause the auto-pick while the President decides.
-    this.host.closeLegislativeTimer();
+    // Fresh clock for the President; silence is a refuse, not a stall.
+    this.host.openLegislativeTimer(
+      VETO_CONSENT_PROMPT_MS,
+      VETO_CONSENT_DURATION_MS,
+    );
     this.host.log('vetoProposed');
     this.host.changed();
     return null;

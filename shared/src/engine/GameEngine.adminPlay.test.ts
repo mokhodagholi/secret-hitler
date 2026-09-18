@@ -16,6 +16,14 @@ function startAdminPlay() {
   for (const player of players) engine.setReady(player.id, true);
   const started = engine.startGame(players[0].id);
   expect(started).toBeNull();
+  const first = players[0];
+  if (first) {
+    room.presidentId = first.id;
+    if (room.currentRound) {
+      room.currentRound.presidentId = first.id;
+      room.currentRound.presidentName = first.name;
+    }
+  }
   skipOpeningNight(room);
   engine.endDiscussion();
   return { engine, room, players };
@@ -61,6 +69,14 @@ describe('GameEngine — admin play', () => {
     const players = seatPlayers(engine, ['Ana', 'Ben', 'Cal', 'Dia', 'Eve']);
     for (const player of players) engine.setReady(player.id, true);
     expect(engine.startGame(players[0].id)).toBeNull();
+    const first = players[0];
+    if (first) {
+      room.presidentId = first.id;
+      if (room.currentRound) {
+        room.currentRound.presidentId = first.id;
+        room.currentRound.presidentName = first.name;
+      }
+    }
     skipOpeningNight(room);
     engine.endDiscussion();
     const [president, chancellor] = players;

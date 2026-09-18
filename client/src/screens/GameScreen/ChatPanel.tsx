@@ -6,6 +6,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
+import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { playerLabel } from '../../i18n/perspective';
 import { avatarImage } from '../../assets/avatars';
@@ -79,9 +80,20 @@ export function ChatPanel(props: ChatPanelProps) {
     if (tutorial.playing()) return tutorial.playView();
     return game.view();
   };
+  const silentPlaceholder = () => {
+    const phase = tableView()?.phase;
+    return phase === Phase.PresidentLegislative ||
+      phase === Phase.ChancellorLegislative
+      ? 'game.chatLawSilentPlaceholder'
+      : 'game.chatSilentPlaceholder';
+  };
   const chatLines = () =>
     tutorial.looking() || tutorial.playing() ? tutorial.talk() : game.chatMessages();
   const youId = () => tableView()?.you.id;
+  const writePrompt = () =>
+    tutorial.looking() && tutorial.lookWait() === 'try'
+      ? formatMessage('onboard.idea.writeSomething')
+      : undefined;
   const slowSecondsLeft = () => {
     if (tutorial.looking() || tutorial.playing()) return 0;
     const until = game.chatSlowUntil();
@@ -335,15 +347,15 @@ export function ChatPanel(props: ChatPanelProps) {
           </Show>
         </div>
 
-        <Show when={!tutorial.looking()}>
         <div class={styles.tools}>
-          <Show when={flags.flags.voice}>
+          <Show when={tutorial.looking() || flags.flags.voice}>
             <button
               type="button"
               classList={{
                 [styles.tool]: true,
-                [styles.toolMuted]: voice.selfMuted(),
+                [styles.toolMuted]: !tutorial.looking() && voice.selfMuted(),
               }}
+              data-tutorial-target="mic"
               aria-label={formatMessage(
                 tutorial.looking() || !voice.selfMuted()
                   ? 'game.muteSelf'
@@ -379,43 +391,44 @@ export function ChatPanel(props: ChatPanelProps) {
               />
             </button>
           </Show>
-          <button
-            type="button"
-            class={styles.tool}
-            aria-label={formatMessage('game.playersTitle')}
-            onClick={props.onOpenPlayers}
-          >
-            <Icon name="people" size={20} />
-          </button>
-          <button
-            type="button"
-            class={styles.tool}
-            aria-label={formatMessage('game.historyTitle')}
-            onClick={props.onOpenHistory}
-          >
-            <Icon name="scroll" size={20} />
-          </button>
-          <Show when={props.onSkipTimer}>
+          <Show when={!tutorial.looking()}>
             <button
               type="button"
               class={styles.tool}
-              aria-label={formatMessage('game.skipTimer')}
-              onClick={() => props.onSkipTimer?.()}
+              aria-label={formatMessage('game.playersTitle')}
+              onClick={props.onOpenPlayers}
             >
-              <Icon name="skip" size={20} />
+              <Icon name="people" size={20} />
+            </button>
+            <button
+              type="button"
+              class={styles.tool}
+              aria-label={formatMessage('game.historyTitle')}
+              onClick={props.onOpenHistory}
+            >
+              <Icon name="scroll" size={20} />
+            </button>
+            <Show when={props.onSkipTimer}>
+              <button
+                type="button"
+                class={styles.tool}
+                aria-label={formatMessage('game.skipTimer')}
+                onClick={() => props.onSkipTimer?.()}
+              >
+                <Icon name="skip" size={20} />
+              </button>
+            </Show>
+            <span class={styles.toolDivider} aria-hidden="true" />
+            <button
+              type="button"
+              class={styles.tool}
+              aria-label={formatMessage('settings.title')}
+              onClick={props.onOpenMenu}
+            >
+              <Icon name="gear" size={20} />
             </button>
           </Show>
-          <span class={styles.toolDivider} aria-hidden="true" />
-          <button
-            type="button"
-            class={styles.tool}
-            aria-label={formatMessage('settings.title')}
-            onClick={props.onOpenMenu}
-          >
-            <Icon name="gear" size={20} />
-          </button>
         </div>
-        </Show>
       </header>
 
       <Show when={bodyOpen()}>
@@ -424,6 +437,7 @@ export function ChatPanel(props: ChatPanelProps) {
             [styles.feed]: true,
             [styles.feedCollapsed]: !feedOpen(),
           }}
+          data-tutorial-target="messages"
           ref={(element) => {
             feedScroller = element;
             if (feedOpen()) {
@@ -503,23 +517,26 @@ export function ChatPanel(props: ChatPanelProps) {
               rows={1}
               dir={i18n.dir()}
               aria-label={
+                writePrompt() ??
                 props.composeHint ??
                 formatMessage(
                   !talkingAllowed()
-                    ? 'game.chatSilentPlaceholder'
+                    ? silentPlaceholder()
                     : 'game.chatPlaceholder',
                 )
               }
               placeholder={
-                props.composeHint
-                  ? ''
-                  : !talkingAllowed() && !tutorial.looking()
-                    ? formatMessage('game.chatSilentPlaceholder')
-                    : slowSecondsLeft() > 0
-                      ? formatMessage('game.chatSlowPlaceholder', {
-                          seconds: slowSecondsLeft(),
-                        })
-                      : formatMessage('game.chatPlaceholder')
+                writePrompt()
+                  ? writePrompt()
+                  : props.composeHint
+                    ? ''
+                    : !talkingAllowed() && !tutorial.looking()
+                      ? formatMessage(silentPlaceholder())
+                      : slowSecondsLeft() > 0
+                        ? formatMessage('game.chatSlowPlaceholder', {
+                            seconds: slowSecondsLeft(),
+                          })
+                        : formatMessage('game.chatPlaceholder')
               }
               maxlength={500}
               disabled={!talkingAllowed()}

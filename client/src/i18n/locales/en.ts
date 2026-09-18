@@ -140,7 +140,7 @@ export const en = {
     steps: {
       nominate: {
         title: 'Nominate a Chancellor',
-        body: 'The presidency passes clockwise each round. The President nominates a Chancellor, but the last elected President and Chancellor are ineligible (only the last Chancellor in a 5-player game).',
+        body: 'The presidency passes clockwise each round. The President nominates a Chancellor. Last elected President and Chancellor cannot sit as Chancellor again — unless only five players remain, in which case only the last Chancellor is locked.',
       },
       elect: {
         title: 'Vote',
@@ -173,7 +173,7 @@ export const en = {
       },
       special: {
         title: 'Call Special Election',
-        body: 'Name any player as the next presidential candidate; the normal clockwise rotation resumes afterward.',
+        body: 'Pick the next President from the other seats. You cannot name yourself. After that round, the presidency walks clockwise from where it left off.',
       },
       peek: {
         title: 'Policy Peek',
@@ -220,6 +220,31 @@ export const en = {
     rememberBody:
       'Listen to the story, then look at the votes. The player who always says Ja, the one who never takes office, and the one who explodes after a Fascist law — any of them might be lying.',
     trustNoOne: 'Trust no one.',
+    online: {
+      title: 'This table is online',
+      lead:
+        'The printed rulebook is the board game. Wins, powers, and the tracker are the same. Phones drop and people stall, so this table has a few extra procedures — otherwise a round could freeze forever.',
+      vote: {
+        title: 'Who votes',
+        body: 'Only seats that are still connected vote. A dropped player is skipped so the election can finish.',
+      },
+      office: {
+        title: 'Empty office',
+        body: 'The presidency walks past a disconnected seat. The table does not wait for them to come back.',
+      },
+      leave: {
+        title: 'Leave or kick',
+        body: 'If you leave or the table removes you, that seat is out — no vote, no office.',
+      },
+      clocks: {
+        title: 'Clocks',
+        body: 'If time runs out and nobody acts, the game keeps going.',
+        vote: 'A missed vote is Nein.',
+        veto: 'If you do not answer a veto, it is refused.',
+        law: 'If nobody picks a law, one is enacted or burned at random.',
+        why: 'So one person cannot wreck the table.',
+      },
+    },
   },
   tutorial: {
     video: 'Watch the tutorial',
@@ -250,7 +275,7 @@ export const en = {
       'You are Chancellor now. You enact one of these two. Put the Liberal down.',
     peek: 'Look at the top three. Put them back. Lie to the table if you have to.',
     execute:
-      'Take someone off the table. If it is Hitler, the Liberals win. Nobody sees the role unless it is Hitler.',
+      'Execute someone. If it is Hitler, the Liberals win. If not, the role stays hidden.',
     win: 'The Liberals win. Next hand nobody tells you who is lying. Listen to who talks.',
     winNext: 'The Liberals win. The next table only shows what changed.',
     nightDone:
@@ -264,7 +289,7 @@ export const en = {
     investigate:
       'Tap a seat. You see their party, not their role. Lie to the table if you have to.',
     specialElection:
-      'You pick the next President — it does not walk around the table.',
+      'You pick the next President — not yourself. It does not walk around the table.',
     nextEight:
       'Same board as seven. Two Fascists around a Hitler who saw nothing at night. More seats, noisier votes.',
     nextNine: 'Investigate twice. Three Fascists plus Hitler.',
@@ -305,9 +330,15 @@ export const en = {
       welcome: "We're in. Right — everything you just saw is used on this screen.",
       people: 'These are the people in the game. Two sides: Fascist and Liberal.',
       talk: 'People talk to each other — in chat, and on the mic.',
+      messages: 'Messages show up here.',
+      writeHere:
+        'Anything you type here goes into chat and the table sees it. Write something, then hit send.',
+      writeSomething: 'Write something…',
+      yourMessage: "That's yours. Everyone at the table can see it.",
+      whereWereWe: 'Wait — where were we?',
       talkAbout: "Let's watch together what they're saying.",
       campaign:
-        'Everyone tries to look Liberal so the President will make them Chancellor.',
+        'Oh right — everyone tries to look Liberal so the President will make them Chancellor.',
       yourTurn: 'Your turn. Write something that makes the President name you Chancellor.',
       composeHint: "Just put me in. I don't care who wins.",
       composeHint2: "Put me in. I'm Liberal.",
@@ -333,7 +364,7 @@ export const en = {
       trackerTitle: 'Election tracker',
       tracker: 'This is the tracker. Three marks.',
       trackerFail1:
-        'If half plus one say Nein, the government fails. The tracker moves up one.',
+        'The government needs more Ja than Nein — a tie fails too. The tracker moves up one.',
       nextPresidentTitle: 'Next president',
       nextPresident: 'The presidency moves to the next seat.',
       trackerFail2Title: 'Second fail',
@@ -597,6 +628,7 @@ export const en = {
     moveDialog: 'Move panel',
     chatPlaceholder: 'Write a message…',
     chatSilentPlaceholder: 'Night — no talking yet…',
+    chatLawSilentPlaceholder: 'No talking during the laws…',
     chatSlowPlaceholder: 'Wait {seconds}s…',
     chatSlowWait: 'Wait {seconds} seconds',
     chatSlowCount: '{seconds}',
@@ -642,7 +674,7 @@ export const en = {
       peekHint: 'The top three policies, in order:',
       investigateHint: 'Tap a player to investigate their loyalty',
       executeHint: 'Tap a player to execute',
-      electHint: 'Tap a player to be the next President',
+      electHint: 'Tap someone else as the next President — not you',
       alreadyInvestigated: 'You already checked that player’s party.',
       investigationResult: '{name} belongs to the {party} party',
       inProgress: '{name} is using a presidential power…',
@@ -824,6 +856,7 @@ export const en = {
       pass: 'Two policies are coming to the Chancellor.',
       passYou: 'Two policies are coming to you.',
       chancellorChoosing: 'The Chancellor enacts one policy.',
+      silence: "Quiet. They're choosing the laws.",
       liberal: 'A Liberal policy is enacted.',
       fascist: 'A Fascist policy is enacted.',
       vetoOffered: 'The Chancellor proposes a veto.',

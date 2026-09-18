@@ -11,6 +11,7 @@ export const TOPIC_ORDER = [
   'failedGovernment',
   'powers',
   'howToWin',
+  'online',
 ] as const;
 
 export type TopicId = (typeof TOPIC_ORDER)[number];
@@ -138,6 +139,14 @@ export const TOPICS: readonly TopicDef[] = [
     bubbleOrigin: 'bottomEnd',
     titleKey: 'rules.winningTitle',
     screen: 'rules-how-to-win',
+  },
+  {
+    id: 'online',
+    icon: 'globe',
+    hue: 'ember',
+    bubbleOrigin: 'topStart',
+    titleKey: 'rules.online.title',
+    screen: 'rules-online',
   },
 ];
 

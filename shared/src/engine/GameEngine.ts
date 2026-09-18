@@ -366,6 +366,12 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   postChat(playerId: string, text: string): void {
     if (this.inOpeningNight()) return;
+    if (
+      this.room.phase === Phase.PresidentLegislative ||
+      this.room.phase === Phase.ChancellorLegislative
+    ) {
+      return;
+    }
     const player = this.room.findPlayer(playerId);
     const body = text.trim();
     if (!player || !body || !player.isAlive) return;
@@ -529,11 +535,6 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     if (room.phase === Phase.GameOver) return;
     this.clearBreath();
     this.finalizeRoundHistory();
-    if (this.fascistsHoldTheTable()) {
-      this.log('fascistsWinNumbers');
-      this.endGame('fascist');
-      return;
-    }
     // A special election runs one round out of turn; afterwards the normal
     // rotation resumes from the player who invoked it.
     const resumeAfter = room.specialElectionResumeAfterId;
@@ -626,17 +627,11 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
       .sort((a, b) => a.seat - b.seat);
   }
 
-  /**
-   * A leaver can shrink the table until Fascists equal or outnumber Liberals
-   * among players still connected. Official rules don't cover mid-game
-   * absences; we check at the start of the next round.
-   */
-  private fascistsHoldTheTable(): boolean {
-    const living = this.room.players.filter((player) => player.isAlive);
-    const present = living.filter((player) => player.connected);
-    if (present.length === 0 || present.length === living.length) return false;
-    const liberals = present.filter((player) => player.role === 'liberal').length;
-    return present.length - liberals >= liberals;
+  /** First candidate is random; later rounds walk clockwise from there. */
+  private pickFirstPresident(): string | null {
+    const living = this.livingInSeatOrder();
+    if (living.length === 0) return null;
+    return living[Math.floor(Math.random() * living.length)]?.id ?? null;
   }
 
   private nextPresidentId(): string | null {
@@ -797,12 +792,15 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
 
   // --- Legislative timer (PhaseHost) -----------------------------------------
 
-  openLegislativeTimer(delayMs = 0): void {
+  openLegislativeTimer(
+    delayMs = 0,
+    durationMs = LEGISLATIVE_DURATION_MS,
+  ): void {
     const room = this.room;
     const openAt =
       Date.now() + ceremonyDelay(room.options.skipCeremony, Math.max(0, delayMs));
     room.legislativeStartedAt = openAt;
-    room.legislativeEndsAt = openAt + LEGISLATIVE_DURATION_MS;
+    room.legislativeEndsAt = openAt + durationMs;
     this.emit('legislativeTimerChanged', { endsAt: room.legislativeEndsAt });
   }
 
@@ -1400,7 +1398,7 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     room.currentRound = null;
     room.nextRoundNumber = 1;
     room.pendingBreath = null;
-    room.presidentId = this.livingInSeatOrder()[0]?.id ?? null;
+    room.presidentId = this.pickFirstPresident();
     if (isPublicTable(room.options) && !room.hostId) {
       const first = this.livingInSeatOrder()[0];
       if (first) {

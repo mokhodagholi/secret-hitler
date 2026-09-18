@@ -38,7 +38,8 @@ read by the engine** — timers always run.
 | Discussion (per round) | `DISCUSSION_DURATION_MS` | **3 min** | Opens nomination |
 | Nomination | `NOMINATION_DURATION_MS` | **25 s** | Election fails, tracker advances |
 | Vote (Ja / Nein) | `VOTE_DURATION_MS` | **30 s** | Missing votes count as Nein |
-| Legislative choice (P or C) | `LEGISLATIVE_DURATION_MS` | **20 s** | Random discard / enact |
+| Legislative choice (P or C) | `LEGISLATIVE_DURATION_MS` | **35 s** | Random discard / enact |
+| Veto consent (President) | `VETO_CONSENT_DURATION_MS` | **35 s** | Silence / disconnect = refuse |
 | Card flight before clock | `LEGISLATIVE_DEAL_MS` / `PASS_MS` | ~2.4 s / ~1.7 s | Clock starts after flight |
 | Executive power | `SPECIAL_POWER_DURATION_MS` | **15 s** | Random target (or skip peek) |
 | Investigate reveal hold | `INVESTIGATION_HOLD_MS` | **10 s** | Next round |

@@ -913,6 +913,35 @@
   white-space: pre-line;
 }
 
+.stepList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    position: relative;
+    padding-inline-start: 1.1em;
+    font-size: 0.95rem;
+    line-height: 1.95;
+    word-spacing: 0.12em;
+    color: $text-light;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-inline-start: 0;
+      top: 0.72em;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: $gold;
+    }
+  }
+}
+
 /* Remember */
 .remember {
   text-align: center;

@@ -3,6 +3,7 @@ import {
   NOMINATION_PROMPT_MS,
   POWER_PROMPT_MS,
   RAVI_CLIP_MS,
+  VETO_CONSENT_PROMPT_MS,
   VOTE_PROMPT_MS,
   raviClipMs,
   raviHoldMs,
@@ -21,5 +22,8 @@ describe('ravi clip catalog', () => {
     );
     expect(VOTE_PROMPT_MS).toBe(raviHoldMs('private.vote', 'vote.start'));
     expect(POWER_PROMPT_MS).toBeGreaterThan(RAVI_CLIP_MS.daniel['power.peek']);
+    expect(VETO_CONSENT_PROMPT_MS).toBeGreaterThan(
+      RAVI_CLIP_MS.daniel['law.vetoOffered'],
+    );
   });
 });

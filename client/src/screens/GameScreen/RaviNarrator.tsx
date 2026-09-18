@@ -202,8 +202,10 @@ export function RaviNarrator(props: {
           line = raviKickVoteLine(entry.code, entry.params, myName, state.you.id);
         } else if (entry.code === 'presidentDraws') {
           if (state.board.president === state.you.id) line = 'law.drawYou';
+          else line = 'law.silence';
         } else if (entry.code === 'presidentPasses') {
           if (state.board.chancellor === state.you.id) line = 'law.passYou';
+          else line = 'law.silence';
         } else if (
           entry.code === 'executed' &&
           namedIsYou(entry.params?.name, myName)

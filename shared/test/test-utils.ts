@@ -12,6 +12,7 @@ import {
 export class StackedDeck extends PolicyDeck {
   constructor(private readonly tiles: Policy[]) {
     super();
+    this.restore([], []);
   }
 
   override reset(): void {
@@ -24,6 +25,11 @@ export class StackedDeck extends PolicyDeck {
 
   override peekTop(count: number): Policy[] {
     return this.tiles.slice(0, count);
+  }
+
+  override discardTiles(tiles: Policy[]): void {
+    const snapshot = this.toSnapshot();
+    this.restore(snapshot.draw, [...snapshot.discard, ...tiles]);
   }
 }
 
@@ -75,7 +81,11 @@ export function skipOpeningNight(room: Room): void {
 export function startGame(
   names: string[] = ['Ana', 'Ben', 'Cal'],
   deck?: PolicyDeck,
-  opts?: { keepOpeningNight?: boolean; skipCeremony?: boolean },
+  opts?: {
+    keepOpeningNight?: boolean;
+    skipCeremony?: boolean;
+    keepRandomPresident?: boolean;
+  },
 ): RunningGame {
   const room = makeRoom(
     opts?.skipCeremony === false ? { skipCeremony: false } : {},
@@ -86,6 +96,16 @@ export function startGame(
   for (const player of players) engine.setReady(player.id, true);
   const error = engine.startGame(players[0].id);
   if (error) throw new Error(`startGame failed: ${error.code}`);
+  if (!opts?.keepRandomPresident) {
+    const first = players[0];
+    if (first) {
+      room.presidentId = first.id;
+      if (room.currentRound) {
+        room.currentRound.presidentId = first.id;
+        room.currentRound.presidentName = first.name;
+      }
+    }
+  }
   if (!opts?.keepOpeningNight) skipOpeningNight(room);
   return { engine, room, players };
 }

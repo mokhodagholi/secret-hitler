@@ -346,6 +346,8 @@ export const DISCUSSION_DURATION_MS = 180_000;
 export const VOTE_DURATION_MS = 45_000;
 /** How long a legislator has to choose before the engine picks at random. */
 export const LEGISLATIVE_DURATION_MS = 35_000;
+/** President veto consent uses the same choice clock; silence counts as refuse. */
+export const VETO_CONSENT_DURATION_MS = LEGISLATIVE_DURATION_MS;
 /** One face-down policy flying from the pile or a seat to the table. */
 export const LEGISLATIVE_TRAVEL_CARD_MS = 780;
 /** President deal: three cards leave the draw pile before the choice clock starts. */

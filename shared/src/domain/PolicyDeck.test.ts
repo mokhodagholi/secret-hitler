@@ -17,16 +17,16 @@ describe('PolicyDeck', () => {
     expect(deck.drawCount).toBe(14);
   });
 
-  it('Should reshuffle the discard pile in when the draw pile runs short', () => {
+  it('Should reshuffle the discard pile in as soon as fewer than three remain', () => {
     const deck = new PolicyDeck();
     const drawn = deck.drawTiles(16);
-    deck.discardTiles(drawn);
     expect(deck.drawCount).toBe(1);
-    expect(deck.discardCount).toBe(16);
+    deck.discardTiles(drawn);
+    expect(deck.discardCount).toBe(0);
+    expect(deck.drawCount).toBe(17);
 
     const refill = deck.drawTiles(3);
     expect(refill).toHaveLength(3);
-    expect(deck.discardCount).toBe(0);
     expect(deck.drawCount).toBe(14);
   });
 
@@ -50,6 +50,7 @@ describe('PolicyDeck', () => {
     expect(deck.drawCount).toBe(3);
     expect(deck.discardCount).toBe(2);
     expect(deck.drawTiles(3)).toEqual(draw);
-    expect(deck.discardCount).toBe(2);
+    expect(deck.discardCount).toBe(0);
+    expect(deck.drawCount).toBe(2);
   });
 });

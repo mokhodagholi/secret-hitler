@@ -35,8 +35,10 @@ export interface PhaseHost {
   /**
    * Open the legislative choice window and schedule its deadline.
    * `delayMs` delays the auto-timeout until the public deal/pass has landed.
+   * `durationMs` is the choose clock (default legislative window; veto consent
+   * passes its own).
    */
-  openLegislativeTimer(delayMs?: number): void;
+  openLegislativeTimer(delayMs?: number, durationMs?: number): void;
   /** Close the legislative choice window and cancel its deadline. */
   closeLegislativeTimer(): void;
   /**

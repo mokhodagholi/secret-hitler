@@ -119,6 +119,7 @@ describe('RulesScreen', () => {
     expect(screen.getByRole('button', { name: fa.rules.roundTitle })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.failTitle })).toBeTruthy();
     expect(screen.getByRole('button', { name: fa.rules.winningTitle })).toBeTruthy();
+    expect(screen.getByRole('button', { name: fa.rules.online.title })).toBeTruthy();
     expect(screen.queryByText(fa.rules.whatIsThis.lead)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: fa.rules.overview }));
@@ -283,5 +284,27 @@ describe('RulesScreen', () => {
     expect(screen.getByText(en.rules.winning.trustedHitler.title)).toBeTruthy();
     expect(screen.getByText(en.rules.winning.chaos.title)).toBeTruthy();
     expect(screen.getByText(en.rules.rememberBody)).toBeTruthy();
+  });
+
+  it('Should list how the online table differs from the printed rulebook', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    openWrittenGuide();
+    fireEvent.click(screen.getByRole('button', { name: en.rules.online.title }));
+    expect(harness.services.nav.screen()).toBe('rules-online');
+    expect(screen.getByRole('heading', { name: en.rules.online.title })).toBeTruthy();
+    expect(screen.getByText(en.rules.online.lead)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.vote.title)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.vote.body)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.office.title)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.leave.title)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.clocks.title)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.clocks.body)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.clocks.vote)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.clocks.veto)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.clocks.law)).toBeTruthy();
+    expect(screen.getByText(en.rules.online.clocks.why)).toBeTruthy();
   });
 });
