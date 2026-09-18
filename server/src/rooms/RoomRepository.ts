@@ -62,7 +62,7 @@ export class RoomRepository {
   /** Public, joinable rooms (still in lobby) for the room-list endpoint. */
   listPublic() {
     return [...this.rooms.values()]
-      .filter((entry) => entry.room.options.adminPlayUserId == null)
+      .filter(isDiscoverable)
       .map((e) => e.room.summary())
       .filter((s) => s.phase === 'lobby')
       .sort(pinPublicFirst);
@@ -109,7 +109,7 @@ export class RoomRepository {
   listFillableLobbies(): RoomEntry[] {
     return [...this.rooms.values()].filter((entry) => {
       if (entry.room.phase !== Phase.Lobby) return false;
-      if (entry.room.options.adminPlayUserId != null) return false;
+      if (!isDiscoverable(entry)) return false;
       if (entry.room.passwordHash != null) return false;
       if (entry.room.players.length >= entry.room.options.maxPlayers) return false;
       return true;
@@ -119,7 +119,7 @@ export class RoomRepository {
   /** Every live room, including games already in progress. Hidden admin `/play-game` tables stay out. */
   listAll() {
     return [...this.rooms.values()]
-      .filter((entry) => entry.room.options.adminPlayUserId == null)
+      .filter(isDiscoverable)
       .filter(
         (entry) =>
           !(entry.room.options.kind === 'public' && entry.room.phase === Phase.Lobby),
@@ -164,6 +164,10 @@ export class RoomRepository {
 export interface RoomEntry {
   room: Room;
   engine: GameEngine;
+}
+
+function isDiscoverable(entry: RoomEntry): boolean {
+  return entry.room.options.adminPlayUserId == null;
 }
 
 function pinPublicFirst(

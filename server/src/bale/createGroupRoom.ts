@@ -1,8 +1,7 @@
-import { makeRoomCode, PUBLIC_TABLE_NAME, type MessengerKind } from '@secret-hitler/shared';
+import type { MessengerKind } from '@secret-hitler/shared';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
-import { hashPassword } from '../http/password';
 import type { BaleSeatIndex } from './BaleSeatIndex';
 import {
   createFailedReply,
@@ -13,18 +12,16 @@ import {
 export type GroupRoomCreated =
   | {
       reply: BotReply;
-      password: string;
       code: string;
     }
   | {
       reply: BotReply;
-      code: string;
     };
 
 /**
- * Open a lobby named after the group sender. When `roomPassword` is on, the
- * lobby is locked: members of `chatId` skip the password on join; the
- * plaintext is only returned so the bot can DM it (we store the hash).
+ * Open an unlocked lobby named after the group sender. It is listed on Join
+ * so anyone can sit — group members use the chat button; everyone else can
+ * pick it from the room list.
  */
 export function createGroupRoom(params: {
   repo: RoomRepository;
@@ -37,41 +34,11 @@ export function createGroupRoom(params: {
   chatId: number;
   fromId: number;
   creatorName: string;
-  roomPassword?: boolean;
-  publicTable?: boolean;
-}): GroupRoomCreated | { reply: BotReply } {
+}): GroupRoomCreated {
   const creatorName = params.creatorName.trim() || 'میزبان';
-  if (params.publicTable) {
-    const joinKey = `${params.platform ?? 'bale'}:${params.fromId}`;
-    const seated = params.sockets.sitPublicLobby({ name: creatorName, joinKey });
-    if ('error' in seated) {
-      return { reply: createFailedReply() };
-    }
-    params.seats.occupy(
-      params.fromId,
-      {
-        roomId: seated.roomId,
-        code: seated.code,
-        playerId: seated.playerId,
-        roomName: PUBLIC_TABLE_NAME,
-      },
-      params.platform ?? 'bale',
-    );
-    const reply = createGroupPostedReply({
-      creatorName,
-      code: seated.code,
-      botUsername: params.botUsername,
-      startLink: params.startLink,
-      platform: params.platform ?? 'bale',
-    });
-    return { reply, code: seated.code };
-  }
-  const lockWithPassword = params.roomPassword === true;
-  const password = lockWithPassword ? makeRoomCode() : null;
   const platform = params.platform ?? 'bale';
   const entry = params.repo.create({
     name: creatorName,
-    passwordHash: password ? hashPassword(password) : null,
     originChatId: params.chatId,
     originPlatform: platform,
     timerEnabled: true,
@@ -97,19 +64,14 @@ export function createGroupRoom(params: {
   );
   void params.sockets.persistRoom(entry.room.id);
 
-  const reply = createGroupPostedReply({
-    creatorName,
-    code: entry.room.code,
-    botUsername: params.botUsername,
-    startLink: params.startLink,
-    platform,
-  });
-  if (password == null) {
-    return { reply, code: entry.room.code };
-  }
   return {
-    reply,
-    password,
+    reply: createGroupPostedReply({
+      creatorName,
+      code: entry.room.code,
+      botUsername: params.botUsername,
+      startLink: params.startLink,
+      platform,
+    }),
     code: entry.room.code,
   };
 }

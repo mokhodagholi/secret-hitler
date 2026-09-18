@@ -45,7 +45,7 @@ code (and the password when the table is locked).
 | Invite URL | `ble.ir/{bot}?startapp=CODE` ([`miniAppLink.ts`](../shared/src/net/miniAppLink.ts)) | `t.me/{bot}/{app}?startapp=CODE` for Telegram; the **code** is what crosses apps. |
 | Bot API client | [`bale-bot/`](../bale-bot/) already takes `baseUrl` (default `tapi.bale.ai`) | Construct the same class with `https://api.telegram.org`. |
 | Chat commands | [`server/src/bale/commands.ts`](../server/src/bale/commands.ts) | Keep the logic. Inject `startLink`. Two webhooks. |
-| Group `/create` | `originChatId` + Bale `getChatMember` | Store `originPlatform` too. Ask the bot that owns that chat. A Telegram user is not a member of a Bale group. |
+| Group `/create` | `originChatId` for the group post | Store `originPlatform` too. |
 
 Bale copied Telegram’s Mini App and Bot API. `initData` HMAC, Back
 button, `start_param`, webhook secret header
@@ -94,20 +94,12 @@ pastes **its** mini-app link. The waiting-room share button copies the
 link for **this** WebView’s platform. The code stays visible either
 way — that is the cross-play join key.
 
-### Group tables stay locked to that group’s messenger
+### Group `/create` tables are open
 
-`/create` in a Bale group still means: members Bale still lists in
-that chat skip the password; everyone else types it. “Everyone else”
-includes Telegram and the browser. Same rule the other way for a
-Telegram group.
-
-That is not a hole. The password is how you invite across apps (and
-how you invite someone who left the group). The bot DMs it to the
-creator today; keep that.
-
-Store origin as `{ platform, chatId, messageId }`. Calling Telegram
-`getChatMember` with a Bale chat id would be a wrong-bot miss, not a
-free sit.
+`/create` in a Bale group opens an unlocked lobby listed on Join. Anyone
+can sit — group button, Join, `/find_game`, or the code. Same on
+Telegram. Origin is still stored as `{ platform, chatId, messageId }` so
+the group post can be edited if the host leaves.
 
 ### Identity — same database, not the same person
 
@@ -329,7 +321,7 @@ settings both point here.
 | Mini-app login, lock name to first name | Same `initData` HMAC | Two profiles; same room. |
 | `startapp=CODE` → join screen | Same `start_param` | Code is universal. |
 | `/start` `/find_game` `/games` `/join` `/invite` `/create` | Same parser and replies | Lists are the live repo, not “Telegram rooms”. |
-| Group `/create`, password, origin membership | Telegram `getChatMember` | Other-app players type the password. |
+| Group `/create` | Same unlocked listed lobby | Anyone sits; code is universal. |
 | Support letter | Telegram support group | Independent desks. |
 | Kick-vote tally | Telegram support group | Independent desks. |
 | Native back | Telegram `BackButton` | — |

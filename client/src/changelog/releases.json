@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.10.0",
+      "bump": "minor",
+      "date": "2026-09-18",
+      "changes": [
+        {
+          "kind": "feat",
+          "fa": "میزهایی که در گروه ساخته می‌شوند در فهرست اتاق‌ها دیده می‌شوند و همه می‌توانند بنشینند.",
+          "en": "Tables opened from a group appear on Join, and anyone can sit."
+        }
+      ]
+    },
+    {
       "version": "0.9.0",
       "bump": "minor",
       "date": "2026-09-18",

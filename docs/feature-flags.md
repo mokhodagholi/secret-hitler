@@ -47,8 +47,9 @@ When `voice` is off, the client hides every mic control and the server rejects
 
 When `publicTable` is off, Home Play opens create/join and the server does
 not keep an evergreen lobby. When on, Join shows **one** public table
-(first sitter is host, Start from 5–10); Create is hidden; group `/create`
-sits that salon. Find Match is not used. AFK kicks in every lobby still
+(first sitter is host, Start from 5–10); Create is hidden. Group `/create`
+still opens an unlocked table for that chat and lists it on Join — it does
+not sit the salon. Find Match is not used. AFK kicks in every lobby still
 run. A disconnected lobby seat is dropped after 15 seconds (no ban). See
 [`public-table.md`](./public-table.md).
 
@@ -64,9 +65,9 @@ The table itself is client-only (no tutorial HTTP or room). See
 [`onboarding.md`](./onboarding.md).
 
 When `roomPassword` is off, Create hides the password field and the server
-ignores a password on HTTP create. Group `/create` opens an unlocked lobby
-(no DM / fallback password). Join still asks for a password when a room was
-locked while the flag was on.
+ignores a password on HTTP create. Group `/create` always opens an unlocked
+lobby (no DM / fallback password). Join still asks for a password when a
+room is locked.
 
 When `lobbyFill` is off, the server does not DM warm players to fill waiting
 lobbies. When on, needy 2–4 seat tables get short deep-link invites. See

@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
-import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, friendTableInviteReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, isUsersCommand, lobbyFillInviteReply, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply, usersEmptyReply, usersListReply } from './commands';
+import { baleStartLink, broadcastHelpReply, broadcastPlayerReply, createGroupClosedReply, createGroupPostedReply, deleteRoomDoneReply, deleteRoomHelpReply, deleteRoomMissingReply, friendTableInviteReply, handleBotText, isBroadcastCommand, isDeleteRoomCommand, isDirectMessageCommand, isUnsendCommand, isUsersCommand, lobbyFillInviteReply, parseBotCommand, parseChatIds, parseMessageArg, unsendEmptyReply, usersEmptyReply, usersListReply } from './commands';
 
 const BOT = '@secret_hitler_bot';
 
@@ -233,6 +233,21 @@ describe('handleBotText', () => {
     expect(reply.text).toContain('میزبان رفت');
     expect(reply.text).toContain('Ana');
     expect(reply.reply_markup?.inline_keyboard).toEqual([]);
+  });
+
+  it('Should say a group table is open for everyone', () => {
+    const reply = createGroupPostedReply({
+      creatorName: 'Ana',
+      code: 'ABC123',
+      botUsername: BOT,
+    });
+    expect(reply.text).toContain('اتاق ساخته شد');
+    expect(reply.text).toContain('برای همه بازه');
+    expect(reply.text).not.toContain('رمز');
+    expect(reply.reply_markup?.inline_keyboard[0]?.[0]).toEqual({
+      text: 'ورود به اتاق',
+      url: 'https://ble.ir/secret_hitler_bot?startapp=ABC123',
+    });
   });
 
   it('Should list in-progress games on /games', () => {

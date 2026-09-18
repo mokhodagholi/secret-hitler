@@ -45,9 +45,10 @@ export interface RoomOptions {
   timerEnabled: boolean;
   confirmActions: boolean;
   /**
-   * Group this table was opened from (`/create`). Members of that chat
-   * skip the password; everyone else still types it. Scoped to
-   * {@link originPlatform} so a Telegram user is not a Bale group member.
+   * Group this table was opened from (`/create`). Used to rewrite the
+   * group post if the host leaves. If the table is locked, members of
+   * that chat skip the password. Scoped to {@link originPlatform} so a
+   * Telegram user is not a Bale group member.
    */
   originChatId?: number;
   /** Which bot owns {@link originChatId}. Omitted on restored Bale rooms means Bale. */

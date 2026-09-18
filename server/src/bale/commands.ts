@@ -327,7 +327,7 @@ export function createFailedReply(): BotReply {
   return { text: 'نتونستم اتاق بسازم. دوباره بزن.' };
 }
 
-/** Posted in the group after `/create`. Password stays out of this message. */
+/** Posted in the group after `/create`. */
 export function createGroupPostedReply(params: {
   creatorName: string;
   code: string;
@@ -340,7 +340,7 @@ export function createGroupPostedReply(params: {
     text: [
       'اتاق ساخته شد.',
       `میز ${params.creatorName} — کد ${params.code}`,
-      'از همین گروه با دکمه بیا تو. از بیرون رمز می‌خواد.',
+      'با دکمه بیا تو. این میز برای همه بازه.',
     ].join('\n'),
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],

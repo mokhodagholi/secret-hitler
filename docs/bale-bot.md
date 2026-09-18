@@ -56,7 +56,7 @@ bot.sendMessage(chat_id, text, reply_markup)
 | Secret mismatch | 401. Configure `BALE_WEBHOOK_SECRET`. |
 | Channel | 200, no reply. |
 | Group, anything except `/create` | 200, no reply. The group is not a help desk. |
-| Group `/create` | Opens a locked table named after the sender. |
+| Group `/create` | Opens an unlocked table named after the sender. Listed on Join. |
 | Sticker, photo, empty text | 200, no reply. |
 | Private text | Always a reply — known command, bare room code, or the start greeting. |
 
@@ -345,10 +345,12 @@ server opens a real lobby, and the group gets a join button.
 What is created:
 
 - Room **name** = the sender’s Bale first name.
-- A random 6-character **password** (same alphabet as room codes).
+- **No password.** Anyone can sit — from the group button, Join, `/find_game`,
+  or a share code.
 - The sender is already seated as **host** (they still tap the button to open
   the mini-app; that reuses the reserved seat, it does not add a second Ana).
-- `originChatId` is this group. Join later asks Bale `getChatMember`.
+- `originChatId` is this group (so the join post can be edited if the host
+  leaves).
 
 The posted message id is stored on the room (`originMessageId`). If the host
 leaves, the bot **edits that same post** so the join button does not linger:
@@ -358,34 +360,21 @@ leaves, the bot **edits that same post** so the join button does not linger:
 میز {name} بسته شد.
 ```
 
-Group reply (password is **not** in this message):
+Group reply:
 
 ```
 اتاق ساخته شد.
 میز {name} — کد {CODE}
-از همین گروه با دکمه بیا تو. از بیرون رمز می‌خواد.
+با دکمه بیا تو. این میز برای همه بازه.
 ```
 
 Button: **ورود به اتاق**.
 
-Password delivery:
-
-1. The bot DMs the creator the password, so they can invite people who are
-   not in the group.
-2. If that DM fails (they have never `/start`ed the bot), the password is
-   posted in the group as a fallback. Otherwise it stays out of the group
-   so a forwarded join button is not enough to sit down.
-
-Join rules for that table:
-
-| Who | Password |
-|---|---|
-| Creator tapping the button | No — reserved seat. |
-| Someone Bale still lists as a member of that group | No. |
-| Anyone else (left the group, never in it, browser `/join/CODE`) | Yes. |
+No password DM. Group membership is not a join gate — anyone with the
+code or the Join row can sit.
 
 The mini-app still does the actual sit (`POST /api/rooms/CODE/join` with
-Bale `initData`). Group membership is checked on the server, not in chat.
+Bale `initData` when they came from the mini-app).
 
 Private-chat `/create`:
 
@@ -396,8 +385,8 @@ Private-chat `/create`:
 Groups are limited to three `/create`s per minute so a spammy chat cannot
 fill the server.
 
-The bot must be **in the group** (it already is if it saw `/create`) so
-`getChatMember` can run. Add it as a member before people rely on this.
+The bot must be **in the group** (it already is if it saw `/create`).
+Add it as a member before people rely on this.
 
 ---
 

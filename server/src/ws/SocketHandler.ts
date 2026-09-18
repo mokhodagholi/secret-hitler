@@ -142,12 +142,12 @@ export class SocketHandler {
     this.broadcastJoinList();
   }
 
-  /** Snapshots Join shows: lobby rooms, salon-only while publicTable is on. */
+  /** Snapshots Join shows: lobby rooms. Salon is pinned first while publicTable is on. */
   joinList(): RoomSummary[] {
     this.ensurePublicLobby();
     const rooms = this.repo.listPublic();
     return this.flags.publicTable
-      ? rooms.filter((room) => room.kind === 'public')
+      ? rooms
       : rooms.filter((room) => room.kind !== 'public');
   }
 

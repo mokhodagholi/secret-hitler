@@ -20,7 +20,7 @@ starts when they want.
 | When it deals, a new empty salon | **Yes**, in the same turn, so Join does not flicker empty. |
 | Find Match queue / Accept at 6 | **No.** That skipped the waiting room. |
 | Stranger Create / extra waiting rooms | **No.** One lobby. In-progress games are separate. |
-| Group `/create` | Sits **this** salon (does not open a private group table). |
+| Group `/create` | Opens an **unlocked** table for that chat and lists it on Join (does not sit the salon). |
 | Own-table button | Measurement only. Records `own_room_prompt` / `own_room_want`. Does **not** spawn a second lobby. |
 | 5-minute lobby AFK | Yes, guests who sit unready. Do not AFK-kick the host. |
 | Cap / spillover | Max **10**. Full → wait for the next salon after deal. No second public lobby in v1. |
@@ -128,8 +128,8 @@ revisit private tables later.
 |---|---|
 | Create / keep one empty lobby | `SocketHandler.ensurePublicLobby` |
 | First sitter host; Start 5–10 | `shared/src/engine/GameEngine.ts` |
-| Join lists only the salon | `GET /api/rooms` when `publicTable` |
-| Sit the salon (HTTP + `/create`) | `SocketHandler.sitPublicLobby` |
+| Join lists the salon (plus group `/create` tables) | `GET /api/rooms` when `publicTable` |
+| Sit the salon (HTTP create) | `SocketHandler.sitPublicLobby` |
 | Own-table crumbs | `POST /api/product/own-room` |
 | Join-only Home | `HomeScreen` Play → `RoomsScreen` join |
 | Copy | `fa.ts` **and** `en.ts` — [`persian.md`](./persian.md) **میز** |

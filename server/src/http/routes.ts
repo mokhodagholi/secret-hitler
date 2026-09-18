@@ -125,8 +125,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     subscribers,
     broadcastDelayMs: deps.broadcastDelayMs,
     product,
-    roomPassword: flags.roomPassword,
-    publicTable: flags.publicTable,
   };
   const messengers = configuredMessengers(bale, telegram);
   registerBaleBodyParser(app);
@@ -439,7 +437,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return reply.code(201).send(res);
   });
 
-  // Join list: the salon only while publicTable is on.
+  // Join list: salon plus open hosted lobbies while publicTable is on.
   app.get('/api/rooms', async () => sockets.joinList());
 
   /** Proxies and phones freeze a silent stream; comment frames keep the pipe open. */
