@@ -9,6 +9,11 @@
           "kind": "feat",
           "fa": "اگر در اتاق انتظار بمانید و میز دیگری شلوغ‌تر باشد، می‌توانید به آن میز بروید.",
           "en": "If you wait in a lobby and another table has more people, you can move to that table."
+        },
+        {
+          "kind": "feat",
+          "fa": "وقتی کسی به میز می‌نشیند یا بلند می‌شود، فهرست اتاق‌ها همان لحظه عوض می‌شود.",
+          "en": "Open rooms update as soon as someone sits down or leaves a table."
         }
       ]
     },

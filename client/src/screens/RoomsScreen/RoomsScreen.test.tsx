@@ -307,4 +307,37 @@ describe('RoomsScreen', () => {
     await waitFor(() => expect(screen.getByText(en.joinGame.noSalon)).toBeTruthy());
     expect(screen.queryByText(en.joinGame.noRooms)).toBeNull();
   });
+
+  it('Should not offer a manual Join refresh', async () => {
+    const harness = buildHarness();
+    harness.services.game.listRooms = async () => [];
+    renderWithApp(() => <RoomsScreen initialTab="join" />, harness);
+    expect(screen.queryByRole('button', { name: /refresh/i })).toBeNull();
+  });
+
+  it('Should update Join seats when the live list changes', async () => {
+    const harness = buildHarness();
+    const openLobby: RoomSummary = {
+      id: 'room-1',
+      code: 'ABC123',
+      name: 'Friday',
+      playerCount: 2,
+      maxPlayers: 10,
+      hasPassword: false,
+      phase: Phase.Lobby,
+    };
+    let push: ((rooms: RoomSummary[]) => void) | undefined;
+    harness.services.game.listRooms = async () => [openLobby];
+    harness.services.game.watchJoinList = (onList) => {
+      push = onList;
+      return () => {
+        push = undefined;
+      };
+    };
+    renderWithApp(() => <RoomsScreen initialTab="join" />, harness);
+
+    await waitFor(() => expect(screen.getByText('2/10')).toBeTruthy());
+    push?.([{ ...openLobby, playerCount: 5 }]);
+    await waitFor(() => expect(screen.getByText('5/10')).toBeTruthy());
+  });
 });

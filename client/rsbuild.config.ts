@@ -235,6 +235,11 @@ export default defineConfig({
     historyApiFallback: true,
     ...(process.env.DEV_HTTPS === '1' ? { https: devHttpsOptions() } : {}),
     proxy: {
+      '/api/rooms/stream': {
+        target: 'http://localhost:3001',
+        timeout: 0,
+        proxyTimeout: 0,
+      },
       '/api': 'http://localhost:3001',
       '/ws': {
         target: 'http://localhost:3001',

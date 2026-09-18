@@ -1,10 +1,4 @@
-import {
-  For,
-  Show,
-  createEffect,
-  createResource,
-  createSignal,
-} from 'solid-js';
+import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { Phase, type RoomSummary } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { RoomApiError } from '../../services/GameStateService';
@@ -204,10 +198,8 @@ function JoinRoomPanel() {
   const [ownOpen, setOwnOpen] = createSignal(false);
 
   const [invite, setInvite] = createSignal(nav.consumeJoinCode());
-  const [rooms, { refetch }] = createResource(
-    () => (invite() ? false : true),
-    () => game.listRooms(),
-  );
+  const [rooms, setRooms] = createSignal<RoomSummary[] | undefined>(undefined);
+  const [roomsLoading, setRoomsLoading] = createSignal(!invite());
   const listedRooms = () =>
     [...(rooms() ?? [])].sort(
       (left, right) => Number(right.kind === 'public') - Number(left.kind === 'public'),
@@ -262,9 +254,8 @@ function JoinRoomPanel() {
         setNeedsPassword(true);
       } else if (invite()) {
         setInvite(null);
-        void refetch();
       } else {
-        void refetch();
+        void game.listRooms().then(setRooms).catch(() => undefined);
       }
     } finally {
       setSubmitting(false);
@@ -280,6 +271,36 @@ function JoinRoomPanel() {
     void submit();
   });
 
+  createEffect(() => {
+    if (invite()) return;
+    let streamReady = false;
+    setRoomsLoading(true);
+    void game.listRooms().then(
+      (list) => {
+        if (streamReady) return;
+        setRooms(list);
+        setRoomsLoading(false);
+      },
+      () => {
+        if (!streamReady) setRoomsLoading(false);
+      },
+    );
+    const stop = game.watchJoinList((list) => {
+      streamReady = true;
+      setRooms(list);
+      setRoomsLoading(false);
+    });
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      void game.listRooms().then(setRooms).catch(() => undefined);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    onCleanup(() => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisible);
+    });
+  });
+
   return (
     <div class={styles.join}>
       <Show
@@ -289,20 +310,13 @@ function JoinRoomPanel() {
             <div class={styles.tableHead}>
               <span class={styles.thName}>{formatMessage('joinGame.colName')}</span>
               <span class={styles.thPlayers}>{formatMessage('joinGame.colPlayers')}</span>
-              <button
-                type="button"
-                class={styles.refresh}
-                aria-label={formatMessage('joinGame.refresh')}
-                onClick={() => void refetch()}
-              >
-                <Icon name="refresh" size={16} />
-              </button>
+              <span class={styles.thJoin} aria-hidden="true" />
             </div>
 
             <Show
               when={(rooms() ?? []).length > 0}
               fallback={
-                <Show when={!rooms.loading}>
+                <Show when={!roomsLoading()}>
                   <p class={styles.empty}>
                     {formatMessage(
                       salon() ? 'joinGame.noSalon' : 'joinGame.noRooms',

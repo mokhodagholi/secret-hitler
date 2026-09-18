@@ -216,11 +216,9 @@ $edge: rgba(110, 65, 35, 0.6);
   color: #e3d3ad;
 }
 
-.refresh {
-  display: flex;
-  color: #e3d3ad;
-  padding: 2px;
-  @include pressable;
+.thJoin {
+  flex-shrink: 0;
+  width: 4.75rem;
 }
 
 .empty {
