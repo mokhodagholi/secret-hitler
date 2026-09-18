@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .backdrop {
-  @include overlay-cover;
+  @include overlay-cover(absolute);
   @include overlay-pad(20px);
   z-index: 90;
   display: flex;

@@ -577,9 +577,8 @@ export function GameScreen() {
       state.nominationDeadline?.endsAt,
       state.voteDeadline?.endsAt,
       state.legislativeDeadline?.endsAt,
-      state.specialPowerDeadline?.endsAt,
     ].filter((value): value is number => value != null && value > 0);
-    if (endsAt.length === 0 || state.kickVote) {
+    if (endsAt.length === 0 || state.kickVote || state.breathDeadline) {
       lastClockSecond = -1;
       return;
     }
@@ -1108,6 +1107,12 @@ export function GameScreen() {
           });
     }
     if (state.phase === Phase.SpecialPower && state.activePower) {
+      if (state.you.investigation) {
+        return formatMessage('game.power.investigationResult', {
+          name: isolateBidi(state.you.investigation.name),
+          party: formatMessage(`game.${state.you.investigation.party}`),
+        });
+      }
       if (iAmPresident()) {
         const hint = {
           investigate: 'game.power.investigateHint',
@@ -1122,6 +1127,18 @@ export function GameScreen() {
       });
     }
     return formatMessage('game.help.elect');
+  }
+
+  const powerHeadline = () => {
+    const state = view();
+    return state?.phase === Phase.SpecialPower && state.activePower != null;
+  };
+
+  // Power dock is gone; the parchment is the only instruction during a power.
+  function eventHeadline(): string {
+    if (onboarding()) return formatMessage(tutorial.headlineKey());
+    if (powerHeadline()) return helpMessage();
+    return ravi.line() ?? helpMessage();
   }
 
   function onSeat(player: PublicPlayer): void {
@@ -1238,12 +1255,12 @@ export function GameScreen() {
           >
             <Show when={!tutorial.lookBlurred()}>
             <GameEventHeader
-              headline={
-                onboarding()
-                  ? formatMessage(tutorial.headlineKey())
-                  : (ravi.line() ?? helpMessage())
+              headline={eventHeadline()}
+              durationMs={
+                onboarding() || powerHeadline()
+                  ? undefined
+                  : ravi.lineDurationMs()
               }
-              durationMs={onboarding() ? undefined : ravi.lineDurationMs()}
               onTyped={
                 tutorial.looking()
                   ? (done, text) => setLookHeadlineTyped({ text, done })

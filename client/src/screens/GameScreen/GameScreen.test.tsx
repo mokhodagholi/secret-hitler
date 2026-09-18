@@ -940,10 +940,36 @@ describe('GameScreen — presidential power', () => {
       ...view,
       phase: Phase.SpecialPower,
       activePower: 'investigate',
+      voteDeadline: null,
       board: { ...view.board, president: 'you', chancellor: 'cal' },
+      specialPowerDeadline: {
+        startedAt: Date.now() - 1_000,
+        endsAt: Date.now() + 14_000,
+      },
     });
 
-    expect(screen.getAllByText(en.game.power.investigateHint).length).toBeLessThanOrEqual(1);
+    expect(screen.getByText(en.game.power.investigateHint)).toBeTruthy();
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
+  });
+
+  it('Should tell the President to execute from the header without a chat clock', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'execution',
+      voteDeadline: null,
+      board: { ...view.board, president: 'you', chancellor: 'cal' },
+      specialPowerDeadline: {
+        startedAt: Date.now() - 1_000,
+        endsAt: Date.now() + 14_000,
+      },
+    });
+
+    expect(screen.getByText(en.game.power.executeHint)).toBeTruthy();
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
   });
 
   it('Should investigate during the Ravi prompt hold', () => {
@@ -1331,6 +1357,7 @@ describe('GameScreen — legislative modal', () => {
       screen.getByRole('button', { name: en.game.liberal }),
     );
     expect(screen.getByText(SECONDS_PATTERN)).toBeTruthy();
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
     fireEvent.click(liberal);
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
@@ -1360,6 +1387,7 @@ describe('GameScreen — legislative modal', () => {
     });
 
     expect(screen.getByText(SECONDS_PATTERN)).toBeTruthy();
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
     expect(harness.socket.lastSent('command')).toEqual({
       type: 'command',
@@ -1767,6 +1795,21 @@ describe('GameScreen — vote timer', () => {
 
     expect(screen.getByText(/^0:3\d$/)).toBeTruthy();
     expect(screen.queryByText(SECONDS_PATTERN)).toBeNull();
+  });
+
+  it('Should hide the chat clock during an announce breath', () => {
+    const harness = buildHarness({ seated: true });
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState({
+      ...votingView(),
+      voteDeadline: { startedAt: Date.now(), endsAt: Date.now() + 30_000 },
+      breathDeadline: {
+        startedAt: Date.now() - 500,
+        endsAt: Date.now() + 3_000,
+      },
+    });
+
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
   });
 });
 

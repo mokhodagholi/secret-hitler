@@ -448,6 +448,59 @@ describe('ChatPanel', () => {
     expect(document.querySelector('[data-chat-ballot]')).toBeNull();
   });
 
+  it('Should hide the chrome clock during a law pick', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    const view = seatedView();
+    harness.pushState({
+      ...view,
+      phase: Phase.PresidentLegislative,
+      legislativeDeadline: {
+        startedAt: Date.now() - 1_000,
+        endsAt: Date.now() + 28_000,
+      },
+    });
+
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
+  });
+
+  it('Should hide the chrome clock during a presidential power', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    const view = seatedView();
+    harness.pushState({
+      ...view,
+      phase: Phase.SpecialPower,
+      activePower: 'execution',
+      specialPowerDeadline: {
+        startedAt: Date.now() - 1_000,
+        endsAt: Date.now() + 14_000,
+      },
+    });
+
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
+  });
+
+  it('Should hide the chrome clock during an announce breath', () => {
+    const harness = buildHarness({ seated: true });
+    renderPanel(harness);
+    const view = seatedView();
+    harness.pushState({
+      ...view,
+      phase: Phase.Voting,
+      voteDeadline: {
+        startedAt: Date.now() - 1_000,
+        endsAt: Date.now() + 20_000,
+      },
+      breathDeadline: {
+        startedAt: Date.now() - 500,
+        endsAt: Date.now() + 3_000,
+      },
+    });
+
+    expect(screen.queryByText(/^\d+:\d{2}$/)).toBeNull();
+  });
+
   it('Should hide the chrome clock when a law pick is already committed', () => {
     const harness = buildHarness({ seated: true });
     renderWithApp(

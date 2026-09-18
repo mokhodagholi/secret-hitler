@@ -42,7 +42,7 @@ export interface ChatPanelProps {
   onHeightChange?: (height: number) => void;
   /** Ghost suggestion that stays visible while the player types. */
   composeHint?: string;
-  /** Hide the chrome clock the moment this viewer commits a law pick. */
+  /** Hide the chrome clock the moment this viewer commits a timed action. */
   suppressActionClock?: boolean;
 }
 
@@ -202,15 +202,15 @@ export function ChatPanel(props: ChatPanelProps) {
     if (tutorial.looking() || tutorial.playing()) return null;
     const state = game.view();
     if (!state) return null;
+    // Announce breaths are a short hold so Ravi can finish — not a clock.
+    if (state.breathDeadline && !state.kickVote) return null;
     const clock = state.kickVote?.startedAt ?? now();
+    // Law pick clocks the card modal. Powers live in the parchment header.
     const deadline =
       state.kickVote ??
       state.discussionDeadline ??
       state.nominationDeadline ??
-      state.voteDeadline ??
-      state.legislativeDeadline ??
-      state.specialPowerDeadline ??
-      state.breathDeadline;
+      state.voteDeadline;
     if (!deadline) return null;
     if ('startedAt' in deadline && now() < deadline.startedAt) return null;
     return Math.max(0, Math.ceil((deadline.endsAt - clock) / 1000));
