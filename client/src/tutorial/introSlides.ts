@@ -105,6 +105,7 @@ export const INTRO_SLIDE_COUNT = INTRO_SLIDES.length;
 
 /** Piece sting on this page. Tracker ticks live on the marks as they fill. */
 export type IntroSlideEffect =
+  | 'onboard-turn'
   | 'onboard-roles'
   | 'onboard-boards'
   | 'onboard-offices'
@@ -114,6 +115,9 @@ export type IntroSlideEffect =
 
 export function effectForIntroVisual(visual: IntroVisual): IntroSlideEffect | null {
   switch (visual.kind) {
+    case 'welcome':
+    case 'check':
+      return 'onboard-turn';
     case 'images':
       if (visual.layout === 'trio') return 'onboard-roles';
       if (visual.layout === 'row') return 'onboard-vote';

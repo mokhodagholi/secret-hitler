@@ -119,7 +119,9 @@ export function RaviNarrator(props: {
   let lastPresident: string | null = null;
   let lastTracker = 0;
   let lastDiscussionStart = 0;
+  let lastDiscussing = false;
   let lastNominationOpen = false;
+  let lastVetoUnlocked = false;
   let warnedClosing = false;
   let heldVoteStart = false;
 
@@ -138,7 +140,9 @@ export function RaviNarrator(props: {
       lastPresident = state.board.president;
       lastTracker = state.board.electionTracker;
       lastDiscussionStart = state.discussionDeadline?.startedAt ?? 0;
+      lastDiscussing = state.discussionDeadline != null;
       lastNominationOpen = state.nominationDeadline != null;
+      lastVetoUnlocked = state.vetoUnlocked;
       sawSnapshot = true;
       const myName =
         state.players.find((player) => player.id === state.you.id)?.name ?? '';
@@ -173,6 +177,14 @@ export function RaviNarrator(props: {
           tableChanged = true;
         }
         if (entry.code === 'voteFailed') governmentFailed = true;
+        if (entry.code === 'votePassed' || entry.code === 'voteFailed') {
+          const ja = Number(entry.params?.ja ?? 0);
+          const total = Number(entry.params?.total ?? 0);
+          pending.push({
+            id: 'vote.count',
+            params: { ja, nein: Math.max(0, total - ja) },
+          });
+        }
         if (
           (entry.code === 'left' || entry.code === 'kicked') &&
           fresh.some(
@@ -247,6 +259,34 @@ export function RaviNarrator(props: {
       seenLog = entries.length;
     }
 
+    const discussing = state.discussionDeadline != null;
+    if (lastDiscussing && !discussing && state.phase === Phase.Nomination) {
+      pending.push({ id: 'discuss.ended' });
+    }
+    lastDiscussing = discussing;
+
+    const nominationOpen = state.nominationDeadline != null;
+    if (nominationOpen && !lastNominationOpen) {
+      if (state.you.id === state.board.president) {
+        pending.push({ id: 'private.nominate' });
+      } else {
+        pending.push({ id: 'nominate.start' });
+      }
+    } else if (
+      lastNominationOpen &&
+      !nominationOpen &&
+      state.phase === Phase.Nomination &&
+      state.board.chancellor == null
+    ) {
+      pending.push({ id: 'nominate.timeout' });
+    }
+    lastNominationOpen = nominationOpen;
+
+    if (state.vetoUnlocked && !lastVetoUnlocked) {
+      pending.push({ id: 'law.vetoUnlocked' });
+    }
+    lastVetoUnlocked = state.vetoUnlocked;
+
     const tracker = state.board.electionTracker;
     if (tracker > lastTracker) {
       governmentFailed = true;
@@ -275,16 +315,6 @@ export function RaviNarrator(props: {
         id: discussOpenLine(lastPhase, tableChanged, governmentFailed),
       });
     }
-
-    const nominationOpen = state.nominationDeadline != null;
-    if (nominationOpen && !lastNominationOpen) {
-      if (state.you.id === state.board.president) {
-        pending.push({ id: 'private.nominate' });
-      } else {
-        pending.push({ id: 'nominate.start' });
-      }
-    }
-    lastNominationOpen = nominationOpen;
 
     if (state.phase !== lastPhase) {
       if (state.phase === Phase.Voting) {

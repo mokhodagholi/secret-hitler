@@ -702,6 +702,93 @@ describe('GameScreen — presence', () => {
   });
 });
 
+describe('GameScreen — table hits', () => {
+  it('Should tally the pile before saying the government passed', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(votingView());
+    play.mockClear();
+
+    harness.socket.emit({
+      type: 'log',
+      entry: {
+        id: 'vote-1',
+        code: 'votePassed',
+        params: { ja: 3, total: 5 },
+        at: Date.now(),
+      },
+    });
+
+    expect(play.mock.calls.map((call) => call[0])).toEqual([
+      'vote-tally',
+      'government-elected',
+    ]);
+  });
+
+  it('Should gavel when discussion ends and the nomination window opens', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    const discussing = {
+      ...nominationView(),
+      board: { ...nominationView().board, electionTracker: 1 },
+      discussionDeadline: {
+        startedAt: Date.now() - 60_000,
+        endsAt: Date.now() + 20_000,
+      },
+      nominationDeadline: null,
+    };
+    harness.pushState(discussing);
+    play.mockClear();
+    harness.pushState({
+      ...discussing,
+      discussionDeadline: null,
+      nominationDeadline: { startedAt: Date.now(), endsAt: Date.now() + 10_000 },
+    });
+
+    expect(play).toHaveBeenCalledWith('discuss-close');
+  });
+
+  it('Should thud when the President never names a Chancellor', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    const open = nominationView();
+    harness.pushState(open);
+    play.mockClear();
+    harness.pushState({
+      ...open,
+      nominationDeadline: null,
+    });
+
+    expect(play).toHaveBeenCalledWith('nominate-timeout');
+  });
+
+  it('Should not thud when a Chancellor is named', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    harness.pushState(nominationView());
+    play.mockClear();
+    harness.pushState(votingView());
+
+    expect(play).not.toHaveBeenCalledWith('nominate-timeout');
+  });
+
+  it('Should unlatch veto when the fifth Fascist law lands', () => {
+    const harness = buildHarness({ seated: true });
+    const play = rs.spyOn(harness.services.sound, 'play');
+    renderWithApp(() => <GameScreen />, harness);
+    const view = votingView();
+    harness.pushState({ ...view, vetoUnlocked: false });
+    play.mockClear();
+    harness.pushState({ ...view, vetoUnlocked: true });
+
+    expect(play).toHaveBeenCalledWith('veto-unlock');
+  });
+});
+
 function openPlayers() {
   fireEvent.click(screen.getByRole('button', { name: en.game.playersTitle }));
 }

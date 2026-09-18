@@ -58,7 +58,7 @@ describe('TutorialService — intro', () => {
   });
 
   it('Should name a lesson sting for each intro piece', () => {
-    expect(effectForIntroVisual({ kind: 'welcome' })).toBeNull();
+    expect(effectForIntroVisual({ kind: 'welcome' })).toBe('onboard-turn');
     expect(
       effectForIntroVisual({ kind: 'images', layout: 'trio', srcs: [] }),
     ).toBe('onboard-roles');
@@ -74,6 +74,6 @@ describe('TutorialService — intro', () => {
       'onboard-deck',
     );
     expect(effectForIntroVisual({ kind: 'laws' })).toBe('onboard-laws');
-    expect(effectForIntroVisual({ kind: 'check' })).toBeNull();
+    expect(effectForIntroVisual({ kind: 'check' })).toBe('onboard-turn');
   });
 });
