@@ -109,8 +109,8 @@ sound. First time they stand on Home with no Sit dialog, Daniel rings
 that icon. They tap it, the Settings page opens, and he walks **each
 row** — what it is, what it does. Skip anytime. Remembered in
 `sh:onboarding-home-settings`. Unlike Sit, local `pnpm dev` still shows
-this when `FEATURE_ONBOARDING` is on. A palette icon next to the hand
-replays the same lesson.
+this when `FEATURE_ONBOARDING` is on. A labeled **Learn settings** chip
+next to the hand replays the same lesson.
 
 Beats live in `client/src/tutorial/settingsView.ts` (`SETTINGS_BEATS`).
 Copy under `onboard.idea.homeSettings` and `onboard.settings.*`.
@@ -139,7 +139,8 @@ gear (tap or Skip), Daniel rings that chip, they open it, and a **mock**
 list walks every chip on the sheet. Cards start **collapsed** (same as the
 live History sheet). No `/api/history` — the tour never writes a real
 match. Remembered in `sh:onboarding-home-history`. Local `pnpm dev` skips
-the first-run prompt; a trophy icon next to the hand opens the same tour.
+the first-run prompt; a labeled **Learn history** chip next to the hand
+opens the same tour.
 
 Beats live in `client/src/tutorial/historyView.ts` (`HISTORY_BEATS`).
 Copy under `onboard.history.*` in both locales.

@@ -101,6 +101,7 @@ describe('HomeScreen', () => {
       expect(button).toBeNull();
       return;
     }
+    expect(screen.getByText(en.home.checkOnboarding)).toBeTruthy();
     fireEvent.click(button!);
     expect(harness.services.nav.screen()).toBe('onboarding');
     expect(harness.services.tutorial.introducing()).toBe(true);
@@ -143,6 +144,7 @@ describe('HomeScreen', () => {
       expect(button).toBeNull();
       return;
     }
+    expect(screen.getByText(en.home.checkSettingsOnboarding)).toBeTruthy();
     fireEvent.click(button!);
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.tutorial.guidingHome()).toBe(true);
@@ -160,6 +162,7 @@ describe('HomeScreen', () => {
       expect(button).toBeNull();
       return;
     }
+    expect(screen.getByText(en.home.checkHistoryOnboarding)).toBeTruthy();
     fireEvent.click(button!);
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.tutorial.reviewingHistory()).toBe(true);
@@ -181,6 +184,7 @@ describe('HomeScreen', () => {
       harness,
     );
 
+    expect(screen.getByText(en.nav.settings)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     expect(harness.services.nav.screen()).toBe('settings');
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy();
@@ -261,6 +265,7 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.nav.rules })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.home.history })).toBeTruthy();
+    expect(screen.getByText(en.nav.settings)).toBeTruthy();
     expect(screen.getByText(en.nav.rules)).toBeTruthy();
     expect(screen.queryByText('0/6')).toBeNull();
     expect(document.querySelector(`img[src="${heroImage}"]`)).toBeTruthy();

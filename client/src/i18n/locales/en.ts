@@ -48,9 +48,9 @@ export const en = {
     rank: 'Rookie',
     live: 'Live',
     events: 'Events',
-    checkOnboarding: 'Guide table',
-    checkSettingsOnboarding: 'Settings onboarding',
-    checkHistoryOnboarding: 'History onboarding',
+    checkOnboarding: 'Learn the game',
+    checkSettingsOnboarding: 'Learn settings',
+    checkHistoryOnboarding: 'Learn history',
   },
   playerCards: {
     title: 'Player Cards',

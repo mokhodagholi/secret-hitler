@@ -204,7 +204,7 @@ export function HomeScreen() {
           <div class={styles.toolEnd}>
             <button
               type="button"
-              class={styles.tool}
+              class={styles.guideChip}
               data-tutorial-target="homeSettings"
               aria-label={formatMessage('nav.settings')}
               onClick={() => {
@@ -212,32 +212,44 @@ export function HomeScreen() {
                 nav.navigate('settings');
               }}
             >
-              <Icon name="gear" size={22} />
+              <Icon name="gear" size={16} />
+              <span class={styles.guideLabel} dir="auto">
+                {formatMessage('nav.settings')}
+              </span>
             </button>
             <Show when={showDevOnboarding}>
               <button
                 type="button"
-                class={styles.tool}
+                class={styles.guideChip}
                 aria-label={formatMessage('home.checkOnboarding')}
                 onClick={openDevOnboarding}
               >
-                <Icon name="hand" size={22} />
+                <Icon name="hand" size={16} />
+                <span class={styles.guideLabel} dir="auto">
+                  {formatMessage('home.checkOnboarding')}
+                </span>
               </button>
               <button
                 type="button"
-                class={styles.tool}
+                class={styles.guideChip}
                 aria-label={formatMessage('home.checkSettingsOnboarding')}
                 onClick={openDevSettingsOnboarding}
               >
-                <Icon name="palette" size={22} />
+                <Icon name="palette" size={16} />
+                <span class={styles.guideLabel} dir="auto">
+                  {formatMessage('home.checkSettingsOnboarding')}
+                </span>
               </button>
               <button
                 type="button"
-                class={styles.tool}
+                class={styles.guideChip}
                 aria-label={formatMessage('home.checkHistoryOnboarding')}
                 onClick={openDevHistoryOnboarding}
               >
-                <Icon name="trophy" size={22} />
+                <Icon name="trophy" size={16} />
+                <span class={styles.guideLabel} dir="auto">
+                  {formatMessage('home.checkHistoryOnboarding')}
+                </span>
               </button>
             </Show>
             <Show when={flags.flags.onboarding}>
