@@ -30,7 +30,7 @@ export const INTRO_REASSURE_MS = 3000;
  * Yes → look table. No → reassure, then restart from the first piece.
  */
 export function OnboardingIntroScreen() {
-  const { tutorial, nav, i18n, animation, settings, sound, ravi } = useApp();
+  const { tutorial, nav, i18n, animation, settings, sound, ravi, game, miniApp } = useApp();
   const { formatMessage } = i18n;
   const [reassuring, setReassuring] = createSignal(false);
   let reassureTimer: ReturnType<typeof setTimeout> | undefined;
@@ -70,6 +70,13 @@ export function OnboardingIntroScreen() {
   };
   const progressSep = () => (i18n.lang() === 'fa' ? ' از ' : ' / ');
 
+  function identity() {
+    return {
+      initData: miniApp.initData(),
+      clientId: settings.settings.profileId,
+    };
+  }
+
   onCleanup(() => {
     if (reassureTimer !== undefined) clearTimeout(reassureTimer);
   });
@@ -78,10 +85,7 @@ export function OnboardingIntroScreen() {
     const handleBack = () => {
       if (reassuring()) return;
       ravi.prime();
-      if (!tutorial.retreatIntro()) {
-        tutorial.skipIntro();
-        nav.returnTo('home');
-      }
+      if (!tutorial.retreatIntro()) leave();
     };
     nav.setBackHandler(handleBack);
     onCleanup(() => nav.clearBackHandler(handleBack));
@@ -90,6 +94,11 @@ export function OnboardingIntroScreen() {
   function leave(): void {
     if (reassureTimer !== undefined) clearTimeout(reassureTimer);
     setReassuring(false);
+    void game.recordOnboard('skip', {
+      ...identity(),
+      stage: 'intro',
+      beat: tutorial.introBeat(),
+    });
     tutorial.skipIntro();
     nav.returnTo('home');
   }
@@ -108,6 +117,11 @@ export function OnboardingIntroScreen() {
 
   function next(): void {
     ravi.prime();
+    void game.recordOnboard('continue', {
+      ...identity(),
+      stage: 'intro',
+      beat: tutorial.introBeat(),
+    });
     if (!tutorial.advanceIntro()) return;
     // Last slide is check — stay; do not open look until they answer.
   }
@@ -115,6 +129,7 @@ export function OnboardingIntroScreen() {
   function notYet(): void {
     if (reassuring()) return;
     ravi.prime();
+    void game.recordOnboard('not_yet', { ...identity(), stage: 'intro' });
     setReassuring(true);
     reassureTimer = setTimeout(() => {
       reassureTimer = undefined;
@@ -232,7 +247,14 @@ export function OnboardingIntroScreen() {
         <div class={styles.chrome}>
           <div class={styles.nav}>
             <Show when={onCheck() && !reassuring() && actionsReady()}>
-              <button type="button" class={styles.continue} onClick={openLook}>
+              <button
+                type="button"
+                class={styles.continue}
+                onClick={() => {
+                  void game.recordOnboard('got_it', { ...identity(), stage: 'intro' });
+                  openLook();
+                }}
+              >
                 {formatMessage('onboard.piece.checkYes')}
               </button>
             </Show>
@@ -264,6 +286,11 @@ export function OnboardingIntroScreen() {
             classList={{ [styles.skip]: true, [styles.skipHeld]: !actionsReady() }}
             onClick={() => {
               if (!actionsReady()) return;
+              void game.recordOnboard('skip', {
+                ...identity(),
+                stage: 'intro',
+                beat: tutorial.introBeat(),
+              });
               openLook();
             }}
           >

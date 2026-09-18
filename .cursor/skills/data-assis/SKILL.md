@@ -40,6 +40,7 @@ ssh root@195.248.241.251 \
 | Ask | Start with |
 |---|---|
 | Funnel / demand | `product_events` (`miniapp_auth`, `seated` — not raw `bot_start`) |
+| Onboarding follow-through | `onboard_*` then join to `seated` |
 | Lobby fill ROI | `lobby_fill_invite` / `_fail` / `_wave` + sat-that-room join |
 | Why empty lobbies | `product_lobbies` death_reason + peak seats |
 | Match health | `product_matches` outcomes |

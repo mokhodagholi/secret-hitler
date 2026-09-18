@@ -19,9 +19,41 @@ export const PRODUCT_EVENT_NAMES = [
   'own_room_want',
   'lobby_nudge_prompt',
   'lobby_nudge_join',
+  'onboard_prompt',
+  'onboard_sit',
+  'onboard_not_now',
+  'onboard_skip',
+  'onboard_continue',
+  'onboard_got_it',
+  'onboard_not_yet',
+  'onboard_play',
 ] as const;
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
+
+/** Client onboarding buttons / scripted-table start. */
+export const ONBOARD_INTENTS = [
+  'prompt',
+  'sit',
+  'not_now',
+  'skip',
+  'continue',
+  'got_it',
+  'not_yet',
+  'play',
+] as const;
+
+export type OnboardIntent = (typeof ONBOARD_INTENTS)[number];
+
+export const ONBOARD_STAGES = [
+  'intro',
+  'look',
+  'play',
+  'settings',
+  'history',
+] as const;
+
+export type OnboardStage = (typeof ONBOARD_STAGES)[number];
 
 export type ProductPlatform = MessengerKind | 'browser';
 

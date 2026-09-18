@@ -152,9 +152,21 @@ export function HomeScreen() {
     if (!homeGuiding()) return;
     const handleBack = () => {
       if (tutorial.reviewingHistory()) {
+        void game.recordOnboard('skip', {
+          initData: miniApp.initData(),
+          clientId: settings.settings.profileId,
+          stage: 'history',
+          beat: tutorial.beat(),
+        });
         tutorial.skipHomeHistory();
         return;
       }
+      void game.recordOnboard('skip', {
+        initData: miniApp.initData(),
+        clientId: settings.settings.profileId,
+        stage: 'settings',
+        beat: tutorial.beat(),
+      });
       tutorial.skipHomeSettings();
       tutorial.startHomeHistory(homeYou());
     };
@@ -372,13 +384,33 @@ export function HomeScreen() {
               }
               showSkip={homeHeadlineReady()}
               onPrevious={() => tutorial.retreatHomeHistory()}
-              onContinue={() => tutorial.advanceHomeHistory()}
+              onContinue={() => {
+                void game.recordOnboard('continue', {
+                  initData: miniApp.initData(),
+                  clientId: settings.settings.profileId,
+                  stage: 'history',
+                  beat: tutorial.beat(),
+                });
+                tutorial.advanceHomeHistory();
+              }}
               onSkip={() => {
                 ravi.prime();
                 if (tutorial.reviewingHistory()) {
+                  void game.recordOnboard('skip', {
+                    initData: miniApp.initData(),
+                    clientId: settings.settings.profileId,
+                    stage: 'history',
+                    beat: tutorial.beat(),
+                  });
                   tutorial.skipHomeHistory();
                   return;
                 }
+                void game.recordOnboard('skip', {
+                  initData: miniApp.initData(),
+                  clientId: settings.settings.profileId,
+                  stage: 'settings',
+                  beat: tutorial.beat(),
+                });
                 tutorial.skipHomeSettings();
                 tutorial.startHomeHistory(homeYou());
               }}

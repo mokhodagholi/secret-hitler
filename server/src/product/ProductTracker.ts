@@ -9,6 +9,8 @@ import { matchOutcomeOf } from './matchOutcome';
 import type {
   LobbyDeathReason,
   LobbySource,
+  OnboardIntent,
+  OnboardStage,
   ProductEventName,
   ProductPlatform,
   ProductStore,
@@ -31,6 +33,17 @@ function platformOf(userKey: string | null | undefined): ProductPlatform | null 
   if (userKey.startsWith('client:')) return 'browser';
   return null;
 }
+
+const ONBOARD_EVENT: Record<OnboardIntent, ProductEventName> = {
+  prompt: 'onboard_prompt',
+  sit: 'onboard_sit',
+  not_now: 'onboard_not_now',
+  skip: 'onboard_skip',
+  continue: 'onboard_continue',
+  got_it: 'onboard_got_it',
+  not_yet: 'onboard_not_yet',
+  play: 'onboard_play',
+};
 
 function messengerChat(userKey: string | null | undefined): {
   platform: MessengerKind;
@@ -96,6 +109,22 @@ export class ProductTracker {
       platform: platformOf(userKey),
       roomCode: fields.toCode,
       payload: { fromCode: fields.fromCode, seats: fields.seats },
+    });
+  }
+
+  onboard(
+    intent: OnboardIntent,
+    userKey: string | null,
+    fields: { stage?: OnboardStage; beat?: number; count?: number } = {},
+  ): void {
+    const payload: Record<string, unknown> = {};
+    if (fields.stage) payload.stage = fields.stage;
+    if (fields.beat != null) payload.beat = fields.beat;
+    if (fields.count != null) payload.count = fields.count;
+    this.event(ONBOARD_EVENT[intent], {
+      userKey,
+      platform: platformOf(userKey),
+      payload: Object.keys(payload).length > 0 ? payload : null,
     });
   }
 

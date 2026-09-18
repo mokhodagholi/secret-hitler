@@ -257,6 +257,39 @@ export class GameStateService {
     }
   }
 
+  /** Measurement only. Onboarding buttons and scripted-table starts. */
+  async recordOnboard(
+    intent:
+      | 'prompt'
+      | 'sit'
+      | 'not_now'
+      | 'skip'
+      | 'continue'
+      | 'got_it'
+      | 'not_yet'
+      | 'play',
+    crumb: {
+      initData?: string;
+      clientId?: string;
+      stage?: 'intro' | 'look' | 'play' | 'settings' | 'history';
+      beat?: number;
+      count?: number;
+    } = {},
+  ): Promise<void> {
+    try {
+      await this.request('POST', '/api/product/onboard', {
+        intent,
+        initData: crumb.initData,
+        clientId: crumb.clientId,
+        stage: crumb.stage,
+        beat: crumb.beat,
+        count: crumb.count,
+      });
+    } catch {
+      /* crumbs must not block the lesson */
+    }
+  }
+
   async listRooms(): Promise<RoomSummary[]> {
     let response: Response;
     try {

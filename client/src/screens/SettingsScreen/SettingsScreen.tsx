@@ -14,7 +14,7 @@ import { SETTINGS_TARGET } from '../../tutorial/settingsView';
 import styles from './SettingsScreen.module.scss';
 
 export function SettingsScreen() {
-  const { settings, i18n, miniApp, nav, flags, ravi, tutorial } = useApp();
+  const { settings, i18n, miniApp, nav, flags, ravi, tutorial, game } = useApp();
   const state = settings.settings;
   const { formatMessage } = i18n;
   const fromHost = () => miniApp.user() != null;
@@ -49,6 +49,12 @@ export function SettingsScreen() {
   createEffect(() => {
     if (!guiding()) return;
     const handleBack = () => {
+      void game.recordOnboard('skip', {
+        initData: miniApp.initData(),
+        clientId: settings.settings.profileId,
+        stage: 'settings',
+        beat: tutorial.beat(),
+      });
       tutorial.skipHomeSettings();
       nav.navigate('home');
     };
@@ -69,6 +75,12 @@ export function SettingsScreen() {
 
   function leaveTour(): void {
     ravi.prime();
+    void game.recordOnboard('skip', {
+      initData: miniApp.initData(),
+      clientId: settings.settings.profileId,
+      stage: 'settings',
+      beat: tutorial.beat(),
+    });
     tutorial.skipHomeSettings();
     nav.navigate('home');
   }
@@ -81,6 +93,12 @@ export function SettingsScreen() {
 
   function goContinue(): void {
     ravi.prime();
+    void game.recordOnboard('continue', {
+      initData: miniApp.initData(),
+      clientId: settings.settings.profileId,
+      stage: 'settings',
+      beat: tutorial.beat(),
+    });
     if (tutorial.advanceHomeSettings()) nav.navigate('home');
   }
 

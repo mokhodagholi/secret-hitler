@@ -173,4 +173,44 @@ describe('public table', () => {
     expect(store.events[0]?.roomCode).toBe('ABC123');
     expect(store.events[1]?.roomCode).toBe('XYZ789');
   });
+
+  it('Should record onboarding button crumbs', async () => {
+    const store = new InMemoryProductStore();
+    const built = await buildServer({ product: store });
+    app = built.app;
+    const sit = await httpJson(built.app, 'POST', '/api/product/onboard', {
+      intent: 'sit',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      stage: 'intro',
+    });
+    const skip = await httpJson(built.app, 'POST', '/api/product/onboard', {
+      intent: 'skip',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      stage: 'look',
+      beat: 3,
+    });
+    const play = await httpJson(built.app, 'POST', '/api/product/onboard', {
+      intent: 'play',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      stage: 'play',
+      count: 5,
+    });
+    const bad = await httpJson(built.app, 'POST', '/api/product/onboard', {
+      intent: 'nope',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    });
+    expect(sit.status).toBe(200);
+    expect(skip.status).toBe(200);
+    expect(play.status).toBe(200);
+    expect(bad.status).toBe(400);
+    await built.product.flush();
+    expect(store.events.map((event) => event.name)).toEqual([
+      'onboard_sit',
+      'onboard_skip',
+      'onboard_play',
+    ]);
+    expect(store.events[0]?.payload).toEqual({ stage: 'intro' });
+    expect(store.events[1]?.payload).toEqual({ stage: 'look', beat: 3 });
+    expect(store.events[2]?.payload).toEqual({ stage: 'play', count: 5 });
+  });
 });

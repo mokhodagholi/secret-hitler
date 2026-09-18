@@ -87,6 +87,7 @@ describe('OnboardingIntroScreen', () => {
 
   it('Should open the look table when they say they got it', () => {
     const harness = buildHarness();
+    const record = rs.spyOn(harness.services.game, 'recordOnboard').mockResolvedValue();
     harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
     harness.services.nav.navigate('onboarding');
     renderWithApp(() => <OnboardingIntroScreen />, harness);
@@ -97,6 +98,11 @@ describe('OnboardingIntroScreen', () => {
     expect(screen.getByText(en.onboard.piece.checkTitle)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.onboard.piece.checkYes }));
 
+    expect(record).toHaveBeenCalledWith(
+      'continue',
+      expect.objectContaining({ stage: 'intro', beat: 0 }),
+    );
+    expect(record).toHaveBeenCalledWith('got_it', expect.objectContaining({ stage: 'intro' }));
     expect(harness.services.tutorial.introducing()).toBe(false);
     expect(harness.services.tutorial.looking()).toBe(true);
     expect(harness.services.nav.screen()).toBe('game');
@@ -104,6 +110,7 @@ describe('OnboardingIntroScreen', () => {
 
   it('Should reassure, then restart from the first piece after a pause', async () => {
     const harness = buildHarness();
+    const record = rs.spyOn(harness.services.game, 'recordOnboard').mockResolvedValue();
     harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
     harness.services.nav.navigate('onboarding');
     renderWithApp(() => <OnboardingIntroScreen />, harness);
@@ -113,6 +120,7 @@ describe('OnboardingIntroScreen', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: en.onboard.piece.checkNo }));
 
+    expect(record).toHaveBeenCalledWith('not_yet', expect.objectContaining({ stage: 'intro' }));
     expect(screen.getByText(en.onboard.piece.checkReassure)).toBeTruthy();
     expect(harness.services.tutorial.introBeat()).toBe(INTRO_SLIDES.length - 1);
     expect(screen.queryByRole('button', { name: en.onboard.piece.checkYes })).toBeNull();
@@ -129,11 +137,16 @@ describe('OnboardingIntroScreen', () => {
 
   it('Should open the look table when Skip is pressed', () => {
     const harness = buildHarness();
+    const record = rs.spyOn(harness.services.game, 'recordOnboard').mockResolvedValue();
     harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
     harness.services.nav.navigate('onboarding');
     renderWithApp(() => <OnboardingIntroScreen />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.skip }));
+    expect(record).toHaveBeenCalledWith(
+      'skip',
+      expect.objectContaining({ stage: 'intro', beat: 0 }),
+    );
     expect(harness.services.nav.screen()).toBe('game');
     expect(harness.services.tutorial.introducing()).toBe(false);
     expect(harness.services.tutorial.looking()).toBe(true);

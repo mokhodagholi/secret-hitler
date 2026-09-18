@@ -50,12 +50,13 @@ over this, same as today.
 
 ## Principles
 
-- **Client only.** No tutorial HTTP, no tutorial room on the server, no
-  bots in Postgres. The shared `GameEngine` already has no I/O — the
-  client constructs a `Room`, runs the engine in memory, and paints the
-  same Game / Waiting-room screens off that snapshot. Live games stay
-  server-sourced. This path never touches the wire. Showing it is still
-  gated by `FEATURE_ONBOARDING` so production can turn the table off.
+- **Client only.** No tutorial room on the server, no bots in Postgres.
+  The shared `GameEngine` already has no I/O — the client constructs a
+  `Room`, runs the engine in memory, and paints the same Game /
+  Waiting-room screens off that snapshot. Live games stay
+  server-sourced. Button crumbs (`onboard_*` via `/api/product/onboard`)
+  are measurement-only — they do not create a room. Showing the table is
+  still gated by `FEATURE_ONBOARDING` so production can turn it off.
 - **Natural seats.** Other players have names, avatars, typing pauses.
   Chat is table talk, never “this is a lesson”. They never mention
   Daniel, the guide, or that they are scripted.

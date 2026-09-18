@@ -24,6 +24,12 @@ import type { GameHistoryStore, SavedGame } from '../history/GameHistoryStore';
 import type { ProfileStore } from '../profiles/ProfileStore';
 import type { BotSubscriberStore } from '../bale/BotSubscriberStore';
 import type { ProductTracker } from '../product/ProductTracker';
+import {
+  ONBOARD_INTENTS,
+  ONBOARD_STAGES,
+  type OnboardIntent,
+  type OnboardStage,
+} from '../product/ProductStore';
 import { hashPassword, verifyPassword } from './password';
 import { identifyInitData } from '../bale/initData';
 import { baleUserInOriginChat } from '../bale/groupMember';
@@ -112,6 +118,29 @@ function joinBanKey(
   if (identified) return `${identified.kind}:${identified.user.id}`;
   if (isClientId(clientId)) return `client:${clientId}`;
   return null;
+}
+
+function isOnboardIntent(value: unknown): value is OnboardIntent {
+  return typeof value === 'string' && (ONBOARD_INTENTS as readonly string[]).includes(value);
+}
+
+function onboardStageOf(value: unknown): OnboardStage | undefined {
+  if (typeof value !== 'string') return undefined;
+  return (ONBOARD_STAGES as readonly string[]).includes(value)
+    ? (value as OnboardStage)
+    : undefined;
+}
+
+function onboardBeatOf(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) return undefined;
+  return value;
+}
+
+function onboardCountOf(value: unknown): number | undefined {
+  if (value !== 5 && value !== 6 && value !== 7 && value !== 8 && value !== 9 && value !== 10) {
+    return undefined;
+  }
+  return value;
 }
 
 function configuredMessengers(bale?: BaleRuntime, telegram?: BaleRuntime): BaleRuntime[] {
@@ -686,6 +715,28 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     };
     if (body.intent === 'prompt') product.lobbyNudgePrompt(userKey, fields);
     else product.lobbyNudgeJoin(userKey, fields);
+    return reply.send({ ok: true });
+  });
+
+  app.post('/api/product/onboard', async (req, reply) => {
+    const body = (req.body ?? {}) as {
+      intent?: unknown;
+      initData?: string;
+      clientId?: string;
+      stage?: unknown;
+      beat?: unknown;
+      count?: unknown;
+    };
+    if (!isOnboardIntent(body.intent)) {
+      return reply.code(400).send({ error: 'intent is required' });
+    }
+    const identified = identifyInitData(body.initData, messengers);
+    const userKey = joinBanKey(identified, body.clientId);
+    product.onboard(body.intent, userKey, {
+      stage: onboardStageOf(body.stage),
+      beat: onboardBeatOf(body.beat),
+      count: onboardCountOf(body.count),
+    });
     return reply.send({ ok: true });
   });
 

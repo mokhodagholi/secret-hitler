@@ -138,6 +138,14 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 | `own_room_want` | Tapped “I want my own table” (does not Create) |
 | `lobby_nudge_prompt` | Waiting-room “fuller table” modal opened |
 | `lobby_nudge_join` | Sat the offered fuller table from that modal |
+| `onboard_prompt` | Sit dialog opened (first-run table lesson) |
+| `onboard_sit` | Tapped Sit |
+| `onboard_not_now` | Tapped Not now |
+| `onboard_skip` | Tapped Skip — `payload.stage` intro/look/play/settings/history |
+| `onboard_continue` | Tapped Continue — `payload.stage` + `payload.beat` |
+| `onboard_got_it` | Tapped “got it” on the pieces check |
+| `onboard_not_yet` | Tapped “not yet” on the pieces check (restarts pieces) |
+| `onboard_play` | Started a scripted table — `payload.count` 5–10 |
 | `seated` | Sat a tracked table (also marks blast *sat*) |
 | `table_dealt` | Cards dealt |
 | `game_finished` / `game_abandoned` | Match end crumbs |
@@ -165,6 +173,7 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 |---|---|
 | How many starts / miniapp / sits today? | `product_events` distinct `user_key` |
 | Did people want their own table? | `own_room_prompt` / `own_room_want` |
+| Did they follow onboarding? Did they then play? | `onboard_*` then join to `seated` |
 | Did thin lobbies move to a fuller table? | `lobby_nudge_prompt` / `lobby_nudge_join` |
 | Did lobby-fill work? Conversion? | `lobby_fill_*` + join to `seated` |
 | Why did this invite fail? | `lobby_fill_fail` then user timeline |
@@ -223,6 +232,55 @@ SELECT
 FROM product_events
 WHERE at >= NOW() - INTERVAL '1 day'
   AND user_key IS NOT NULL;
+```
+
+### Onboarding follow-through
+
+`payload.stage`: `intro` | `look` | `play` | `settings` | `history`.  
+Skip on intro/look still opens the next lesson — drop-off is `not_now` and Skip that leaves Home. Real play is `seated` after `onboard_sit`.
+
+```sql
+SELECT
+  COUNT(DISTINCT user_key) FILTER (WHERE name = 'onboard_prompt') AS prompted,
+  COUNT(DISTINCT user_key) FILTER (WHERE name = 'onboard_sit') AS sat_lesson,
+  COUNT(DISTINCT user_key) FILTER (WHERE name = 'onboard_not_now') AS not_now,
+  COUNT(DISTINCT user_key) FILTER (WHERE name = 'onboard_got_it') AS got_it,
+  COUNT(DISTINCT user_key) FILTER (WHERE name = 'onboard_play') AS scripted_play,
+  COUNT(DISTINCT user_key) FILTER (
+    WHERE name = 'onboard_play' AND (payload->>'count')::int = 5
+  ) AS five,
+  COUNT(DISTINCT user_key) FILTER (WHERE name = 'onboard_skip') AS skipped
+FROM product_events
+WHERE at >= NOW() - INTERVAL '1 day'
+  AND name LIKE 'onboard_%'
+  AND user_key IS NOT NULL;
+```
+
+```sql
+SELECT payload->>'stage' AS stage, name, COUNT(*) AS events,
+       COUNT(DISTINCT user_key) AS unique_users
+FROM product_events
+WHERE at >= NOW() - INTERVAL '1 day'
+  AND name IN ('onboard_continue', 'onboard_skip', 'onboard_play')
+GROUP BY 1, 2
+ORDER BY 1, 2;
+```
+
+```sql
+-- Lesson Sit → real table within 24h
+WITH sits AS (
+  SELECT DISTINCT user_key FROM product_events
+  WHERE name = 'onboard_sit' AND user_key IS NOT NULL
+    AND at >= NOW() - INTERVAL '1 day'
+)
+SELECT
+  COUNT(*) AS sat_lesson,
+  COUNT(*) FILTER (WHERE EXISTS (
+    SELECT 1 FROM product_events e
+    WHERE e.user_key = s.user_key AND e.name = 'seated'
+      AND e.at >= NOW() - INTERVAL '1 day'
+  )) AS seated_after
+FROM sits s;
 ```
 
 ### Lobby fill — volume

@@ -236,6 +236,10 @@ export class TutorialService {
     );
   }
 
+  playingCount(): OnboardCount | null {
+    return this.playing() && this.table ? this.table.count : null;
+  }
+
   seenCount(): number {
     try {
       return parseCount(localStorage.getItem(TUTORIAL_SEEN_COUNT_KEY));

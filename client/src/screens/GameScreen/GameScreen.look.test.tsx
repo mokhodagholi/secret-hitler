@@ -201,10 +201,16 @@ describe('GameScreen — look', () => {
 
   it('Should skip the look table onto the five-player hand', async () => {
     const harness = buildHarness();
+    const record = rs.spyOn(harness.services.game, 'recordOnboard').mockResolvedValue();
     openLook(harness);
     renderWithApp(() => <LookRoutes />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.skip }));
+    expect(record).toHaveBeenCalledWith('skip', expect.objectContaining({ stage: 'look' }));
+    expect(record).toHaveBeenCalledWith(
+      'play',
+      expect.objectContaining({ stage: 'play', count: 5 }),
+    );
     expect(harness.services.nav.screen()).toBe('game');
     expect(harness.services.tutorial.looking()).toBe(false);
     expect(harness.services.tutorial.playing()).toBe(true);

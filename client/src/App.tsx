@@ -254,6 +254,14 @@ function SitOffer() {
   const { tutorial, nav, i18n, settings, flags, game, ravi, miniApp } = useApp();
   const { formatMessage } = i18n;
   const websiteClosed = () => miniApp.platform === 'browser' && !flags.flags.browserPlay;
+  let sitPrompted = false;
+
+  function identity() {
+    return {
+      initData: miniApp.initData(),
+      clientId: settings.settings.profileId,
+    };
+  }
 
   // Offer after this dialog exists. Asking during splash leaves offeringSit
   // true with no subscriber, and ConfirmDialog never sees a closed → open flip.
@@ -275,8 +283,14 @@ function SitOffer() {
   const sitRequired = () => tutorial.declineCount() === 0;
 
   createEffect(() => {
-    if (!sitOpen()) return;
+    if (!sitOpen()) {
+      sitPrompted = false;
+      return;
+    }
     void ravi.speakGuide('onboard.piece.welcome');
+    if (sitPrompted) return;
+    sitPrompted = true;
+    void game.recordOnboard('prompt', identity());
   });
 
   return (
@@ -288,6 +302,7 @@ function SitOffer() {
       onConfirm={() => {
         ravi.prime();
         ravi.cancel();
+        void game.recordOnboard('sit', identity());
         tutorial.startIntro({
           name: settings.settings.profileName.trim() || formatMessage('game.you'),
           avatar: settings.settings.avatar,
@@ -300,6 +315,7 @@ function SitOffer() {
           : () => {
               ravi.prime();
               ravi.cancel();
+              void game.recordOnboard('not_now', identity());
               tutorial.declineSit();
             }
       }

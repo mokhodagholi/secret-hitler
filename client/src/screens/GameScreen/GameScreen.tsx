@@ -53,7 +53,7 @@ import styles from './GameScreen.module.scss';
  * docked chat panel. Phase actions still arrive as overlays; state is the server's.
  */
 export function GameScreen() {
-  const { nav, game, i18n, animation, ravi, sound, flags, voice, tutorial, settings } =
+  const { nav, game, i18n, animation, ravi, sound, flags, voice, tutorial, settings, miniApp } =
     useApp();
   const { formatMessage } = i18n;
 
@@ -814,26 +814,56 @@ export function GameScreen() {
     );
   }
 
+  function onboardCrumb(
+    intent: 'skip' | 'continue' | 'play',
+    fields: { stage?: 'look' | 'play'; beat?: number; count?: number } = {},
+  ): void {
+    void game.recordOnboard(intent, {
+      initData: miniApp.initData(),
+      clientId: settings.settings.profileId,
+      ...fields,
+    });
+  }
+
   function continueLook(): void {
     ravi.prime();
     if (!tutorial.canContinueLook()) return;
     if (!tutorial.lookBlurred() && !lookHeadlineReady()) return;
-    if (tutorial.advanceLook()) tutorial.startPlay(playYou(), 5);
+    onboardCrumb('continue', { stage: 'look', beat: tutorial.beat() });
+    if (tutorial.advanceLook()) {
+      tutorial.startPlay(playYou(), 5);
+      onboardCrumb('play', { stage: 'play', count: 5 });
+    }
   }
 
   function skipOnboarding(): void {
     if (tutorial.looking()) {
-      if (tutorial.skipLookBeat()) tutorial.startPlay(playYou(), 5);
+      onboardCrumb('skip', { stage: 'look', beat: tutorial.beat() });
+      if (tutorial.skipLookBeat()) {
+        tutorial.startPlay(playYou(), 5);
+        onboardCrumb('play', { stage: 'play', count: 5 });
+      }
       return;
     }
     if (tutorial.playing()) {
+      const count = tutorial.playingCount() ?? undefined;
       setCeremonyOpen(false);
       if (tutorial.playSoon()) {
+        onboardCrumb('skip', { stage: 'play', count });
         leaveLook();
         return;
       }
-      if (tutorial.skipFiveSoon()) return;
-      if (tutorial.skipToNextPlay()) return;
+      if (tutorial.skipFiveSoon()) {
+        onboardCrumb('skip', { stage: 'play', count: 5 });
+        return;
+      }
+      if (tutorial.skipToNextPlay()) {
+        onboardCrumb('skip', { stage: 'play', count });
+        const next = tutorial.playingCount();
+        if (next != null) onboardCrumb('play', { stage: 'play', count: next });
+        return;
+      }
+      onboardCrumb('skip', { stage: 'play', count });
       leaveLook();
       return;
     }
@@ -1546,10 +1576,26 @@ export function GameScreen() {
                 onPrevious={() => tutorial.retreatLook()}
                 onContinue={() => {
                   if (tutorial.looking()) continueLook();
-                  else if (tutorial.lock() === 'delta') tutorial.acknowledgeDelta();
-                  else if (tutorial.playSoon()) leaveLook();
-                  else if (tutorial.playing() && view()?.winner) {
+                  else if (tutorial.lock() === 'delta') {
+                    onboardCrumb('continue', {
+                      stage: 'play',
+                      count: tutorial.playingCount() ?? undefined,
+                    });
+                    tutorial.acknowledgeDelta();
+                  } else if (tutorial.playSoon()) {
+                    onboardCrumb('continue', {
+                      stage: 'play',
+                      count: tutorial.playingCount() ?? undefined,
+                    });
+                    leaveLook();
+                  } else if (tutorial.playing() && view()?.winner) {
+                    const count = tutorial.playingCount() ?? undefined;
+                    onboardCrumb('continue', { stage: 'play', count });
                     if (!tutorial.continueLadder()) leaveLook();
+                    else {
+                      const next = tutorial.playingCount();
+                      if (next != null) onboardCrumb('play', { stage: 'play', count: next });
+                    }
                   }
                 }}
                 onSkip={skipOnboarding}

@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@rstest/core';
+import { describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
 import { App } from './App';
@@ -21,10 +21,17 @@ describe('App — first-run look', () => {
 
   it('Should sit onto the intro pages', async () => {
     const harness = buildHarness({ flags: { onboarding: true } });
+    const record = rs.spyOn(harness.services.game, 'recordOnboard').mockResolvedValue();
     render(() => <App services={harness.services} />);
     await waitFor(() => expect(screen.getByRole('button', { name: en.onboard.sit })).toBeTruthy());
 
+    expect(record).toHaveBeenCalledWith('prompt', expect.objectContaining({
+      clientId: harness.services.settings.settings.profileId,
+    }));
     fireEvent.click(screen.getByRole('button', { name: en.onboard.sit }));
+    expect(record).toHaveBeenCalledWith('sit', expect.objectContaining({
+      clientId: harness.services.settings.settings.profileId,
+    }));
     expect(harness.services.nav.screen()).toBe('onboarding');
     expect(harness.services.tutorial.introducing()).toBe(true);
     expect(screen.getByText(en.onboard.piece.rolesTitle)).toBeTruthy();
@@ -34,10 +41,14 @@ describe('App — first-run look', () => {
   it('Should stay home after Not now once Sit was deferred before', async () => {
     localStorage.setItem(ONBOARDING_DECLINE_KEY, '1');
     const harness = buildHarness({ flags: { onboarding: true } });
+    const record = rs.spyOn(harness.services.game, 'recordOnboard').mockResolvedValue();
     render(() => <App services={harness.services} />);
     await waitFor(() => expect(screen.getByRole('button', { name: en.onboard.notNow })).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.notNow }));
+    expect(record).toHaveBeenCalledWith('not_now', expect.objectContaining({
+      clientId: harness.services.settings.settings.profileId,
+    }));
     expect(localStorage.getItem(ONBOARDING_DECLINE_KEY)).toBe('2');
     expect(harness.services.nav.screen()).toBe('home');
     expect(screen.queryByText(en.onboard.piece.welcome)).toBeNull();

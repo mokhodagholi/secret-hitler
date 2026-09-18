@@ -456,7 +456,9 @@ describe('HomeScreen', () => {
     expect(screen.getByText(/Tap Add/)).toBeTruthy();
     fireEvent.click(screen.getByText('Reza').parentElement!.querySelector('button')!);
     expect(screen.getByText(en.onboard.history.sent)).toBeTruthy();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(
+      fetchSpy.mock.calls.filter(([url]) => String(url) !== '/api/product/onboard'),
+    ).toEqual([]);
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
     expect(screen.getByText(en.onboard.history.ties)).toBeTruthy();

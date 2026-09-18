@@ -93,6 +93,7 @@ export interface BuiltServer {
   product: ProductTracker;
   lobbyFill: LobbyFillService | null;
   productDigest: ProductDigestService | null;
+  roomQuota: HostedRoomQuota;
 }
 
 /**
