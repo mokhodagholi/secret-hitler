@@ -19,6 +19,9 @@ import {
 import { parseSupportChatId } from './bale/support';
 import { connectDatabase } from './db/connection';
 import { drizzleFolder, migrateDatabase } from './db/migrate';
+import { DrizzleCreateBanStore } from './rooms/DrizzleCreateBanStore';
+import { BAN_DURATION_MS } from './rooms/HostedRoomQuota';
+import { firewallBan, firewallUnban } from './http/firewallBan';
 import { iceServersFromEnv } from './voice/media';
 import { MediasoupBackend } from './voice/MediasoupBackend';
 import { VoiceHub } from './voice/VoiceHub';
@@ -185,7 +188,18 @@ async function main() {
     }
   }
 
-  const { app } = await buildServer({
+  const createBans = new DrizzleCreateBanStore(connection);
+  const storedBans = await createBans.list();
+  const activeBans = [];
+  for (const ban of storedBans) {
+    if (ban.bannedAt + BAN_DURATION_MS <= Date.now()) {
+      await createBans.remove(ban);
+      if (ban.kind === 'ip') await firewallUnban(ban.value);
+      continue;
+    }
+    activeBans.push(ban);
+  }
+  const { app, roomQuota } = await buildServer({
     logger: true,
     history,
     profiles,
@@ -202,6 +216,25 @@ async function main() {
     // Stay under Bale's ~3 req/s when /broadcast fans out.
     broadcastDelayMs: 350,
   });
+  roomQuota.restore(activeBans);
+  const lift = async (ban: { kind: 'ip' | 'user'; value: string }): Promise<void> => {
+    await createBans.remove(ban);
+    if (ban.kind === 'ip') await firewallUnban(ban.value);
+  };
+  roomQuota.onBanned = async (bans) => {
+    for (const ban of bans) {
+      await createBans.add(ban);
+      if (ban.kind === 'ip') await firewallBan(ban.value);
+    }
+  };
+  for (const ban of activeBans) {
+    if (ban.kind === 'ip') await firewallBan(ban.value);
+  }
+  // The packet drop outlives the in-app check, so lift it on a timer.
+  const sweep = setInterval(() => {
+    for (const ban of roomQuota.expire()) void lift(ban);
+  }, 60_000);
+  sweep.unref();
 
   app.log.info({ flags }, 'Feature flags');
   app.log.info('Game history and live-room persistence enabled.');

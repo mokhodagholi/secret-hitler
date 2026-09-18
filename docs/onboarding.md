@@ -94,9 +94,8 @@ not refill from empty.
 Last page asks «گرفتید؟». Yes → «بریم سر میز». No → «مشکلی نیست» then
 still open the look table. Either answer goes to step 1.
 
-Daniel speaks the Sit welcome, the first piece, and «گرفتید؟» (plus
-the reassure line if they say not yet). The pages in between are
-silent — the art and labels are the lesson.
+Sahar speaks every piece page, the Sit welcome, and the reassure line if
+they say not yet.
 
 Slides live in `client/src/tutorial/introSlides.ts`. Copy under
 `onboard.piece.*` in both locales.

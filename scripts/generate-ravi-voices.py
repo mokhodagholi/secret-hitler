@@ -882,7 +882,7 @@ def main() -> None:
         "--catalog",
         choices=("table", "onboard"),
         default="table",
-        help="table = live Ravi; onboard = Sarah guide lines",
+        help="table = live Ravi; onboard = Sahar guide lines",
     )
     parser.add_argument(
         "--skip-existing",

@@ -1,0 +1,26 @@
+@use '../../styles/vars' as *;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  min-height: 70%;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  color: $gold-bright;
+  font-family: $font-body;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.body {
+  margin: 0;
+  color: $text-light;
+  font-size: 1rem;
+  line-height: 1.6;
+}

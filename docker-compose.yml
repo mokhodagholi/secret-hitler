@@ -58,6 +58,10 @@ services:
     # Host network so mediasoup RTP uses 40000–40999 without Docker mapping
     # a thousand UDP ports (that OOMs the VPS and leaves 443 dead).
     network_mode: host
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /etc/secret-hitler:/etc/secret-hitler
     env_file:
       - .env
     environment:
@@ -65,6 +69,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-secret_hitler}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB:-secret_hitler}
       PUBLIC_URL: ${PUBLIC_URL:-https://mrfantastic.ir}
       FEATURE_PUBLIC_TABLE: ${FEATURE_PUBLIC_TABLE:-true}
+      FEATURE_BROWSER_PLAY: 'false'
       # Production only — local `pnpm dev` must leave this unset so it does not
       # call setWebhook and overwrite Bale/Telegram registration.
       BOT_SET_WEBHOOK: ${BOT_SET_WEBHOOK:-true}
@@ -86,14 +91,23 @@ services:
     container_name: secret-hitler-turn
     restart: unless-stopped
     network_mode: host
-    command: >
-      -n
-      --log-file=stdout
-      --listening-port=3478
-      --fingerprint
-      --lt-cred-mech
-      --user=${TURN_USERNAME:-hitler}:${TURN_PASSWORD:-change-me}
-      --realm=${PUBLIC_URL:-mrfantastic.ir}
+    # Host networking sees docker0/br-* too. Pin the public NIC or browsers
+    # get 172.x relay candidates they cannot route. Realm is a hostname —
+    # PUBLIC_URL includes https:// and breaks long-term credentials.
+    entrypoint: ['turnserver']
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --fingerprint
+      - --lt-cred-mech
+      - --no-tls
+      - --no-dtls
+      - --user=${TURN_USERNAME:-hitler}:${TURN_PASSWORD:-change-me}
+      - --realm=${TURN_REALM:-mrfantastic.ir}
+      - --listening-ip=${MEDIASOUP_ANNOUNCED_IP:?Set MEDIASOUP_ANNOUNCED_IP to the public IPv4}
+      - --relay-ip=${MEDIASOUP_ANNOUNCED_IP}
+      - --external-ip=${MEDIASOUP_ANNOUNCED_IP}
 
   nginx:
     build:

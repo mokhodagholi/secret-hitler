@@ -9,6 +9,7 @@ export const FLAG_NAMES = [
   'onboarding',
   'roomPassword',
   'lobbyFill',
+  'browserPlay',
 ] as const;
 
 export type FlagName = (typeof FLAG_NAMES)[number];
@@ -23,6 +24,8 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   onboarding: true,
   roomPassword: false,
   lobbyFill: false,
+  // Website seats are off until FEATURE_BROWSER_PLAY=true. Bale and Telegram stay on.
+  browserPlay: false,
 };
 
 export interface FlagsResponse {

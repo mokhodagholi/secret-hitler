@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@rstest/core';
+import { describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import { Show } from 'solid-js';
 import { SettingsScreen } from './SettingsScreen';
@@ -134,5 +134,21 @@ describe('SettingsScreen', () => {
     expect(harness.services.nav.screen()).toBe('home');
     expect(localStorage.getItem('sh:onboarding-home-settings')).toBe('1');
     expect(harness.services.tutorial.guidingHome()).toBe(false);
+  });
+
+  it('Should speak each settings line once', () => {
+    const harness = buildHarness();
+    const speak = rs.spyOn(harness.services.ravi, 'speakGuide');
+    harness.services.nav.navigate('settings');
+    harness.services.tutorial.startHomeSettings();
+    harness.services.tutorial.openHomeSettings();
+    renderWithApp(() => <SettingsScreen />, harness);
+
+    const times = (key: string) =>
+      speak.mock.calls.filter((call) => call[0] === key).length;
+    expect(times('onboard.settings.name')).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    expect(times('onboard.settings.card')).toBe(1);
+    expect(times('onboard.settings.name')).toBe(1);
   });
 });

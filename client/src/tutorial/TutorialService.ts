@@ -554,10 +554,13 @@ export class TutorialService {
   headlineKey(): MessageKey {
     if (this.reviewingHistory()) return historyBeatAt(this.beat()).headline;
     if (this.guidingHome()) return this.settingsBeat().headline;
-    if (this.playing()) return this.playHeadline();
-    if (this.looking() && this.lookHeadlineOverride()) {
-      return this.lookHeadlineOverride()!;
+    // Look wins over play: startPlay sets playing before endLook, and the
+    // header must not jump to the scripted line for that gap.
+    if (this.looking()) {
+      if (this.lookHeadlineOverride()) return this.lookHeadlineOverride()!;
+      return lookBeatAt(this.beat()).headline;
     }
+    if (this.playing()) return this.playHeadline();
     return lookBeatAt(this.beat()).headline;
   }
 

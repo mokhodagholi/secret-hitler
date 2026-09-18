@@ -36,7 +36,9 @@ export function VotingOverlay(props: VotingOverlayProps) {
   const showDialog = () => props.canVote && chosen() == null;
 
   onMount(() => {
-    if (props.canVote && !tutorial.looking()) void ravi.speak('private.vote');
+    if (props.canVote && !tutorial.looking() && !tutorial.playing()) {
+      void ravi.speak('private.vote');
+    }
   });
 
   function choose(vote: Vote): void {

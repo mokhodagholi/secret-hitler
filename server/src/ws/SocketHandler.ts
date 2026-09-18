@@ -103,6 +103,8 @@ export class SocketHandler {
   onRoomCreated: ((entry: RoomEntry) => void) | null = null;
   /** Product funnel; tests leave the default no-op tracker. */
   product = new ProductTracker();
+  /** Clears the one-open-room slot when this table is destroyed. */
+  roomQuota: { forget(roomId: string): void } | null = null;
 
   constructor(
     private readonly repo: RoomRepository,
@@ -1095,6 +1097,7 @@ export class SocketHandler {
     this.seats?.releaseRoom(roomId);
     const removed = this.repo.get(roomId)?.room;
     const death = this.lobbyDeathReason.get(roomId);
+    this.roomQuota?.forget(roomId);
     this.repo.remove(roomId);
     if (removed) this.product.onRoomRemoved(removed, death);
     void this.voice?.removeRoom(roomId);

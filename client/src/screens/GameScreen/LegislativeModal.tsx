@@ -155,7 +155,14 @@ export function LegislativeModal(props: LegislativeModalProps) {
   }
 
   function speakIfHolder(): void {
-    if (closed || props.policies.length === 0 || tutorial.looking()) return;
+    if (
+      closed ||
+      props.policies.length === 0 ||
+      tutorial.looking() ||
+      tutorial.playing()
+    ) {
+      return;
+    }
     sound.play('card-flip');
     void ravi.speak(props.mode === 'discard' ? 'private.discard' : 'private.enact');
   }

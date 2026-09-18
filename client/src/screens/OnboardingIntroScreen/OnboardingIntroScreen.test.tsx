@@ -23,9 +23,26 @@ describe('OnboardingIntroScreen', () => {
     expect(screen.getByText(en.onboard.piece.roles)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.continue })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
+    const next = screen.getByRole('button', { name: en.onboard.continue });
+    const skip = screen.getByRole('button', { name: en.onboard.skip });
+    expect(next.compareDocumentPosition(skip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('Should let Daniel speak the first piece and the got-it page, not the pages in between', () => {
+  it('Should keep Back beside Next, with Skip on the right', () => {
+    const harness = buildHarness();
+    harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
+    harness.services.nav.navigate('onboarding');
+    renderWithApp(() => <OnboardingIntroScreen />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    const next = screen.getByRole('button', { name: en.onboard.continue });
+    const back = screen.getByRole('button', { name: en.onboard.previous });
+    const skip = screen.getByRole('button', { name: en.onboard.skip });
+    expect(next.compareDocumentPosition(back) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(back.compareDocumentPosition(skip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('Should speak every piece page, including the got-it close', () => {
     const harness = buildHarness();
     const speak = rs.spyOn(harness.services.ravi, 'speakGuide');
     harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
@@ -35,13 +52,12 @@ describe('OnboardingIntroScreen', () => {
     expect(speak).toHaveBeenCalledWith('onboard.piece.roles');
     speak.mockClear();
 
-    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
-    expect(speak).not.toHaveBeenCalled();
-
-    for (let index = 1; index < INTRO_SLIDES.length - 1; index++) {
+    for (let index = 1; index < INTRO_SLIDES.length; index++) {
+      speak.mockClear();
       fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+      expect(speak).toHaveBeenCalledTimes(1);
+      expect(speak).toHaveBeenCalledWith(INTRO_SLIDES[index]!.bodyKey);
     }
-    expect(speak).toHaveBeenCalledWith('onboard.piece.check');
   });
 
   it('Should play a page tap on the first piece', () => {
@@ -121,5 +137,17 @@ describe('OnboardingIntroScreen', () => {
     expect(harness.services.nav.screen()).toBe('game');
     expect(harness.services.tutorial.introducing()).toBe(false);
     expect(harness.services.tutorial.looking()).toBe(true);
+  });
+
+  it('Should ignore Skip while the guide is still speaking', () => {
+    const harness = buildHarness();
+    rs.spyOn(harness.services.ravi, 'speaking').mockReturnValue(true);
+    harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
+    harness.services.nav.navigate('onboarding');
+    renderWithApp(() => <OnboardingIntroScreen />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.skip }));
+    expect(harness.services.nav.screen()).toBe('onboarding');
+    expect(harness.services.tutorial.looking()).toBe(false);
   });
 });

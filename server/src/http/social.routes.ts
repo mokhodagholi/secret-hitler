@@ -42,6 +42,8 @@ export interface SocialRouteDeps {
   social: SocialBook;
   bale?: BaleRuntime;
   telegram?: BaleRuntime;
+  /** When false, accepting a table invite needs a signed Bale or Telegram login. */
+  browserPlay?: boolean;
 }
 
 function isClientId(value: unknown): value is string {
@@ -360,6 +362,9 @@ export function registerSocialRoutes(app: FastifyInstance, deps: SocialRouteDeps
     const { identified, accountId, person } = readCaller(body);
     if (!accountId || !person) {
       return fail(reply, 400, 'AUTH_FAILED', 'A profile is required.');
+    }
+    if (deps.browserPlay === false && !identified) {
+      return fail(reply, 401, 'MESSENGER_ONLY', 'Open the game from Bale or Telegram.');
     }
     const { id } = req.params as { id: string };
     const result = await social.acceptInvite(id, accountId);

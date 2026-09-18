@@ -36,6 +36,16 @@ export function SettingsScreen() {
   const headlineReady = () =>
     headlineTyped().done && headlineTyped().text === headlineText();
 
+  // Home unmounts once Settings opens, so the tour lines have to start here.
+  let spokenGuide: string | undefined;
+  createEffect(() => {
+    if (!guiding()) return;
+    const key = tutorial.headlineKey();
+    if (key === spokenGuide) return;
+    spokenGuide = key;
+    void ravi.speakGuide(key);
+  });
+
   createEffect(() => {
     if (!guiding()) return;
     const handleBack = () => {
@@ -58,16 +68,19 @@ export function SettingsScreen() {
   });
 
   function leaveTour(): void {
+    ravi.prime();
     tutorial.skipHomeSettings();
     nav.navigate('home');
   }
 
   function goPrevious(): void {
+    ravi.prime();
     tutorial.retreatHomeSettings();
     if (!tutorial.settingsPage()) nav.navigate('home');
   }
 
   function goContinue(): void {
+    ravi.prime();
     if (tutorial.advanceHomeSettings()) nav.navigate('home');
   }
 
@@ -81,6 +94,7 @@ export function SettingsScreen() {
           <div class={styles.guideHeader}>
             <GameEventHeader
               headline={headlineText()}
+              durationMs={ravi.lineDurationMs()}
               onTyped={(done, text) => setHeadlineTyped({ text, done })}
             />
           </div>
@@ -200,6 +214,7 @@ export function SettingsScreen() {
             target={tutorial.target()}
             lifted={tutorial.maskLifted()}
             passHole={tutorial.passHole()}
+            guideSpeaking={ravi.speaking()}
             layoutKey={tutorial.beat() + headlineTyped().text.length}
             showContinue={
               tutorial.canContinueHomeSettings() && headlineReady()

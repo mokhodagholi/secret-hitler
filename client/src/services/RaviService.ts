@@ -159,6 +159,10 @@ export class RaviService {
   private epoch = 0;
   private queue: Promise<void> = Promise.resolve();
   private unlockGesture: (() => void) | null = null;
+  /** Guide clip the browser refused. Replayed on the next tap — lineId stays null for guides. */
+  private pendingGuide: MessageKey | null = null;
+  /** Key already handed to the speaker. A second request for it would play the line twice. */
+  private activeGuideKey: MessageKey | null = null;
 
   constructor(
     private readonly settings: SettingsService,
@@ -167,14 +171,19 @@ export class RaviService {
   ) {}
 
   /**
-   * Onboarding guide line (Sarah). Table chat (`onboard.talk.*`) stays silent.
+   * Onboarding guide line (Sahar). Table chat (`onboard.talk.*`) stays silent.
    * Header copy still comes from i18n — this only plays the clip and sets type pace.
    */
   speakGuide(key: MessageKey): Promise<void> {
     if (!isOnboardGuideKey(key)) return Promise.resolve();
+    if (key === this.activeGuideKey) return this.queue;
+    this.activeGuideKey = key;
     const epoch = this.epoch;
     const run = this.queue.then(() => {
-      if (this.epoch !== epoch) return;
+      if (this.epoch !== epoch) {
+        this.releaseGuide(key);
+        return;
+      }
       return this.deliverGuide(key);
     });
     this.queue = run.catch(() => {});
@@ -201,6 +210,8 @@ export class RaviService {
   cancel(): void {
     this.epoch += 1;
     this.generation += 1;
+    this.pendingGuide = null;
+    this.activeGuideKey = null;
     this.stopCurrent();
     this.setSpeaking(false);
     this.queue = Promise.resolve();
@@ -220,6 +231,14 @@ export class RaviService {
   }
 
   /**
+   * Call from a tap before the next guide clip. Mini-app browsers only
+   * allow later `play()` if this gesture already started audio.
+   */
+  prime(): void {
+    this.unlockSession();
+  }
+
+  /**
    * Call from the Ravi Voice toggle — that tap is a user gesture in Bale.
    * Replays the current line when turning back on; does not touch table voice.
    */
@@ -232,6 +251,14 @@ export class RaviService {
     this.unlockSession();
     const id = this.lineId();
     if (id) this.replayAfterUnlock(id);
+  }
+
+  /** jsdom never finishes a clip, so tests must not sit on `speaking()`. */
+  private beginLine(): void {
+    this.setSpeaking(true);
+    if (import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test') {
+      this.setSpeaking(false);
+    }
   }
 
   private catalogMs(id: RaviLineId): number {
@@ -255,7 +282,7 @@ export class RaviService {
     this.generation += 1;
     const generation = this.generation;
     this.stopCurrent();
-    this.setSpeaking(true);
+    this.beginLine();
 
     const src = this.clipSrc(id);
     if (!canPlayAudio || !this.settings.settings.raviVoice || !src) {
@@ -324,6 +351,12 @@ export class RaviService {
     if (this.unlockGesture || typeof window === 'undefined') return;
     const onGesture = () => {
       this.disarmUnlock();
+      const guide = this.pendingGuide;
+      if (guide && this.settings.settings.raviVoice) {
+        this.pendingGuide = null;
+        void this.deliverGuide(guide);
+        return;
+      }
       const id = this.lineId();
       if (id && this.settings.settings.raviVoice) this.replayAfterUnlock(id);
     };
@@ -346,7 +379,7 @@ export class RaviService {
     this.playClip(id);
     const audio = this.current;
     if (!audio) return;
-    this.setSpeaking(true);
+    this.beginLine();
     this.setDurationForLine(id);
     const syncDuration = () => {
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
@@ -379,15 +412,19 @@ export class RaviService {
     const subtitle = this.i18n.formatMessage(key);
     this.setLine(subtitle);
     this.setLineId(null);
-    this.setLineDurationMs(guideDurationMs(subtitle));
+    const fallbackMs = guideDurationMs(subtitle);
+    this.setGuideDurationMs(fallbackMs);
     this.generation += 1;
     const generation = this.generation;
+    this.pendingGuide = key;
     this.stopCurrent();
-    this.setSpeaking(true);
+    this.beginLine();
 
     const src = ONBOARD_CLIPS[key];
     if (!canPlayAudio || !this.settings.settings.raviVoice || !src) {
-      return this.hold(generation, guideDurationMs(subtitle));
+      this.pendingGuide = null;
+      this.releaseGuide(key);
+      return this.hold(generation, fallbackMs);
     }
 
     this.stopCurrent();
@@ -396,12 +433,22 @@ export class RaviService {
     audio.volume = 0.9;
     this.current = audio;
 
+    const syncDuration = () => {
+      if (this.generation !== generation) return;
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        this.setGuideDurationMs(audio.duration * 1000);
+      }
+    };
+    audio.addEventListener('loadedmetadata', syncDuration, { once: true });
+    syncDuration();
+
     return new Promise((resolve) => {
       const finish = () => {
         if (this.generation === generation) {
           this.setSpeaking(false);
           if (this.current === audio) this.current = null;
         }
+        this.releaseGuide(key);
         resolve();
       };
       audio.addEventListener('ended', finish, { once: true });
@@ -409,13 +456,24 @@ export class RaviService {
       const played = audio.play() as Promise<void> | undefined;
       played
         ?.then(() => {
+          if (this.pendingGuide === key) this.pendingGuide = null;
           if (audio.paused || audio.ended) finish();
         })
         .catch((error) => {
           if (isAutoplayBlocked(error)) this.armUnlock();
+          else if (this.pendingGuide === key) this.pendingGuide = null;
           finish();
         });
     });
+  }
+
+  private releaseGuide(key: MessageKey): void {
+    if (this.activeGuideKey === key) this.activeGuideKey = null;
+  }
+
+  /** Typewriter pace for a guide line — clip length when known, else text estimate. */
+  private setGuideDurationMs(audioMs: number): void {
+    this.setLineDurationMs(Math.max(400, Math.round(audioMs) - TYPE_LEAD_MS));
   }
 
   private clipSrc(id: RaviLineId): string | undefined {

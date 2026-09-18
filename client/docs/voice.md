@@ -19,7 +19,7 @@ mediasoup.
 | WS frames | [`shared/src/types/events.ts`](../../shared/src/types/events.ts) |
 | SFU | [`server/src/voice/`](../../server/src/voice/) (`VoiceHub` + mediasoup) |
 | Signaling | existing `/ws` in [`SocketHandler`](../../server/src/ws/SocketHandler.ts) |
-| ICE | UDP mediasoup ports on the host-networked server + coturn. Compose must not publish 40000–40999 — Docker hangs on that range and 443 dies. |
+| ICE | UDP mediasoup ports on the host-networked server + coturn. Compose must not publish 40000–40999 — Docker hangs on that range and 443 dies. Coturn must pin `--listening-ip` / `--relay-ip` / `--external-ip` to `MEDIASOUP_ANNOUNCED_IP` or it advertises docker0 (`172.x`) as a relay. Offer UDP and TCP on 3478 (`TURN_URLS`). |
 | Client | [`VoiceService`](../src/services/VoiceService.ts) |
 
 `VoiceHub` watches engine events (death, leave, disconnect) and pauses

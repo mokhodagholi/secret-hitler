@@ -49,6 +49,7 @@ the Bale HTTP client the server embeds. Table voice (mediasoup) ships dark behin
 | Game table UI | `client/src/screens/GameScreen/` |
 | Client services | `client/src/services/` (reached via `AppContext`) |
 | Feature flags | `shared/src/flags.ts` + `docs/feature-flags.md` |
+| Abuse / rate limit / bans | `docs/security.md` + `server/src/rooms/HostedRoomQuota.ts` + `server/src/http/routes.ts` |
 | Table voice | `client/docs/voice.md` + `client/src/services/VoiceService.ts` + `server/src/voice/` |
 | Copy / i18n | `client/src/i18n/locales/fa.ts` **and** `en.ts` + `docs/persian.md` |
 | Sound | `client/docs/audio.md` + `client/src/services/SoundService.ts` |

@@ -33,12 +33,15 @@ function signInitData(userId: number, firstName: string): string {
 async function createRoom(
   app: Awaited<ReturnType<typeof buildServer>>['app'],
   overrides: Record<string, unknown> = {},
+  remoteAddress?: string,
 ) {
-  return httpJson<CreateRoomResponse>(app, 'POST', '/api/rooms', {
-    name: 'Friday Night',
-    hostName: 'Ana',
-    ...overrides,
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/rooms',
+    payload: { name: 'Friday Night', hostName: 'Ana', ...overrides },
+    ...(remoteAddress ? { remoteAddress } : {}),
   });
+  return { status: response.statusCode, body: response.json() as CreateRoomResponse };
 }
 
 describe('room HTTP endpoints', () => {
@@ -53,6 +56,30 @@ describe('room HTTP endpoints', () => {
     expect(body.code).toMatch(/^[A-Z0-9]{6}$/);
     expect(body.shareLink).toContain(`/join/${body.code}`);
     expect(body.shareLink).not.toContain('ble.ir');
+  });
+
+  it('Should refuse a browser seat when browser play is off', async () => {
+    const { app } = await buildServer({
+      flags: { ...DEFAULT_FLAGS, browserPlay: false },
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: BALE_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const denied = await createRoom(app);
+    expect(denied.status).toBe(401);
+    expect((denied.body as unknown as { code: string }).code).toBe('MESSENGER_ONLY');
+
+    const allowed = await createRoom(app, { initData: signInitData(9, 'Ana') });
+    expect(allowed.status).toBe(201);
+
+    const joinDenied = await httpJson(app, 'POST', `/api/rooms/${allowed.body.code}/join`, {
+      name: 'Ben',
+    });
+    expect(joinDenied.status).toBe(401);
+    expect((joinDenied.body as { code: string }).code).toBe('MESSENGER_ONLY');
   });
 
   it('Should return a Bale startapp invite when the request is not loopback', async () => {
@@ -127,7 +154,7 @@ describe('room HTTP endpoints', () => {
 
   it('Should reject a wrong password but accept the right one', async () => {
     const { app } = await buildServer({
-      flags: { ...DEFAULT_FLAGS, roomPassword: true },
+      flags: { ...DEFAULT_FLAGS, roomPassword: true, browserPlay: true },
     });
     const created = (await createRoom(app, { password: 'secret' })).body;
 
@@ -167,14 +194,60 @@ describe('room HTTP endpoints', () => {
     expect(full.status).toBe(409);
   });
 
-  it('Should rate-limit room creation per address', async () => {
-    const { app } = await buildServer();
-    for (let i = 0; i < 5; i++) {
-      expect((await createRoom(app)).status).toBe(201);
-    }
-    const throttled = await createRoom(app);
-    expect(throttled.status).toBe(429);
-    expect((throttled.body as unknown as { code: string }).code).toBe('RATE_LIMITED');
+  it('Should drop a second table without banning the address', async () => {
+    const { app, repo } = await buildServer();
+    const first = await createRoom(app);
+    expect(first.status).toBe(201);
+
+    const second = await createRoom(app, { name: 'Second', hostName: 'Ben' });
+    expect(second.status).toBe(409);
+    expect((second.body as unknown as { code: string }).code).toBe('ALREADY_HOSTING');
+    expect(repo.getByCode(first.body.code)).toBeTruthy();
+    expect(repo.listPublic()).toEqual([
+      expect.objectContaining({ name: 'Friday Night', playerCount: 1 }),
+    ]);
+
+    const joined = await httpJson(app, 'POST', `/api/rooms/${first.body.code}/join`, {
+      name: 'Dan',
+    });
+    expect(joined.status).toBe(200);
+  });
+
+  it('Should not ban a Bale account that opens a second table', async () => {
+    const { app } = await buildServer({
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: BALE_TOKEN,
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const first = await createRoom(app, { initData: signInitData(9, 'Ana') });
+    expect(first.status).toBe(201);
+
+    const second = await createRoom(app, {
+      name: 'Second',
+      hostName: 'Ana',
+      initData: signInitData(9, 'Ana'),
+    });
+    expect(second.status).toBe(409);
+    expect((second.body as unknown as { code: string }).code).toBe('ALREADY_HOSTING');
+
+    const joined = await httpJson(app, 'POST', `/api/rooms/${first.body.code}/join`, {
+      name: 'Ben',
+      initData: signInitData(9, 'Ana'),
+    });
+    expect(joined.status).toBe(200);
+  });
+
+  it('Should let the same address open a table after the first one is gone', async () => {
+    const { app, sockets } = await buildServer();
+    const first = await createRoom(app);
+    expect(first.status).toBe(201);
+    expect(sockets.destroyRoomByCode(first.body.code)?.code).toBe(first.body.code);
+
+    const next = await createRoom(app, { name: 'Again', hostName: 'Ana' });
+    expect(next.status).toBe(201);
   });
 
   it('Should seat create and join with the requested player card', async () => {
@@ -212,7 +285,9 @@ describe('room HTTP — previous Bale seat', () => {
     expect(seated.status).toBe(200);
     expect(seats.get(9)?.roomId).toBe(first.roomId);
 
-    const second = (await createRoom(app, { name: 'Other Table', hostName: 'Cal' })).body;
+    const second = (
+      await createRoom(app, { name: 'Other Table', hostName: 'Cal' }, '203.0.113.8')
+    ).body;
     const moved = await httpJson<JoinRoomResponse>(
       app,
       'POST',
@@ -302,11 +377,11 @@ describe('profile HTTP endpoints', () => {
 });
 
 describe('GET /api/flags', () => {
-  it('Should return catalog defaults when no flags are injected', async () => {
+  it('Should return browser seats when a suite does not inject flags', async () => {
     const { app } = await buildServer();
     const { status, body } = await httpJson<FlagsResponse>(app, 'GET', '/api/flags');
     expect(status).toBe(200);
-    expect(body).toEqual({ flags: DEFAULT_FLAGS });
+    expect(body).toEqual({ flags: { ...DEFAULT_FLAGS, browserPlay: true } });
   });
 
   it('Should return injected flags as-is', async () => {

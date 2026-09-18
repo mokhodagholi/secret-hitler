@@ -34,7 +34,7 @@ describe('public table', () => {
 
   it('Should list one empty Join salon when the flag is on', async () => {
     const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      flags: { ...DEFAULT_FLAGS, publicTable: true, browserPlay: true },
     });
     app = built.app;
     const { body } = await httpJson<RoomSummary[]>(built.app, 'GET', '/api/rooms');
@@ -48,7 +48,7 @@ describe('public table', () => {
 
   it('Should keep the empty salon and drop extra waiting publics', async () => {
     const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      flags: { ...DEFAULT_FLAGS, publicTable: true, browserPlay: true },
     });
     app = built.app;
     const keep = built.repo.waitingPublicLobby();
@@ -61,7 +61,7 @@ describe('public table', () => {
 
   it('Should cap a restored public lobby to ten seats', async () => {
     const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      flags: { ...DEFAULT_FLAGS, publicTable: true, browserPlay: true },
     });
     app = built.app;
     const entry = built.repo.create({ name: 'میز عمومی', kind: 'public' });
@@ -73,7 +73,7 @@ describe('public table', () => {
 
   it('Should hide admin play tables from the public and /games lists', async () => {
     const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      flags: { ...DEFAULT_FLAGS, publicTable: true, browserPlay: true },
     });
     app = built.app;
     built.repo.create({ name: 'میز آزمایش', adminPlayUserId: 1_902_004_260 });
@@ -85,7 +85,7 @@ describe('public table', () => {
 
   it('Should destroy an admin play table when a seat leaves', async () => {
     const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      flags: { ...DEFAULT_FLAGS, publicTable: true, browserPlay: true },
     });
     app = built.app;
     const entry = built.repo.create({
@@ -104,7 +104,7 @@ describe('public table', () => {
 
   it('Should let a player sit the public salon by code', async () => {
     const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      flags: { ...DEFAULT_FLAGS, publicTable: true, browserPlay: true },
     });
     app = built.app;
     built.sockets.ensurePublicLobby();
@@ -124,7 +124,7 @@ describe('public table', () => {
   it('Should record own-table interest without opening a room', async () => {
     const store = new InMemoryProductStore();
     const built = await buildServer({
-      flags: { ...DEFAULT_FLAGS, publicTable: true },
+      flags: { ...DEFAULT_FLAGS, publicTable: true, browserPlay: true },
       product: store,
     });
     app = built.app;

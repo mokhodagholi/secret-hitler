@@ -75,6 +75,10 @@ Telegram WebView ─┼─► same HTTPS origin ─► same WS ─► same Room
 Browser /join/CODE ─┘
 ```
 
+The website does not seat anyone unless `FEATURE_BROWSER_PLAY` is on. See
+[`feature-flags.md`](./feature-flags.md). Bale and Telegram still share the
+tables.
+
 Invite is a six-character code. Each host also has a convenience deep
 link that opens **that** host already holding the code:
 

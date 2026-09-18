@@ -7,6 +7,7 @@ import type { MessageKey } from './types';
 
 export const ERROR_MESSAGE_KEYS: Record<ServerErrorCode | 'NETWORK', MessageKey> = {
   AUTH_FAILED: 'error.AUTH_FAILED',
+  MESSENGER_ONLY: 'error.MESSENGER_ONLY',
   ROOM_NOT_FOUND: 'error.ROOM_NOT_FOUND',
   ROOM_FULL: 'error.ROOM_FULL',
   WRONG_PASSWORD: 'error.WRONG_PASSWORD',
@@ -16,6 +17,7 @@ export const ERROR_MESSAGE_KEYS: Record<ServerErrorCode | 'NETWORK', MessageKey>
   PLAYERS_NOT_READY: 'error.PLAYERS_NOT_READY',
   RATE_LIMITED: 'error.RATE_LIMITED',
   INVALID_ACTION: 'error.INVALID_ACTION',
+  ALREADY_HOSTING: 'error.ALREADY_HOSTING',
   BANNED: 'error.BANNED',
   SOCIAL_BLOCKED: 'error.SOCIAL_BLOCKED',
   SOCIAL_COOLDOWN: 'error.SOCIAL_COOLDOWN',

@@ -60,6 +60,10 @@ ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 ENV MEDIASOUP_WORKER_BIN=/usr/local/bin/mediasoup-worker
 ENV MEDIASOUP_DISABLE_LIBURING=true
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends iptables \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN npm install -g pnpm@11.25.0
 COPY --from=build /usr/local/bin/mediasoup-worker /usr/local/bin/mediasoup-worker
 

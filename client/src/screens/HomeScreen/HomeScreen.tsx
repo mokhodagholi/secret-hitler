@@ -63,9 +63,15 @@ export function HomeScreen() {
   const homeHeadlineReady = () =>
     homeHeadlineTyped().done && homeHeadlineTyped().text === homeHeadlineText();
 
+  let spokenGuide: string | undefined;
   createEffect(() => {
     if (!homeGuiding()) return;
-    void ravi.speakGuide(tutorial.headlineKey());
+    // Settings owns the rows after the gear. Speaking them here too plays the name twice.
+    if (tutorial.settingsPage()) return;
+    const key = tutorial.headlineKey();
+    if (key === spokenGuide) return;
+    spokenGuide = key;
+    void ravi.speakGuide(key);
   });
 
   function resolvedName(): string {
@@ -122,6 +128,7 @@ export function HomeScreen() {
   }
 
   function openDevSettingsOnboarding(): void {
+    ravi.prime();
     tutorial.startHomeSettings({ voice: flags.flags.voice });
   }
 
@@ -209,6 +216,7 @@ export function HomeScreen() {
               data-tutorial-target="homeSettings"
               aria-label={formatMessage('nav.settings')}
               onClick={() => {
+                ravi.prime();
                 if (tutorial.guidingHome()) tutorial.openHomeSettings();
                 nav.navigate('settings');
               }}
@@ -344,6 +352,7 @@ export function HomeScreen() {
               target={tutorial.target()}
               lifted={tutorial.maskLifted()}
               passHole={tutorial.passHole()}
+              guideSpeaking={ravi.speaking()}
               layoutKey={
                 tutorial.beat() +
                 Number(tutorial.historySheet()) +
@@ -365,6 +374,7 @@ export function HomeScreen() {
               onPrevious={() => tutorial.retreatHomeHistory()}
               onContinue={() => tutorial.advanceHomeHistory()}
               onSkip={() => {
+                ravi.prime();
                 if (tutorial.reviewingHistory()) {
                   tutorial.skipHomeHistory();
                   return;

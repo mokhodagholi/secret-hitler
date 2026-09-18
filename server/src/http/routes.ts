@@ -38,6 +38,8 @@ import { DEFAULT_ADMIN_USER_ID, isAdminUser, parseAdminUserIds } from '../bale/a
 import { ensureAdminPlayTable } from '../bale/adminPlay';
 import { registerSocialRoutes } from './social.routes';
 import type { SocialBook } from '../social/SocialBook';
+import type { HostedRoomQuota } from '../rooms/HostedRoomQuota';
+import { addressToBan } from './firewallBan';
 
 export interface RouteDeps {
   repo: RoomRepository;
@@ -66,6 +68,8 @@ export interface RouteDeps {
   /** Funnel / lobby / blast / match health. */
   product: ProductTracker;
   social: SocialBook;
+  /** One open hosted table per address and account. */
+  roomQuota: HostedRoomQuota;
 }
 
 /** Per-IP budgets: room creation is expensive, join attempts guard passwords. */
@@ -78,6 +82,24 @@ const SUPPORT_DESCRIPTION_MAX = 2000;
 const SUPPORT_DESCRIPTION_MIN = 3;
 
 const CLIENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function requestAddress(req: FastifyRequest): string {
+  return addressToBan(req.socket.remoteAddress, req.ip);
+}
+
+function bannedReply(reply: FastifyReply) {
+  return reply.code(403).send({
+    error: 'You cannot open another table.',
+    code: 'BANNED',
+  });
+}
+
+function messengerOnlyReply(reply: FastifyReply) {
+  return reply.code(401).send({
+    error: 'Open the game from Bale or Telegram.',
+    code: 'MESSENGER_ONLY',
+  });
+}
 
 function isClientId(value: unknown): value is string {
   return typeof value === 'string' && CLIENT_ID.test(value);
@@ -114,7 +136,7 @@ function inviteRuntime(
 
 /** Registers room HTTP endpoints under `/api`. */
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
-  const { repo, tokens, sockets, recorder, history, profiles, subscribers, bale, telegram, flags, product } =
+  const { repo, tokens, sockets, recorder, history, profiles, subscribers, bale, telegram, flags, product, roomQuota } =
     deps;
   const adminUserIds = deps.adminUserIds ?? parseAdminUserIds();
   const allowDevPlay = deps.allowDevPlay === true;
@@ -358,11 +380,14 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
         : null;
 
     const identified = identifyInitData(body.initData, messengers);
+    if (!flags.browserPlay && !identified) return messengerOnlyReply(reply);
     const hostRuntime = identified
       ? runtimeOf(identified.kind, bale, telegram)
       : undefined;
     const previousSeat = reservedSeat(identified, hostRuntime);
     const joinKey = joinBanKey(identified, body.clientId);
+    const address = requestAddress(req);
+    if (roomQuota.isBlocked(address, joinKey)) return bannedReply(reply);
 
     if (flags.publicTable) {
       const seated = sockets.sitPublicLobby({
@@ -409,6 +434,22 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
       timerEnabled: body.options?.timerEnabled,
       confirmActions: body.options?.confirmActions,
     });
+    const claim = roomQuota.claim(address, joinKey, entry.room.id);
+    if (claim) {
+      sockets.destroyRoomByCode(entry.room.code);
+      if (claim.bans.length > 0 && roomQuota.onBanned) {
+        try {
+          await roomQuota.onBanned(claim.bans);
+        } catch (error) {
+          req.log.error({ err: error }, 'Failed to persist create ban');
+        }
+      }
+      if (claim.bans.length > 0) return bannedReply(reply);
+      return reply.code(409).send({
+        error: 'You already have a table open.',
+        code: 'ALREADY_HOSTING',
+      });
+    }
     sockets.registerEngine(entry);
     recorder.attach(entry);
 
@@ -495,12 +536,8 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return reply.send({ ok: true });
   });
 
-  // Recent finished games.
-  app.get('/api/history', async (req) => {
-    const limit = Number((req.query as { limit?: string }).limit) || undefined;
-    return history.listRecent(limit);
-  });
-
+  // Finished games are per player. There is no public list — it used to
+  // include every seat's messenger id.
   app.post('/api/history/mine', async (req, reply) => {
     if (!profileLimiter.allow(req.ip)) {
       return reply
@@ -539,10 +576,12 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     }
 
     const identified = identifyInitData(body.initData, messengers);
+    if (!flags.browserPlay && !identified) return messengerOnlyReply(reply);
     const joinRuntime = identified
       ? runtimeOf(identified.kind, bale, telegram)
       : undefined;
     const joinKey = joinBanKey(identified, body.clientId);
+    if (roomQuota.isBlocked(requestAddress(req), joinKey)) return bannedReply(reply);
     if (joinKey && entry.room.bannedJoinKeys.has(joinKey)) {
       return reply
         .code(403)
@@ -658,6 +697,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     social: deps.social,
     bale,
     telegram,
+    browserPlay: flags.browserPlay,
   });
 }
 

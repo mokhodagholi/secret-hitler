@@ -4,6 +4,7 @@ import {
   Match,
   Show,
   Switch,
+  batch,
   createEffect,
   createMemo,
   createSignal,
@@ -42,22 +43,22 @@ export function OnboardingIntroScreen() {
     if (effect) sound.play(effect);
   });
 
+  // A beat can notify twice (reassure ending, then the restart). Same sentence stays quiet.
+  let spokenGuide: string | undefined;
   createEffect(() => {
-    if (!tutorial.introducing()) return;
-    if (reassuring()) {
-      void ravi.speakGuide('onboard.piece.checkReassure');
+    if (!tutorial.introducing()) {
+      spokenGuide = undefined;
       return;
     }
-    // Piece pages are read on the slide. Daniel only on the first
-    // piece and the «گرفتید؟» close.
-    if (tutorial.introBeat() === 0 || slide().visual.kind === 'check') {
-      void ravi.speakGuide(slide().bodyKey);
-      return;
-    }
-    ravi.cancel();
+    const key = reassuring() ? 'onboard.piece.checkReassure' : slide().bodyKey;
+    if (key === spokenGuide) return;
+    spokenGuide = key;
+    void ravi.speakGuide(key);
   });
   const atStart = () => tutorial.introBeat() === 0;
   const onCheck = () => slide().visual.kind === 'check';
+  /** Bottom actions wait until this page's line has finished. */
+  const actionsReady = () => !ravi.speaking();
   /** Separate bdi nodes — a single "۱ از ۱۰" string merges the digits under RTL bidi. Follow page dir (no forced ltr) so fa keeps current on the right. */
   const progressCurrent = () => {
     const n = tutorial.introBeat() + 1;
@@ -76,6 +77,7 @@ export function OnboardingIntroScreen() {
   onMount(() => {
     const handleBack = () => {
       if (reassuring()) return;
+      ravi.prime();
       if (!tutorial.retreatIntro()) {
         tutorial.skipIntro();
         nav.returnTo('home');
@@ -105,17 +107,22 @@ export function OnboardingIntroScreen() {
   }
 
   function next(): void {
+    ravi.prime();
     if (!tutorial.advanceIntro()) return;
     // Last slide is check — stay; do not open look until they answer.
   }
 
   function notYet(): void {
     if (reassuring()) return;
+    ravi.prime();
     setReassuring(true);
     reassureTimer = setTimeout(() => {
       reassureTimer = undefined;
-      setReassuring(false);
-      tutorial.restartIntro();
+      // One update — otherwise the check line speaks again before beat 0.
+      batch(() => {
+        setReassuring(false);
+        tutorial.restartIntro();
+      });
     }, INTRO_REASSURE_MS);
   }
 
@@ -140,9 +147,6 @@ export function OnboardingIntroScreen() {
             {progressSep()}
             <bdi>{progressTotal()}</bdi>
           </span>
-          <button type="button" class={styles.skip} onClick={openLook}>
-            {formatMessage('onboard.skip')}
-          </button>
         </header>
 
         <div class={styles.stage}>
@@ -226,34 +230,45 @@ export function OnboardingIntroScreen() {
         </div>
 
         <div class={styles.chrome}>
-          <Show when={!atStart() && !reassuring()}>
-            <button
-              type="button"
-              class={styles.previous}
-              onClick={() => tutorial.retreatIntro()}
-            >
-              {formatMessage('onboard.previous')}
-            </button>
-          </Show>
-
-          <Show when={onCheck() && !reassuring()}>
-            <button
-              type="button"
-              class={styles.secondary}
-              onClick={notYet}
-            >
-              {formatMessage('onboard.piece.checkNo')}
-            </button>
-            <button type="button" class={styles.continue} onClick={openLook}>
-              {formatMessage('onboard.piece.checkYes')}
-            </button>
-          </Show>
-
-          <Show when={!onCheck()}>
-            <button type="button" class={styles.continue} onClick={next}>
-              {formatMessage('onboard.continue')}
-            </button>
-          </Show>
+          <div class={styles.nav}>
+            <Show when={onCheck() && !reassuring() && actionsReady()}>
+              <button type="button" class={styles.continue} onClick={openLook}>
+                {formatMessage('onboard.piece.checkYes')}
+              </button>
+            </Show>
+            <Show when={!onCheck() && actionsReady()}>
+              <button type="button" class={styles.continue} onClick={next}>
+                {formatMessage('onboard.continue')}
+              </button>
+            </Show>
+            <Show when={!atStart() && !reassuring() && actionsReady()}>
+              <button
+                type="button"
+                class={styles.previous}
+                onClick={() => {
+                  ravi.prime();
+                  tutorial.retreatIntro();
+                }}
+              >
+                {formatMessage('onboard.previous')}
+              </button>
+            </Show>
+            <Show when={onCheck() && !reassuring() && actionsReady()}>
+              <button type="button" class={styles.secondary} onClick={notYet}>
+                {formatMessage('onboard.piece.checkNo')}
+              </button>
+            </Show>
+          </div>
+          <button
+            type="button"
+            classList={{ [styles.skip]: true, [styles.skipHeld]: !actionsReady() }}
+            onClick={() => {
+              if (!actionsReady()) return;
+              openLook();
+            }}
+          >
+            {formatMessage('onboard.skip')}
+          </button>
         </div>
       </div>
     </Screen>

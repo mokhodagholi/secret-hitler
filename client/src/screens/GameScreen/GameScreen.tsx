@@ -70,9 +70,18 @@ export function GameScreen() {
     if (effect) sound.play(effect);
   });
 
+  // Same sentence on a new beat, or a lock/cue change, must not replay.
+  // Night keeps the header off; the next scripted line is still tracked.
+  let spokenGuide: string | undefined;
   createEffect(() => {
-    if (!tutorial.looking() && !tutorial.guidesHeader()) return;
-    void ravi.speakGuide(tutorial.headlineKey());
+    const looking = tutorial.looking();
+    const guiding = tutorial.guidesHeader();
+    const key =
+      looking || guiding || tutorial.playing() ? tutorial.headlineKey() : undefined;
+    if (!looking && !guiding) return;
+    if (!key || key === spokenGuide) return;
+    spokenGuide = key;
+    void ravi.speakGuide(key);
   });
 
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
@@ -389,13 +398,15 @@ export function GameScreen() {
       // Chaos: tracker resets in the same snapshot as the top-of-deck law.
       const chaos = tracker < previousTracker;
       revealEnactedPolicy(latest, chaos);
-      void ravi.speak(
-        chaos
-          ? 'chaos.enacted'
-          : latest === 'liberal'
-            ? 'law.liberal'
-            : 'law.fascist',
-      );
+      if (!tutorial.playing() && !tutorial.looking()) {
+        void ravi.speak(
+          chaos
+            ? 'chaos.enacted'
+            : latest === 'liberal'
+              ? 'law.liberal'
+              : 'law.fascist',
+        );
+      }
       sound.play(
         chaos
           ? 'chaos-enact'
@@ -804,6 +815,7 @@ export function GameScreen() {
   }
 
   function continueLook(): void {
+    ravi.prime();
     if (!tutorial.canContinueLook()) return;
     if (!tutorial.lookBlurred() && !lookHeadlineReady()) return;
     if (tutorial.advanceLook()) tutorial.startPlay(playYou(), 5);
@@ -1507,6 +1519,7 @@ export function GameScreen() {
                 target={tutorial.target()}
                 lifted={tutorial.maskLifted() || tutorial.blurred()}
                 passHole={tutorial.passHole()}
+                guideSpeaking={ravi.speaking()}
               layoutKey={
                 chatHeight() +
                 tutorial.talk().length +
@@ -1544,7 +1557,7 @@ export function GameScreen() {
               />
             </Show>
 
-            <Show when={!tutorial.looking()}>
+            <Show when={!tutorial.looking() && !tutorial.playing()}>
             <RaviNarrator
               ceremonyOpen={ceremonyOpen()}
               now={clockMs()}

@@ -36,15 +36,22 @@
 
 .skip {
   @include pressable;
-  padding: 8px 14px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 7.5rem;
+  padding: 12px 18px;
   border-radius: $radius;
   border: 1.5px solid rgba($cream, 0.35);
   background: rgba(243, 231, 201, 0.08);
   color: $cream;
   font-family: $font-body;
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.skipHeld {
+  cursor: default;
 }
 
 .stage {
@@ -312,10 +319,17 @@
 .chrome {
   flex-shrink: 0;
   display: flex;
+  direction: ltr;
   align-items: center;
-  justify-content: flex-end;
   gap: 12px;
   margin-top: 16px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 
 /* First card: plaque + copy sit high; leftover space is above Continue. */
@@ -350,7 +364,6 @@
 }
 
 .previous {
-  margin-inline-end: auto;
   color: $cream;
   background: rgba(243, 231, 201, 0.1);
   border: 1.5px solid rgba(243, 231, 201, 0.4);

@@ -55,6 +55,9 @@ describe('parseFeatureFlags', () => {
     );
     expect(parseFeatureFlags({ FEATURE_LOBBY_FILL: 'true' }).lobbyFill).toBe(true);
     expect(parseFeatureFlags({ FEATURE_LOBBYFILL: 'true' }).lobbyFill).toBe(false);
+    expect(parseFeatureFlags({}).browserPlay).toBe(false);
+    expect(parseFeatureFlags({ FEATURE_BROWSER_PLAY: 'true' }).browserPlay).toBe(true);
+    expect(parseFeatureFlags({ FEATURE_BROWSERPLAY: 'true' }).browserPlay).toBe(false);
   });
 });
 

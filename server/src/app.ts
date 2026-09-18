@@ -30,6 +30,7 @@ import { LobbyFillService } from './product/LobbyFillService';
 import { ProductDigestService } from './product/ProductDigestService';
 import { SocialBook } from './social/SocialBook';
 import { InMemorySocialStore } from './social/SocialStore';
+import { HostedRoomQuota } from './rooms/HostedRoomQuota';
 
 const WS_PATH = '/ws';
 
@@ -110,7 +111,9 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
 
   const repo = new RoomRepository(options.minPlayers);
   const tokens = new TokenStore();
-  const flags = options.flags ?? DEFAULT_FLAGS;
+  // Catalog default is messenger-only. Suites that omit flags still seat a
+  // browser host; production always passes parseFeatureFlags.
+  const flags = options.flags ?? { ...DEFAULT_FLAGS, browserPlay: true };
   const sockets = new SocketHandler(
     repo,
     tokens,
@@ -177,6 +180,9 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
   });
 
   app.get('/health', async () => ({ status: 'ok', shared: SHARED_VERSION }));
+  const roomQuota = new HostedRoomQuota();
+  sockets.roomQuota = roomQuota;
+
   registerRoutes(app, {
     repo,
     tokens,
@@ -195,6 +201,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     broadcastDelayMs: options.broadcastDelayMs,
     product,
     social,
+    roomQuota,
   });
 
   await app.ready();
@@ -211,5 +218,5 @@ export async function buildServer(options: ServerOptions = {}): Promise<BuiltSer
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
-  return { app, repo, tokens, sockets, seats, product, lobbyFill, productDigest };
+  return { app, repo, tokens, sockets, seats, product, lobbyFill, productDigest, roomQuota };
 }

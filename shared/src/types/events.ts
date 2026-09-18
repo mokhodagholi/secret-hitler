@@ -96,6 +96,7 @@ export interface IceServer {
 
 export type ServerErrorCode =
   | 'AUTH_FAILED'
+  | 'MESSENGER_ONLY'
   | 'ROOM_NOT_FOUND'
   | 'ROOM_FULL'
   | 'WRONG_PASSWORD'
@@ -105,6 +106,7 @@ export type ServerErrorCode =
   | 'PLAYERS_NOT_READY'
   | 'RATE_LIMITED'
   | 'INVALID_ACTION'
+  | 'ALREADY_HOSTING'
   | 'BANNED'
   | 'SOCIAL_BLOCKED'
   | 'SOCIAL_COOLDOWN'

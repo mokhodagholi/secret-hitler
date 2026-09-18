@@ -168,8 +168,34 @@ describe('RaviService', () => {
 
     await ravi.speakGuide('onboard.piece.welcome');
     expect(ravi.line()).toBe(
-      "Before a real table, we'll walk the board together. About two minutes — skip whenever you want.",
+      "Before a real game, we'll look through a simulated one. About two minutes — skip whenever you want.",
     );
-    expect(play).not.toHaveBeenCalled();
+    expect(play).toHaveBeenCalled();
+  });
+
+  it('Should replay a blocked guide line on the next tap', async () => {
+    let attempts = 0;
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() => {
+      attempts += 1;
+      if (attempts === 1) {
+        return Promise.reject(new DOMException('blocked', 'NotAllowedError'));
+      }
+      return Promise.resolve();
+    });
+    const ravi = makeRavi(true);
+    await ravi.speakGuide('onboard.settings.name');
+    expect(play).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(play).toHaveBeenCalledTimes(2);
+  });
+
+  it('Should play a guide line once when it is requested twice together', async () => {
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+    const ravi = makeRavi(true);
+    void ravi.speakGuide('onboard.settings.name');
+    void ravi.speakGuide('onboard.settings.name');
+    await ravi.idle();
+    expect(play).toHaveBeenCalledTimes(1);
   });
 });

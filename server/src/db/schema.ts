@@ -198,6 +198,18 @@ export const productBlasts = pgTable('product_blasts', {
   reached: integer('reached').notNull(),
 });
 
+/** Address or account blocked for opening too many tables. Kept for two hours. */
+export const createBans = pgTable(
+  'create_bans',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    kind: text('kind').notNull(),
+    value: text('value').notNull(),
+    bannedAt: timestamp('banned_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique('create_bans_kind_value').on(table.kind, table.value)],
+);
+
 export const productBlastRecipients = pgTable(
   'product_blast_recipients',
   {

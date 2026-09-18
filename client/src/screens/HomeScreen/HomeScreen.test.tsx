@@ -166,6 +166,7 @@ describe('HomeScreen', () => {
 
   it('Should ring the home settings gear on a first visit', () => {
     const harness = buildHarness({ flags: { onboarding: true } });
+    const speak = rs.spyOn(harness.services.ravi, 'speakGuide');
     harness.services.tutorial.offerAfterSplash(harness.services.nav, false, true);
     harness.services.tutorial.declineSit();
     renderWithApp(
@@ -181,6 +182,7 @@ describe('HomeScreen', () => {
     );
 
     expect(screen.getByText(en.onboard.idea.homeSettings)).toBeTruthy();
+    expect(speak).toHaveBeenCalledWith('onboard.idea.homeSettings');
     expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
 
@@ -189,6 +191,7 @@ describe('HomeScreen', () => {
     expect(harness.services.tutorial.guidingHome()).toBe(true);
     expect(localStorage.getItem('sh:onboarding-home-settings')).toBeNull();
     expect(screen.getByText(en.onboard.settings.name)).toBeTruthy();
+    expect(speak.mock.calls.filter((call) => call[0] === 'onboard.settings.name')).toHaveLength(1);
     expect(screen.getByRole('button', { name: en.onboard.continue })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull();
   });
@@ -459,7 +462,7 @@ describe('HomeScreen', () => {
     expect(screen.getByText(en.onboard.history.ties)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
-    expect(screen.getByText(/This is how you close it/)).toBeTruthy();
+    expect(screen.getByText(/You can close it from here/)).toBeTruthy();
     expect(screen.getByText(/Tap the X/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
     expect(screen.getByText(/Imagine you played another hand and lost/)).toBeTruthy();

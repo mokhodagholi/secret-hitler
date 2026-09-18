@@ -57,6 +57,13 @@
       "when": 1789584000000,
       "tag": "0007_product_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789760000000,
+      "tag": "0008_create_bans",
+      "breakpoints": true
     }
   ]
 }

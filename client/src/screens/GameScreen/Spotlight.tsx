@@ -20,6 +20,8 @@ export interface SpotlightProps {
   continueLabel?: string;
   /** Punch-out lets the widget below receive taps (composer, etc.). */
   passHole?: boolean;
+  /** Guide is still speaking — taps wait, and nothing looks clickable. */
+  guideSpeaking?: boolean;
   /** Remeasure when docked chrome (chat height) moves. */
   layoutKey?: number;
 }
@@ -368,6 +370,7 @@ export function Spotlight(props: SpotlightProps) {
   // Same moments Continue / Skip stay off: header still typing, or a table action.
   const freezeRing = () =>
     props.showContinue === false || props.showSkip === false;
+  const held = () => props.guideSpeaking === true;
 
   const maskId = 'look-spotlight-mask';
 
@@ -434,7 +437,8 @@ export function Spotlight(props: SpotlightProps) {
               type="button"
               classList={{
                 [styles.hole]: true,
-                [styles.holePass]: props.passHole === true,
+                [styles.holePass]: props.passHole === true && !held(),
+                [styles.held]: held(),
                 [styles.holeFlush]: props.target === 'composer',
                 [styles.holeStatic]: freezeRing(),
               }}
@@ -442,7 +446,7 @@ export function Spotlight(props: SpotlightProps) {
               tabIndex={-1}
               aria-hidden="true"
               onClick={() => {
-                if (props.showContinue === false || props.passHole) return;
+                if (held() || props.showContinue === false || props.passHole) return;
                 props.onContinue();
               }}
             />
@@ -451,32 +455,45 @@ export function Spotlight(props: SpotlightProps) {
       </Show>
         </>
       </Show>
-      <div class={styles.chrome}>
-        <Show when={props.showSkip !== false}>
-          <button type="button" class={styles.skip} onClick={() => props.onSkip()}>
-            {props.formatMessage('onboard.skip')}
-          </button>
-        </Show>
+      <div classList={{ [styles.chrome]: true, [styles.chromeHeld]: held() }}>
         <div class={styles.nav}>
-          <Show when={props.showPrevious}>
-            <button
-              type="button"
-              class={styles.previous}
-              onClick={() => props.onPrevious?.()}
-            >
-              {props.formatMessage('onboard.previous')}
-            </button>
-          </Show>
           <Show when={props.showContinue !== false}>
             <button
               type="button"
               class={styles.continue}
-              onClick={() => props.onContinue()}
+              onClick={() => {
+                if (held()) return;
+                props.onContinue();
+              }}
             >
               {props.continueLabel ?? props.formatMessage('onboard.continue')}
             </button>
           </Show>
+          <Show when={props.showPrevious}>
+            <button
+              type="button"
+              class={styles.previous}
+              onClick={() => {
+                if (held()) return;
+                props.onPrevious?.();
+              }}
+            >
+              {props.formatMessage('onboard.previous')}
+            </button>
+          </Show>
         </div>
+        <Show when={props.showSkip !== false}>
+          <button
+            type="button"
+            class={styles.skip}
+            onClick={() => {
+              if (held()) return;
+              props.onSkip();
+            }}
+          >
+            {props.formatMessage('onboard.skip')}
+          </button>
+        </Show>
       </div>
     </div>
   );

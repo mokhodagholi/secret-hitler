@@ -16,6 +16,7 @@ for the flags themselves.
 | `onboarding` | `FEATURE_ONBOARDING` | on |
 | `roomPassword` | `FEATURE_ROOM_PASSWORD` | off |
 | `lobbyFill` | `FEATURE_LOBBY_FILL` | off |
+| `browserPlay` | `FEATURE_BROWSER_PLAY` | off |
 
 Adding a flag: one name in `FLAG_NAMES`, one default in `DEFAULT_FLAGS`, one
 `FEATURE_<NAME>` key in [`.env.example`](../.env.example). Unknown `FEATURE_*`
@@ -77,3 +78,8 @@ room is locked.
 When `lobbyFill` is off, the server does not DM warm players to fill waiting
 lobbies. When on, needy 2–4 seat tables get short deep-link invites. See
 [`lobby-fill.md`](./lobby-fill.md).
+
+When `browserPlay` is off, the website cannot open or join a table. Bale and
+Telegram mini-app logins still sit at the same tables. Group `/create` still
+opens a lobby. Set `FEATURE_BROWSER_PLAY=true` to seat people from a normal
+browser again, including local `pnpm dev`.

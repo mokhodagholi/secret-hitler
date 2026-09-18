@@ -21,6 +21,7 @@ import { WhatsNewModal } from './components/WhatsNewModal/WhatsNewModal';
 import { ChangelogScreen } from './screens/ChangelogScreen/ChangelogScreen';
 import { SupportScreen } from './screens/SupportScreen/SupportScreen';
 import { OnboardingIntroScreen } from './screens/OnboardingIntroScreen/OnboardingIntroScreen';
+import { MessengerOnlyScreen } from './screens/MessengerOnlyScreen/MessengerOnlyScreen';
 import { criticalBootUrls } from './services/prefetch';
 import { waitForOnline } from './services/online';
 
@@ -101,7 +102,11 @@ function FollowMatchStart() {
 }
 
 function Router() {
-  const { nav } = useApp();
+  const { nav, flags, miniApp } = useApp();
+  // The website is not a table. Localhost still looks like Bale because of the mock.
+  if (miniApp.platform === 'browser' && !flags.flags.browserPlay) {
+    return <MessengerOnlyScreen />;
+  }
   return (
     <Switch fallback={<HomeScreen />}>
       <Match when={nav.screen() === 'home'}>
@@ -246,12 +251,14 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
 }
 
 function SitOffer() {
-  const { tutorial, nav, i18n, settings, flags, game, ravi } = useApp();
+  const { tutorial, nav, i18n, settings, flags, game, ravi, miniApp } = useApp();
   const { formatMessage } = i18n;
+  const websiteClosed = () => miniApp.platform === 'browser' && !flags.flags.browserPlay;
 
   // Offer after this dialog exists. Asking during splash leaves offeringSit
   // true with no subscriber, and ConfirmDialog never sees a closed → open flip.
   createEffect(() => {
+    if (websiteClosed()) return;
     // Catalog defaults onboarding on, so Sit can open even before /api/flags.
     const onboarding = flags.flags.onboarding;
     if (!onboarding) return;
@@ -262,7 +269,8 @@ function SitOffer() {
     );
   });
 
-  const sitOpen = () => tutorial.offeringSit() && flags.flags.onboarding;
+  const sitOpen = () =>
+    !websiteClosed() && tutorial.offeringSit() && flags.flags.onboarding;
   // First splash: Sit only. Later launches (after a Not now) may defer.
   const sitRequired = () => tutorial.declineCount() === 0;
 
@@ -278,6 +286,7 @@ function SitOffer() {
       confirmLabel={formatMessage('onboard.sit')}
       cancelLabel={sitRequired() ? undefined : formatMessage('onboard.notNow')}
       onConfirm={() => {
+        ravi.prime();
         ravi.cancel();
         tutorial.startIntro({
           name: settings.settings.profileName.trim() || formatMessage('game.you'),
@@ -289,6 +298,7 @@ function SitOffer() {
         sitRequired()
           ? undefined
           : () => {
+              ravi.prime();
               ravi.cancel();
               tutorial.declineSit();
             }

@@ -1,5 +1,5 @@
 import { Show } from 'solid-js';
-import { describe, expect, it } from '@rstest/core';
+import { describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { GameScreen } from './GameScreen';
 import { en } from '../../i18n/locales/en';
@@ -77,6 +77,24 @@ describe('GameScreen — look', () => {
     expect(
       screen.queryByRole('dialog', { name: en.game.chancellorRevealTitleYou }),
     ).toBeNull();
+  });
+
+  it('Should speak each look line once, even when the next beat repeats it', () => {
+    const harness = buildHarness();
+    const speak = rs.spyOn(harness.services.ravi, 'speakGuide');
+    openLook(harness);
+    renderWithApp(() => <LookRoutes />, harness);
+
+    while (harness.services.tutorial.looking()) {
+      if (harness.services.tutorial.advanceLook()) break;
+    }
+
+    const times = (key: string) =>
+      speak.mock.calls.filter((call) => call[0] === key).length;
+    expect(times('onboard.idea.welcome')).toBe(1);
+    expect(times('onboard.idea.people')).toBe(1);
+    expect(times('onboard.idea.talkAbout')).toBe(1);
+    expect(times('onboard.idea.yourTurn')).toBe(1);
   });
 
   it('Should retreat one look beat when Previous is pressed', () => {

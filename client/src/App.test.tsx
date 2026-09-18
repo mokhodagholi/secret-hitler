@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
 import { App } from './App';
 import { en } from './i18n/locales/en';
+import { BrowserMiniApp } from './services/miniapp';
 import { TUTORIAL_ANNOUNCE_LIMIT, ONBOARDING_DECLINE_KEY } from './tutorial/TutorialService';
 import { buildHarness, makeView } from '../test/test-utils';
 
@@ -96,6 +97,16 @@ describe('App — first-run look', () => {
     expect(harness.services.nav.screen()).toBe('home');
     expect(screen.queryByText(en.onboard.piece.welcome)).toBeNull();
     expect(harness.services.tutorial.offeringSit()).toBe(false);
+  });
+
+  it('Should tell a website visitor to open Bale or Telegram', async () => {
+    const harness = buildHarness({ flags: { browserPlay: false, onboarding: false } });
+    harness.services.miniApp = new BrowserMiniApp();
+    render(() => <App services={harness.services} />);
+
+    await waitFor(() => expect(screen.getByText(en.messengerOnly.title)).toBeTruthy());
+    expect(screen.getByText(en.messengerOnly.body)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.home.play })).toBeNull();
   });
 });
 

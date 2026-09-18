@@ -1,5 +1,5 @@
 import { Show } from 'solid-js';
-import { describe, expect, it } from '@rstest/core';
+import { describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import { GameScreen } from './GameScreen';
 import { en } from '../../i18n/locales/en';
@@ -77,5 +77,26 @@ describe('GameScreen — five-player table', () => {
       expect(harness.services.tutorial.playView()?.you.vote).toBe('ja');
     });
     expect(screen.queryByRole('button', { name: en.game.voteJa })).toBeNull();
+  });
+
+  it('Should speak each scripted line once', async () => {
+    const harness = buildHarness();
+    const speak = rs.spyOn(harness.services.ravi, 'speakGuide');
+    harness.services.tutorial.startFive({ name: 'You', avatar: 0 });
+    harness.services.nav.navigate('game');
+    renderWithApp(() => <PlayRoutes />, harness);
+
+    harness.services.tutorial.finishNight();
+    await waitFor(() => {
+      expect(screen.getByText(en.onboard.openNominateTap)).toBeTruthy();
+    });
+
+    const times = (key: string) =>
+      speak.mock.calls.filter((call) => call[0] === key).length;
+    expect(times('onboard.youPresident')).toBe(1);
+    expect(times('onboard.mustNominate')).toBe(1);
+    expect(times('onboard.openNominate')).toBe(1);
+    expect(times('onboard.openNominateTap')).toBe(1);
+    expect(times('onboard.pick')).toBe(0);
   });
 });
