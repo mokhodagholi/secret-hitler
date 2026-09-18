@@ -1,8 +1,8 @@
 import { describe, expect, it } from '@rstest/core';
 import { Phase } from '@secret-hitler/shared';
 import { NavigationService } from '../services/NavigationService';
-import { LOOK_BEATS, LOOK_SEAT, buildLookView, effectForLookTarget, LOOK_CAMPAIGN, LOOK_CAMPAIGN_AGAIN, samePitch } from './lookView';
-import { en } from '../i18n/locales/en';
+import { LOOK_BEATS, LOOK_SEAT, buildLookView, effectForLookTarget, LOOK_CAMPAIGN } from './lookView';
+import { portraitGender } from '../assets/avatars';
 import {
   ONBOARDING_DECLINE_KEY,
   ONBOARDING_STEP_KEY,
@@ -133,6 +133,18 @@ describe('TutorialService — look', () => {
     expect(view.board.president).toBe(LOOK_SEAT.nima);
   });
 
+  it('Should sit men on man names and women on woman names', () => {
+    const view = buildLookView({ name: 'You', avatar: 0 }, 0);
+    const nima = view.players.find((player) => player.id === LOOK_SEAT.nima);
+    const sara = view.players.find((player) => player.id === LOOK_SEAT.sara);
+    const reza = view.players.find((player) => player.id === LOOK_SEAT.reza);
+    const omid = view.players.find((player) => player.id === LOOK_SEAT.omid);
+    expect(portraitGender(nima?.avatar ?? -1)).toBe('man');
+    expect(portraitGender(sara?.avatar ?? -1)).toBe('woman');
+    expect(portraitGender(reza?.avatar ?? -1)).toBe('man');
+    expect(portraitGender(omid?.avatar ?? -1)).toBe('man');
+  });
+
   it('Should name Nima president once people start talking', () => {
     const chatBeat = LOOK_BEATS.findIndex((beat) => beat.target === 'chat');
     const view = buildLookView({ name: 'You', avatar: 0 }, chatBeat);
@@ -156,6 +168,7 @@ describe('TutorialService — look', () => {
     expect(effectForLookTarget('government')).toBe('onboard-offices');
     expect(effectForLookTarget('table')).toBeNull();
     expect(effectForLookTarget('chat')).toBeNull();
+    expect(effectForLookTarget('messages')).toBeNull();
     expect(effectForLookTarget('composer')).toBeNull();
   });
 
@@ -189,8 +202,9 @@ describe('TutorialService — look', () => {
     expect(tutorial.lock()).toBe('night');
     expect(tutorial.headlineKey()).toBe('onboard.nightDone');
     tutorial.finishNight();
-    expect(tutorial.lock()).toBe('nominate');
-    expect(tutorial.headlineKey()).toBe('onboard.pick');
+    expect(tutorial.lock()).toBeNull();
+    expect(tutorial.headlineKey()).toBe('onboard.youPresident');
+    expect(tutorial.maskLifted()).toBe(true);
     tutorial.skipFive();
   });
 
@@ -202,6 +216,25 @@ describe('TutorialService — look', () => {
     expect(tutorial.talk().some((line) => line.key === 'onboard.talk.pickMe')).toBe(
       true,
     );
+    expect(tutorial.lock()).toBe('nominate');
+    expect(tutorial.headlineKey()).toBe('onboard.pick');
+    expect(tutorial.target()).toBe('nima');
+    expect(tutorial.passHole()).toBe(true);
+    tutorial.skipFive();
+  });
+
+  it('Should nominate Nima once the pick lock is on', async () => {
+    const tutorial = new TutorialService();
+    tutorial.startFive({ name: 'You', avatar: 0 });
+    tutorial.finishNight();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const nima = tutorial.playView()?.players.find((player) => player.name === 'Nima');
+    expect(nima).toBeTruthy();
+    expect(tutorial.isNominateHintSeat(nima!.id)).toBe(true);
+    expect(tutorial.handlePlay({ kind: 'nominateChancellor', targetId: nima!.id })).toBe(
+      true,
+    );
+    expect(tutorial.playView()?.board.chancellor).toBe(nima!.id);
     tutorial.skipFive();
   });
 
@@ -219,6 +252,85 @@ describe('TutorialService — look', () => {
     expect(tutorial.target()).toBe(LOOK_BEATS[0].target);
   });
 
+  it('Should skip a look beat without leaving the table', () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    expect(tutorial.skipLookBeat()).toBe(false);
+    expect(tutorial.looking()).toBe(true);
+    expect(tutorial.headlineKey()).toBe(LOOK_BEATS[1].headline);
+    tutorial.skipLook();
+  });
+
+  it('Should skip the first write wait onto where-were-we', () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    const tryIndex = LOOK_BEATS.findIndex((beat) => beat.wait === 'try');
+    for (let index = 0; index < tryIndex; index++) tutorial.advanceLook();
+    expect(tutorial.lookWait()).toBe('try');
+    expect(tutorial.skipLookBeat()).toBe(false);
+    expect(tutorial.headlineKey()).toBe('onboard.idea.whereWereWe');
+    expect(tutorial.maskLifted()).toBe(true);
+    tutorial.skipLook();
+  });
+
+  it('Should lift on lets-listen then ring chat when the table talks', () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    const talkAbout = LOOK_BEATS.findIndex(
+      (beat) => beat.headline === 'onboard.idea.talkAbout' && beat.wait === 'continue',
+    );
+    for (let index = 0; index < talkAbout; index++) tutorial.advanceLook();
+    expect(tutorial.headlineKey()).toBe('onboard.idea.talkAbout');
+    expect(tutorial.maskLifted()).toBe(true);
+    expect(tutorial.advanceLook()).toBe(false);
+    expect(tutorial.lookWait()).toBe('talk');
+    expect(tutorial.target()).toBe('chat');
+    expect(tutorial.maskLifted()).toBe(false);
+    tutorial.skipLook();
+  });
+
+  it('Should skip the campaign wait and ask the viewer to write', () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    const talkIndex = LOOK_BEATS.findIndex((beat) => beat.wait === 'talk');
+    for (let index = 0; index < talkIndex; index++) tutorial.advanceLook();
+    expect(tutorial.lookWait()).toBe('talk');
+    expect(tutorial.skipLookBeat()).toBe(false);
+    expect(tutorial.lookWait()).toBe('say');
+    expect(tutorial.headlineKey()).toBe('onboard.idea.yourTurn');
+    tutorial.skipLook();
+  });
+
+  it('Should lift after the viewer first line then pick the lesson back up', () => {
+    const tutorial = new TutorialService();
+    tutorial.startLook({ name: 'You', avatar: 0 });
+    const tryIndex = LOOK_BEATS.findIndex((beat) => beat.wait === 'try');
+    for (let index = 0; index < tryIndex; index++) tutorial.advanceLook();
+    expect(tutorial.lookWait()).toBe('try');
+    expect(tutorial.canContinueLook()).toBe(false);
+    expect(tutorial.lookTyping()).toBe(true);
+    expect(tutorial.lookComposeHint()).toBe(false);
+
+    tutorial.say('hello there');
+    expect(tutorial.headlineKey()).toBe('onboard.idea.whereWereWe');
+    expect(tutorial.maskLifted()).toBe(true);
+    expect(tutorial.talk().some((line) => line.text === 'hello there')).toBe(true);
+    expect(tutorial.lookWait()).toBe('pause');
+
+    tutorial.lookHeadlineFinished();
+    expect(tutorial.headlineKey()).toBe('onboard.idea.whereWereWe');
+
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        expect(tutorial.headlineKey()).toBe('onboard.idea.campaign');
+        expect(tutorial.maskLifted()).toBe(true);
+        expect(tutorial.talk().some((line) => line.text === 'hello there')).toBe(true);
+        tutorial.skipLook();
+        resolve();
+      }, 20);
+    });
+  });
+
   it('Should play the campaign then name the viewer chancellor', async () => {
     const tutorial = new TutorialService();
     tutorial.startLook({ name: 'You', avatar: 0 });
@@ -233,18 +345,11 @@ describe('TutorialService — look', () => {
       LOOK_CAMPAIGN.map((line) => line.key),
     );
 
-    const hint = en.onboard.idea.composeHint;
-    tutorial.say(hint, hint);
+    expect(tutorial.lookComposeHintKey()).toBe('onboard.idea.composeHint');
+    tutorial.say('count me in');
+    expect(tutorial.maskLifted()).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(tutorial.talk().some((line) => line.key === 'onboard.talk.badLine')).toBe(
-      true,
-    );
-    expect(tutorial.lookComposeHintKey()).toBe('onboard.idea.composeHint2');
-    expect(tutorial.lookWait()).toBe('say');
-
-    const hint2 = en.onboard.idea.composeHint2;
-    tutorial.say(hint2, hint2);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tutorial.talk().some((line) => line.text === 'count me in')).toBe(true);
     expect(tutorial.talk().some((line) => line.key === 'onboard.talk.iPickYou')).toBe(
       true,
     );
@@ -254,7 +359,7 @@ describe('TutorialService — look', () => {
     tutorial.skipLook();
   });
 
-  it('Should reject a pitch that is not the suggestion then ask again', async () => {
+  it('Should accept any pitch then name the viewer chancellor', async () => {
     const tutorial = new TutorialService();
     tutorial.startLook({ name: 'You', avatar: 0 });
     const talkIndex = LOOK_BEATS.findIndex((beat) => beat.wait === 'talk');
@@ -262,36 +367,15 @@ describe('TutorialService — look', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(tutorial.lookWait()).toBe('say');
 
-    tutorial.say('put me in', en.onboard.idea.composeHint);
-    expect(tutorial.lookWait()).toBe('talk');
+    tutorial.say('whatever I want');
+    expect(tutorial.maskLifted()).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(tutorial.talk().some((line) => line.key === 'onboard.talk.badLine')).toBe(
+    expect(tutorial.talk().some((line) => line.text === 'whatever I want')).toBe(true);
+    expect(tutorial.talk().some((line) => line.key === 'onboard.talk.iPickYou')).toBe(
       true,
     );
-    expect(
-      LOOK_CAMPAIGN_AGAIN.every((line) =>
-        tutorial.talk().some((spoken) => spoken.key === line.key),
-      ),
-    ).toBe(true);
-    expect(tutorial.lookWait()).toBe('say');
-    expect(tutorial.lookComposeHintKey()).toBe('onboard.idea.composeHint2');
-
-    tutorial.say('still no', en.onboard.idea.composeHint2);
-    expect(tutorial.headlineKey()).toBe('onboard.idea.writeTheHint');
-    expect(tutorial.lookWait()).toBe('say');
-
-    const hint2 = en.onboard.idea.composeHint2;
-    tutorial.say(hint2, hint2);
-    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(tutorial.target()).toBe('government');
     tutorial.skipLook();
-  });
-
-  it('Should treat collapsed spaces as the same pitch', () => {
-    expect(samePitch("  Just put me in. I don't care who wins.  ", en.onboard.idea.composeHint)).toBe(
-      true,
-    );
-    expect(samePitch('put me in', en.onboard.idea.composeHint)).toBe(false);
   });
 
   it('Should skip without marking the look complete', () => {
@@ -339,6 +423,15 @@ describe('TutorialService — count ladder', () => {
     const tutorial = new TutorialService();
     tutorial.startPlay({ name: 'You', avatar: 0 }, 6);
     expect(tutorial.continueLadder()).toBe(false);
+    tutorial.skipPlay();
+  });
+
+  it('Should skip a five-player table onto six', () => {
+    const tutorial = new TutorialService();
+    tutorial.startPlay({ name: 'You', avatar: 0 }, 5);
+    expect(tutorial.skipToNextPlay()).toBe(true);
+    expect(tutorial.playing()).toBe(true);
+    expect(tutorial.headlineKey()).toBe('onboard.nextSix');
     tutorial.skipPlay();
   });
 });

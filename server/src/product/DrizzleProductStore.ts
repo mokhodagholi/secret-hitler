@@ -2,11 +2,13 @@ import { and, desc, eq, gt, gte, isNull, lt, or, sql } from 'drizzle-orm';
 import type { MessengerKind } from '@secret-hitler/shared';
 import { connectDatabase, type Database, type DbConnection } from '../db/connection';
 import {
+  friendRequests,
   productBlastRecipients,
   productBlasts,
   productEvents,
   productLobbies,
   productMatches,
+  tableInvites,
 } from '../db/schema';
 import { LOBBY_FILL } from './lobbyFill';
 import {
@@ -277,6 +279,7 @@ export class DrizzleProductStore implements ProductStore {
           and(gte(productLobbies.openedAt, from), lt(productLobbies.openedAt, to)),
           and(gte(productLobbies.dealtAt, from), lt(productLobbies.dealtAt, to)),
           and(gte(productLobbies.diedAt, from), lt(productLobbies.diedAt, to)),
+          and(gte(productLobbies.reached5At, from), lt(productLobbies.reached5At, to)),
         ),
       );
 
@@ -322,7 +325,38 @@ export class DrizzleProductStore implements ProductStore {
       afkKicks: row.afkKicks,
     }));
 
-    return { events, lobbies, matches };
+    const friendRows = await this.db
+      .select({ resolvedAt: friendRequests.resolvedAt })
+      .from(friendRequests)
+      .where(
+        and(
+          eq(friendRequests.status, 'accepted'),
+          gte(friendRequests.resolvedAt, from),
+          lt(friendRequests.resolvedAt, to),
+        ),
+      );
+    const inviteRows = await this.db
+      .select({ resolvedAt: tableInvites.resolvedAt })
+      .from(tableInvites)
+      .where(
+        and(
+          eq(tableInvites.status, 'accepted'),
+          gte(tableInvites.resolvedAt, from),
+          lt(tableInvites.resolvedAt, to),
+        ),
+      );
+
+    return {
+      events,
+      lobbies,
+      matches,
+      friendAccepts: friendRows
+        .filter((row): row is { resolvedAt: Date } => row.resolvedAt != null)
+        .map((row) => ({ resolvedAt: row.resolvedAt })),
+      tableInviteAccepts: inviteRows
+        .filter((row): row is { resolvedAt: Date } => row.resolvedAt != null)
+        .map((row) => ({ resolvedAt: row.resolvedAt })),
+    };
   }
 
   close(): Promise<void> {

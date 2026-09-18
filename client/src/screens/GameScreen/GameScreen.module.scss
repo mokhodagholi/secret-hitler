@@ -13,9 +13,8 @@
   background: #2a1c14;
   padding-top: env(safe-area-inset-top, 0px);
   --chat-panel-height: 280px;
-  /* Button row (~44) + bottom inset (12) + gap above Skip / Continue (~40). */
-  --look-chrome-height: 96px;
-  --look-chrome-nudge: 0px;
+  /* Button row (~44) + bottom inset (16) + gap between chat and Skip / Continue (~16). */
+  --look-chrome-height: 76px;
 }
 
 .body {
@@ -39,7 +38,7 @@
 }
 
 .sceneLookChat .players {
-  padding-bottom: 28px;
+  padding-bottom: 8px;
 }
 
 .lookSeeNext {

@@ -7,6 +7,7 @@ import { PolicyDeck, type Policy } from '@secret-hitler/shared';
 export class StackedDeck extends PolicyDeck {
   constructor(private readonly tiles: Policy[]) {
     super();
+    this.restore([], []);
   }
 
   override reset(): void {
@@ -19,5 +20,10 @@ export class StackedDeck extends PolicyDeck {
 
   override peekTop(count: number): Policy[] {
     return this.tiles.slice(0, count);
+  }
+
+  override discardTiles(tiles: Policy[]): void {
+    const snapshot = this.toSnapshot();
+    this.restore(snapshot.draw, [...snapshot.discard, ...tiles]);
   }
 }

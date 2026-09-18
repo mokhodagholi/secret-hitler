@@ -11,4 +11,28 @@ export const PRODUCT_DIGEST = {
   timeZone: 'Asia/Tehran',
   /** Iran is fixed UTC+3:30 (no DST since 2022). */
   iranOffsetMs: (3 * 60 + 30) * 60_000,
+  /**
+   * Timer jitter vs a boot clock that was hours ahead (which captures a
+   * future slot and posts an empty digest). Only clamp past this slack.
+   */
+  futureBoundarySlackMs: 60_000,
+  /** Evening cafe hours (Iran), used for the night-sitter goal. */
+  eveningHourFrom: 18,
+  eveningHourTo: 24,
+} as const;
+
+/**
+ * Iran-day numbers we fight for. Baseline was 17 Sep 2026 (first full
+ * events day). Do not treat friend-*requests sent* as a goal.
+ */
+export const PRODUCT_GOALS = {
+  gamesFinished: 180,
+  seatedUsers: 900,
+  reached5: 350,
+  friendAccepts: 40,
+  tableInviteAccepts: 50,
+  eveningSitters: 350,
+  d1SitPct: 35,
+  abandonPctMax: 12,
+  fillSatPctMin: 20,
 } as const;

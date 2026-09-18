@@ -1,6 +1,38 @@
 {
   "releases": [
     {
+      "version": "0.8.3",
+      "bump": "patch",
+      "date": "2026-09-18",
+      "changes": [
+        {
+          "kind": "fix",
+          "fa": "اولین رئیس‌جمهور هر بازی تصادفی انتخاب می‌شود، نه همیشه صندلی اول.",
+          "en": "The first President is now chosen at random, not always the first seat."
+        },
+        {
+          "kind": "fix",
+          "fa": "وقتی رئیس‌جمهور و صدراعظم قانون برمی‌دارند، نوشتن در چت قفل می‌شود تا میز ساکت بماند.",
+          "en": "Table chat locks while the President and Chancellor pick laws, so the table stays quiet."
+        },
+        {
+          "kind": "fix",
+          "fa": "اگر رئیس‌جمهور به پیشنهاد وتو جواب ندهد، وتو رد می‌شود و صدراعظم باید قانون بگذارد.",
+          "en": "If the President does not answer a veto, it is refused and the Chancellor must enact a law."
+        },
+        {
+          "kind": "fix",
+          "fa": "اگر ارتباط بازیکنان قطع شود، فاشیست‌ها دیگر فقط به‌خاطر تعداد بیشتر در میز برنده نمی‌شوند.",
+          "en": "If players disconnect, Fascists no longer win just because they outnumber whoever stayed."
+        },
+        {
+          "kind": "feat",
+          "fa": "در راهنمای نوشتاری می‌توانید ببینید این میز آنلاین با کتاب بازی چه فرقی دارد.",
+          "en": "The written guide now lists how this online table differs from the printed rulebook."
+        }
+      ]
+    },
+    {
       "version": "0.8.2",
       "bump": "patch",
       "date": "2026-09-18",

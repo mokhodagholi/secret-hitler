@@ -1473,7 +1473,7 @@ export function GameScreen() {
               <Spotlight
                 target={tutorial.target()}
                 lifted={tutorial.maskLifted() || tutorial.lookBlurred()}
-                passHole={tutorial.lookPassHole()}
+                passHole={tutorial.passHole()}
                 layoutKey={chatHeight() + tutorial.talk().length}
                 continueLabel={
                   tutorial.looking()

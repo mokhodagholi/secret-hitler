@@ -84,9 +84,9 @@ interface HoleRect {
 /** Space between the gold ring and the punched-out widget. */
 const HOLE_PAD = 8;
 const HOLE_RADIUS = 12;
-/** Keep the chat ring off the screen edge and under Continue. */
+/** Keep the chat ring off the screen edge. Continue sits under the panel. */
 const CHAT_EDGE = 20;
-const CHAT_TOP_GAP = 52;
+const CHAT_INSET = 10;
 
 /**
  * Warm-smoke mask with one punched-out region. Previous / Continue / Skip sit
@@ -98,6 +98,7 @@ const CHAT_TOP_GAP = 52;
  */
 export function Spotlight(props: SpotlightProps) {
   const [holes, setHoles] = createSignal<HoleRect[]>([]);
+  const [passRect, setPassRect] = createSignal<HoleRect | null>(null);
   const [size, setSize] = createSignal({ width: 0, height: 0 });
   let overlay: HTMLDivElement | undefined;
 
@@ -112,6 +113,7 @@ export function Spotlight(props: SpotlightProps) {
     );
     if (!nodes || nodes.length === 0) {
       setHoles([]);
+      setPassRect(null);
       return;
     }
 
@@ -131,6 +133,15 @@ export function Spotlight(props: SpotlightProps) {
 
     nodes.forEach((node) => {
       absorb(node.getBoundingClientRect());
+      // Chat messages scroll out of the panel; folding them grows the ring.
+      if (
+        props.target === 'chat' ||
+        props.target === 'messages' ||
+        props.target === 'composer' ||
+        props.target === 'mic'
+      ) {
+        return;
+      }
       node.querySelectorAll('*').forEach((child) => {
         absorb(child.getBoundingClientRect());
       });
@@ -138,13 +149,31 @@ export function Spotlight(props: SpotlightProps) {
 
     if (!found) {
       setHoles([]);
+      setPassRect(null);
       return;
     }
 
-    if (props.target === 'chat' || props.target === 'composer') {
-      const topGap = props.target === 'chat' ? CHAT_TOP_GAP : 10;
+    if (props.target === 'composer') {
+      const visual: HoleRect = {
+        left: left - overlayBox.left,
+        top: top - overlayBox.top,
+        width: right - left,
+        height: bottom - top,
+      };
+      setHoles([visual]);
+      setPassRect(visual);
+      return;
+    }
+
+    setPassRect(null);
+
+    if (
+      props.target === 'chat' ||
+      props.target === 'messages' ||
+      props.target === 'mic'
+    ) {
       const holeLeft = Math.max(CHAT_EDGE, left - overlayBox.left + 6);
-      const holeTop = top - overlayBox.top + topGap;
+      const holeTop = top - overlayBox.top + CHAT_INSET;
       const holeRight = Math.min(
         overlayBox.width - CHAT_EDGE,
         right - overlayBox.left - 6,
@@ -214,7 +243,7 @@ export function Spotlight(props: SpotlightProps) {
       <Show when={!props.lifted}>
         <>
       <Show
-        when={props.passHole && holes()[0]}
+        when={props.passHole && (passRect() ?? holes()[0])}
         fallback={
           <div
             classList={{
@@ -249,8 +278,8 @@ export function Spotlight(props: SpotlightProps) {
                     y={rect.top}
                     width={rect.width}
                     height={rect.height}
-                    rx={HOLE_RADIUS}
-                    ry={HOLE_RADIUS}
+                    rx={props.target === 'composer' ? 0 : HOLE_RADIUS}
+                    ry={props.target === 'composer' ? 0 : HOLE_RADIUS}
                     fill="#000"
                   />
                 )}
@@ -258,11 +287,11 @@ export function Spotlight(props: SpotlightProps) {
             </mask>
           </defs>
           <rect
+            class={styles.maskFill}
             x="0"
             y="0"
             width={size().width}
             height={size().height}
-            fill="rgba(12, 8, 5, 0.55)"
             mask={`url(#${maskId})`}
           />
         </svg>
@@ -271,7 +300,10 @@ export function Spotlight(props: SpotlightProps) {
             <button
               type="button"
               class={styles.hole}
-              classList={{ [styles.holePass]: props.passHole === true }}
+              classList={{
+                [styles.holePass]: props.passHole === true,
+                [styles.holeFlush]: props.target === 'composer',
+              }}
               style={holeStyle(rect)}
               tabIndex={-1}
               aria-hidden="true"

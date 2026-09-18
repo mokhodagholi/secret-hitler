@@ -87,14 +87,10 @@ export class TutorialDirector {
     this.campaignThenNominate();
   }
 
-  /** Live tables pick a random living president; tests keep seat 0 so the first teaching lock stays stable. */
+  /** Five-player first hand: you are President so the nominate lock stays on you. */
   private shufflePresident(): void {
     if (this.table.count !== 5) return;
-    const living = this.table.room.players.filter((player) => player.isAlive);
-    if (living.length === 0) return;
-    const index = TEST ? 0 : Math.floor(Math.random() * living.length);
-    const pick = living[index];
-    if (pick) this.table.room.presidentId = pick.id;
+    this.table.room.presidentId = this.table.youId;
   }
 
   private campaignThenNominate(): void {
@@ -120,8 +116,8 @@ export class TutorialDirector {
     };
 
     if (president === this.table.youId) {
-      this.hooks.onHeadline('onboard.pick');
-      this.hooks.onLock('nominate');
+      this.hooks.onHeadline('onboard.youPresident');
+      this.hooks.onLock(null);
       this.hooks.onView();
     } else {
       this.hooks.onHeadline('onboard.watch');
@@ -133,7 +129,12 @@ export class TutorialDirector {
   private openFirstNomination(): void {
     if (this.stopped) return;
     const president = this.table.room.presidentId;
-    if (president === this.table.youId) return;
+    if (president === this.table.youId) {
+      this.hooks.onHeadline('onboard.pick');
+      this.hooks.onLock('nominate');
+      this.hooks.onView();
+      return;
+    }
     if (!president) return;
     const target = this.chancellorFor(president);
     if (!target) return;

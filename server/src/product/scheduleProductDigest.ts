@@ -33,10 +33,69 @@ export function nextProductDigestAt(
   return new Date(boundaryIranAsUtc - offset);
 }
 
+/** Most recently closed Iran-local boundary at or before `now`. */
+export function lastProductDigestAt(
+  now: Date,
+  intervalMs: number = PRODUCT_DIGEST.intervalMs,
+): Date {
+  return new Date(nextProductDigestAt(now, intervalMs).getTime() - intervalMs);
+}
+
 /** Previous closed window ending at `to` (exclusive end). */
 export function productDigestWindow(
   to: Date,
   intervalMs: number = PRODUCT_DIGEST.intervalMs,
 ): { from: Date; to: Date } {
   return { from: new Date(to.getTime() - intervalMs), to };
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** 00:00 Iran of the calendar day that contains `at`. */
+export function iranDayStart(at: Date): Date {
+  const offset = PRODUCT_DIGEST.iranOffsetMs;
+  const shifted = new Date(at.getTime() + offset);
+  return new Date(
+    Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()) - offset,
+  );
+}
+
+export interface ProductScoreboardRange {
+  /** Scoreboard day start (inclusive). */
+  dayFrom: Date;
+  /** Scoreboard day end (exclusive) — digest boundary, or next midnight. */
+  dayTo: Date;
+  /** Previous Iran day, for D1. */
+  previousFrom: Date;
+  previousTo: Date;
+  /** Fetch events from here (previous day start). */
+  lookbackFrom: Date;
+  /** True when `windowEnd` is 00:00 Iran — yesterday is a complete day. */
+  complete: boolean;
+}
+
+/**
+ * Iran-day scoreboard for a digest that just closed at `windowEnd`.
+ * Midnight posts the day that just finished; 06/12/18 post today so far.
+ */
+export function productScoreboardRange(windowEnd: Date): ProductScoreboardRange {
+  const offset = PRODUCT_DIGEST.iranOffsetMs;
+  const shifted = new Date(windowEnd.getTime() + offset);
+  const complete =
+    shifted.getUTCHours() === 0 &&
+    shifted.getUTCMinutes() === 0 &&
+    shifted.getUTCSeconds() === 0 &&
+    shifted.getUTCMilliseconds() === 0;
+
+  const dayTo = windowEnd;
+  const dayFrom = complete ? new Date(windowEnd.getTime() - MS_PER_DAY) : iranDayStart(windowEnd);
+  const previousFrom = new Date(dayFrom.getTime() - MS_PER_DAY);
+  return {
+    dayFrom,
+    dayTo,
+    previousFrom,
+    previousTo: dayFrom,
+    lookbackFrom: previousFrom,
+    complete,
+  };
 }

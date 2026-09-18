@@ -126,11 +126,17 @@ export interface ProductStore {
    */
   listWarmInviteTargets(query: WarmInviteQuery): Promise<string[]>;
   /**
-   * Aggregate funnel / lobby / fill / match health for one closed time window.
-   * Caller supplies `liveRooms` when formatting the support-group digest.
+   * Aggregate funnel / lobby / fill / match / social-accept rows from `from`
+   * (scoreboard lookback) until `to`. Caller supplies `liveRooms` when
+   * formatting the support-group digest.
    */
   summarizeDigestWindow(from: Date, to: Date): Promise<DigestWindowTotals>;
   close(): Promise<void>;
+}
+
+/** One accepted friend request / table invite, for the Iran-day scoreboard. */
+export interface DigestSocialAccept {
+  resolvedAt: Date;
 }
 
 /** Counts for {@link summarizeProductDigest} without live-room / clock fields. */
@@ -138,6 +144,8 @@ export interface DigestWindowTotals {
   events: ProductEvent[];
   lobbies: ProductLobby[];
   matches: ProductMatch[];
+  friendAccepts: DigestSocialAccept[];
+  tableInviteAccepts: DigestSocialAccept[];
 }
 
 export const BLAST_RETURN_WINDOW_MS = 24 * 60 * 60 * 1000;

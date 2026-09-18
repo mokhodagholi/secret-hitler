@@ -1,5 +1,4 @@
 import {
-  AVATAR_COUNT,
   GameEngine,
   OPENING_CEREMONY_MS,
   Phase,
@@ -10,7 +9,7 @@ import {
   type Policy,
   type Role,
 } from '@secret-hitler/shared';
-import { DEFAULT_COMPANION_NAMES } from './cast';
+import { companionPortraits, DEFAULT_COMPANION_NAMES } from './cast';
 import { StackedDeck } from './StackedDeck';
 import type { LookYou } from './lookView';
 
@@ -123,10 +122,11 @@ export function startScriptedTable(you: LookYou, count: OnboardCount): ScriptedT
   const cast: Array<{ name: string; avatar: number; host?: boolean }> = [
     { name: you.name || 'You', avatar: you.avatar, host: true },
   ];
+  const portraits = companionPortraits(you.avatar, count - 1);
   for (let index = 0; index < count - 1; index++) {
     cast.push({
       name: companionName(you, index),
-      avatar: (you.avatar + index + 1) % AVATAR_COUNT,
+      avatar: portraits[index] ?? 0,
     });
   }
 
@@ -142,6 +142,12 @@ export function startScriptedTable(you: LookYou, count: OnboardCount): ScriptedT
   if (!youSeat) throw new Error('play table missing you');
   const started = engine.startGame(youSeat.id);
   if (started) throw new Error(`play start failed: ${started.code}`);
+  // Teaching table: you hold the first placard. Live games pick at random.
+  room.presidentId = youSeat.id;
+  if (room.currentRound) {
+    room.currentRound.presidentId = youSeat.id;
+    room.currentRound.presidentName = youSeat.name;
+  }
 
   const roles = rolesFor(count);
   room.players.forEach((player, index) => {

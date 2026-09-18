@@ -4,12 +4,15 @@ import { escapeBaleMarkdown } from '../bale/commands';
 import type { ProductStore } from './ProductStore';
 import { PRODUCT_DIGEST } from './productDigest';
 import {
+  lastProductDigestAt,
   nextProductDigestAt,
   productDigestWindow,
+  productScoreboardRange,
 } from './scheduleProductDigest';
 import {
   formatProductDigest,
   summarizeProductDigest,
+  summarizeProductScoreboard,
 } from './summarizeProductDigest';
 
 export interface ProductDigestServiceOptions {
@@ -29,6 +32,7 @@ export interface ProductDigestServiceOptions {
 /**
  * Posts a product digest to each configured support group on Iran-local
  * boundaries (every 6h for now; constant is the one place to move to 24h).
+ * The same message includes the Iran-day fight scoreboard vs PRODUCT_GOALS.
  */
 export class ProductDigestService {
   private readonly product: ProductStore;
@@ -69,8 +73,14 @@ export class ProductDigestService {
   /** Run one digest for the window ending at `to` (tests / manual). */
   async postWindow(to: Date = this.now()): Promise<string | null> {
     if (!this.hasDesk()) return null;
-    const { from, to: end } = productDigestWindow(to, this.intervalMs);
-    const totals = await this.product.summarizeDigestWindow(from, end);
+    const now = this.now();
+    const closedAt =
+      to.getTime() > now.getTime() + PRODUCT_DIGEST.futureBoundarySlackMs
+        ? lastProductDigestAt(now, this.intervalMs)
+        : to;
+    const { from, to: end } = productDigestWindow(closedAt, this.intervalMs);
+    const scoreRange = productScoreboardRange(end);
+    const totals = await this.product.summarizeDigestWindow(scoreRange.lookbackFrom, end);
     const snapshot = summarizeProductDigest({
       from,
       to: end,
@@ -79,7 +89,15 @@ export class ProductDigestService {
       lobbies: totals.lobbies,
       matches: totals.matches,
     });
-    const text = escapeBaleMarkdown(formatProductDigest(snapshot));
+    const scoreboard = summarizeProductScoreboard({
+      range: scoreRange,
+      events: totals.events,
+      lobbies: totals.lobbies,
+      matches: totals.matches,
+      friendAccepts: totals.friendAccepts,
+      tableInviteAccepts: totals.tableInviteAccepts,
+    });
+    const text = escapeBaleMarkdown(formatProductDigest(snapshot, scoreboard));
     await this.broadcast(text);
     return text;
   }

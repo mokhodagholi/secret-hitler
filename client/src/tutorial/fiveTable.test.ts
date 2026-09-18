@@ -2,6 +2,7 @@ import { describe, expect, it } from '@rstest/core';
 import { Phase } from '@secret-hitler/shared';
 import { isAllowedChancellor, startFiveTable } from './fiveTable';
 import { startScriptedTable } from './scriptedTable';
+import { portraitGender } from '../assets/avatars';
 
 describe('fiveTable', () => {
   it('Should open nomination at night with forced Liberal you and Fascist Reza', () => {
@@ -20,6 +21,15 @@ describe('fiveTable', () => {
     expect(isAllowedChancellor(table, table.saraId)).toBe(true);
     expect(isAllowedChancellor(table, table.rezaId)).toBe(false);
     expect(isAllowedChancellor(table, table.omidId)).toBe(false);
+  });
+
+  it('Should sit a man portrait on Nima and a woman portrait on Sara', () => {
+    const table = startFiveTable({ name: 'You', avatar: 0 });
+    expect(portraitGender(table.room.findPlayer(table.nimaId)?.avatar ?? -1)).toBe('man');
+    expect(portraitGender(table.room.findPlayer(table.saraId)?.avatar ?? -1)).toBe(
+      'woman',
+    );
+    expect(portraitGender(table.room.findPlayer(table.rezaId)?.avatar ?? -1)).toBe('man');
   });
 });
 

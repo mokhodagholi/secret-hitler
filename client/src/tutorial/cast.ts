@@ -1,4 +1,5 @@
 import type { MessageKey } from '../i18n';
+import { assignPortraits, type PortraitGender } from '../assets/avatars';
 import type { LookYou } from './lookView';
 
 export const COMPANION_IDS = [
@@ -12,6 +13,18 @@ export const COMPANION_IDS = [
   'hoda',
   'behrad',
 ] as const;
+
+export const COMPANION_GENDERS: readonly PortraitGender[] = [
+  'man',
+  'woman',
+  'man',
+  'man',
+  'woman',
+  'man',
+  'man',
+  'woman',
+  'man',
+];
 
 export const DEFAULT_COMPANION_NAMES = [
   'Nima',
@@ -29,6 +42,10 @@ export function localizedCompanions(
   formatMessage: (key: MessageKey) => string,
 ): string[] {
   return COMPANION_IDS.map((id) => formatMessage(`onboard.seat.${id}`));
+}
+
+export function companionPortraits(youAvatar: number, count: number): number[] {
+  return assignPortraits(youAvatar, COMPANION_GENDERS.slice(0, count));
 }
 
 export function tutorialYou(

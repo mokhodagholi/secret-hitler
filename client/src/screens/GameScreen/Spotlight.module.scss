@@ -1,6 +1,9 @@
 @use '../../styles/vars' as *;
 @use '../../styles/mixins' as *;
 
+// Warm smoke over the rest of the table — dark enough to kill contrast.
+$look-smoke: rgba(12, 8, 5, 0.8);
+
 .root {
   position: absolute;
   top: 0;
@@ -22,7 +25,7 @@
 }
 
 .blockDim {
-  background: rgba(12, 8, 5, 0.55);
+  background: $look-smoke;
 }
 
 .mask {
@@ -32,6 +35,10 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+.maskFill {
+  fill: $look-smoke;
 }
 
 .hole {
@@ -49,15 +56,16 @@
   pointer-events: none;
 }
 
+.holeFlush {
+  border-radius: 0;
+}
+
 // Height budget is mirrored by GameScreen --look-chrome-height / .lookChromeSpacer.
 .chrome {
   position: absolute;
   left: 16px;
   right: 16px;
-  bottom: calc(
-    12px + env(safe-area-inset-bottom, 0px) + var(--chat-panel-height, 0px) -
-      var(--look-chrome-nudge, 0px)
-  );
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 3;
   display: flex;
   align-items: center;

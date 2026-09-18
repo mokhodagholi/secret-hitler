@@ -1,10 +1,10 @@
 import {
-  AVATAR_COUNT,
   Phase,
   type GameStateView,
   type PublicPlayer,
 } from '@secret-hitler/shared';
 import type { MessageKey } from '../i18n';
+import { companionPortraits } from './cast';
 
 export const LOOK_ROOM_ID = 'look';
 
@@ -16,7 +16,7 @@ export const LOOK_SEAT = {
   omid: 'look-omid',
 } as const;
 
-export type LookWait = 'continue' | 'talk' | 'say' | 'auto';
+export type LookWait = 'continue' | 'talk' | 'say' | 'try' | 'auto' | 'pause';
 
 interface LookBeatSpec {
   target: string;
@@ -48,15 +48,36 @@ export const LOOK_BEATS = [
   },
   { target: 'chat', headline: 'onboard.idea.talk', wait: 'continue', chat: true },
   {
-    target: 'chat',
+    target: 'messages',
+    headline: 'onboard.idea.messages',
+    wait: 'continue',
+    chat: true,
+  },
+  {
+    target: 'composer',
+    headline: 'onboard.idea.writeHere',
+    wait: 'try',
+    chat: true,
+  },
+  {
+    target: 'table',
+    headline: 'onboard.idea.whereWereWe',
+    wait: 'pause',
+    lifted: true,
+    chat: true,
+  },
+  {
+    target: 'table',
     headline: 'onboard.idea.campaign',
     wait: 'continue',
+    lifted: true,
     chat: true,
   },
   {
     target: 'chat',
     headline: 'onboard.idea.talkAbout',
     wait: 'continue',
+    lifted: true,
     chat: true,
   },
   {
@@ -101,50 +122,20 @@ export function lookBlursTable(index: number): boolean {
   return lookBeatAt(index).blur === true;
 }
 
-/** Nima is President; the other three campaign, two lines each. */
+/** Nima asks the table; the others campaign, two lines each. */
 export const LOOK_CAMPAIGN: ReadonlyArray<{
   seat: keyof typeof LOOK_SEAT;
   key: MessageKey;
 }> = [
+  { seat: 'nima', key: 'onboard.talk.listening' },
   { seat: 'reza', key: 'onboard.talk.trustMe' },
   { seat: 'sara', key: 'onboard.talk.playingYou' },
   { seat: 'omid', key: 'onboard.talk.anyoneCan' },
-  { seat: 'nima', key: 'onboard.talk.listening' },
   { seat: 'reza', key: 'onboard.talk.putMeIn' },
   { seat: 'sara', key: 'onboard.talk.tooEager' },
   { seat: 'omid', key: 'onboard.talk.quietlyLiberal' },
   { seat: 'nima', key: 'onboard.talk.illPick' },
 ];
-
-/** Second pass after a pitch that was not the suggestion. */
-export const LOOK_CAMPAIGN_AGAIN: ReadonlyArray<{
-  seat: keyof typeof LOOK_SEAT;
-  key: MessageKey;
-}> = [
-  { seat: 'reza', key: 'onboard.talk.stillLiberal' },
-  { seat: 'sara', key: 'onboard.talk.pickElse' },
-  { seat: 'omid', key: 'onboard.talk.sameSong' },
-  { seat: 'nima', key: 'onboard.talk.stillListening' },
-  { seat: 'reza', key: 'onboard.talk.thisHand' },
-  { seat: 'sara', key: 'onboard.talk.noRush' },
-];
-
-/**
- * The compose ghost is the required line. Allow collapsed spaces and the
- * usual ي/ك slip; do not accept a different sentence.
- */
-export function samePitch(typed: string, expected: string): boolean {
-  return normalizePitch(typed) === normalizePitch(expected);
-}
-
-function normalizePitch(text: string): string {
-  return text
-    .replace(/\u064A/g, '\u06CC')
-    .replace(/\u0643/g, '\u06A9')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-}
 
 /** Lesson sting for the punched-out widget. Not live-table foley. */
 export type LookBeatEffect =
@@ -163,6 +154,7 @@ export function effectForLookTarget(target: string): LookBeatEffect | null {
     case 'boards':
       return 'onboard-boards';
     case 'president':
+    case 'nima':
     case 'government':
       return 'onboard-offices';
     case 'vote':
@@ -214,7 +206,7 @@ export function buildLookView(
   const target = beat.target;
   const withChancellor = options.picked === true || target === 'government';
 
-  const avatars = companionAvatars(you.avatar);
+  const avatars = companionPortraits(you.avatar, 4);
   const players: PublicPlayer[] = [
     seat({
       id: LOOK_SEAT.you,
@@ -301,17 +293,6 @@ function emptyView(players: PublicPlayer[], withChancellor: boolean): GameStateV
       wantStartCooldownUntil: null,
     },
   };
-}
-
-function companionAvatars(youAvatar: number): [number, number, number, number] {
-  const picks: number[] = [];
-  for (let index = 0; picks.length < 4; index++) {
-    const avatar = index % AVATAR_COUNT;
-    if (avatar === youAvatar && AVATAR_COUNT > 1) continue;
-    if (picks.includes(avatar)) continue;
-    picks.push(avatar);
-  }
-  return picks as [number, number, number, number];
 }
 
 function seat(

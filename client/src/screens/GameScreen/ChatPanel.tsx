@@ -239,7 +239,7 @@ export function ChatPanel(props: ChatPanelProps) {
 
   function sendChat(): void {
     if (!composerEnabled() || !talkingAllowed() || !canSend()) return;
-    if (tutorial.looking()) tutorial.say(chatDraft(), props.composeHint);
+    if (tutorial.looking()) tutorial.say(chatDraft());
     else if (tutorial.playing()) tutorial.say(chatDraft());
     else game.sendChat(chatDraft());
     setChatDraft('');

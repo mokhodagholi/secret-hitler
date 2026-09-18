@@ -126,7 +126,7 @@ export function OnboardingIntroScreen() {
             {progressSep()}
             <bdi>{progressTotal()}</bdi>
           </span>
-          <button type="button" class={styles.skip} onClick={leave}>
+          <button type="button" class={styles.skip} onClick={openLook}>
             {formatMessage('onboard.skip')}
           </button>
         </header>

@@ -78,6 +78,7 @@ export function TableSeat(props: TableSeatProps) {
 
   /** Seat offices yield to the ticket dialog on the look government beat. */
   const tutorialTarget = () => {
+    if (tutorial.isNominateHintSeat(props.player.id)) return 'nima';
     if (props.ballot === 'ja' || props.ballot === 'nein') return 'ballots';
     if (tutorial.looking() && tutorial.target() === 'government') {
       return undefined;

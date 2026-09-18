@@ -20,13 +20,11 @@ import {
 import {
   LOOK_BEATS,
   LOOK_CAMPAIGN,
-  LOOK_CAMPAIGN_AGAIN,
   LOOK_SEAT,
   buildLookView,
   lookBeatAt,
   lookBlursTable,
   lookShowsChat,
-  samePitch,
   type LookWait,
   type LookYou,
 } from './lookView';
@@ -92,7 +90,6 @@ export class TutorialService {
 
   private lookSettled = false;
   private lookPicked = false;
-  private lookPitchFails = 0;
   private lookTimers: number[] = [];
   private sitAsked = false;
   private lookYou: LookYou | null = null;
@@ -328,8 +325,33 @@ export class TutorialService {
     return this.lookHintKey();
   }
 
+  /** Composer is the lesson — taps must reach the field. */
+  lookTyping(): boolean {
+    if (!this.looking()) return false;
+    const wait = this.lookWait();
+    return wait === 'say' || wait === 'try';
+  }
+
+  /** Composer, seats, votes, and laws must receive taps through the hole. */
+  passHole(): boolean {
+    if (this.looking()) return this.lookTyping();
+    if (!this.playing()) return false;
+    const lock = this.lock();
+    return (
+      lock === 'nominate' ||
+      lock === 'voteJa' ||
+      lock === 'voteNein' ||
+      lock === 'burnFascist' ||
+      lock === 'enactLiberal' ||
+      lock === 'peek' ||
+      lock === 'execute' ||
+      lock === 'investigate' ||
+      lock === 'specialElection'
+    );
+  }
+
   lookPassHole(): boolean {
-    return this.looking() && this.lookWait() === 'say';
+    return this.passHole();
   }
 
   canContinueLook(): boolean {
@@ -359,6 +381,43 @@ export class TutorialService {
     const previous = this.beat() - 1;
     if (previous < 0) return;
     this.applyLookBeat(previous);
+  }
+
+  /**
+   * Daniel finished typing this look line. Pause beats wait, then move on.
+   */
+  lookHeadlineFinished(): void {
+    if (!this.looking()) return;
+    if (lookBeatAt(this.beat()).wait !== 'pause') return;
+    this.stopLookScript();
+    this.scheduleLook(() => {
+      if (lookBeatAt(this.beat()).wait !== 'pause') return;
+      this.advanceLook();
+    }, this.lookDelay(1400, 2200));
+  }
+
+  /**
+   * Skip this look beat. Talk/write waits jump to the next real lesson.
+   * True when the look is finished.
+   */
+  skipLookBeat(): boolean {
+    if (!this.looking()) return false;
+    const wait = this.lookWait();
+    if (wait === 'talk') {
+      const sayIndex = LOOK_BEATS.findIndex((item) => item.wait === 'say');
+      if (sayIndex < 0) return this.advanceLook();
+      this.applyLookBeat(sayIndex);
+      return false;
+    }
+    if (wait === 'say' || this.lookWaitOverride() === 'auto') {
+      this.lookPicked = true;
+      this.refreshLookView();
+      const government = LOOK_BEATS.findIndex((item) => item.target === 'government');
+      if (government < 0) return this.advanceLook();
+      this.applyLookBeat(government);
+      return false;
+    }
+    return this.advanceLook();
   }
 
   /** After look: open a scripted table. Count 5 is the full small hand. */
@@ -393,24 +452,27 @@ export class TutorialService {
     this.refreshPlay();
   }
 
-  say(text: string, expected?: string): void {
+  /** Any non-empty line. The look pitch does not have to match the ghost. */
+  say(text: string): void {
     const trimmed = text.trim();
     if (!trimmed) return;
     if (this.looking()) {
-      if (this.lookWait() !== 'say' || !this.lookYou) return;
+      if (!this.lookYou) return;
+      if (this.lookWait() === 'try') {
+        this.pushTalk({
+          playerId: LOOK_SEAT.you,
+          name: this.lookYou.name,
+          text: trimmed,
+        });
+        this.advanceLook();
+        return;
+      }
+      if (this.lookWait() !== 'say') return;
       this.pushTalk({
         playerId: LOOK_SEAT.you,
         name: this.lookYou.name,
         text: trimmed,
       });
-      if (expected != null && !samePitch(trimmed, expected)) {
-        this.rejectPitch();
-        return;
-      }
-      if (this.lookPitchFails === 0) {
-        this.rejectPitch();
-        return;
-      }
       this.acceptPitch();
       return;
     }
@@ -457,6 +519,15 @@ export class TutorialService {
     if (!won) this.bumpDeclines();
   }
 
+  /** Skip this count and sit the next. False when the ladder is done. */
+  skipToNextPlay(): boolean {
+    if (!this.playing() || !this.table) return false;
+    const next = nextOnboardCount(this.table.count);
+    if (next == null) return false;
+    this.startPlay(this.lookYou ?? { name: 'You', avatar: 0 }, next);
+    return true;
+  }
+
   closeLook(): void {
     if (this.looking()) {
       if (this.lookSettled) this.endLook();
@@ -482,6 +553,16 @@ export class TutorialService {
       return isAllowedPowerTarget(this.table, lock, targetId);
     }
     return false;
+  }
+
+  /** First five-player pick: the gold ring sits on Nima. */
+  isNominateHintSeat(playerId: string): boolean {
+    return (
+      this.playing() &&
+      this.lock() === 'nominate' &&
+      this.table?.strictFirstPick === true &&
+      this.table.nimaId === playerId
+    );
   }
 
   /** Lift the teaching mask while bots play, and during night (its own overlay). */
@@ -637,6 +718,7 @@ export class TutorialService {
   }
 
   private lockTarget(lock: PlayLock): string {
+    if (lock === 'nominate' && this.table?.strictFirstPick) return 'nima';
     if (
       lock === 'nominate' ||
       lock === 'execute' ||
@@ -661,15 +743,15 @@ export class TutorialService {
     this.setBeat(index);
     this.setLookLifted(false);
     const beat = lookBeatAt(index);
-    const campaignFrom = LOOK_BEATS.findIndex((item) => item.wait === 'talk');
+    const tryFrom = LOOK_BEATS.findIndex((item) => item.wait === 'try');
     const governmentFrom = LOOK_BEATS.findIndex((item) => item.target === 'government');
     const pickedBefore = this.lookPicked;
     if (index < governmentFrom) this.lookPicked = false;
     if (beat.wait !== 'say') {
-      this.lookPitchFails = 0;
       this.setLookHintKey('onboard.idea.composeHint');
     }
-    if (index <= campaignFrom) this.setTalk([]);
+    // Keep the viewer's first line on the table until they write again.
+    if (index < tryFrom) this.setTalk([]);
     if (!this.lookView() || pickedBefore !== this.lookPicked) this.refreshLookView();
     if (beat.wait === 'talk') this.startCampaignTalk();
   }
@@ -681,24 +763,15 @@ export class TutorialService {
     );
   }
 
-  private startCampaignTalk(
-    lines: typeof LOOK_CAMPAIGN | typeof LOOK_CAMPAIGN_AGAIN = LOOK_CAMPAIGN,
-    then: 'advance' | 'say' = 'advance',
-  ): void {
+  private startCampaignTalk(): void {
     const speak = (offset: number): void => {
-      if (offset >= lines.length) {
-        if (then === 'advance') {
-          this.advanceLook();
-          return;
-        }
-        this.setLookWaitOverride(null);
-        this.setLookHeadlineOverride(null);
-        this.setLookHintKey('onboard.idea.composeHint2');
+      if (offset >= LOOK_CAMPAIGN.length) {
+        this.advanceLook();
         return;
       }
-      const line = lines[offset];
+      const line = LOOK_CAMPAIGN[offset];
       if (!line) {
-        if (then === 'advance') this.advanceLook();
+        this.advanceLook();
         return;
       }
       this.pushTalk({
@@ -706,30 +779,13 @@ export class TutorialService {
         name: this.companionName(line.seat),
         key: line.key,
       });
-      this.scheduleLook(() => speak(offset + 1), this.lookDelay(2800, 4200));
+      this.scheduleLook(() => speak(offset + 1), this.lookDelay(4500, 6500));
     };
-    this.scheduleLook(() => speak(0), this.lookDelay(2000, 2800));
-  }
-
-  private rejectPitch(): void {
-    if (this.lookPitchFails === 0) {
-      this.lookPitchFails = 1;
-      this.setLookWaitOverride('talk');
-      this.setLookHeadlineOverride('onboard.idea.badPitch');
-      this.scheduleLook(() => {
-        this.pushTalk({
-          playerId: LOOK_SEAT.nima,
-          name: this.companionName('nima'),
-          key: 'onboard.talk.badLine',
-        });
-        this.startCampaignTalk(LOOK_CAMPAIGN_AGAIN, 'say');
-      }, this.lookDelay(1600, 2400));
-      return;
-    }
-    this.setLookHeadlineOverride('onboard.idea.writeTheHint');
+    this.scheduleLook(() => speak(0), this.lookDelay(3500, 5000));
   }
 
   private acceptPitch(): void {
+    this.setLookLifted(true);
     this.setLookWaitOverride('auto');
     this.scheduleLook(() => {
       this.pushTalk({
@@ -782,7 +838,6 @@ export class TutorialService {
   private endLook(): void {
     this.lookSettled = false;
     this.lookPicked = false;
-    this.lookPitchFails = 0;
     this.setLookHintKey('onboard.idea.composeHint');
     this.setLookWaitOverride(null);
     this.setLookHeadlineOverride(null);

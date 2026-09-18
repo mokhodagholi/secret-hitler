@@ -1,5 +1,7 @@
-import type { ProductEvent, ProductLobby, ProductMatch } from './ProductStore';
-import { PRODUCT_DIGEST } from './productDigest';
+import type { DigestSocialAccept, ProductEvent, ProductLobby, ProductMatch } from './ProductStore';
+import { hourInIran } from './hourInIran';
+import { PRODUCT_DIGEST, PRODUCT_GOALS } from './productDigest';
+import type { ProductScoreboardRange } from './scheduleProductDigest';
 
 export interface ProductDigestSnapshot {
   from: Date;
@@ -175,13 +177,16 @@ function satPct(snapshot: ProductDigestSnapshot): string {
 }
 
 /** Persian ops digest for the support group (same voice as kick letters). */
-export function formatProductDigest(snapshot: ProductDigestSnapshot): string {
+export function formatProductDigest(
+  snapshot: ProductDigestSnapshot,
+  scoreboard?: ProductScoreboardSnapshot,
+): string {
   const deathLine =
     snapshot.deathReasons.length === 0
       ? '—'
       : snapshot.deathReasons.map((row) => `${row.reason} ${row.count}`).join(' · ');
 
-  return [
+  const lines = [
     `📊 ${formatIranClock(snapshot.from)}–${formatIranClock(snapshot.to)} ایران`,
     '',
     'نفرها',
@@ -199,5 +204,186 @@ export function formatProductDigest(snapshot: ProductDigestSnapshot): string {
     '',
     'بازی',
     `  شروع ${snapshot.matchesStarted} · تمام ${snapshot.matchesFinished} · رها ${snapshot.matchesAbandoned}`,
+  ];
+
+  if (scoreboard) {
+    lines.push('', formatProductScoreboard(scoreboard));
+  }
+
+  return lines.join('\n');
+}
+
+export interface ProductScoreboardSnapshot {
+  dayFrom: Date;
+  dayTo: Date;
+  complete: boolean;
+  gamesFinished: number;
+  seatedUsers: number;
+  reached5: number;
+  friendAccepts: number;
+  tableInviteAccepts: number;
+  eveningSitters: number | null;
+  d1SitPct: number | null;
+  abandonPct: number | null;
+  fillSatPct: number | null;
+}
+
+export interface ScoreboardInput {
+  range: ProductScoreboardRange;
+  events: readonly ProductEvent[];
+  lobbies: readonly ProductLobby[];
+  matches: readonly ProductMatch[];
+  friendAccepts: readonly DigestSocialAccept[];
+  tableInviteAccepts: readonly DigestSocialAccept[];
+}
+
+function uniqueSeated(events: readonly ProductEvent[], from: Date, to: Date): Set<string> {
+  const keys = new Set<string>();
+  for (const event of events) {
+    if (event.name !== 'seated' || !event.userKey) continue;
+    if (!inRange(event.at, from, to)) continue;
+    keys.add(event.userKey);
+  }
+  return keys;
+}
+
+function countFillSat(
+  events: readonly ProductEvent[],
+  from: Date,
+  to: Date,
+): { invites: number; sat: number } {
+  const convertMs = PRODUCT_DIGEST.fillConvertWindowMs;
+  const invites: { userKey: string; roomCode: string; at: number }[] = [];
+  for (const event of events) {
+    if (event.name !== 'lobby_fill_invite' || !event.userKey || !event.roomCode) continue;
+    if (!inRange(event.at, from, to)) continue;
+    invites.push({ userKey: event.userKey, roomCode: event.roomCode, at: event.at.getTime() });
+  }
+  let sat = 0;
+  for (const invite of invites) {
+    const until = invite.at + convertMs;
+    const hit = events.some(
+      (event) =>
+        event.userKey === invite.userKey &&
+        (event.name === 'seated' || event.name === 'room_join') &&
+        event.roomCode === invite.roomCode &&
+        event.at.getTime() >= invite.at &&
+        event.at.getTime() < until,
+    );
+    if (hit) sat += 1;
+  }
+  return { invites: invites.length, sat };
+}
+
+function eveningWindowOpen(range: ProductScoreboardRange): boolean {
+  if (range.complete) return true;
+  const lastMs = range.dayTo.getTime() - 1;
+  if (lastMs < range.dayFrom.getTime()) return false;
+  return hourInIran(new Date(lastMs)) >= PRODUCT_DIGEST.eveningHourFrom;
+}
+
+function pctOrNull(numerator: number, denominator: number): number | null {
+  if (denominator === 0) return null;
+  return (100 * numerator) / denominator;
+}
+
+/** Iran-day fight numbers vs {@link PRODUCT_GOALS}. */
+export function summarizeProductScoreboard(input: ScoreboardInput): ProductScoreboardSnapshot {
+  const { range, events, lobbies, matches } = input;
+  const { dayFrom, dayTo, previousFrom, previousTo, complete } = range;
+
+  const seatedToday = uniqueSeated(events, dayFrom, dayTo);
+  const seatedYesterday = uniqueSeated(events, previousFrom, previousTo);
+  let returned = 0;
+  for (const key of seatedYesterday) {
+    if (seatedToday.has(key)) returned += 1;
+  }
+
+  let gamesFinished = 0;
+  let matchesAbandoned = 0;
+  for (const match of matches) {
+    if (!match.endedAt || !inRange(match.endedAt, dayFrom, dayTo)) continue;
+    if (match.outcome === 'abandoned') matchesAbandoned += 1;
+    else if (match.outcome) gamesFinished += 1;
+  }
+
+  let reached5 = 0;
+  for (const lobby of lobbies) {
+    if (lobby.reached5At && inRange(lobby.reached5At, dayFrom, dayTo)) reached5 += 1;
+  }
+
+  const fill = countFillSat(events, dayFrom, dayTo);
+
+  let eveningSitters: number | null = null;
+  if (eveningWindowOpen(range)) {
+    const evening = new Set<string>();
+    for (const event of events) {
+      if (event.name !== 'seated' || !event.userKey) continue;
+      if (!inRange(event.at, dayFrom, dayTo)) continue;
+      const hour = hourInIran(event.at);
+      if (hour >= PRODUCT_DIGEST.eveningHourFrom && hour < PRODUCT_DIGEST.eveningHourTo) {
+        evening.add(event.userKey);
+      }
+    }
+    eveningSitters = evening.size;
+  }
+
+  let friendAccepts = 0;
+  for (const row of input.friendAccepts) {
+    if (inRange(row.resolvedAt, dayFrom, dayTo)) friendAccepts += 1;
+  }
+  let tableInviteAccepts = 0;
+  for (const row of input.tableInviteAccepts) {
+    if (inRange(row.resolvedAt, dayFrom, dayTo)) tableInviteAccepts += 1;
+  }
+
+  return {
+    dayFrom,
+    dayTo,
+    complete,
+    gamesFinished,
+    seatedUsers: seatedToday.size,
+    reached5,
+    friendAccepts,
+    tableInviteAccepts,
+    eveningSitters,
+    d1SitPct: pctOrNull(returned, seatedYesterday.size),
+    abandonPct: pctOrNull(matchesAbandoned, gamesFinished + matchesAbandoned),
+    fillSatPct: pctOrNull(fill.sat, fill.invites),
+  };
+}
+
+function vsGoal(actual: number, goal: number): string {
+  return `${actual} / ${goal}`;
+}
+
+function formatPctValue(value: number | null): string {
+  if (value == null) return '—';
+  return `${Math.round(value)}٪`;
+}
+
+/** Scoreboard block appended under the 6h ops digest. */
+export function formatProductScoreboard(snapshot: ProductScoreboardSnapshot): string {
+  const header = snapshot.complete
+    ? '🎯 دیروز ایران'
+    : `🎯 امروز ایران تا ${formatIranClock(snapshot.dayTo)}`;
+  const evening =
+    snapshot.eveningSitters == null
+      ? `— / ${PRODUCT_GOALS.eveningSitters}`
+      : vsGoal(snapshot.eveningSitters, PRODUCT_GOALS.eveningSitters);
+  const d1Label = snapshot.complete ? 'برگشت فردا' : 'برگشت فردا تا الان';
+
+  return [
+    header,
+    `  بازی تمام: ${vsGoal(snapshot.gamesFinished, PRODUCT_GOALS.gamesFinished)}`,
+    `  نشستند: ${vsGoal(snapshot.seatedUsers, PRODUCT_GOALS.seatedUsers)}`,
+    `  رسیدن به ۵: ${vsGoal(snapshot.reached5, PRODUCT_GOALS.reached5)}`,
+    `  قبول دوست: ${vsGoal(snapshot.friendAccepts, PRODUCT_GOALS.friendAccepts)}`,
+    `  قبول دعوت میز: ${vsGoal(snapshot.tableInviteAccepts, PRODUCT_GOALS.tableInviteAccepts)}`,
+    `  نشست شب: ${evening}`,
+    `  ${d1Label}: ${formatPctValue(snapshot.d1SitPct)} / ${PRODUCT_GOALS.d1SitPct}٪`,
+    'نگهبان',
+    `  رها: ${formatPctValue(snapshot.abandonPct)} · سقف ${PRODUCT_GOALS.abandonPctMax}٪`,
+    `  پر کردن میز: ${formatPctValue(snapshot.fillSatPct)} · کف ${PRODUCT_GOALS.fillSatPctMin}٪`,
   ].join('\n');
 }

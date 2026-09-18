@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@rstest/core';
+import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen } from '@solidjs/testing-library';
 import {
   INTRO_REASSURE_MS,
@@ -7,6 +7,10 @@ import {
 import { en } from '../../i18n/locales/en';
 import { INTRO_SLIDES } from '../../tutorial/introSlides';
 import { buildHarness, renderWithApp } from '../../../test/test-utils';
+
+afterEach(() => {
+  rs.restoreAllMocks();
+});
 
 describe('OnboardingIntroScreen', () => {
   it('Should show the first piece with Continue and Skip', () => {
@@ -19,6 +23,16 @@ describe('OnboardingIntroScreen', () => {
     expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.continue })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
+  });
+
+  it('Should play a page tap on the welcome piece', () => {
+    const harness = buildHarness();
+    const play = rs.spyOn(harness.services.sound, 'play');
+    harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
+    harness.services.nav.navigate('onboarding');
+    renderWithApp(() => <OnboardingIntroScreen />, harness);
+
+    expect(play).toHaveBeenCalledWith('onboard-turn');
   });
 
   it('Should show current and total as separate page numbers', () => {
@@ -78,14 +92,15 @@ describe('OnboardingIntroScreen', () => {
     );
   });
 
-  it('Should go home when Skip is pressed', () => {
+  it('Should open the look table when Skip is pressed', () => {
     const harness = buildHarness();
     harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
     harness.services.nav.navigate('onboarding');
     renderWithApp(() => <OnboardingIntroScreen />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.skip }));
-    expect(harness.services.nav.screen()).toBe('home');
+    expect(harness.services.nav.screen()).toBe('game');
     expect(harness.services.tutorial.introducing()).toBe(false);
+    expect(harness.services.tutorial.looking()).toBe(true);
   });
 });

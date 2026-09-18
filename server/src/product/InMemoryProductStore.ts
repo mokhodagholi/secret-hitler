@@ -27,6 +27,8 @@ export class InMemoryProductStore implements ProductStore {
   readonly lobbies: ProductLobby[] = [];
   readonly matches: ProductMatch[] = [];
   readonly blasts: ProductBlast[] = [];
+  readonly friendAccepts: Date[] = [];
+  readonly tableInviteAccepts: Date[] = [];
 
   async recordEvent(event: ProductEvent): Promise<void> {
     this.events.push({
@@ -169,13 +171,20 @@ export class InMemoryProductStore implements ProductStore {
         (lobby) =>
           inDigestRange(lobby.openedAt, from, to) ||
           (lobby.dealtAt != null && inDigestRange(lobby.dealtAt, from, to)) ||
-          (lobby.diedAt != null && inDigestRange(lobby.diedAt, from, to)),
+          (lobby.diedAt != null && inDigestRange(lobby.diedAt, from, to)) ||
+          (lobby.reached5At != null && inDigestRange(lobby.reached5At, from, to)),
       ),
       matches: this.matches.filter(
         (match) =>
           inDigestRange(match.startedAt, from, to) ||
           (match.endedAt != null && inDigestRange(match.endedAt, from, to)),
       ),
+      friendAccepts: this.friendAccepts
+        .filter((resolvedAt) => inDigestRange(resolvedAt, from, to))
+        .map((resolvedAt) => ({ resolvedAt })),
+      tableInviteAccepts: this.tableInviteAccepts
+        .filter((resolvedAt) => inDigestRange(resolvedAt, from, to))
+        .map((resolvedAt) => ({ resolvedAt })),
     };
   }
 
