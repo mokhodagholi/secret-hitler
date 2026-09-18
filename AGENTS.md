@@ -44,6 +44,7 @@ the Bale HTTP client the server embeds. Table voice (mediasoup) ships dark behin
 | Any live data / analytics (VPS) | `docs/product-analytics.md` (includes support digest) |
 | Community fight scoreboard | `docs/product-analytics.md` + `.cursor/skills/data-assis-metrics/SKILL.md` |
 | Lobby fill invites (warm DMs) | `docs/lobby-fill.md` + `server/src/product/LobbyFillService.ts` |
+| Lobby fuller-table nudge | `docs/lobby-nudge.md` + `client/src/screens/WaitingRoomScreen/` |
 | Screen / route | `client/src/App.tsx` + `client/src/screens/<Name>/` |
 | Game table UI | `client/src/screens/GameScreen/` |
 | Client services | `client/src/services/` (reached via `AppContext`) |

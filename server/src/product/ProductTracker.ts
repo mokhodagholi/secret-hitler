@@ -75,6 +75,30 @@ export class ProductTracker {
     this.event('own_room_want', { userKey, platform: platformOf(userKey) });
   }
 
+  lobbyNudgePrompt(
+    userKey: string | null,
+    fields: { fromCode?: string; toCode?: string; seats?: number } = {},
+  ): void {
+    this.event('lobby_nudge_prompt', {
+      userKey,
+      platform: platformOf(userKey),
+      roomCode: fields.fromCode,
+      payload: { toCode: fields.toCode, seats: fields.seats },
+    });
+  }
+
+  lobbyNudgeJoin(
+    userKey: string | null,
+    fields: { fromCode?: string; toCode?: string; seats?: number } = {},
+  ): void {
+    this.event('lobby_nudge_join', {
+      userKey,
+      platform: platformOf(userKey),
+      roomCode: fields.toCode,
+      payload: { fromCode: fields.fromCode, seats: fields.seats },
+    });
+  }
+
   hostedRoomCreated(room: Room, userKey: string | null): void {
     if (!isTracked(room)) return;
     this.event('room_create', {

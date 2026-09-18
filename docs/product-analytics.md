@@ -136,6 +136,8 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 | `room_create` / `room_join` / `group_create` | How the table was born / joined |
 | `own_room_prompt` | Opened the “own table” dialog on Join |
 | `own_room_want` | Tapped “I want my own table” (does not Create) |
+| `lobby_nudge_prompt` | Waiting-room “fuller table” modal opened |
+| `lobby_nudge_join` | Sat the offered fuller table from that modal |
 | `seated` | Sat a tracked table (also marks blast *sat*) |
 | `table_dealt` | Cards dealt |
 | `game_finished` / `game_abandoned` | Match end crumbs |
@@ -163,6 +165,7 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 |---|---|
 | How many starts / miniapp / sits today? | `product_events` distinct `user_key` |
 | Did people want their own table? | `own_room_prompt` / `own_room_want` |
+| Did thin lobbies move to a fuller table? | `lobby_nudge_prompt` / `lobby_nudge_join` |
 | Did lobby-fill work? Conversion? | `lobby_fill_*` + join to `seated` |
 | Why did this invite fail? | `lobby_fill_fail` then user timeline |
 | When did user X join / block? | `product_events` + `bot_subscribers` |

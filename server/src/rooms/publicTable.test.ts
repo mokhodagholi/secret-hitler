@@ -144,4 +144,33 @@ describe('public table', () => {
       'own_room_want',
     ]);
   });
+
+  it('Should record a lobby-nudge prompt and join', async () => {
+    const store = new InMemoryProductStore();
+    const built = await buildServer({ product: store });
+    app = built.app;
+    const prompt = await httpJson(built.app, 'POST', '/api/product/lobby-nudge', {
+      intent: 'prompt',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      fromCode: 'ABC123',
+      toCode: 'XYZ789',
+      seats: 4,
+    });
+    const join = await httpJson(built.app, 'POST', '/api/product/lobby-nudge', {
+      intent: 'join',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      fromCode: 'ABC123',
+      toCode: 'XYZ789',
+      seats: 4,
+    });
+    expect(prompt.status).toBe(200);
+    expect(join.status).toBe(200);
+    await built.product.flush();
+    expect(store.events.map((event) => event.name)).toEqual([
+      'lobby_nudge_prompt',
+      'lobby_nudge_join',
+    ]);
+    expect(store.events[0]?.roomCode).toBe('ABC123');
+    expect(store.events[1]?.roomCode).toBe('XYZ789');
+  });
 });

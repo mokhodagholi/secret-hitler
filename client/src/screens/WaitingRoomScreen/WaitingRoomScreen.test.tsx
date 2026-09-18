@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
-import { Phase } from '@secret-hitler/shared';
+import { Phase, type RoomSummary } from '@secret-hitler/shared';
 import { WaitingRoomScreen } from './WaitingRoomScreen';
+import { lobbyNudgeTiming, resetLobbyNudgeTiming } from './lobbyNudge';
 import { en } from '../../i18n/locales/en';
 import { buildHarness, makePlayer, makeView, renderWithApp } from '../../../test/test-utils';
 
 describe('WaitingRoomScreen', () => {
   afterEach(() => {
     rs.restoreAllMocks();
+    resetLobbyNudgeTiming();
   });
   it('Should invite friends from a lobby button, not a share link', async () => {
     const harness = buildHarness({ seated: true });
@@ -642,5 +644,138 @@ describe('WaitingRoomScreen', () => {
     expect(document.querySelector('[data-lobby-tip]')).toBeNull();
     expect(screen.queryByText(en.tip.chaos)).toBeNull();
     expect(screen.getByRole('region', { name: en.waiting.chat })).toBeTruthy();
+  });
+});
+
+function fullerLobby(overrides: Partial<RoomSummary> = {}): RoomSummary {
+  return {
+    id: 'room-2',
+    code: 'XYZ789',
+    name: 'Busy Table',
+    playerCount: 4,
+    maxPlayers: 10,
+    hasPassword: false,
+    phase: Phase.Lobby,
+    ...overrides,
+  };
+}
+
+describe('WaitingRoomScreen — fuller table nudge', () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+    resetLobbyNudgeTiming();
+  });
+
+  it('Should not offer another table before a minute in the lobby', () => {
+    lobbyNudgeTiming.firstWaitMs = 60_000;
+    const harness = buildHarness({ seated: true });
+    harness.services.game.listRooms = async () => [fullerLobby()];
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        minPlayers: 5,
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    expect(screen.queryByText(/Another table has/)).toBeNull();
+  });
+
+  it('Should offer the fuller table after a minute with live seat counts', async () => {
+    lobbyNudgeTiming.firstWaitMs = 20;
+    const harness = buildHarness({ seated: true });
+    harness.services.game.listRooms = async () => [fullerLobby({ playerCount: 4 })];
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        minPlayers: 5,
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(en.waiting.nudgeBody.replace('{count}', '4'))).toBeTruthy(),
+    );
+    expect(screen.getByRole('button', { name: en.waiting.nudgeJoin })).toBeTruthy();
+  });
+
+  it('Should stay quiet when no other lobby has more people', async () => {
+    lobbyNudgeTiming.firstWaitMs = 20;
+    const harness = buildHarness({ seated: true });
+    harness.services.game.listRooms = async () => [
+      fullerLobby({ id: 'room-1', playerCount: 1 }),
+      fullerLobby({ id: 'room-2', playerCount: 1 }),
+    ];
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        minPlayers: 5,
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText(/Another table has/)).toBeNull();
+  });
+
+  it('Should move the player into the fuller lobby when they accept', async () => {
+    lobbyNudgeTiming.firstWaitMs = 20;
+    const harness = buildHarness({ seated: true });
+    harness.services.settings.set('profileName', 'Ana');
+    harness.services.game.listRooms = async () => [fullerLobby()];
+    const joined: string[] = [];
+    harness.services.game.joinRoom = async (idOrCode) => {
+      joined.push(idOrCode);
+      return {
+        roomId: 'room-2',
+        code: 'XYZ789',
+        token: 'token-2',
+        playerId: 'you-2',
+      };
+    };
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        minPlayers: 5,
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: en.waiting.nudgeJoin })).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: en.waiting.nudgeJoin }));
+    await waitFor(() => expect(joined).toEqual(['room-2']));
+  });
+
+  it('Should offer again on the next tick with a fresh seat count', async () => {
+    lobbyNudgeTiming.firstWaitMs = 20;
+    lobbyNudgeTiming.repeatMs = 40;
+    const harness = buildHarness({ seated: true });
+    let seats = 3;
+    harness.services.game.listRooms = async () => [fullerLobby({ playerCount: seats })];
+    renderWithApp(() => <WaitingRoomScreen />, harness);
+    harness.pushState(
+      makeView({
+        hostId: 'you',
+        minPlayers: 5,
+        players: [makePlayer({ id: 'you', name: 'You', seat: 0, isHost: true })],
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(en.waiting.nudgeBody.replace('{count}', '3'))).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: en.waiting.nudgeStay }));
+    expect(screen.queryByText(/Another table has/)).toBeNull();
+
+    seats = 5;
+    await waitFor(() =>
+      expect(screen.getByText(en.waiting.nudgeBody.replace('{count}', '5'))).toBeTruthy(),
+    );
   });
 });

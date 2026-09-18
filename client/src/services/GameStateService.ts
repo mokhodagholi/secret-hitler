@@ -232,6 +232,31 @@ export class GameStateService {
     }
   }
 
+  /** Measurement only. Fuller-table lobby offer; join still goes through /api/rooms. */
+  async recordLobbyNudge(
+    intent: 'prompt' | 'join',
+    crumb: {
+      initData?: string;
+      clientId?: string;
+      fromCode?: string;
+      toCode?: string;
+      seats?: number;
+    } = {},
+  ): Promise<void> {
+    try {
+      await this.request('POST', '/api/product/lobby-nudge', {
+        intent,
+        initData: crumb.initData,
+        clientId: crumb.clientId,
+        fromCode: crumb.fromCode,
+        toCode: crumb.toCode,
+        seats: crumb.seats,
+      });
+    } catch {
+      /* crumbs must not block the table switch */
+    }
+  }
+
   async listRooms(): Promise<RoomSummary[]> {
     let response: Response;
     try {
@@ -243,6 +268,30 @@ export class GameStateService {
       throw new RoomApiError('NETWORK', 'Could not load the room list.');
     }
     return (await response.json()) as RoomSummary[];
+  }
+
+  /**
+   * Live Join list. Tests skip the stream so mocked {@link listRooms} stays
+   * the seam; screens override this when they need to push updates.
+   */
+  watchJoinList(onList: (rooms: RoomSummary[]) => void): () => void {
+    if (
+      typeof EventSource === 'undefined' ||
+      import.meta.env.MODE === 'test' ||
+      process.env.NODE_ENV === 'test'
+    ) {
+      return () => {};
+    }
+    const source = new EventSource('/api/rooms/stream');
+    source.onmessage = (event) => {
+      try {
+        const parsed: unknown = JSON.parse(event.data);
+        if (Array.isArray(parsed)) onList(parsed as RoomSummary[]);
+      } catch {
+        /* a truncated frame; EventSource will deliver the next one */
+      }
+    };
+    return () => source.close();
   }
 
   async loadMatchOccupancy(): Promise<MatchOccupancy> {

@@ -8,7 +8,13 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { Phase, type GameStateView, type PublicPlayer, type SocialPerson } from '@secret-hitler/shared';
+import {
+  Phase,
+  type GameStateView,
+  type PublicPlayer,
+  type RoomSummary,
+  type SocialPerson,
+} from '@secret-hitler/shared';
 import awaitingBg from '../../assets/lobby/awaiting-bg.png';
 import { useApp } from '../../services/AppContext';
 import { CONNECTION_STATUS_KEYS, ERROR_MESSAGE_KEYS } from '../../i18n';
@@ -24,6 +30,7 @@ import { PlayerActionsMenu } from '../GameScreen/PlayerActionsMenu';
 import { InviteFriendsSheet } from '../HomeScreen/InviteFriendsSheet';
 import { LobbyChat } from './LobbyChat';
 import { PlayerSlot } from './PlayerSlot';
+import { lobbyNudgeTiming, pickFullerLobby } from './lobbyNudge';
 import { seatLayoutForBox } from './slotSize';
 import styles from './WaitingRoomScreen.module.scss';
 
@@ -46,10 +53,13 @@ export function WaitingRoomScreen() {
   const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [nowMs, setNowMs] = createSignal(Date.now());
+  const [nudge, setNudge] = createSignal<RoomSummary | null>(null);
+  const [switchingNudge, setSwitchingNudge] = createSignal(false);
 
   const view = game.view;
   const amReady = () => game.you()?.ready ?? false;
   const isPublicTable = () => view()?.kind === 'public';
+  const lobbyRoomId = createMemo(() => view()?.roomId);
 
   function socialIdentity(): SocialIdentity {
     const name = miniApp.user()?.firstName ?? settings.settings.profileName.trim();
@@ -133,6 +143,110 @@ export function WaitingRoomScreen() {
     game.leaveRoom();
     nav.returnTo('play');
   }
+
+  function nudgeBusy(): boolean {
+    return (
+      confirmingLeave() ||
+      startOpen() ||
+      inviteOpen() ||
+      kickTarget() != null ||
+      playerMenu() != null ||
+      reporting() != null ||
+      switchingNudge()
+    );
+  }
+
+  function nudgeIdentity() {
+    return {
+      initData: miniApp.initData(),
+      clientId: settings.settings.profileId,
+    };
+  }
+
+  async function considerNudge(): Promise<void> {
+    const state = view();
+    if (!state || state.phase !== Phase.Lobby || state.adminPlay) return;
+    if (nudgeBusy()) return;
+    if (state.kickVote || state.startChoice) return;
+    try {
+      const rooms = await game.listRooms();
+      const latest = view();
+      if (!latest || latest.phase !== Phase.Lobby || latest.adminPlay) return;
+      if (latest.roomId !== state.roomId) return;
+      const connected = latest.players.filter((player) => player.connected).length;
+      const fuller = pickFullerLobby({
+        rooms,
+        currentRoomId: latest.roomId,
+        currentCount: connected,
+      });
+      if (!fuller) {
+        setNudge(null);
+        return;
+      }
+      const alreadyOpen = nudge();
+      setNudge(fuller);
+      if (alreadyOpen) return;
+      void game.recordLobbyNudge('prompt', {
+        ...nudgeIdentity(),
+        fromCode: latest.code,
+        toCode: fuller.code,
+        seats: fuller.playerCount,
+      });
+    } catch {
+      /* next tick retries with live seats */
+    }
+  }
+
+  async function switchToFuller(): Promise<void> {
+    const target = nudge();
+    if (!target || switchingNudge()) return;
+    const name = miniApp.user()?.firstName ?? settings.settings.profileName.trim();
+    if (!name) return;
+    setSwitchingNudge(true);
+    const fromCode = view()?.code;
+    try {
+      await game.joinRoom(target.id, {
+        name,
+        avatar: settings.settings.avatar,
+        clientId: settings.settings.profileId,
+        initData: miniApp.initData(),
+      });
+      void game.recordLobbyNudge('join', {
+        ...nudgeIdentity(),
+        fromCode,
+        toCode: target.code,
+        seats: target.playerCount,
+      });
+      setNudge(null);
+    } catch {
+      setNudge(null);
+    } finally {
+      setSwitchingNudge(false);
+    }
+  }
+
+  // First offer after a minute in this lobby, then every three minutes with a
+  // fresh room list. Changing tables restarts the wait.
+  createEffect(() => {
+    const roomId = lobbyRoomId();
+    if (!roomId) return;
+    setNudge(null);
+    let cancelled = false;
+    let repeatTimer: ReturnType<typeof setInterval> | undefined;
+    const firstTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      void considerNudge();
+      if (cancelled) return;
+      repeatTimer = window.setInterval(() => {
+        void considerNudge();
+      }, lobbyNudgeTiming.repeatMs);
+    }, lobbyNudgeTiming.firstWaitMs);
+    onCleanup(() => {
+      cancelled = true;
+      clearTimeout(firstTimer);
+      if (repeatTimer) clearInterval(repeatTimer);
+    });
+  });
 
   function tryStart(): void {
     const state = view();
@@ -287,6 +401,20 @@ export function WaitingRoomScreen() {
                 cancelLabel={formatMessage('common.cancel')}
                 onConfirm={leaveRoom}
                 onCancel={() => setConfirmingLeave(false)}
+              />
+
+              <ConfirmDialog
+                open={nudge() != null && !confirmingLeave()}
+                message={formatMessage('waiting.nudgeBody', {
+                  count: nudge()?.playerCount ?? 0,
+                })}
+                confirmLabel={formatMessage('waiting.nudgeJoin')}
+                cancelLabel={formatMessage('waiting.nudgeStay')}
+                stackActions
+                onConfirm={() => {
+                  void switchToFuller();
+                }}
+                onCancel={() => setNudge(null)}
               />
 
               <ConfirmDialog

@@ -494,9 +494,8 @@ export const fa = {
   joinGame: {
     title: 'پیوستن به بازی',
     availableRooms: 'اتاق‌های باز',
-    refresh: 'به‌روزرسانی',
     noRooms: 'الان اتاقی نیست. یکی بسازید.',
-    noSalon: 'میز عمومی هنوز نیومده. به‌روزرسانی بزنید.',
+    noSalon: 'میز عمومی هنوز نیومده. کمی صبر کنید.',
     colName: 'نام',
     colPlayers: 'بازیکنان',
     playerCount: '{count}/{max} بازیکن',
@@ -546,6 +545,10 @@ export const fa = {
     startChoiceClock: '{seconds} ثانیه وقت دارید.',
     chat: 'گفتگوی اتاق',
     chatEmpty: 'هنوز کسی حرفی نزده. شما شروع کنید.',
+    nudgeBody:
+      'یه میز {count} نفره منتظر شماست. برید اون‌جا تا بازی زودتر شروع بشه.',
+    nudgeJoin: 'بریم اون میز',
+    nudgeStay: 'همین‌جا می‌مونم',
   },
   tip: {
     chaos:

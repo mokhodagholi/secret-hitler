@@ -11,6 +11,7 @@ import type {
   MatchOccupancy,
   MessengerKind,
   ProfileResponse,
+  RoomSummary,
   SaveProfileRequest,
 } from '@secret-hitler/shared';
 import { ADMIN_PLAY_SEAT_COUNT, isPublicTable, normalizeAvatar, roomInviteLink, toFlagsResponse } from '@secret-hitler/shared';
@@ -439,11 +440,41 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   });
 
   // Join list: the salon only while publicTable is on.
-  app.get('/api/rooms', async () => {
-    sockets.ensurePublicLobby();
-    const rooms = repo.listPublic();
-    if (flags.publicTable) return rooms.filter((room) => room.kind === 'public');
-    return rooms.filter((room) => room.kind !== 'public');
+  app.get('/api/rooms', async () => sockets.joinList());
+
+  /** Proxies and phones freeze a silent stream; comment frames keep the pipe open. */
+  const JOIN_LIST_HEARTBEAT_MS = 25_000;
+
+  app.get('/api/rooms/stream', (request, reply) => {
+    reply.hijack();
+    request.raw.setTimeout(0);
+    request.raw.socket.setTimeout(0);
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    const write = (chunk: string): void => {
+      if (!reply.raw.writableEnded) reply.raw.write(chunk);
+    };
+    const send = (rooms: RoomSummary[]): void => {
+      write(`data: ${JSON.stringify(rooms)}\n\n`);
+    };
+    const unwatch = sockets.watchJoinList(send);
+    const heartbeat = setInterval(() => write(': keep-alive\n\n'), JOIN_LIST_HEARTBEAT_MS);
+    if (typeof heartbeat === 'object' && 'unref' in heartbeat) heartbeat.unref();
+
+    let closed = false;
+    const close = (): void => {
+      if (closed) return;
+      closed = true;
+      clearInterval(heartbeat);
+      unwatch();
+    };
+    request.raw.on('close', close);
+    reply.raw.on('close', close);
   });
 
   app.get('/api/match', async (): Promise<MatchOccupancy> => {
@@ -594,6 +625,30 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     const userKey = joinBanKey(identified, body.clientId);
     if (body.intent === 'prompt') product.ownRoomPrompt(userKey);
     else product.ownRoomWant(userKey);
+    return reply.send({ ok: true });
+  });
+
+  app.post('/api/product/lobby-nudge', async (req, reply) => {
+    const body = (req.body ?? {}) as {
+      intent?: string;
+      initData?: string;
+      clientId?: string;
+      fromCode?: string;
+      toCode?: string;
+      seats?: number;
+    };
+    if (body.intent !== 'prompt' && body.intent !== 'join') {
+      return reply.code(400).send({ error: 'intent is required' });
+    }
+    const identified = identifyInitData(body.initData, messengers);
+    const userKey = joinBanKey(identified, body.clientId);
+    const fields = {
+      fromCode: typeof body.fromCode === 'string' ? body.fromCode : undefined,
+      toCode: typeof body.toCode === 'string' ? body.toCode : undefined,
+      seats: typeof body.seats === 'number' ? body.seats : undefined,
+    };
+    if (body.intent === 'prompt') product.lobbyNudgePrompt(userKey, fields);
+    else product.lobbyNudgeJoin(userKey, fields);
     return reply.send({ ok: true });
   });
 

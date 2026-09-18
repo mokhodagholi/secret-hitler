@@ -20,6 +20,7 @@ import {
   type GameEngine,
   type GameStateView,
   type RoomClosedReason,
+  type RoomSummary,
   type ServerErrorCode,
   type ServerMessage,
 } from '@secret-hitler/shared';
@@ -93,6 +94,10 @@ export class SocketHandler {
   private readonly router: MessageRouter<ClientMessage, GameContext>;
   /** Why the current empty-lobby drop happened, if we already know. */
   private readonly lobbyDeathReason = new Map<string, LobbyDeathReason>();
+  /** Join-screen subscribers — not seated, so they sit outside ConnectionRegistry. */
+  private readonly joinListWatchers = new Set<(rooms: RoomSummary[]) => void>();
+  /** Last Join payload, so in-game ticks do not rebroadcast an unchanged list. */
+  private joinListKey = '';
 
   /** History attach — set after construction so the recorder can exist first. */
   onRoomCreated: ((entry: RoomEntry) => void) | null = null;
@@ -134,6 +139,25 @@ export class SocketHandler {
     this.registerEngine(created);
     this.onRoomCreated?.(created);
     void this.persistRoom(created.room.id);
+    this.broadcastJoinList();
+  }
+
+  /** Snapshots Join shows: lobby rooms, salon-only while publicTable is on. */
+  joinList(): RoomSummary[] {
+    this.ensurePublicLobby();
+    const rooms = this.repo.listPublic();
+    return this.flags.publicTable
+      ? rooms.filter((room) => room.kind === 'public')
+      : rooms.filter((room) => room.kind !== 'public');
+  }
+
+  /** Push the current Join list now, then again whenever a lobby seat changes. */
+  watchJoinList(listener: (rooms: RoomSummary[]) => void): () => void {
+    this.joinListWatchers.add(listener);
+    const rooms = this.joinList();
+    this.joinListKey = JSON.stringify(rooms);
+    listener(rooms);
+    return () => this.joinListWatchers.delete(listener);
   }
 
   /** Sit the evergreen Join salon. First sitter becomes host. */
@@ -225,6 +249,7 @@ export class SocketHandler {
   /** Drop pending timers so a Fastify close does not keep the process. */
   dispose(): void {
     clearInterval(this.idleWatch);
+    this.joinListWatchers.clear();
     this.socketLastSeen.clear();
     for (const roomId of this.startChoiceTimers.keys()) this.stopStartChoiceTimer(roomId);
     for (const playerId of [...this.lobbyAfkTimers.keys()]) {
@@ -319,6 +344,7 @@ export class SocketHandler {
       void this.persistRoom(room.id);
       this.product.lobbySeatsChanged(room);
       this.dropEmptyRoomIfUnkept(room.id);
+      this.broadcastJoinList();
     });
 
     engine.on('roleAssigned', ({ playerId }) => {
@@ -1075,6 +1101,7 @@ export class SocketHandler {
     if (this.live) {
       void this.enqueuePersist(roomId, () => this.live!.remove(roomId));
     }
+    this.broadcastJoinList();
   }
 
   private onAuth(ws: WebSocket, token: string): void {
@@ -1185,6 +1212,21 @@ export class SocketHandler {
       type: 'state',
       state: this.viewerState(entry.room.id, seat.playerId),
     });
+  }
+
+  private broadcastJoinList(): void {
+    if (this.joinListWatchers.size === 0) return;
+    const rooms = this.joinList();
+    const key = JSON.stringify(rooms);
+    if (key === this.joinListKey) return;
+    this.joinListKey = key;
+    for (const watcher of this.joinListWatchers) {
+      try {
+        watcher(rooms);
+      } catch (error) {
+        console.error('Join-list watcher failed', error);
+      }
+    }
   }
 
   private broadcastMatchStatus(): void {

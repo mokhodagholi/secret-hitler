@@ -498,9 +498,8 @@ export const en = {
   joinGame: {
     title: 'Join Game',
     availableRooms: 'Available Rooms',
-    refresh: 'Refresh',
     noRooms: 'No open rooms right now. Create one!',
-    noSalon: 'The public table is not here yet. Try refresh.',
+    noSalon: 'The public table is not here yet. Wait a moment.',
     colName: 'Name',
     colPlayers: 'Players',
     playerCount: '{count}/{max} players',
@@ -550,6 +549,10 @@ export const en = {
     startChoiceClock: '{seconds} seconds left.',
     chat: 'Lobby chat',
     chatEmpty: 'The table is quiet. Say something.',
+    nudgeBody:
+      'Another table has {count} people waiting for you. Join them so the game can start sooner.',
+    nudgeJoin: 'Join that table',
+    nudgeStay: 'Stay here',
   },
   tip: {
     chaos:

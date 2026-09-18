@@ -251,3 +251,36 @@ describe('GameStateService — own-table crumbs', () => {
     await expect(game.recordOwnRoom('want')).resolves.toBeUndefined();
   });
 });
+
+describe('GameStateService — lobby nudge crumbs', () => {
+  afterEach(() => {
+    rs.restoreAllMocks();
+  });
+
+  it('Should post a lobby-nudge crumb without throwing when it fails', async () => {
+    const socket = new FakeSocket();
+    const game = new GameStateService(socket as unknown as WebSocketService);
+    let body: unknown;
+    rs.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      body = JSON.parse(String(init?.body ?? '{}'));
+      return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+
+    await game.recordLobbyNudge('prompt', {
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      fromCode: 'ABC123',
+      toCode: 'XYZ789',
+      seats: 4,
+    });
+    expect(body).toEqual({
+      intent: 'prompt',
+      clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      fromCode: 'ABC123',
+      toCode: 'XYZ789',
+      seats: 4,
+    });
+
+    rs.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+    await expect(game.recordLobbyNudge('join')).resolves.toBeUndefined();
+  });
+});
