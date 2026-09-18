@@ -435,7 +435,7 @@ export const en = {
     piece: {
       welcomeTitle: 'A short sitting',
       welcome:
-        "Before a real table, we'll walk the board together. About two minutes — skip whenever you want.",
+        "Before a real game, we'll look through a simulated one. About two minutes — skip whenever you want.",
       welcomeTime: 'About 2 minutes',
       rolesTitle: 'Roles',
       roles: 'Liberal, Fascist, and Hitler.',

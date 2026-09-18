@@ -814,13 +814,20 @@ def run_eleven(
         "sarah": os.environ.get("ELEVENLABS_SARAH_VOICE_ID", "EXAVITQu4vr4xnSDxMaL"),
         "brian": os.environ.get("ELEVENLABS_BRIAN_VOICE_ID", "nPczCjzI2devNBz1zQrb"),
         "dilara": os.environ.get("ELEVENLABS_DILARA_VOICE_ID", ""),
+        # Onboarding woman shortlist (Persian listen tests).
+        "ella": os.environ.get("ELEVENLABS_ELLA_VOICE_ID", "fhLywKvvSBS2FpHCxymW"),
+        "alice": os.environ.get("ELEVENLABS_ALICE_VOICE_ID", "Xb7hH8MSUJpSbSDYk0k2"),
+        "lily": os.environ.get("ELEVENLABS_LILY_VOICE_ID", "pFZP5JQG7iQjIQuC4Bku"),
+        "bella": os.environ.get("ELEVENLABS_BELLA_VOICE_ID", "hpp4J3VqNfWAUOO0d1Us"),
+        "sahar": os.environ.get("ELEVENLABS_SAHAR_VOICE_ID", "NZiuR1C6kVMSWHG27sIM"),
     }
     missing = [name for name in who if not voices.get(name)]
     if missing:
         sys.exit(
             "Unknown or unconfigured ElevenLabs voice: "
             + ", ".join(missing)
-            + ". Use --who daniel, george, callum, sarah, brian, or james (paid)."
+            + ". Use --who daniel, george, callum, sarah, brian, james, "
+            "ella, alice, lily, bella, or sahar."
         )
 
     catalog: dict[str, LineText] = (

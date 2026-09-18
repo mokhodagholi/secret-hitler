@@ -9,7 +9,7 @@ from __future__ import annotations
 # id → spoken Persian. Same sentence the header types.
 ONBOARD_LINES: dict[str, str] = {
     "onboard.piece.welcome": (
-        "قبل از میز واقعی، با هم یه دور می‌ریم رو تخته. "
+        "قبل از اینکه بریم توی بازی واقعی، یه بازی شبیه‌سازی‌شده رو می‌بینیم. "
         "حدود دو دقیقه طول می‌کشه — هر وقت خواستید بگذرید."
     ),
     "onboard.piece.roles": "لیبرال، فاشیست، و هیتلر.",
