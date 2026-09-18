@@ -171,6 +171,20 @@ describe('room HTTP endpoints', () => {
     expect(right.status).toBe(200);
   });
 
+  it('Should ignore a password on HTTP create when roomPassword is off', async () => {
+    const { app } = await buildServer();
+    const created = await createRoom(app, { password: 'secret' });
+    expect(created.status).toBe(201);
+
+    const listed = await httpJson<RoomSummary[]>(app, 'GET', '/api/rooms');
+    expect(listed.body[0]?.hasPassword).toBe(false);
+
+    const joined = await httpJson(app, 'POST', `/api/rooms/${created.body.code}/join`, {
+      name: 'Ben',
+    });
+    expect(joined.status).toBe(200);
+  });
+
   it('Should report an unknown room as not found', async () => {
     const { app } = await buildServer();
     const { status } = await httpJson(app, 'POST', '/api/rooms/NOPE99/join', {

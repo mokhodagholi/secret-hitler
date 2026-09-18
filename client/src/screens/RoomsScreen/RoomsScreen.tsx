@@ -221,13 +221,15 @@ function JoinRoomPanel() {
   const selectedRoom = (): RoomSummary | null =>
     rooms()?.find((room) => room.id === selectedRoomId()) ?? null;
 
-  const needsDetails = (room: RoomSummary) => room.hasPassword || profileMissing();
+  const needsDetails = () => profileMissing() || needsPassword();
 
   function pick(room: RoomSummary): void {
     if (!joinable(room)) return;
     setErrorKey(null);
+    setNeedsPassword(false);
+    setPassword('');
     setSelectedRoomId(room.id);
-    if (!needsDetails(room)) void submit(room);
+    if (!profileMissing()) void submit(room);
   }
 
   async function submit(room?: RoomSummary | null): Promise<void> {
@@ -250,8 +252,9 @@ function JoinRoomPanel() {
     } catch (error) {
       const code = error instanceof RoomApiError ? error.code : 'NETWORK';
       setErrorKey(ERROR_MESSAGE_KEYS[code]);
-      if (invite() && code === 'WRONG_PASSWORD') {
+      if (code === 'WRONG_PASSWORD') {
         setNeedsPassword(true);
+        if (!password().trim()) setErrorKey(null);
       } else if (invite()) {
         setInvite(null);
       } else {
@@ -369,7 +372,7 @@ function JoinRoomPanel() {
               </ul>
             </Show>
 
-            <Show when={selectedRoom() && needsDetails(selectedRoom()!)}>
+            <Show when={selectedRoom() && needsDetails()}>
               <KeyboardForm class={styles.form}>
                 <Show when={profileMissing()}>
                   <Field
@@ -379,7 +382,7 @@ function JoinRoomPanel() {
                     onSubmit={() => void submit()}
                   />
                 </Show>
-                <Show when={selectedRoom()!.hasPassword}>
+                <Show when={needsPassword()}>
                   <Field
                     label={formatMessage('joinGame.password')}
                     type="password"

@@ -56,7 +56,7 @@ bot.sendMessage(chat_id, text, reply_markup)
 | Secret mismatch | 401. Configure `BALE_WEBHOOK_SECRET`. |
 | Channel | 200, no reply. |
 | Group, anything except `/create` | 200, no reply. The group is not a help desk. |
-| Group `/create` | Opens an unlocked table named after the sender. Listed on Join. |
+| Group `/create` | Opens a locked table named after the sender. Listed on Join. Members of that chat skip the password. |
 | Sticker, photo, empty text | 200, no reply. |
 | Private text | Always a reply — known command, bare room code, or the start greeting. |
 
@@ -345,8 +345,9 @@ server opens a real lobby, and the group gets a join button.
 What is created:
 
 - Room **name** = the sender’s Bale first name.
-- **No password.** Anyone can sit — from the group button, Join, `/find_game`,
-  or a share code.
+- **Password.** A short lock is generated. Members of this group skip it
+  (`getChatMember`). Anyone else — Join, `/find_game`, a share code, another
+  messenger — must type it.
 - The sender is already seated as **host** (they still tap the button to open
   the mini-app; that reuses the reserved seat, it does not add a second Ana).
 - `originChatId` is this group (so the join post can be edited if the host
@@ -365,16 +366,22 @@ Group reply:
 ```
 اتاق ساخته شد.
 میز {name} — کد {CODE}
-با دکمه بیا تو. این میز برای همه بازه.
+با دکمه بیا تو. کسی که تو گروه نیست رمز می‌خواد.
 ```
 
 Button: **ورود به اتاق**.
 
-No password DM. Group membership is not a join gate — anyone with the
-code or the Join row can sit.
+The host gets a private DM with the password. If that DM cannot be delivered
+(they have never `/start`ed the bot), the same password is posted in the group
+as a fallback:
+
+```
+رمز برای کسی که تو گروه نیست: {password}
+```
 
 The mini-app still does the actual sit (`POST /api/rooms/CODE/join` with
-Bale `initData` when they came from the mini-app).
+Bale `initData` when they came from the mini-app). Group members send no
+password; the server checks they are still in the chat.
 
 Private-chat `/create`:
 

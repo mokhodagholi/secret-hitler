@@ -340,7 +340,7 @@ export function createGroupPostedReply(params: {
     text: [
       'اتاق ساخته شد.',
       `میز ${params.creatorName} — کد ${params.code}`,
-      'با دکمه بیا تو. این میز برای همه بازه.',
+      'با دکمه بیا تو. کسی که تو گروه نیست رمز می‌خواد.',
     ].join('\n'),
     reply_markup: {
       inline_keyboard: [[{ text: 'ورود به اتاق', url: link }]],

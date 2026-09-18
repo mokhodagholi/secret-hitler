@@ -2,6 +2,7 @@ import type { MessengerKind } from '@secret-hitler/shared';
 import type { RoomRepository } from '../rooms/RoomRepository';
 import type { SocketHandler } from '../ws/SocketHandler';
 import type { GameResultRecorder } from '../history/GameResultRecorder';
+import { hashPassword, makeRoomPassword } from '../http/password';
 import type { BaleSeatIndex } from './BaleSeatIndex';
 import {
   createFailedReply,
@@ -13,15 +14,15 @@ export type GroupRoomCreated =
   | {
       reply: BotReply;
       code: string;
+      password: string;
     }
   | {
       reply: BotReply;
     };
 
 /**
- * Open an unlocked lobby named after the group sender. It is listed on Join
- * so anyone can sit — group members use the chat button; everyone else can
- * pick it from the room list.
+ * Open a locked lobby named after the group sender. Members of that chat
+ * skip the password; everyone else needs it. Listed on Join with a lock.
  */
 export function createGroupRoom(params: {
   repo: RoomRepository;
@@ -37,8 +38,10 @@ export function createGroupRoom(params: {
 }): GroupRoomCreated {
   const creatorName = params.creatorName.trim() || 'میزبان';
   const platform = params.platform ?? 'bale';
+  const password = makeRoomPassword();
   const entry = params.repo.create({
     name: creatorName,
+    passwordHash: hashPassword(password),
     originChatId: params.chatId,
     originPlatform: platform,
     timerEnabled: true,
@@ -73,5 +76,6 @@ export function createGroupRoom(params: {
       platform,
     }),
     code: entry.room.code,
+    password,
   };
 }

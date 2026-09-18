@@ -98,12 +98,13 @@ pastes **its** mini-app link. The waiting-room share button copies the
 link for **this** WebView’s platform. The code stays visible either
 way — that is the cross-play join key.
 
-### Group `/create` tables are open
+### Group `/create` tables are locked
 
-`/create` in a Bale group opens an unlocked lobby listed on Join. Anyone
-can sit — group button, Join, `/find_game`, or the code. Same on
-Telegram. Origin is still stored as `{ platform, chatId, messageId }` so
-the group post can be edited if the host leaves.
+`/create` in a Bale group opens a locked lobby listed on Join. People still
+in that chat skip the password (group button, Join, `/find_game`, or the
+code). Everyone else must type it. Same on Telegram. Origin is still stored
+as `{ platform, chatId, messageId }` so the group post can be edited if the
+host leaves. The host is DMed the password (group fallback if the DM fails).
 
 ### Identity — same database, not the same person
 
@@ -325,7 +326,7 @@ settings both point here.
 | Mini-app login, lock name to first name | Same `initData` HMAC | Two profiles; same room. |
 | `startapp=CODE` → join screen | Same `start_param` | Code is universal. |
 | `/start` `/find_game` `/games` `/join` `/invite` `/create` | Same parser and replies | Lists are the live repo, not “Telegram rooms”. |
-| Group `/create` | Same unlocked listed lobby | Anyone sits; code is universal. |
+| Group `/create` | Same locked listed lobby | Members of that chat skip the password; the code is universal. |
 | Support letter | Telegram support group | Independent desks. |
 | Kick-vote tally | Telegram support group | Independent desks. |
 | Native back | Telegram `BackButton` | — |

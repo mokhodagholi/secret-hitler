@@ -235,15 +235,15 @@ describe('handleBotText', () => {
     expect(reply.reply_markup?.inline_keyboard).toEqual([]);
   });
 
-  it('Should say a group table is open for everyone', () => {
+  it('Should say a group table is for that chat', () => {
     const reply = createGroupPostedReply({
       creatorName: 'Ana',
       code: 'ABC123',
       botUsername: BOT,
     });
     expect(reply.text).toContain('اتاق ساخته شد');
-    expect(reply.text).toContain('برای همه بازه');
-    expect(reply.text).not.toContain('رمز');
+    expect(reply.text).toContain('رمز');
+    expect(reply.text).not.toContain('برای همه بازه');
     expect(reply.reply_markup?.inline_keyboard[0]?.[0]).toEqual({
       text: 'ورود به اتاق',
       url: 'https://ble.ir/secret_hitler_bot?startapp=ABC123',

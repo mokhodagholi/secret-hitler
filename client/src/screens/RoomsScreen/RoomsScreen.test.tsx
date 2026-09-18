@@ -175,6 +175,46 @@ describe('RoomsScreen', () => {
     expect(harness.services.nav.screen()).toBe('waiting-room');
   });
 
+  it('Should try a listed locked room without a password before asking', async () => {
+    const harness = buildHarness();
+    harness.services.settings.set('profileName', 'Ana');
+    const attempts: Array<string | undefined> = [];
+    harness.services.game.listRooms = async () => [
+      {
+        id: 'room-1',
+        code: 'ABC123',
+        name: 'Friday',
+        playerCount: 2,
+        maxPlayers: 10,
+        hasPassword: true,
+        phase: Phase.Lobby,
+      },
+    ];
+    harness.services.game.joinRoom = async (_idOrCode, request) => {
+      attempts.push(request.password);
+      if (!request.password) {
+        throw new RoomApiError('WRONG_PASSWORD', 'Wrong password');
+      }
+      return {
+        roomId: 'room-1',
+        code: 'ABC123',
+        token: 'token-1',
+        playerId: 'you',
+      };
+    };
+    renderWithApp(() => <RoomsScreen initialTab="join" />, harness);
+
+    await waitFor(() => expect(screen.getByText('Friday')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: en.joinGame.join }));
+    await waitFor(() => expect(attempts).toEqual([undefined]));
+    fireEvent.input(screen.getByLabelText(en.joinGame.password), {
+      target: { value: 'secret' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.joinGame.submit }));
+    await waitFor(() => expect(attempts).toEqual([undefined, 'secret']));
+    expect(harness.services.nav.screen()).toBe('waiting-room');
+  });
+
   it('Should stay on create/join when the player already holds a live seat', () => {
     const harness = buildHarness({ seated: true });
     harness.services.nav.navigate('play');

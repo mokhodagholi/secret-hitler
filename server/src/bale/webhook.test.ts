@@ -357,7 +357,7 @@ describe('Bale webhook — group /create', () => {
     expect(sent).toHaveLength(0);
   });
 
-  it('Should open a named, unlocked table from /create in a group', async () => {
+  it('Should open a named, locked table from /create in a group', async () => {
     const sent: Array<{ chat_id: number | string; text: string; reply_markup?: unknown }> = [];
     const { app, repo } = await buildServer({
       bale: {
@@ -388,9 +388,10 @@ describe('Bale webhook — group /create', () => {
     const room = groupTable(repo).room;
     expect(room.summary()).toMatchObject({
       name: 'Ana',
-      hasPassword: false,
+      hasPassword: true,
       playerCount: 1,
     });
+    expect(room.passwordHash).toBeTruthy();
     expect(room.options.originChatId).toBe(-401);
     expect(room.options.originMessageId).toBe(77);
     expect(repo.listPublic()).toEqual([room.summary()]);
@@ -402,13 +403,16 @@ describe('Bale webhook — group /create', () => {
     expect(groupPost?.text).toContain('اتاق ساخته شد');
     expect(groupPost?.text).toContain('Ana');
     expect(groupPost?.text).toContain(room.code);
-    expect(groupPost?.text).toContain('برای همه بازه');
+    expect(groupPost?.text).toContain('رمز');
     expect(JSON.stringify(groupPost?.reply_markup)).toContain(
       `https://ble.ir/secret_hitler_bot?startapp=${room.code}`,
     );
 
     const dm = sent.find((item) => item.chat_id === 9);
-    expect(dm).toBeUndefined();
+    expect(dm?.text).toContain('رمز');
+    expect(dm?.text).toContain(room.code);
+    const password = dm!.text.trim().split('\n').at(-1);
+    expect(password).toMatch(/^[A-Z2-9]{4}$/);
   });
 
   it('Should list a group table on Join next to the public salon', async () => {
@@ -441,18 +445,18 @@ describe('Bale webhook — group /create', () => {
 
     const group = groupTable(repo).room;
     expect(group.options.kind).not.toBe('public');
-    expect(group.passwordHash).toBeNull();
+    expect(group.passwordHash).toBeTruthy();
     expect(group.code).not.toBe(salonCode);
 
     const after = await httpJson<RoomSummary[]>(app, 'GET', '/api/rooms');
     expect(after.body).toHaveLength(2);
     expect(after.body[0]).toMatchObject({ kind: 'public', code: salonCode });
-    expect(after.body.some((room) => room.name === 'Ana' && room.hasPassword === false)).toBe(
+    expect(after.body.some((room) => room.name === 'Ana' && room.hasPassword === true)).toBe(
       true,
     );
   });
 
-  it('Should not post a password when a group table is opened', async () => {
+  it('Should post the password in the group when the host DM fails', async () => {
     const sent: Array<{ chat_id: number | string; text: string }> = [];
     const { app, repo } = await buildServer({
       bale: {
@@ -480,16 +484,23 @@ describe('Bale webhook — group /create', () => {
       },
     });
 
-    expect(sent.some((item) => item.text.includes('رمز'))).toBe(false);
-    expect(groupTable(repo).room.passwordHash).toBeNull();
+    expect(groupTable(repo).room.passwordHash).toBeTruthy();
+    const fallback = sent.find((item) => item.chat_id === -402 && item.text.includes('رمز برای'));
+    expect(fallback).toBeTruthy();
+    const password = fallback!.text.split(':').at(-1)?.trim();
+    expect(password).toMatch(/^[A-Z2-9]{4}$/);
   });
 
-  it('Should let anyone join a group table without a password', async () => {
+  it('Should let group members join without a password and keep others behind it', async () => {
     const members = new Set<number>([9, 10]);
+    const sent: Array<{ chat_id: number | string; text: string }> = [];
     const { app, repo, seats } = await buildServer({
       bale: {
         bot: {
-          sendMessage: async () => ({}),
+          sendMessage: async (params) => {
+            sent.push(params);
+            return {};
+          },
           getChatMember: async ({ user_id }) => {
             if (!members.has(user_id)) throw new Error('not in chat');
             return { status: 'member' as const };
@@ -514,6 +525,8 @@ describe('Bale webhook — group /create', () => {
 
     const room = groupTable(repo).room;
     const hostId = seats.get(9)?.playerId;
+    const dm = sent.find((item) => item.chat_id === 9);
+    const password = dm!.text.trim().split('\n').at(-1)!;
 
     const memberJoin = await httpJson<{ playerId: string }>(
       app,
@@ -524,11 +537,20 @@ describe('Bale webhook — group /create', () => {
     expect(memberJoin.status).toBe(200);
     expect(memberJoin.body.playerId).not.toBe(hostId);
 
-    const outsiderJoin = await httpJson<{ playerId: string }>(
+    const outsiderDenied = await httpJson<{ playerId: string }>(
       app,
       'POST',
       `/api/rooms/${room.code}/join`,
       { name: 'Cal', initData: signInitData(11, 'Cal') },
+    );
+    expect(outsiderDenied.status).toBe(403);
+    expect((outsiderDenied.body as { code: string }).code).toBe('WRONG_PASSWORD');
+
+    const outsiderJoin = await httpJson<{ playerId: string }>(
+      app,
+      'POST',
+      `/api/rooms/${room.code}/join`,
+      { name: 'Cal', password, initData: signInitData(11, 'Cal') },
     );
     expect(outsiderJoin.status).toBe(200);
 
@@ -538,7 +560,15 @@ describe('Bale webhook — group /create', () => {
       `/api/rooms/${room.code}/join`,
       { name: 'Dan' },
     );
-    expect(fromTheWeb.status).toBe(200);
+    expect(fromTheWeb.status).toBe(403);
+
+    const fromTheWebWithPassword = await httpJson<{ playerId: string }>(
+      app,
+      'POST',
+      `/api/rooms/${room.code}/join`,
+      { name: 'Dan', password },
+    );
+    expect(fromTheWebWithPassword.status).toBe(200);
 
     const creatorRejoin = await httpJson<{ playerId: string }>(
       app,
