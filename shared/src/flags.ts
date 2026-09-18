@@ -20,7 +20,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   publicTable: false,
   lobbyKick: false,
   gameKick: false,
-  onboarding: false,
+  onboarding: true,
   roomPassword: false,
   lobbyFill: false,
 };

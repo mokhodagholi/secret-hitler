@@ -71,7 +71,7 @@ async function playFirstGovernment(tutorial: TutorialService): Promise<void> {
 }
 
 describe('TutorialService — first-run sit', () => {
-  it('Should offer the table for the first five launches', () => {
+  it('Should offer the table for the first three launches', () => {
     const tutorial = new TutorialService();
     expect(tutorial.shouldOffer()).toBe(true);
     expect(tutorial.seenCount()).toBe(0);
@@ -90,7 +90,7 @@ describe('TutorialService — first-run sit', () => {
     expect(new TutorialService().shouldOffer()).toBe(false);
   });
 
-  it('Should stop offering after five look declines', () => {
+  it('Should stop offering after three look declines', () => {
     localStorage.setItem(ONBOARDING_DECLINE_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
     const tutorial = new TutorialService();
     const nav = new NavigationService('/');
@@ -134,11 +134,13 @@ describe('TutorialService — first-run sit', () => {
     expect(tutorial.shouldOffer()).toBe(true);
   });
 
-  it('Should still offer the look after the old rules hub was seen five times', () => {
-    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
+  it('Should still offer Sit after the old tutorial counters are full', () => {
+    localStorage.setItem(TUTORIAL_SEEN_COUNT_KEY, '5');
+    localStorage.setItem('sh:onboarding-declines', '5');
     const tutorial = new TutorialService();
     const nav = new NavigationService('/');
     expect(tutorial.offerAfterSplash(nav, false, true)).toBe(true);
+    expect(tutorial.offeringSit()).toBe(true);
   });
 
   it('Should stay quiet when the onboarding flag is off', () => {

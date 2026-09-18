@@ -14,6 +14,7 @@ describe('FeatureFlagService', () => {
     const flags = new FeatureFlagService();
     expect(flags.enabled('voice')).toBe(false);
     expect(flags.enabled('publicTable')).toBe(false);
+    expect(flags.enabled('onboarding')).toBe(true);
     expect(flags.ready()).toBe(false);
   });
 
@@ -35,6 +36,7 @@ describe('FeatureFlagService', () => {
     });
     await flags.load();
     expect(flags.enabled('voice')).toBe(false);
+    expect(flags.enabled('onboarding')).toBe(true);
     expect(flags.ready()).toBe(true);
   });
 
@@ -56,6 +58,39 @@ describe('FeatureFlagService', () => {
     const flags = new FeatureFlagService();
     flags.apply({ ...DEFAULT_FLAGS, voice: true });
     expect(flags.enabled('voice')).toBe(true);
+  });
+
+  it('Should fetch again on a later load after the first wave missed', async () => {
+    let calls = 0;
+    const flags = new FeatureFlagService({ ...DEFAULT_FLAGS, onboarding: false }, async () => {
+      calls += 1;
+      if (calls <= 3) throw new Error('offline');
+      return jsonResponse({ flags: { onboarding: true } });
+    });
+    await flags.load();
+    expect(flags.enabled('onboarding')).toBe(false);
+    expect(flags.ready()).toBe(true);
+
+    await flags.load();
+    expect(calls).toBe(4);
+    expect(flags.enabled('onboarding')).toBe(true);
+  });
+
+  it('Should replace an early catalog when a later load returns new flags', async () => {
+    let calls = 0;
+    const flags = new FeatureFlagService(DEFAULT_FLAGS, async () => {
+      calls += 1;
+      if (calls === 1) {
+        return jsonResponse({ flags: { ...DEFAULT_FLAGS, onboarding: false } });
+      }
+      return jsonResponse({ flags: { ...DEFAULT_FLAGS, onboarding: true } });
+    });
+    await flags.load();
+    expect(flags.enabled('onboarding')).toBe(false);
+    expect(flags.ready()).toBe(true);
+
+    await flags.load();
+    expect(flags.enabled('onboarding')).toBe(true);
   });
 
   it('Should fetch /api/flags only once when load is called twice', async () => {
@@ -83,6 +118,26 @@ describe('FeatureFlagService', () => {
     await malformed.load();
     expect(malformed.enabled('voice')).toBe(false);
     expect(malformed.ready()).toBe(true);
+  });
+
+  it('Should call the default fetch without Illegal invocation', async () => {
+    const original = globalThis.fetch;
+    let called = 0;
+    globalThis.fetch = (async () => {
+      called += 1;
+      return jsonResponse({
+        flags: { ...DEFAULT_FLAGS, onboarding: true, voice: true },
+      });
+    }) as typeof fetch;
+    try {
+      const flags = new FeatureFlagService();
+      await flags.load();
+      expect(called).toBeGreaterThan(0);
+      expect(flags.enabled('onboarding')).toBe(true);
+      expect(flags.enabled('voice')).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 
   it('Should honor injected initial flags without fetching', () => {

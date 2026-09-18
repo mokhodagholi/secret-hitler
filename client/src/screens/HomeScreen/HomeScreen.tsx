@@ -133,7 +133,8 @@ export function HomeScreen() {
   const [supportFading, setSupportFading] = createSignal(false);
 
   createEffect(() => {
-    if (!flags.ready() || !flags.flags.onboarding) return;
+    const onboarding = flags.flags.onboarding;
+    if (!flags.ready() || !onboarding) return;
     if (tutorial.offeringSit()) return;
     if (game.inRoom()) return;
     tutorial.beginHomeSettings({ voice: flags.flags.voice });
@@ -249,19 +250,6 @@ export function HomeScreen() {
                 <Icon name="trophy" size={16} />
                 <span class={styles.guideLabel} dir="auto">
                   {formatMessage('home.checkHistoryOnboarding')}
-                </span>
-              </button>
-            </Show>
-            <Show when={flags.flags.onboarding}>
-              <button
-                type="button"
-                class={styles.guideChip}
-                aria-label={formatMessage('tutorial.table')}
-                onClick={openDevOnboarding}
-              >
-                <Icon name="hand" size={16} />
-                <span class={styles.guideLabel} dir="auto">
-                  {formatMessage('tutorial.table')}
                 </span>
               </button>
             </Show>

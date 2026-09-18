@@ -107,32 +107,6 @@ describe('HomeScreen', () => {
     expect(harness.services.tutorial.introducing()).toBe(true);
   });
 
-  it('Should hide the simulated-game chip when onboarding is off', () => {
-    const harness = buildHarness();
-    renderWithApp(() => <HomeScreen />, harness);
-
-    expect(screen.queryByRole('button', { name: en.tutorial.table })).toBeNull();
-  });
-
-  it('Should open the simulated table from the home chip', () => {
-    const harness = buildHarness({ flags: { onboarding: true } });
-    renderWithApp(
-      () => (
-        <Show
-          when={harness.services.nav.screen() === 'home'}
-          fallback={<div data-testid="onboarding-open" />}
-        >
-          <HomeScreen />
-        </Show>
-      ),
-      harness,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: en.tutorial.table }));
-    expect(harness.services.nav.screen()).toBe('onboarding');
-    expect(harness.services.tutorial.introducing()).toBe(true);
-  });
-
   it('Should ring the home gear from the palette icon', () => {
     const harness = buildHarness();
     renderWithApp(() => <HomeScreen />, harness);

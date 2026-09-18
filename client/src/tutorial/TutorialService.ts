@@ -56,15 +56,16 @@ import {
 import { INTRO_SLIDE_COUNT, INTRO_SLIDES } from './introSlides';
 import type { IntroSlide } from './introSlides';
 
-/** How many times Sit / Skip can be declined before we stop asking. */
-export const TUTORIAL_ANNOUNCE_LIMIT = 5;
+/** How many launches Sit can be declined before we stop asking. */
+export const TUTORIAL_ANNOUNCE_LIMIT = 3;
 
 /** Old rules-hub first-run. Not used to hide the look table. */
 export const TUTORIAL_SEEN_COUNT_KEY = 'sh:tutorial-seen-count';
 
 export const ONBOARDING_STEP_KEY = 'sh:onboarding-step';
 
-export const ONBOARDING_DECLINE_KEY = 'sh:onboarding-declines';
+/** Sit / Not now. New name so a filled old tutorial counter does not hide Sit. */
+export const ONBOARDING_DECLINE_KEY = 'sh:onboarding-sit-declines';
 
 export const ONBOARDING_HOME_SETTINGS_KEY = 'sh:onboarding-home-settings';
 

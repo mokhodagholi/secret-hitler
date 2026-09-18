@@ -13,7 +13,7 @@ for the flags themselves.
 | `publicTable` | `FEATURE_PUBLIC_TABLE` | off |
 | `lobbyKick` | `FEATURE_LOBBY_KICK` | off |
 | `gameKick` | `FEATURE_GAME_KICK` | off |
-| `onboarding` | `FEATURE_ONBOARDING` | off |
+| `onboarding` | `FEATURE_ONBOARDING` | on |
 | `roomPassword` | `FEATURE_ROOM_PASSWORD` | off |
 | `lobbyFill` | `FEATURE_LOBBY_FILL` | off |
 
@@ -21,8 +21,8 @@ Adding a flag: one name in `FLAG_NAMES`, one default in `DEFAULT_FLAGS`, one
 `FEATURE_<NAME>` key in [`.env.example`](../.env.example). Unknown `FEATURE_*`
 keys are ignored.
 
-`true` / `1` (any case) turn a flag on. Missing, empty, `false`, or anything
-else stays the default — today that means off.
+`true` / `1` (any case) turn a flag on. Missing or empty keeps the
+catalog default. Any other present value is off.
 
 ## How the client sees them
 
@@ -31,16 +31,19 @@ Production (`server/src/index.ts`) passes
 returns `{ flags }` rebuilt from the catalog only — never a dump of env.
 
 The client [`FeatureFlagService`](../client/src/services/FeatureFlagService.ts)
-fetches that once at boot (`cache: 'no-store'`). Splash waits for that
-response so screens never paint with a stale catalog. `publicTable`
-defaults off so Join still shows Create until the fetch confirms the
-salon. Joining a
+fetches `/api/flags` at boot (`cache: 'no-store'`). Splash waits for the
+first wave so screens never paint with a stale catalog. If the proxy is
+not up yet, or that first catalog is still the defaults, a few more
+fetches run after splash so Home is not frozen on a too-early miss.
+`publicTable` defaults off so Join still shows Create until the fetch
+confirms the salon. Joining a
 room also applies `flags` from the `authed` WebSocket frame — that is the
 live switch, so a missed HTTP fetch cannot hide in-game chrome. Callers
 read `flags.flags.voice` in JSX (the store) or `flags.enabled('voice')` in
-handlers. A failed or malformed response keeps the defaults. Tests inject
-a preloaded service (or `{ flags: { voice: true } }` on `buildServer`) and do
-not set `process.env`.
+handlers. A failed or malformed response keeps the defaults until a later
+attempt succeeds. Tests inject a preloaded service (or
+`{ flags: { voice: true } }` on `buildServer`) and do not set
+`process.env`.
 
 When `voice` is off, the client hides every mic control and the server rejects
 `voice:*` frames. See [`client/docs/voice.md`](../client/docs/voice.md).
@@ -60,7 +63,9 @@ lobby kick clears the seat only — no ban; the player may sit again.
 When `gameKick` is off, in-game kick votes and mid-game host kick stay dark;
 the server rejects those frames too.
 
-When `onboarding` is off, the first-run Sit offer and look table stay dark.
+When `onboarding` is off (`FEATURE_ONBOARDING=false`), the first-run Sit
+offer and look table stay dark. Default on: splash offers Sit instead of
+the written-rules hub, up to three launches (`sh:onboarding-sit-declines`).
 The table itself is client-only (no tutorial HTTP or room). See
 [`onboarding.md`](./onboarding.md).
 

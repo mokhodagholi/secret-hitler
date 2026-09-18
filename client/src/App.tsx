@@ -252,21 +252,19 @@ function SitOffer() {
   // Offer after this dialog exists. Asking during splash leaves offeringSit
   // true with no subscriber, and ConfirmDialog never sees a closed → open flip.
   createEffect(() => {
-    if (!flags.ready() || !flags.flags.onboarding) return;
-    // Local `pnpm dev` uses the home icon — do not pop Sit on boot.
-    const skipSitInDev =
-      import.meta.env.DEV &&
-      import.meta.env.MODE !== 'test' &&
-      process.env.NODE_ENV !== 'test';
+    // Catalog defaults onboarding on, so Sit can open even before /api/flags.
+    const onboarding = flags.flags.onboarding;
+    if (!onboarding) return;
     tutorial.offerAfterSplash(
       nav,
-      game.inRoom() || nav.peekPlaySeat() != null || skipSitInDev,
-      true,
+      game.inRoom() || nav.peekPlaySeat() != null,
+      onboarding,
     );
   });
 
-  const sitOpen = () =>
-    tutorial.offeringSit() && flags.ready() && flags.flags.onboarding;
+  const sitOpen = () => tutorial.offeringSit() && flags.flags.onboarding;
+  // First splash: Sit only. Later launches (after a Not now) may defer.
+  const sitRequired = () => tutorial.declineCount() === 0;
 
   createEffect(() => {
     if (!sitOpen()) return;
@@ -278,7 +276,7 @@ function SitOffer() {
       open={sitOpen()}
       message={formatMessage('onboard.piece.welcome')}
       confirmLabel={formatMessage('onboard.sit')}
-      cancelLabel={formatMessage('onboard.notNow')}
+      cancelLabel={sitRequired() ? undefined : formatMessage('onboard.notNow')}
       onConfirm={() => {
         ravi.cancel();
         tutorial.startIntro({
@@ -287,10 +285,14 @@ function SitOffer() {
         });
         nav.navigate('onboarding');
       }}
-      onCancel={() => {
-        ravi.cancel();
-        tutorial.declineSit();
-      }}
+      onCancel={
+        sitRequired()
+          ? undefined
+          : () => {
+              ravi.cancel();
+              tutorial.declineSit();
+            }
+      }
     />
   );
 }

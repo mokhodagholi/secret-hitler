@@ -6,8 +6,7 @@ through live matches at every size.
 
 This file is the plan. Steps 0–7 are in the client (intro slides → look
 → five, then 6–10 as **difference-only** sittings). Daniel is header text
-only — no `onboard.*` clips yet. Ships dark behind `FEATURE_ONBOARDING`
-(default off).
+only — no `onboard.*` clips yet. `FEATURE_ONBOARDING` defaults on.
 
 **The table must feel like a table.** The other seats are scripted, but
 the player is never told that. No “practice”, no “ربات”, no “these are
@@ -43,9 +42,11 @@ investigate, special election, two investigates, full table. Do not
 replay the five-player lecture.
 
 After a match: next step, or Home / Join. Remember progress in
-`localStorage` (`sh:onboarding-step`). Sit / Skip declines live in
-`sh:onboarding-declines` — not the old rules-hub `sh:tutorial-seen-count`.
-A live join link or a restored seat still wins over this, same as today.
+`localStorage` (`sh:onboarding-step`). Sit / Not now lives in
+`sh:onboarding-sit-declines` — not `sh:tutorial-seen-count` or the old
+`sh:onboarding-declines`. The **first** Sit has no Not now — they must
+go. Later offers may defer. A live join link or a restored seat still wins
+over this, same as today.
 
 ## Principles
 
@@ -54,7 +55,7 @@ A live join link or a restored seat still wins over this, same as today.
   client constructs a `Room`, runs the engine in memory, and paints the
   same Game / Waiting-room screens off that snapshot. Live games stay
   server-sourced. This path never touches the wire. Showing it is still
-  gated by `FEATURE_ONBOARDING` so production can stay dark.
+  gated by `FEATURE_ONBOARDING` so production can turn the table off.
 - **Natural seats.** Other players have names, avatars, typing pauses.
   Chat is table talk, never “this is a lesson”. They never mention
   Daniel, the guide, or that they are scripted.
@@ -108,9 +109,9 @@ The table gear is a mute sheet. The **home** gear is name, portrait, and
 sound. First time they stand on Home with no Sit dialog, Daniel rings
 that icon. They tap it, the Settings page opens, and he walks **each
 row** — what it is, what it does. Skip anytime. Remembered in
-`sh:onboarding-home-settings`. Unlike Sit, local `pnpm dev` still shows
-this when `FEATURE_ONBOARDING` is on. A labeled **Learn settings** chip
-next to the hand replays the same lesson.
+`sh:onboarding-home-settings`. Sit comes first after splash; this tour
+starts once they tap Not now. A labeled **Learn settings** chip next to
+the hand replays the same lesson.
 
 Beats live in `client/src/tutorial/settingsView.ts` (`SETTINGS_BEATS`).
 Copy under `onboard.idea.homeSettings` and `onboard.settings.*`.
@@ -138,9 +139,8 @@ Past tables live under the History chip. First time they finish the home
 gear (tap or Skip), Daniel rings that chip, they open it, and a **mock**
 list walks every chip on the sheet. Cards start **collapsed** (same as the
 live History sheet). No `/api/history` — the tour never writes a real
-match. Remembered in `sh:onboarding-home-history`. Local `pnpm dev` skips
-the first-run prompt; a labeled **Learn history** chip next to the hand
-opens the same tour.
+match. Remembered in `sh:onboarding-home-history`. A labeled **Learn
+history** chip next to the hand opens the same tour.
 
 Beats live in `client/src/tutorial/historyView.ts` (`HISTORY_BEATS`).
 Copy under `onboard.history.*` in both locales.
@@ -621,9 +621,9 @@ GameStateService         tutorial path feeds the same view() the live
   talk — or a small parallel list on the tutorial service if chat is
   socket-only today. Do not invent a server chat HTTP for this.
 - GameOver, night overlay, vote cards: the real components.
-- `FEATURE_ONBOARDING` / `flags.onboarding` ships dark, then on. First-run
-  SitOffer after splash offers step 0 instead of only the video hub.
-  Local `pnpm dev` skips that offer; a home icon opens the same table.
+- `FEATURE_ONBOARDING` / `flags.onboarding` defaults on. First-run
+  SitOffer after splash offers step 0 instead of the written-rules hub,
+  up to three launches. A home icon still opens the same table.
 
 This is the one place the client mutates a `Room`. It is a closed box.
 A tutorial table is never published, never in match history, never a
@@ -659,7 +659,7 @@ happens, …).
       what GameScreen already reads.
 - [x] Spotlight / mask; punch-out from the current beat.
 - [x] Step 1 beat list + Daniel lines in i18n (header text; no clips yet).
-- [x] First-run: Sit / Not now. Skip. `sh:onboarding-step`.
+- [x] First-run: Sit required (no Not now); later launches may defer. Skip. `sh:onboarding-step`.
 - [x] Home gear: first visit rings settings (name / portrait / sound).
 - [x] Home history: mock sheet after the gear; every chip on the list.
 - [x] Tests: punch-outs in order; Skip opens five.

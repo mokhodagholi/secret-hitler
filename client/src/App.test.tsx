@@ -14,7 +14,8 @@ describe('App — first-run look', () => {
     await waitFor(() => expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
     expect(screen.getByRole('button', { name: en.onboard.sit })).toBeTruthy();
-    expect(screen.getByRole('button', { name: en.onboard.notNow })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.onboard.notNow })).toBeNull();
+    expect(screen.queryByText(en.tutorial.announce)).toBeNull();
   });
 
   it('Should sit onto the intro pages', async () => {
@@ -29,19 +30,20 @@ describe('App — first-run look', () => {
     expect(screen.getByText(en.onboard.piece.roles)).toBeTruthy();
   });
 
-  it('Should stay home after Not now and count it', async () => {
+  it('Should stay home after Not now once Sit was deferred before', async () => {
+    localStorage.setItem(ONBOARDING_DECLINE_KEY, '1');
     const harness = buildHarness({ flags: { onboarding: true } });
     render(() => <App services={harness.services} />);
     await waitFor(() => expect(screen.getByRole('button', { name: en.onboard.notNow })).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.notNow }));
-    expect(localStorage.getItem(ONBOARDING_DECLINE_KEY)).toBe('1');
+    expect(localStorage.getItem(ONBOARDING_DECLINE_KEY)).toBe('2');
     expect(harness.services.nav.screen()).toBe('home');
     expect(screen.queryByText(en.onboard.piece.welcome)).toBeNull();
     expect(screen.getByText(en.onboard.idea.homeSettings)).toBeTruthy();
   });
 
-  it('Should go home after splash once the sit offer has been seen five times', async () => {
+  it('Should go home after splash once the sit offer has been seen three times', async () => {
     localStorage.setItem(ONBOARDING_DECLINE_KEY, String(TUTORIAL_ANNOUNCE_LIMIT));
     const harness = buildHarness({ flags: { onboarding: true } });
     render(() => <App services={harness.services} />);
@@ -85,7 +87,7 @@ describe('App — first-run look', () => {
   });
 
   it('Should not offer Sit when onboarding is off', async () => {
-    const harness = buildHarness();
+    const harness = buildHarness({ flags: { onboarding: false } });
     render(() => <App services={harness.services} />);
 
     await waitFor(() =>

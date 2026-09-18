@@ -38,7 +38,7 @@ function openWrittenGuide(name: string = en.tutorial.text) {
 
 describe('RulesScreen', () => {
   it('Should put only the video and written tutorials on the hub', () => {
-    const harness = buildHarness();
+    const harness = buildHarness({ flags: { onboarding: false } });
     harness.services.nav.navigate('rules');
     renderWithApp(() => <RulesRoutes />, harness);
 
