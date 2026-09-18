@@ -48,7 +48,13 @@ export function OnboardingIntroScreen() {
       void ravi.speakGuide('onboard.piece.checkReassure');
       return;
     }
-    void ravi.speakGuide(slide().bodyKey);
+    // Piece pages are read on the slide. Daniel only on the first
+    // piece and the «گرفتید؟» close.
+    if (tutorial.introBeat() === 0 || slide().visual.kind === 'check') {
+      void ravi.speakGuide(slide().bodyKey);
+      return;
+    }
+    ravi.cancel();
   });
   const atStart = () => tutorial.introBeat() === 0;
   const onCheck = () => slide().visual.kind === 'check';

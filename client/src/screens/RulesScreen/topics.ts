@@ -44,7 +44,7 @@ export interface TopicDef {
   screen: Extract<ScreenName, `rules-${string}`>;
 }
 
-export type HubCardId = 'video' | 'text';
+export type HubCardId = 'table' | 'video' | 'text';
 
 export interface HubCardDef {
   id: HubCardId;
@@ -52,10 +52,20 @@ export interface HubCardDef {
   hue: TopicHue;
   bubbleOrigin: BubbleOrigin;
   titleKey: MessageKey;
-  screen: Extract<ScreenName, `rules-${string}`>;
+  screen: ScreenName;
 }
 
-/** The guide hub is only these two doors; written lessons live behind text. */
+/** Hands-on table — only when the onboarding flag is on. */
+export const TABLE_HUB_CARD: HubCardDef = {
+  id: 'table',
+  icon: 'hand',
+  hue: 'brass',
+  bubbleOrigin: 'topStart',
+  titleKey: 'tutorial.table',
+  screen: 'onboarding',
+};
+
+/** Written lessons live behind text. The table door is prepended when the flag is on. */
 export const HUB_CARDS: readonly HubCardDef[] = [
   {
     id: 'video',

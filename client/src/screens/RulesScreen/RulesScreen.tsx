@@ -3,18 +3,31 @@ import { useApp } from '../../services/AppContext';
 import { Screen } from '../../components/Screen/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { TopicCard } from './TopicCard';
-import { HUB_CARDS } from './topics';
+import { HUB_CARDS, TABLE_HUB_CARD, type HubCardDef } from './topics';
 import styles from './RulesScreen.module.scss';
 
 /** Topic cards. Each one navigates to its own lesson screen. */
 export function RulesScreen() {
-  const { i18n, nav, tutorial } = useApp();
+  const { i18n, nav, tutorial, flags, settings } = useApp();
   const { formatMessage } = i18n;
+
+  const hubCards = () =>
+    flags.flags.onboarding ? [TABLE_HUB_CARD, ...HUB_CARDS] : HUB_CARDS;
 
   const leaveHub = () => {
     tutorial.dismissAnnouncement();
     nav.back();
   };
+
+  function openCard(card: HubCardDef) {
+    if (card.id === 'table') {
+      tutorial.startIntro({
+        name: settings.settings.profileName.trim() || formatMessage('game.you'),
+        avatar: settings.settings.avatar,
+      });
+    }
+    nav.navigate(card.screen);
+  }
 
   return (
     <Screen fill>
@@ -37,14 +50,14 @@ export function RulesScreen() {
             </div>
           </Show>
           <div class={styles.topicGrid}>
-            <For each={HUB_CARDS}>
+            <For each={hubCards()}>
               {(card) => (
                 <TopicCard
                   icon={card.icon}
                   hue={card.hue}
                   bubbleOrigin={card.bubbleOrigin}
                   title={formatMessage(card.titleKey)}
-                  onOpen={() => nav.navigate(card.screen)}
+                  onOpen={() => openCard(card)}
                 />
               )}
             </For>

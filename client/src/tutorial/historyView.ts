@@ -29,7 +29,9 @@ export const HISTORY_TARGET = {
   you: 'historyYou',
   role: 'historyRole',
   add: 'historyAdd',
+  sent: 'historySent',
   tie: 'historyTie',
+  close: 'historyClose',
   loss: 'historyLoss',
 } as const;
 
@@ -46,8 +48,8 @@ interface HistoryBeatSpec {
 }
 
 /**
- * Home — past tables. One mock win first; a loss lands under it after the
- * first card is taught. Roles, then Add, then the friend chips.
+ * Home — past tables. One mock win first. Roles, Add, Reza's sent chip,
+ * then the other statuses. Close via X, reopen, then a loss under it.
  */
 export const HISTORY_BEATS = [
   {
@@ -102,6 +104,13 @@ export const HISTORY_BEATS = [
     expand: 'win',
   },
   {
+    target: HISTORY_TARGET.sent,
+    headline: 'onboard.history.sent',
+    wait: 'continue',
+    sheet: true,
+    expand: 'win',
+  },
+  {
     target: HISTORY_TARGET.tie,
     headline: 'onboard.history.ties',
     wait: 'continue',
@@ -109,8 +118,20 @@ export const HISTORY_BEATS = [
     expand: 'win',
   },
   {
-    target: HISTORY_TARGET.loss,
+    target: HISTORY_TARGET.close,
+    headline: 'onboard.history.close',
+    wait: 'open',
+    sheet: true,
+    expand: 'win',
+  },
+  {
+    target: HISTORY_TARGET.chip,
     headline: 'onboard.history.loss',
+    wait: 'open',
+  },
+  {
+    target: HISTORY_TARGET.loss,
+    headline: 'onboard.history.lossCard',
     wait: 'continue',
     sheet: true,
     expand: 'loss',

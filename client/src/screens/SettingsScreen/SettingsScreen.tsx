@@ -200,7 +200,7 @@ export function SettingsScreen() {
             target={tutorial.target()}
             lifted={tutorial.maskLifted()}
             passHole={tutorial.passHole()}
-            layoutKey={tutorial.beat()}
+            layoutKey={tutorial.beat() + headlineTyped().text.length}
             showContinue={
               tutorial.canContinueHomeSettings() && headlineReady()
             }

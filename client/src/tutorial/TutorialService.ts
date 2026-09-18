@@ -437,10 +437,18 @@ export class TutorialService {
     return this.historyTies()[accountId] ?? 'none';
   }
 
-  /** History chip tap on the first beat. */
+  /** History chip tap — first open, and reopen after they close. */
   openHistoryChip(): boolean {
     if (!this.reviewingHistory() || this.historyWait() !== 'open') return false;
     if (historyBeatAt(this.beat()).target !== 'homeHistory') return false;
+    this.advanceHomeHistory();
+    return true;
+  }
+
+  /** Close (X) on the taught beat. Other beats ignore the X. */
+  closeHistorySheet(): boolean {
+    if (!this.reviewingHistory() || this.historyWait() !== 'open') return false;
+    if (historyBeatAt(this.beat()).target !== 'historyClose') return false;
     this.advanceHomeHistory();
     return true;
   }

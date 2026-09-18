@@ -106,6 +106,32 @@ describe('HomeScreen', () => {
     expect(harness.services.tutorial.introducing()).toBe(true);
   });
 
+  it('Should hide the simulated-game chip when onboarding is off', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <HomeScreen />, harness);
+
+    expect(screen.queryByRole('button', { name: en.tutorial.table })).toBeNull();
+  });
+
+  it('Should open the simulated table from the home chip', () => {
+    const harness = buildHarness({ flags: { onboarding: true } });
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<div data-testid="onboarding-open" />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: en.tutorial.table }));
+    expect(harness.services.nav.screen()).toBe('onboarding');
+    expect(harness.services.tutorial.introducing()).toBe(true);
+  });
+
   it('Should ring the home gear from the palette icon', () => {
     const harness = buildHarness();
     renderWithApp(() => <HomeScreen />, harness);
@@ -137,7 +163,8 @@ describe('HomeScreen', () => {
     fireEvent.click(button!);
     expect(harness.services.nav.screen()).toBe('home');
     expect(harness.services.tutorial.reviewingHistory()).toBe(true);
-    expect(screen.getByText(en.onboard.history.chip)).toBeTruthy();
+    expect(screen.getByText(/the details are here/)).toBeTruthy();
+    expect(screen.getByText(/Tap it/)).toBeTruthy();
   });
 
   it('Should open Settings from the gear', () => {
@@ -198,7 +225,8 @@ describe('HomeScreen', () => {
     expect(harness.services.nav.screen()).toBe('home');
     expect(localStorage.getItem('sh:onboarding-home-settings')).toBe('1');
     expect(screen.queryByText(en.onboard.idea.homeSettings)).toBeNull();
-    expect(screen.getByText(en.onboard.history.chip)).toBeTruthy();
+    expect(screen.getByText(/the details are here/)).toBeTruthy();
+    expect(screen.getByText(/Tap it/)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
   });
 
@@ -418,7 +446,8 @@ describe('HomeScreen', () => {
     const fetchSpy = rs.spyOn(globalThis, 'fetch');
     renderWithApp(() => <HomeScreen />, harness);
 
-    expect(screen.getByText(en.onboard.history.chip)).toBeTruthy();
+    expect(screen.getByText(/the details are here/)).toBeTruthy();
+    expect(screen.getByText(/Tap it/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: en.home.history }));
 
@@ -441,13 +470,25 @@ describe('HomeScreen', () => {
     for (let step = 0; step < 3; step++) {
       fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
     }
-    expect(screen.getByText(en.onboard.history.add)).toBeTruthy();
+    expect(screen.getByText(/You can make friends from here/)).toBeTruthy();
+    expect(screen.getByText(/Tap Add/)).toBeTruthy();
     fireEvent.click(screen.getByText('Reza').parentElement!.querySelector('button')!);
-    expect(screen.getByText(en.onboard.history.ties)).toBeTruthy();
+    expect(screen.getByText(en.onboard.history.sent)).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
-    expect(screen.getByText(en.onboard.history.loss)).toBeTruthy();
+    expect(screen.getByText(en.onboard.history.ties)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    expect(screen.getByText(/This is how you close it/)).toBeTruthy();
+    expect(screen.getByText(/Tap the X/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.common.goBack }));
+    expect(screen.getByText(/Imagine you played another hand and lost/)).toBeTruthy();
+    expect(screen.getByText(/Tap it/)).toBeTruthy();
+    expect(screen.queryByText(en.game.over.fascistsWin)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: en.home.history }));
+    expect(screen.getByText(en.onboard.history.lossCard)).toBeTruthy();
     expect(screen.getByText(en.game.over.fascistsWin)).toBeTruthy();
     expect(screen.getAllByText(new RegExp(en.home.historyLost)).length).toBeGreaterThan(0);
     expect(screen.getByText('Maryam')).toBeTruthy();

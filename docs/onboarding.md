@@ -93,6 +93,10 @@ not refill from empty.
 Last page asks «گرفتید؟». Yes → «بریم سر میز». No → «مشکلی نیست» then
 still open the look table. Either answer goes to step 1.
 
+Daniel speaks the Sit welcome, the first piece, and «گرفتید؟» (plus
+the reassure line if they say not yet). The pages in between are
+silent — the art and labels are the lesson.
+
 Slides live in `client/src/tutorial/introSlides.ts`. Copy under
 `onboard.piece.*` in both locales.
 
@@ -143,21 +147,24 @@ Copy under `onboard.history.*` in both locales.
 | # | Ring | Wait | They learn |
 |---|---|---|---|
 | 1 | History chip | Until they tap | Every match they've played — details are here |
-| 2 | Sheet | Continue | Finished tables; empty until they play |
+| 2 | Sheet | Continue | Tables they've played; empty if they haven't sat yet |
 | 3 | Winner line | Continue | Liberals or Fascists took it |
 | 4 | You won / lost + date | Continue | Their result, and when (hour and minute) |
-| 5 | Seats | Continue | Everyone, seat order — first card expands |
-| 6 | Your row | Continue | Your role (first match only) |
-| 7 | Roles | Continue | After a match the roles are public |
-| 8 | Add on Reza | Until they tap Add | Add from here like after a match |
-| 9 | Sent / friends / incoming | Continue | The three other friend chips |
-| 10 | Lost table | Continue | Imagine another game they lost — second card drops in |
-| 11 | Lifted | Continue | Open History from Home any time |
+| 5 | Seats | Continue | Seat order — people they played with; first card expands |
+| 6 | Your row | Continue | That's you (first match only) |
+| 7 | Roles | Continue | After a match, who sat which role |
+| 8 | Add on Reza | Until they tap Add | Make friends from here — tap Add |
+| 9 | Reza's sent chip | Continue | The request went out |
+| 10 | Sent / friends / incoming | Continue | The other friend-status chips |
+| 11 | Close (X) | Until they tap X | How to close the sheet |
+| 12 | History chip | Until they tap | Imagine another game they lost — open History again |
+| 13 | Lost table | Continue | That card lands under the win |
+| 14 | Lifted | Continue | Open History from Home any time |
 
-One mock win first (Nima–Omid). After friends, a Fascist loss (Maryam–Behrad)
-lands under it and the sheet scrolls to it. Reza starts with Add; Nima is
-already friends; Sara already sent; Omid has an incoming request. No guest
-seats.
+One mock win first (Nima–Omid). After they close and reopen, a Fascist loss
+(Maryam–Behrad) lands under it and the sheet scrolls to it. Reza starts with
+Add; Nima is already friends; Sara already sent; Omid has an incoming request.
+No guest seats.
 
 ---
 
@@ -491,8 +498,11 @@ Do not use the word تمرین / practice / bot / ربات in any of these.
 | `onboard.history.you` | calm | *(your row)* | |
 | `onboard.history.roles` | calm | *(role chips)* | |
 | `onboard.history.add` | calm | *(Add — wait for tap)* | |
+| `onboard.history.sent` | calm | *(Reza's sent chip)* | |
 | `onboard.history.ties` | calm | *(sent / friends / incoming)* | |
-| `onboard.history.loss` | calm | *(second card — a loss)* | |
+| `onboard.history.close` | calm | *(sheet X — wait for tap)* | |
+| `onboard.history.loss` | calm | *(home history chip again — wait for tap)* | |
+| `onboard.history.lossCard` | calm | *(second card — a loss)* | |
 | `onboard.history.done` | warmly | *(lifted)* | |
 | `onboard.idea.talk` | calm | *(step 1 #6 — ring chat, no extra mic ring)* | |
 | `onboard.idea.settings` | calm | *(step 1 #7 — ring gear; wait for tap)* | |

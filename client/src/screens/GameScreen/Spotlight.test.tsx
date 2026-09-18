@@ -66,15 +66,24 @@ describe('Spotlight — gold ring', () => {
     });
   });
 
-  it('Should pulse the ring once Continue and Skip are shown', async () => {
-    const { container } = mountSpotlight({
-      showContinue: true,
-      showSkip: true,
-    });
+  it('Should punch one hole per history role chip', async () => {
+    stubVisibleBox();
+    const { container } = render(() => (
+      <div>
+        <span data-tutorial-target="historyRole" />
+        <span data-tutorial-target="historyRole" />
+        <Spotlight
+          target="historyRole"
+          onContinue={() => undefined}
+          onSkip={() => undefined}
+          formatMessage={(key) => key}
+          showContinue
+          showSkip
+        />
+      </div>
+    ));
     await waitFor(() => {
-      const hole = container.querySelector(`.${styles.hole}`);
-      expect(hole).toBeTruthy();
-      expect(hole?.classList.contains(styles.holeStatic)).toBe(false);
+      expect(container.querySelectorAll(`.${styles.hole}`).length).toBe(2);
     });
   });
 });

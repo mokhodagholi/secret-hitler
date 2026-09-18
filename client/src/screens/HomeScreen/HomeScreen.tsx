@@ -240,6 +240,19 @@ export function HomeScreen() {
                 <Icon name="trophy" size={22} />
               </button>
             </Show>
+            <Show when={flags.flags.onboarding}>
+              <button
+                type="button"
+                class={styles.guideChip}
+                aria-label={formatMessage('tutorial.table')}
+                onClick={openDevOnboarding}
+              >
+                <Icon name="hand" size={16} />
+                <span class={styles.guideLabel} dir="auto">
+                  {formatMessage('tutorial.table')}
+                </span>
+              </button>
+            </Show>
             <button
               type="button"
               class={styles.guideChip}
@@ -335,7 +348,8 @@ export function HomeScreen() {
                 tutorial.beat() +
                 Number(tutorial.historySheet()) +
                 tutorial.historyMatches().length +
-                tutorial.historyExpandIds().join('').length
+                tutorial.historyExpandIds().join('').length +
+                homeHeadlineTyped().text.length
               }
               showContinue={
                 tutorial.reviewingHistory() &&

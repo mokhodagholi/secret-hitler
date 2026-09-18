@@ -25,6 +25,25 @@ describe('OnboardingIntroScreen', () => {
     expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
   });
 
+  it('Should let Daniel speak the first piece and the got-it page, not the pages in between', () => {
+    const harness = buildHarness();
+    const speak = rs.spyOn(harness.services.ravi, 'speakGuide');
+    harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
+    harness.services.nav.navigate('onboarding');
+    renderWithApp(() => <OnboardingIntroScreen />, harness);
+
+    expect(speak).toHaveBeenCalledWith('onboard.piece.roles');
+    speak.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    expect(speak).not.toHaveBeenCalled();
+
+    for (let index = 1; index < INTRO_SLIDES.length - 1; index++) {
+      fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    }
+    expect(speak).toHaveBeenCalledWith('onboard.piece.check');
+  });
+
   it('Should play a page tap on the first piece', () => {
     const harness = buildHarness();
     const play = rs.spyOn(harness.services.sound, 'play');

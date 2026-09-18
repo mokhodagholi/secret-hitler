@@ -249,7 +249,7 @@ describe('TutorialService — home history', () => {
     expect(tutorial.historyMatches()).toHaveLength(1);
   });
 
-  it('Should teach Add on Reza, then append a loss, and remember Skip', () => {
+  it('Should teach Add on Reza, then close and reopen onto a loss, and remember Skip', () => {
     const tutorial = new TutorialService();
     localStorage.setItem(ONBOARDING_HOME_SETTINGS_KEY, '1');
     tutorial.startHomeHistory({ name: 'Ana', avatar: 0 });
@@ -262,9 +262,17 @@ describe('TutorialService — home history', () => {
     expect(tutorial.addHistoryFriend('look-history-maryam')).toBe(false);
     expect(tutorial.addHistoryFriend(HISTORY_ADD_ACCOUNT)).toBe(true);
     expect(tutorial.historyTie(HISTORY_ADD_ACCOUNT)).toBe('outgoing');
+    expect(tutorial.headlineKey()).toBe('onboard.history.sent');
+    expect(tutorial.advanceHomeHistory()).toBe(false);
     expect(tutorial.headlineKey()).toBe('onboard.history.ties');
     expect(tutorial.advanceHomeHistory()).toBe(false);
+    expect(tutorial.headlineKey()).toBe('onboard.history.close');
+    expect(tutorial.closeHistorySheet()).toBe(true);
     expect(tutorial.headlineKey()).toBe('onboard.history.loss');
+    expect(tutorial.historySheet()).toBe(false);
+    expect(tutorial.historyMatches()).toHaveLength(1);
+    expect(tutorial.openHistoryChip()).toBe(true);
+    expect(tutorial.headlineKey()).toBe('onboard.history.lossCard');
     expect(tutorial.historyMatches()).toHaveLength(2);
     expect(tutorial.historyExpandIds()).toEqual(['look-history-loss']);
     tutorial.skipHomeHistory();

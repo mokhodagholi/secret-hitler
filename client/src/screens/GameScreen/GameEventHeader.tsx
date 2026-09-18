@@ -14,7 +14,7 @@ export interface GameEventHeaderProps {
  */
 export function GameEventHeader(props: GameEventHeaderProps) {
   return (
-    <header class={styles.header} aria-live="polite">
+    <header class={styles.header} data-spotlight-layout aria-live="polite">
       <p class={styles.headline} dir="auto">
         <TypewriterText
           text={props.headline}

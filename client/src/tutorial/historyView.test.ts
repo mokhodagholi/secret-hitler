@@ -19,18 +19,22 @@ describe('historyView — mock sheet', () => {
   it('Should cover winner, loss, roles, and every friend chip without a guest', () => {
     const you = { name: 'Ana', avatar: 0 };
     const matches = buildHistoryMatches(you);
-    expect(HISTORY_BEATS.length).toBe(11);
+    expect(HISTORY_BEATS.length).toBe(14);
     expect(historyBeatAt(0).wait).toBe('open');
     expect(historyShowsSheet(0)).toBe(false);
     expect(historyShowsSheet(1)).toBe(true);
     expect(historyBeatAt(6).headline).toBe('onboard.history.roles');
     expect(historyBeatAt(7).wait).toBe('open');
-    expect(historyBeatAt(10).lifted).toBe(true);
-    expect(historyShowsLoss(8)).toBe(false);
-    expect(historyShowsLoss(9)).toBe(true);
+    expect(historyBeatAt(8).headline).toBe('onboard.history.sent');
+    expect(historyBeatAt(10).target).toBe('historyClose');
+    expect(historyBeatAt(10).wait).toBe('open');
+    expect(historyBeatAt(11).target).toBe('homeHistory');
+    expect(historyBeatAt(13).lifted).toBe(true);
+    expect(historyShowsLoss(11)).toBe(false);
+    expect(historyShowsLoss(12)).toBe(true);
     expect(historyExpandMatchIds(1)).toEqual([]);
     expect(historyExpandMatchIds(4)).toEqual([HISTORY_WIN_ID]);
-    expect(historyExpandMatchIds(9)).toEqual([HISTORY_LOSS_ID]);
+    expect(historyExpandMatchIds(12)).toEqual([HISTORY_LOSS_ID]);
 
     const win = buildHistoryWin(you);
     const loss = buildHistoryLoss(you);

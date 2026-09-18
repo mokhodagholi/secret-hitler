@@ -99,8 +99,12 @@ export function MatchHistorySheet(props: MatchHistorySheetProps) {
               type="button"
               class={sheet.close}
               aria-label={formatMessage('common.goBack')}
+              data-tutorial-target={reviewing() ? HISTORY_TARGET.close : undefined}
               onClick={() => {
-                if (reviewing()) return;
+                if (reviewing()) {
+                  tutorial.closeHistorySheet();
+                  return;
+                }
                 props.onClose();
               }}
             >
@@ -239,7 +243,10 @@ export function MatchHistorySheet(props: MatchHistorySheetProps) {
                                           class={styles.added}
                                           data-tutorial-target={
                                             reviewing()
-                                              ? HISTORY_TARGET.tie
+                                              ? accountId() === HISTORY_ADD_ACCOUNT &&
+                                                tutorial.target() === HISTORY_TARGET.sent
+                                                ? HISTORY_TARGET.sent
+                                                : HISTORY_TARGET.tie
                                               : undefined
                                           }
                                         >

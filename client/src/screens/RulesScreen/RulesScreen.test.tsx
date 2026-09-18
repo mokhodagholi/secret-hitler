@@ -49,6 +49,16 @@ describe('RulesScreen', () => {
     expect(titles).toEqual([en.tutorial.video, en.tutorial.text]);
   });
 
+  it('Should open the simulated table from the hub when onboarding is on', () => {
+    const harness = buildHarness({ flags: { onboarding: true } });
+    harness.services.nav.navigate('rules');
+    renderWithApp(() => <RulesRoutes />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.tutorial.table }));
+    expect(harness.services.nav.screen()).toBe('onboarding');
+    expect(harness.services.tutorial.introducing()).toBe(true);
+  });
+
   it('Should open Aparat from the video card instead of embedding it', () => {
     const harness = buildHarness();
     harness.services.nav.navigate('rules');
