@@ -114,7 +114,16 @@ export function InvestigateOverlay(props: InvestigateOverlayProps) {
           alt={shownParty() ? formatMessage(`game.${shownParty()!}`) : ''}
           ref={(element) => (card = element)}
         />
-        <Show when={ready() && announce() ? shownParty() : undefined}>
+        <Show
+          when={ready() && announce() ? shownParty() : undefined}
+          fallback={
+            <span class={styles.result}>
+              {formatMessage('ravi.power.investigated', {
+                name: props.targetName,
+              })}
+            </span>
+          }
+        >
           {(party) => (
             <span
               classList={{

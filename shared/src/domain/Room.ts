@@ -93,6 +93,10 @@ export class Room {
   nextRoundNumber = 1;
   /** Deferred phase hand-off while the table hears the last announce. */
   pendingBreath: PendingBreath | null = null;
+  /** Seats that just finished a game — rematch lobby may show their roles. */
+  lastGamePlayerIds: string[] = [];
+  /** Epoch ms after which rematch-lobby roles hide. */
+  lastGameRolesUntil = 0;
 
   constructor(args: {
     id: string;
@@ -147,13 +151,20 @@ export class Room {
     };
   }
 
-  /** Own role always; GameOver and rematch Lobby show last-game seats.
-   *  Fascists see each other and Hitler; in 5–6 player games Hitler also sees
-   *  the Fascists. Liberals never see anyone mid-game. */
+  /** Own role always mid-game; GameOver shows every seat. Rematch lobby
+   *  shows last-game seats to those players for two minutes. Fascists see
+   *  each other and Hitler; in 5–6 player games Hitler also sees the
+   *  Fascists. Liberals never see anyone mid-game. */
   private roleVisibleTo(viewer: Player, target: Player): Role | null {
     if (target.role == null) return null;
+    if (this.phase === Phase.Lobby) {
+      if (Date.now() >= this.lastGameRolesUntil) return null;
+      if (!this.lastGamePlayerIds.includes(viewer.id)) return null;
+      if (!this.lastGamePlayerIds.includes(target.id)) return null;
+      return target.role;
+    }
     if (viewer.id === target.id) return target.role;
-    if (this.phase === Phase.GameOver || this.phase === Phase.Lobby) {
+    if (this.phase === Phase.GameOver) {
       return target.role;
     }
     const fascistView =
@@ -379,6 +390,8 @@ export class Room {
             action: { ...this.pendingBreath.action },
           }
         : null,
+      lastGamePlayerIds: [...this.lastGamePlayerIds],
+      lastGameRolesUntil: this.lastGameRolesUntil,
     };
   }
 
@@ -461,6 +474,8 @@ export class Room {
           action: { ...snapshot.pendingBreath.action },
         }
       : null;
+    room.lastGamePlayerIds = [...(snapshot.lastGamePlayerIds ?? [])];
+    room.lastGameRolesUntil = snapshot.lastGameRolesUntil ?? 0;
     return room;
   }
 
@@ -544,6 +559,9 @@ export interface RoomSnapshot {
   nextRoundNumber?: number;
   /** Absent on rooms snapshotted before announce breaths. */
   pendingBreath?: PendingBreath | null;
+  /** Absent on rooms snapshotted before rematch-lobby role windows. */
+  lastGamePlayerIds?: string[];
+  lastGameRolesUntil?: number;
 }
 
 function cloneRoundHistory(entry: RoundHistoryEntry): RoundHistoryEntry {

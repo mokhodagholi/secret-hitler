@@ -49,6 +49,8 @@ describe('RaviService', () => {
     const ravi = makeRavi(false);
     await ravi.speak('president.first', { name: 'Ana' });
     expect(ravi.line()).toBe('Ana is President this round.');
+    await ravi.speak('power.investigated', { name: 'Cal' });
+    expect(ravi.line()).toBe("The President is checking Cal’s card.");
   });
 
   it('Should speak a first-person line when the beat is about the viewer', async () => {

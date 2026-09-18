@@ -65,6 +65,33 @@ describe('Room.viewFor — information hiding', () => {
     }
   });
 
+  it('Should hide last-game roles from a sitter who was not in that game', () => {
+    const { engine, room, players } = startGame();
+    engine.endGame('fascist');
+    expect(engine.continuePlaying(players[0].id)).toBeNull();
+
+    const guest = engine.addPlayer('Dana');
+    if ('code' in guest) throw new Error(guest.code);
+    const guestView = room.viewFor(guest.id);
+    expect(guestView.players.every((player) => player.role == null)).toBe(true);
+
+    const hostView = room.viewFor(players[0].id);
+    expect(hostView.players.find((player) => player.id === guest.id)?.role).toBeNull();
+    expect(
+      hostView.players.find((player) => player.id === players[0].id)?.role,
+    ).not.toBeNull();
+  });
+
+  it('Should hide last-game roles after the rematch window', () => {
+    const { engine, room, players } = startGame();
+    engine.endGame('liberal');
+    expect(engine.continuePlaying(players[0].id)).toBeNull();
+    room.lastGameRolesUntil = Date.now() - 1;
+
+    const view = room.viewFor(players[0].id);
+    expect(view.players.every((player) => player.role == null)).toBe(true);
+  });
+
   it('Should expose who voted but never what they voted', () => {
     const game = startGame();
     const { engine, room, players } = game;

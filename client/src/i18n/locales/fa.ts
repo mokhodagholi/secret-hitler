@@ -676,6 +676,13 @@ export const fa = {
     over: {
       liberalsWin: 'لیبرال‌ها برنده شدن!',
       fascistsWin: 'فاشیست‌ها برنده شدن!',
+      reason: {
+        liberalPolicy: 'پنج تا قانون لیبرال تصویب شد.',
+        hitlerExecuted: 'هیتلر اعدام شد.',
+        fascistPolicy: 'شش تا قانون فاشیستی تصویب شد.',
+        hitlerElected: 'هیتلر صدراعظم شد.',
+        fascistNumbers: 'فاشیست‌ها با لیبرال‌ها برابر شدن یا بیشتر شدن.',
+      },
       stay: 'می‌مونم',
       waiting: 'منتظر بقیه‌اید…',
       addFriend: 'دوست',
@@ -851,7 +858,7 @@ export const fa = {
     },
     power: {
       investigate: 'رئیس‌جمهور باید کارت یکی رو چک کنه.',
-      investigated: 'رئیس‌جمهور داره کارتش رو چک می‌کنه.',
+      investigated: 'رئیس‌جمهور داره کارت {name} رو چک می‌کنه.',
       investigatedYou: 'کارت شما چک شد.',
       investigatedLiberal: 'کارتش لیبراله‌.',
       investigatedFascist: 'کارتش فاشیسته‌.',

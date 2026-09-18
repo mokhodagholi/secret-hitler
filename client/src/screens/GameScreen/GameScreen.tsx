@@ -1358,22 +1358,6 @@ export function GameScreen() {
                 </div>
               </div>
 
-            <Show when={tableOverlay() === 'vote'}>
-              <VotingOverlay
-                formatMessage={formatMessage}
-                presidentName={isolateBidi(ticketName(state().board.president))}
-                chancellorName={isolateBidi(ticketName(state().board.chancellor))}
-                presidentAvatar={playerAvatar(state().board.president)}
-                chancellorAvatar={playerAvatar(state().board.chancellor)}
-                canVote={
-                  state().you.vote == null &&
-                  (onboarding() || !!game.you()?.isAlive)
-                }
-                yourVote={state().you.vote}
-                onVote={castVote}
-              />
-            </Show>
-
             <Show when={state().kickVote}>
               {(vote) => (
                 <KickVoteOverlay
@@ -1595,6 +1579,22 @@ export function GameScreen() {
                   onDone={() => setOfficeHandoff(null)}
                 />
               )}
+            </Show>
+
+            <Show when={tableOverlay() === 'vote'}>
+              <VotingOverlay
+                formatMessage={formatMessage}
+                presidentName={isolateBidi(ticketName(state().board.president))}
+                chancellorName={isolateBidi(ticketName(state().board.chancellor))}
+                presidentAvatar={playerAvatar(state().board.president)}
+                chancellorAvatar={playerAvatar(state().board.chancellor)}
+                canVote={
+                  state().you.vote == null &&
+                  (onboarding() || !!game.you()?.isAlive)
+                }
+                yourVote={state().you.vote}
+                onVote={castVote}
+              />
             </Show>
 
             <Show when={tableOverlay() === 'chancellorReveal'}>
@@ -1849,8 +1849,10 @@ export function GameScreen() {
                 formatMessage={formatMessage}
                 winner={state().winner!}
                 players={state().players}
+                chancellorId={state().board.chancellor}
+                fascistPolicies={state().board.fascistPolicies}
                 youId={state().you.id}
-                showRoles={showRoles()}
+                showOutcome={showRoles()}
                 wantsContinue={
                   state().players.find((player) => player.id === state().you.id)
                     ?.wantsContinue === true

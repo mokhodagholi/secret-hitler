@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "0.8.4",
+      "bump": "patch",
+      "date": "2026-09-18",
+      "changes": [
+        {
+          "kind": "fix",
+          "fa": "وقتی رئیس‌جمهور کارت یکی رو چک می‌کنه، میز می‌فهمه کارت کیه.",
+          "en": "When the President investigates, the table now hears whose card is being checked."
+        }
+      ]
+    },
+    {
       "version": "0.8.3",
       "bump": "patch",
       "date": "2026-09-18",

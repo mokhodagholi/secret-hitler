@@ -6,6 +6,7 @@ import {
   DISCUSSION_DURATION_MS,
   KICK_VOTE_DURATION_MS,
   LEGISLATIVE_DURATION_MS,
+  LAST_GAME_ROLES_MS,
   LOBBY_AFK_MS,
   LOBBY_DISCONNECT_MS,
   NOMINATION_DURATION_MS,
@@ -1442,6 +1443,8 @@ export class GameEngine extends TypedEmitter<EngineEvents> implements PhaseHost 
     this.clearStartChoice();
 
     room.players = seated;
+    room.lastGamePlayerIds = seated.map((player) => player.id);
+    room.lastGameRolesUntil = Date.now() + LAST_GAME_ROLES_MS;
     this.maybeMigrateHost();
 
     seated.forEach((player, seat) => {

@@ -683,6 +683,13 @@ export const en = {
     over: {
       liberalsWin: 'The Liberals win!',
       fascistsWin: 'The Fascists win!',
+      reason: {
+        liberalPolicy: 'Five Liberal policies were enacted.',
+        hitlerExecuted: 'Hitler was executed.',
+        fascistPolicy: 'Six Fascist policies were enacted.',
+        hitlerElected: 'Hitler was elected Chancellor.',
+        fascistNumbers: 'Fascists now equal or outnumber Liberals.',
+      },
       stay: 'Stay',
       waiting: 'Waiting for the others…',
       addFriend: 'Add',
@@ -858,7 +865,7 @@ export const en = {
     },
     power: {
       investigate: "The President must check a player's card.",
-      investigated: 'The President is checking their card.',
+      investigated: 'The President is checking {name}’s card.',
       investigatedYou: 'Your card is being checked.',
       investigatedLiberal: 'Their card is Liberal.',
       investigatedFascist: 'Their card is Fascist.',

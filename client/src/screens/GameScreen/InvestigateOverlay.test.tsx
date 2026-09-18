@@ -85,6 +85,11 @@ describe('InvestigateOverlay', () => {
     expect(screen.queryByAltText(en.game.fascist)).toBeNull();
     expect(screen.queryByText(en.ravi.power.investigatedLiberal)).toBeNull();
     expect(screen.queryByText(en.ravi.power.investigatedFascist)).toBeNull();
+    expect(
+      screen.getByText(
+        en.ravi.power.investigated.replace('{name}', 'Cal'),
+      ),
+    ).toBeTruthy();
   });
 
   it('Should show the party face to the investigated player without the President whisper', async () => {

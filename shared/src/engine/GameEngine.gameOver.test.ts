@@ -31,6 +31,8 @@ describe('GameEngine — game over continue', () => {
     expect(room.hostId).toBe(players[0].id);
     expect(players[0].ready).toBe(true);
     expect(players[1].ready).toBe(false);
+    expect(room.lastGamePlayerIds).toEqual(players.map((player) => player.id));
+    expect(room.lastGameRolesUntil).toBeGreaterThan(Date.now());
   });
 
   it('Should drop disconnected seats when a player stays', () => {

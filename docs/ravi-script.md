@@ -159,7 +159,8 @@ Do not invent extra tags per line. If it is not in this table, it is
 - **Tone:** `[calm]`
 
 ### `discuss.ended`
-- **When:** Timer ends or the President skips.
+- **When:** Unused. Nomination follows discussion; saying this stole
+  the Chancellor prompt.
 - **FA:** وقت تموم شد.
 - **EN:** Time's up.
 - **Tone:** `[firm]`
@@ -510,9 +511,9 @@ only on the President’s device, after the card face is up.
 
 ### `power.investigated`
 - **When:** Target chosen. Other seats hear this; the President does not.
-- **FA subtitle:** رئیس‌جمهور حزب {name} رو دید.
+- **FA subtitle:** رئیس‌جمهور داره کارت {name} رو چک می‌کنه.
 - **FA audio:** کارت چک شد.
-- **EN subtitle:** The President has seen {name}’s party.
+- **EN subtitle:** The President is checking {name}’s card.
 - **EN audio:** The card has been checked.
 
 ### `power.investigatedYou`
@@ -683,7 +684,7 @@ table is the **spoken** line.
 | `law.vetoRejected` | `[firm]` | رئیس‌جمهور حق وتو رو رد کرد. باید یه قانون تصویب بشه. |
 | `law.vetoUnlocked` | `[announcing]` | از این به بعد می‌شه حق وتو کرد. |
 | `power.investigate` | `[calm]` | رئیس‌جمهور باید کارت یکی رو چک کنه. |
-| `power.investigated` | `[calm]` | کارت چک شد. |
+| `power.investigated` | `[calm]` | کارت چک شد. (subtitle names the seat) |
 | `power.investigatedYou` | `[whispering]` | کارت شما چک شد. |
 | `power.investigatedLiberal` | `[whispering]` | کارتش لیبراله‌. |
 | `power.investigatedFascist` | `[whispering]` | کارتش فاشیسته‌. |

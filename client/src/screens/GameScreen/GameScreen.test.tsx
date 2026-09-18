@@ -2150,12 +2150,17 @@ describe('GameScreen — game over', () => {
       })),
     });
 
-    expect(screen.getAllByText(en.game.over.liberalsWin).length).toBeGreaterThan(0);
-    expect(screen.queryByText(en.role.hitler)).toBeNull();
+    const overlay = screen.getByRole('alertdialog');
+    expect(within(overlay).getByText(en.game.over.reason.liberalPolicy)).toBeTruthy();
+    expect(within(overlay).queryByText(en.game.over.liberalsWin)).toBeNull();
+    expect(within(overlay).queryByRole('button', { name: en.game.over.stay })).toBeNull();
+    expect(within(overlay).queryByText(en.role.hitler)).toBeNull();
 
     await waitFor(
       () => {
-        expect(screen.getByText(en.role.hitler)).toBeTruthy();
+        expect(within(overlay).getByText(en.game.over.liberalsWin)).toBeTruthy();
+        expect(within(overlay).getByText(en.role.hitler)).toBeTruthy();
+        expect(within(overlay).getByRole('button', { name: en.game.over.stay })).toBeTruthy();
       },
       { timeout: 3_000 },
     );

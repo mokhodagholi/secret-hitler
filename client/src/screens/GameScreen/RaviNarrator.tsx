@@ -261,7 +261,8 @@ export function RaviNarrator(props: {
 
     const discussing = state.discussionDeadline != null;
     if (lastDiscussing && !discussing && state.phase === Phase.Nomination) {
-      pending.push({ id: 'discuss.ended' });
+      // Don't say "time's up" — nominate.start / private.nominate is next.
+      sound.play('discuss-close');
     }
     lastDiscussing = discussing;
 

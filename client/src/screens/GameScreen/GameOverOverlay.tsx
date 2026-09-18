@@ -1,6 +1,6 @@
 import { For, Show, onMount } from 'solid-js';
-import type { Faction, PublicPlayer } from '@secret-hitler/shared';
-import type { FormatMessage } from '../../i18n';
+import type { Faction, PublicPlayer, Role } from '@secret-hitler/shared';
+import type { FormatMessage, MessageKey } from '../../i18n';
 import { playerLabel } from '../../i18n/perspective';
 import { useApp } from '../../services/AppContext';
 import type { SocialIdentity } from '../../services/SocialService';
@@ -10,20 +10,53 @@ import styles from './GameOverOverlay.module.scss';
 const CASCADE_STEP_MS = 140;
 const CASCADE_START_MS = 350;
 
+export type GameOverReason =
+  | 'liberalPolicy'
+  | 'hitlerExecuted'
+  | 'fascistPolicy'
+  | 'hitlerElected'
+  | 'fascistNumbers';
+
+const REASON_KEY: Record<GameOverReason, MessageKey> = {
+  liberalPolicy: 'game.over.reason.liberalPolicy',
+  hitlerExecuted: 'game.over.reason.hitlerExecuted',
+  fascistPolicy: 'game.over.reason.fascistPolicy',
+  hitlerElected: 'game.over.reason.hitlerElected',
+  fascistNumbers: 'game.over.reason.fascistNumbers',
+};
+
+/** Why this board ended — policy path, Hitler, or numbers. */
+export function gameOverReason(args: {
+  winner: Faction;
+  fascistPolicies: number;
+  chancellorId: string | null;
+  players: { id: string; role: Role | null; isAlive: boolean }[];
+}): GameOverReason {
+  if (args.winner === 'liberal') {
+    const hitler = args.players.find((player) => player.role === 'hitler');
+    return hitler && !hitler.isAlive ? 'hitlerExecuted' : 'liberalPolicy';
+  }
+  if (args.fascistPolicies >= 6) return 'fascistPolicy';
+  const chancellor = args.players.find((player) => player.id === args.chancellorId);
+  return chancellor?.role === 'hitler' ? 'hitlerElected' : 'fascistNumbers';
+}
+
 export interface GameOverOverlayProps {
   formatMessage: FormatMessage;
   winner: Faction;
   /** Players with roles revealed (the server discloses all roles at GameOver). */
   players: PublicPlayer[];
+  chancellorId: string | null;
+  fascistPolicies: number;
   youId: string;
-  /** Roles wait until Ravi's "the roles are revealed" line. */
-  showRoles: boolean;
+  /** Winner, roles, and rematch wait until Ravi's reveal line. */
+  showOutcome: boolean;
   wantsContinue: boolean;
   onContinue: () => void;
   onLeave: () => void;
 }
 
-/** End-of-game screen: the winning faction, then every player's revealed role. */
+/** End-of-game screen: what happened, then the winning faction and rematch. */
 export function GameOverOverlay(props: GameOverOverlayProps) {
   const { formatMessage } = props;
   const { animation, social, settings, miniApp, game } = useApp();
@@ -40,6 +73,14 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
     };
   }
 
+  const reason = () =>
+    gameOverReason({
+      winner: props.winner,
+      fascistPolicies: props.fascistPolicies,
+      chancellorId: props.chancellorId,
+      players: props.players,
+    });
+
   onMount(() => {
     void social.load(identity()).catch(() => {});
   });
@@ -54,21 +95,23 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
         aria-modal="true"
         ref={(element) => void animation.play(element, 'pop-in')}
       >
-        <span
-          classList={{
-            [styles.headline]: true,
-            [styles.liberal]: props.winner === 'liberal',
-            [styles.fascist]: props.winner === 'fascist',
-          }}
-        >
-          {formatMessage(
-            props.winner === 'liberal'
-              ? 'game.over.liberalsWin'
-              : 'game.over.fascistsWin',
-          )}
-        </span>
+        <span class={styles.reason}>{formatMessage(REASON_KEY[reason()])}</span>
 
-        <Show when={props.showRoles}>
+        <Show when={props.showOutcome}>
+          <span
+            classList={{
+              [styles.headline]: true,
+              [styles.liberal]: props.winner === 'liberal',
+              [styles.fascist]: props.winner === 'fascist',
+            }}
+          >
+            {formatMessage(
+              props.winner === 'liberal'
+                ? 'game.over.liberalsWin'
+                : 'game.over.fascistsWin',
+            )}
+          </span>
+
           <ul class={styles.roles}>
             <For each={[...props.players].sort((left, right) => left.seat - right.seat)}>
               {(player, index) => (
@@ -121,25 +164,25 @@ export function GameOverOverlay(props: GameOverOverlayProps) {
               )}
             </For>
           </ul>
-        </Show>
 
-        <Show when={props.wantsContinue}>
-          <p class={styles.waiting}>{formatMessage('game.over.waiting')}</p>
-        </Show>
+          <Show when={props.wantsContinue}>
+            <p class={styles.waiting}>{formatMessage('game.over.waiting')}</p>
+          </Show>
 
-        <div class={styles.actions}>
-          <button
-            type="button"
-            class={styles.stay}
-            disabled={props.wantsContinue}
-            onClick={() => props.onContinue()}
-          >
-            {formatMessage('game.over.stay')}
-          </button>
-          <button type="button" class={styles.leave} onClick={() => props.onLeave()}>
-            {formatMessage('game.leaveRoom')}
-          </button>
-        </div>
+          <div class={styles.actions}>
+            <button
+              type="button"
+              class={styles.stay}
+              disabled={props.wantsContinue}
+              onClick={() => props.onContinue()}
+            >
+              {formatMessage('game.over.stay')}
+            </button>
+            <button type="button" class={styles.leave} onClick={() => props.onLeave()}>
+              {formatMessage('game.leaveRoom')}
+            </button>
+          </div>
+        </Show>
       </div>
     </div>
   );
