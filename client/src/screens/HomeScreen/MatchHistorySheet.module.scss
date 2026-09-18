@@ -12,10 +12,22 @@
 }
 
 .matchHead {
+  @include pressable;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 4px;
+  text-align: start;
+  color: $text-dim;
+}
+
+.matchCopy {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 0 4px 4px;
+  min-width: 0;
 }
 
 .outcome {
@@ -30,11 +42,17 @@
   opacity: 0.8;
 }
 
+.seats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .seat {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-radius: $radius-sm;
   background: rgba($navy-950, 0.35);
 }

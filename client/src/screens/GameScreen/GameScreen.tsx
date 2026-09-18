@@ -70,10 +70,22 @@ export function GameScreen() {
     if (effect) sound.play(effect);
   });
 
+  createEffect(() => {
+    if (!tutorial.looking() && !tutorial.guidesHeader()) return;
+    void ravi.speakGuide(tutorial.headlineKey());
+  });
+
   const [confirmingLeave, setConfirmingLeave] = createSignal(false);
   const [reporting, setReporting] = createSignal<PublicPlayer | null>(null);
   const [playerMenu, setPlayerMenu] = createSignal<PublicPlayer | null>(null);
   const [menuOpen, setMenuOpen] = createSignal(false);
+  createEffect(() => {
+    if (tutorial.looking()) {
+      setMenuOpen(tutorial.lookMenu());
+      return;
+    }
+    setMenuOpen(false);
+  });
   const [playersOpen, setPlayersOpen] = createSignal(false);
   const [historyOpen, setHistoryOpen] = createSignal(false);
   const [chatHeight, setChatHeight] = createSignal(280);
@@ -144,7 +156,7 @@ export function GameScreen() {
 
   createEffect(() => {
     const state = view();
-    if (!state || onboarding()) {
+    if (!state || tutorial.looking()) {
       cancelBallotHide();
       setHeldBallots({});
       lastBallotPhase = state?.phase ?? null;
@@ -249,6 +261,10 @@ export function GameScreen() {
 
   createEffect(() => {
     if (tutorial.looking()) return;
+    if (tutorial.playing()) {
+      setCeremonyOpen(tutorial.lock() === 'night');
+      return;
+    }
     const state = view();
     if (!state) return;
     if (state.roomId !== ceremonyRoomId) {
@@ -258,9 +274,7 @@ export function GameScreen() {
     }
     if (ceremonyDecided) return;
     now();
-    const role = tutorial.playing()
-      ? (tutorial.role() ?? state.you.role)
-      : (game.role() ?? state.you.role);
+    const role = game.role() ?? state.you.role;
     const start = state.discussionDeadline?.startedAt ?? 0;
     const looksLikeStart =
       state.phase === Phase.Nomination &&
@@ -800,7 +814,17 @@ export function GameScreen() {
       if (tutorial.skipLookBeat()) tutorial.startPlay(playYou(), 5);
       return;
     }
-    if (tutorial.playing() && tutorial.skipToNextPlay()) return;
+    if (tutorial.playing()) {
+      setCeremonyOpen(false);
+      if (tutorial.playSoon()) {
+        leaveLook();
+        return;
+      }
+      if (tutorial.skipFiveSoon()) return;
+      if (tutorial.skipToNextPlay()) return;
+      leaveLook();
+      return;
+    }
     leaveLook();
   }
 
@@ -844,28 +868,58 @@ export function GameScreen() {
   const secondsUntil = (endsAt: number) =>
     Math.max(0, Math.ceil((endsAt - clockMs()) / 1000));
 
-  function castVote(vote: 'ja' | 'nein'): void {
+  function castVote(vote: 'ja' | 'nein'): boolean {
     if (tutorial.looking()) {
       continueLook();
-      return;
+      return true;
     }
     if (tutorial.playing()) {
-      tutorial.handlePlay({ kind: 'castVote', vote });
-      return;
+      return tutorial.handlePlay({ kind: 'castVote', vote });
     }
     game.sendCommand({ kind: 'castVote', vote });
     setActionCommitted(true);
+    return true;
   }
 
   // During discussion the President's endTurn opens nomination; in the
   // nomination window it ends the round (the engine decides which by state).
   function sendEndTurn(): void {
     setActionCommitted(true);
+    if (tutorial.playing()) {
+      tutorial.handlePlay({ kind: 'endTurn' });
+      return;
+    }
     game.sendCommand({ kind: 'endTurn' });
   }
 
+  const discussing = () => view()?.discussionDeadline != null;
+
   const inNomination = () =>
     view()?.phase === Phase.Nomination && view()?.nominationDeadline != null;
+
+  function chatTableAction(): { label?: string; onAction?: () => void } {
+    if (tutorial.playing()) {
+      if (tutorial.lock() !== 'openNominate') return {};
+      return {
+        label: formatMessage('game.startNomination'),
+        onAction: sendEndTurn,
+      };
+    }
+    if (ceremonyOpen() || !iAmPresident() || view()?.kickVote) return {};
+    if (discussing()) {
+      return {
+        label: formatMessage('game.startNomination'),
+        onAction: sendEndTurn,
+      };
+    }
+    if (inNomination()) {
+      return {
+        label: formatMessage('game.endRound'),
+        onAction: sendEndTurn,
+      };
+    }
+    return {};
+  }
 
   const legislativeTalkLocked = () => {
     const phase = view()?.phase;
@@ -926,7 +980,8 @@ export function GameScreen() {
 
   function chooseLegislative(index: number, mode: 'discard' | 'enact'): void {
     if (tutorial.looking()) {
-      continueLook();
+      if (tutorial.lookWait() !== 'pick') return;
+      if (tutorial.advanceLook()) tutorial.startPlay(playYou(), 5);
       return;
     }
     const kind = mode === 'discard' ? 'discardPolicy' : 'enactPolicy';
@@ -997,7 +1052,16 @@ export function GameScreen() {
     if (chancellorReveal()) return 'chancellorReveal';
     if (state?.phase === Phase.Voting) return 'vote';
     if (isLegislative() && state?.vetoRequested) return 'veto';
-    if (isLegislative()) return 'legislative';
+    if (
+      isLegislative() &&
+      !(
+        tutorial.playing() &&
+        state?.phase === Phase.PresidentLegislative &&
+        tutorial.lock() !== 'burnFascist'
+      )
+    ) {
+      return 'legislative';
+    }
     if (
       state?.phase === Phase.SpecialPower &&
       state.activePower === 'policyPeek' &&
@@ -1165,7 +1229,9 @@ export function GameScreen() {
 
   // Power dock is gone; the parchment is the only instruction during a power.
   function eventHeadline(): string {
-    if (onboarding()) return formatMessage(tutorial.headlineKey());
+    if (tutorial.looking() || tutorial.guidesHeader()) {
+      return formatMessage(tutorial.headlineKey());
+    }
     if (powerHeadline()) return helpMessage();
     if (legislativeActor()) return helpMessage();
     if (legislativeTalkLocked()) return formatMessage('ravi.law.silence');
@@ -1283,19 +1349,17 @@ export function GameScreen() {
               '--chat-panel-height': `${tutorial.looking() && !tutorial.lookChat() ? 0 : chatHeight()}px`,
             }}
           >
-            <Show when={!tutorial.lookBlurred()}>
+            <Show when={!tutorial.blurred()}>
             <GameEventHeader
               headline={eventHeadline()}
-              durationMs={
-                onboarding() || powerHeadline()
-                  ? undefined
-                  : ravi.lineDurationMs()
-              }
+              durationMs={ravi.lineDurationMs()}
               onTyped={
-                tutorial.looking()
+                tutorial.looking() || tutorial.playing()
                   ? (done, text) => {
                       setLookHeadlineTyped({ text, done });
-                      if (done) tutorial.lookHeadlineFinished();
+                      if (!done) return;
+                      if (tutorial.looking()) tutorial.lookHeadlineFinished();
+                      else tutorial.playHeadlineFinished();
                     }
                   : undefined
               }
@@ -1410,23 +1474,8 @@ export function GameScreen() {
                   : undefined
               }
               suppressActionClock={actionCommitted()}
-              actionLabel={
-                ceremonyOpen() || !iAmPresident() || state().kickVote
-                  ? undefined
-                  : game.inDiscussion()
-                    ? formatMessage('game.startNomination')
-                    : inNomination()
-                      ? formatMessage('game.endRound')
-                      : undefined
-              }
-              onAction={
-                !ceremonyOpen() &&
-                !state().kickVote &&
-                iAmPresident() &&
-                (game.inDiscussion() || inNomination())
-                  ? sendEndTurn
-                  : undefined
-              }
+              actionLabel={chatTableAction().label}
+              onAction={chatTableAction().onAction}
               onOpenPlayers={() => setPlayersOpen(true)}
               onOpenHistory={() => setHistoryOpen(true)}
               onSkipTimer={
@@ -1447,7 +1496,7 @@ export function GameScreen() {
                 data-look-chrome-spacer
                 aria-hidden="true"
               />
-              <Show when={tutorial.lookBlurred()}>
+              <Show when={tutorial.blurred()}>
                 <div class={styles.lookSeeNext} aria-live="polite">
                   <p class={styles.lookSeeNextText} dir="auto">
                     {formatMessage(tutorial.headlineKey())}
@@ -1456,9 +1505,14 @@ export function GameScreen() {
               </Show>
               <Spotlight
                 target={tutorial.target()}
-                lifted={tutorial.maskLifted() || tutorial.lookBlurred()}
+                lifted={tutorial.maskLifted() || tutorial.blurred()}
                 passHole={tutorial.passHole()}
-                layoutKey={chatHeight() + tutorial.talk().length}
+              layoutKey={
+                chatHeight() +
+                tutorial.talk().length +
+                (tutorial.lock() ?? '').length +
+                Number(menuOpen())
+              }
                 continueLabel={
                   tutorial.looking()
                     ? formatMessage(tutorial.lookContinueKey())
@@ -1469,7 +1523,7 @@ export function GameScreen() {
                     tutorial.canContinueLook() &&
                     lookHeadlineReady()) ||
                   tutorial.lock() === 'delta' ||
-                  tutorial.lock() === 'night' ||
+                  tutorial.playSoon() ||
                   (tutorial.playing() && view()?.winner != null)
                 }
                 showSkip={!tutorial.looking() || lookHeadlineReady()}
@@ -1480,10 +1534,8 @@ export function GameScreen() {
                 onContinue={() => {
                   if (tutorial.looking()) continueLook();
                   else if (tutorial.lock() === 'delta') tutorial.acknowledgeDelta();
-                  else if (tutorial.lock() === 'night') {
-                    setCeremonyOpen(false);
-                    tutorial.finishNight();
-                  } else if (tutorial.playing() && view()?.winner) {
+                  else if (tutorial.playSoon()) leaveLook();
+                  else if (tutorial.playing() && view()?.winner) {
                     if (!tutorial.continueLadder()) leaveLook();
                   }
                 }}
@@ -1492,7 +1544,7 @@ export function GameScreen() {
               />
             </Show>
 
-            <Show when={!onboarding()}>
+            <Show when={!tutorial.looking()}>
             <RaviNarrator
               ceremonyOpen={ceremonyOpen()}
               now={clockMs()}
@@ -1783,14 +1835,24 @@ export function GameScreen() {
 
             <GameMenu
               open={tableOverlay() === 'menu'}
-              roomName={state().name}
-              onClose={() => setMenuOpen(false)}
+              roomName={
+                tutorial.looking() ? formatMessage('settings.title') : state().name
+              }
+              onClose={() => {
+                if (tutorial.looking()) return;
+                setMenuOpen(false);
+              }}
               onInspectRole={() => {
+                if (tutorial.looking()) return;
                 setMenuOpen(false);
                 setInspectingRole(true);
               }}
-              onViewRules={() => nav.navigate('rules')}
+              onViewRules={() => {
+                if (tutorial.looking()) return;
+                nav.navigate('rules');
+              }}
               onLeave={() => {
+                if (tutorial.looking()) return;
                 setMenuOpen(false);
                 setConfirmingLeave(true);
               }}

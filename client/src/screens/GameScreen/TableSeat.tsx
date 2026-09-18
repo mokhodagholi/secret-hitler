@@ -97,6 +97,8 @@ export function TableSeat(props: TableSeatProps) {
     return undefined;
   };
 
+  const stillPick = () => tutorial.playing() || tutorial.looking();
+
   return (
     <button
       type="button"
@@ -105,8 +107,10 @@ export function TableSeat(props: TableSeatProps) {
         [styles.dead]: !props.player.isAlive,
         [styles.offline]: !props.player.connected,
         [styles.you]: props.isYou,
-        [styles.selectable]: props.selectable,
-        [styles.awaitingPick]: props.awaitingPick === true && !props.selectable,
+        [styles.selectable]: props.selectable && !stillPick(),
+        [styles.selectableStill]: props.selectable && stillPick(),
+        [styles.awaitingPick]:
+          props.awaitingPick === true && !props.selectable && !stillPick(),
         [styles.reportable]: props.reportable === true && !props.selectable,
         [styles.termLocked]: props.termLocked,
         [styles.nominationDimmed]: props.nominationDimmed === true,

@@ -52,6 +52,12 @@ $look-smoke: rgba(12, 8, 5, 0.8);
   animation: spotlight-pulse 1.8s ease-in-out infinite;
 }
 
+.hole.holeStatic {
+  animation: none;
+  transform: none;
+  opacity: 1;
+}
+
 .holePass {
   pointer-events: none;
 }
@@ -68,6 +74,7 @@ $look-smoke: rgba(12, 8, 5, 0.8);
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 3;
   display: flex;
+  direction: ltr;
   align-items: center;
   justify-content: space-between;
   gap: 12px;

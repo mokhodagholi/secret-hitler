@@ -24,6 +24,29 @@ export interface SpotlightProps {
   layoutKey?: number;
 }
 
+function skipDescendants(target: string): boolean {
+  return (
+    target === 'chat' ||
+    target === 'messages' ||
+    target === 'composer' ||
+    target === 'nominateAction' ||
+    target === 'mic' ||
+    target === 'settings' ||
+    target === 'homeSettings' ||
+    target === 'homeHistory' ||
+    target === 'historyAdd'
+  );
+}
+
+function tightSettingsHole(target: string): boolean {
+  return (
+    target === 'nominateAction' ||
+    target === 'settings' ||
+    target === 'homeSettings' ||
+    target === 'homeHistory'
+  );
+}
+
 function PassBars(props: { hole: HoleRect }) {
   const hole = () => props.hole;
   return (
@@ -117,6 +140,23 @@ export function Spotlight(props: SpotlightProps) {
       return;
     }
 
+    if (props.target === 'historyRole') {
+      const roleHoles: HoleRect[] = [];
+      nodes.forEach((node) => {
+        const box = node.getBoundingClientRect();
+        if (box.width < 1 || box.height < 1) return;
+        roleHoles.push({
+          left: box.left - overlayBox.left - HOLE_PAD,
+          top: box.top - overlayBox.top - HOLE_PAD,
+          width: box.width + HOLE_PAD * 2,
+          height: box.height + HOLE_PAD * 2,
+        });
+      });
+      setHoles(roleHoles);
+      setPassRect(null);
+      return;
+    }
+
     let left = Infinity;
     let top = Infinity;
     let right = -Infinity;
@@ -134,12 +174,7 @@ export function Spotlight(props: SpotlightProps) {
     nodes.forEach((node) => {
       absorb(node.getBoundingClientRect());
       // Chat messages scroll out of the panel; folding them grows the ring.
-      if (
-        props.target === 'chat' ||
-        props.target === 'messages' ||
-        props.target === 'composer' ||
-        props.target === 'mic'
-      ) {
+      if (skipDescendants(props.target)) {
         return;
       }
       node.querySelectorAll('*').forEach((child) => {
@@ -159,6 +194,18 @@ export function Spotlight(props: SpotlightProps) {
         top: top - overlayBox.top,
         width: right - left,
         height: bottom - top,
+      };
+      setHoles([visual]);
+      setPassRect(visual);
+      return;
+    }
+
+    if (tightSettingsHole(props.target)) {
+      const visual: HoleRect = {
+        left: left - overlayBox.left - 6,
+        top: top - overlayBox.top - 4,
+        width: right - left + 12,
+        height: bottom - top + 8,
       };
       setHoles([visual]);
       setPassRect(visual);
@@ -207,6 +254,8 @@ export function Spotlight(props: SpotlightProps) {
     measure();
     const frame = requestAnimationFrame(measure);
     onCleanup(() => cancelAnimationFrame(frame));
+    window.addEventListener('scroll', measure, true);
+    onCleanup(() => window.removeEventListener('scroll', measure, true));
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', measure);
       onCleanup(() => window.removeEventListener('resize', measure));
@@ -226,7 +275,15 @@ export function Spotlight(props: SpotlightProps) {
     props.layoutKey;
     measure();
     const frame = requestAnimationFrame(measure);
-    onCleanup(() => cancelAnimationFrame(frame));
+    let follow = 0;
+    const queued = requestAnimationFrame(() => {
+      follow = requestAnimationFrame(measure);
+    });
+    onCleanup(() => {
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame(queued);
+      cancelAnimationFrame(follow);
+    });
   });
 
   const holeStyle = (rect: HoleRect) => ({
@@ -235,6 +292,10 @@ export function Spotlight(props: SpotlightProps) {
     width: `${rect.width}px`,
     height: `${rect.height}px`,
   });
+
+  // Same moments Continue / Skip stay off: header still typing, or a table action.
+  const freezeRing = () =>
+    props.showContinue === false || props.showSkip === false;
 
   const maskId = 'look-spotlight-mask';
 
@@ -299,10 +360,11 @@ export function Spotlight(props: SpotlightProps) {
           {(rect) => (
             <button
               type="button"
-              class={styles.hole}
               classList={{
+                [styles.hole]: true,
                 [styles.holePass]: props.passHole === true,
                 [styles.holeFlush]: props.target === 'composer',
+                [styles.holeStatic]: freezeRing(),
               }}
               style={holeStyle(rect)}
               tabIndex={-1}

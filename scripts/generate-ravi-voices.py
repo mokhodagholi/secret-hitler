@@ -31,6 +31,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from onboard_ravi_lines import ONBOARD_DIRECTION, ONBOARD_LINES  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "client/src/assets/sounds/ravi"
 VOICE_DIR = ROOT / "scripts/ravi-voices"
@@ -366,7 +368,7 @@ ELEVEN_DIRECTION: dict[str, str | tuple[str, ...]] = {
 
 def with_eleven_direction(line_id: str, text: LineText) -> LineText:
     parts = tuple(for_eleven_fa(p) for p in phrases(text))
-    direction = ELEVEN_DIRECTION.get(line_id)
+    direction = ONBOARD_DIRECTION.get(line_id) or ELEVEN_DIRECTION.get(line_id)
     if direction is None:
         return parts if len(parts) > 1 else parts[0]
     if isinstance(direction, tuple):
@@ -792,7 +794,13 @@ def eleven_api_keys() -> list[str]:
     return keys
 
 
-def run_eleven(who: list[str], ids: list[str] | None = None, lang: str = "en") -> None:
+def run_eleven(
+    who: list[str],
+    ids: list[str] | None = None,
+    lang: str = "en",
+    catalog_name: str = "table",
+    skip_existing: bool = False,
+) -> None:
     keys = eleven_api_keys()
     if not keys:
         sys.exit("Set ELEVENLABS_API_KEY or ELEVENLABS_API_KEY_2 for --engine eleven")
@@ -815,13 +823,20 @@ def run_eleven(who: list[str], ids: list[str] | None = None, lang: str = "en") -
             + ". Use --who daniel, george, callum, sarah, brian, or james (paid)."
         )
 
-    catalog = catalog_for(lang)
+    catalog: dict[str, LineText] = (
+        ONBOARD_LINES if catalog_name == "onboard" else catalog_for(lang)
+    )
     lines = catalog if not ids else {i: catalog[i] for i in ids}
     language_code = "en" if lang == "en" else "fa"
     n = 0
+    skipped = 0
     for name in who:
         for line_id, text in lines.items():
             dest = OUT_DIR / name / f"{line_id}.mp3"
+            if skip_existing and dest.exists():
+                print(f"skip {name}/{line_id}")
+                skipped += 1
+                continue
             spoken_text: LineText = (
                 with_eleven_direction(line_id, text) if lang == "fa" else text
             )
@@ -829,7 +844,7 @@ def run_eleven(who: list[str], ids: list[str] | None = None, lang: str = "en") -
             print(f"{name}/{line_id}: {spoken}")
             speak_eleven_line(key, voices[name], spoken_text, dest, language_code)
             n += 1
-    print(f"wrote {n} files under {OUT_DIR / who[0]}")
+    print(f"wrote {n} files under {OUT_DIR / who[0]} (skipped {skipped})")
 
 
 def main() -> None:
@@ -856,6 +871,17 @@ def main() -> None:
         default="fa",
         help="spoken catalog: fa (default) or en",
     )
+    parser.add_argument(
+        "--catalog",
+        choices=("table", "onboard"),
+        default="table",
+        help="table = live Ravi; onboard = Sarah guide lines",
+    )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="leave mp3s that already exist",
+    )
     args = parser.parse_args()
     if shutil.which("ffmpeg") is None:
         sys.exit("ffmpeg is required (brew install ffmpeg)")
@@ -866,7 +892,7 @@ def main() -> None:
     elif args.engine == "gemini":
         run_gemini(who)
     elif args.engine == "eleven":
-        run_eleven(who, ids, args.lang)
+        run_eleven(who, ids, args.lang, args.catalog, args.skip_existing)
     else:
         asyncio.run(run_edge(who, ids))
 

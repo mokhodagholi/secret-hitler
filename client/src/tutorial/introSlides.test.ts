@@ -58,7 +58,6 @@ describe('TutorialService — intro', () => {
   });
 
   it('Should name a lesson sting for each intro piece', () => {
-    expect(effectForIntroVisual({ kind: 'welcome' })).toBe('onboard-turn');
     expect(
       effectForIntroVisual({ kind: 'images', layout: 'trio', srcs: [] }),
     ).toBe('onboard-roles');

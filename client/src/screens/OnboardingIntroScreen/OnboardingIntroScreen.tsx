@@ -29,7 +29,7 @@ export const INTRO_REASSURE_MS = 3000;
  * Yes → look table. No → reassure, then restart from the first piece.
  */
 export function OnboardingIntroScreen() {
-  const { tutorial, nav, i18n, animation, settings, sound } = useApp();
+  const { tutorial, nav, i18n, animation, settings, sound, ravi } = useApp();
   const { formatMessage } = i18n;
   const [reassuring, setReassuring] = createSignal(false);
   let reassureTimer: ReturnType<typeof setTimeout> | undefined;
@@ -40,6 +40,15 @@ export function OnboardingIntroScreen() {
     if (!tutorial.introducing()) return;
     const effect = effectForIntroVisual(slide().visual);
     if (effect) sound.play(effect);
+  });
+
+  createEffect(() => {
+    if (!tutorial.introducing()) return;
+    if (reassuring()) {
+      void ravi.speakGuide('onboard.piece.checkReassure');
+      return;
+    }
+    void ravi.speakGuide(slide().bodyKey);
   });
   const atStart = () => tutorial.introBeat() === 0;
   const onCheck = () => slide().visual.kind === 'check';
@@ -116,7 +125,6 @@ export function OnboardingIntroScreen() {
       <div
         classList={{
           [styles.page]: true,
-          [styles.pageWelcome]: slide().visual.kind === 'welcome',
         }}
         ref={(element) => void animation.play(element, 'screen-enter')}
       >
@@ -133,11 +141,6 @@ export function OnboardingIntroScreen() {
 
         <div class={styles.stage}>
           <Switch>
-            <Match when={slide().visual.kind === 'welcome'}>
-              <div class={styles.welcome} aria-hidden="true">
-                {formatMessage('onboard.piece.welcomeTime')}
-              </div>
-            </Match>
             <Match when={slide().visual.kind === 'government'}>
               <div class={styles.government} aria-hidden="true" dir="ltr">
                 <span class={styles.badgePresident}>

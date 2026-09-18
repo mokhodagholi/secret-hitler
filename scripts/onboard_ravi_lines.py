@@ -1,0 +1,122 @@
+"""Onboarding guide lines for Sarah (ElevenLabs). Table talk is not here."""
+
+from __future__ import annotations
+
+# id → spoken Persian. Intro pages speak title then body.
+ONBOARD_LINES: dict[str, str] = {
+    "onboard.piece.welcome": (
+        "قبل از میز واقعی، با هم یه دور می‌ریم رو تخته. "
+        "حدود دو دقیقه طول می‌کشه — هر وقت خواستید بگذرید."
+    ),
+    "onboard.piece.roles": "نقش‌ها. لیبرال، فاشیست، و هیتلر.",
+    "onboard.piece.boards": "تخته‌ها. آبی مال لیبرال‌هاست، قرمز مال فاشیست‌ها.",
+    "onboard.piece.offices": "رئیس‌جمهور و صدراعظم. دو مقامی که دولت رو می‌سازن.",
+    "onboard.piece.vote": "رأی. هر دور همه باید رأی بدن.",
+    "onboard.piece.tracker": (
+        "شمارندهٔ انتخابات. اینجا شکست دولت‌ها رو می‌شمره. "
+        "سه بار پشت هم که پر بشه، قانون بالای دسته می‌ره رو تخته — بدون دولت."
+    ),
+    "onboard.piece.trackerFail1": "شکست اول. دولت رأی نیاورد. شمارنده از چپ یکی پر می‌شه.",
+    "onboard.piece.trackerFail2": "شکست دوم. باز هم خوابید. خونهٔ دوم هم پر شد.",
+    "onboard.piece.trackerChaos": (
+        "شکست سوم. سه‌بار پشت هم که بخوابه، قانون بالای دسته خودش می‌ره رو تخته — بدون دولت."
+    ),
+    "onboard.piece.deck": (
+        "دسته و سوخته. قانون‌های تازه از دسته میان؛ اونی که می‌سوزه می‌ره رو تودهٔ سوخته‌ها."
+    ),
+    "onboard.piece.laws": (
+        "کارت قانون. لیبرال یا فاشیست. اینا می‌رن رو تخته؛ "
+        "چند تا از یک رنگ که جمع بشه، همون تیم می‌بره."
+    ),
+    "onboard.piece.check": "گرفتید؟ قطعه‌های بازی رو دیدید. اوکی‌اید بریم سر میز؟",
+    "onboard.piece.checkReassure": "مشکلی نیست. دوباره با هم مرور می‌کنیم.",
+    "onboard.idea.welcome": (
+        "وارد بازی شدیم. درسته، همه‌چی که تا الان دیدیم اینجا استفاده می‌شه."
+    ),
+    "onboard.idea.people": "اینا آدمای بازی‌ان. دو دسته تو بازی هست: فاشیست و لیبرال.",
+    "onboard.idea.boards": "اینا هم تخته‌های بازی‌ان. قانون‌ها روشون می‌شینه.",
+    "onboard.idea.thisPresident": "این یکی رئیس‌جمهوره. هر دست صدراعظم رو همین انتخاب می‌کنه.",
+    "onboard.idea.thisPresidentLaws": (
+        "اگه دولت رأی بیاره، سه تا قانون از دسته می‌کشه. "
+        "یکی رو می‌سوزونه، دوتا رو می‌ده به صدراعظم."
+    ),
+    "onboard.idea.talk": "آدما با هم حرف می‌زنن — هم با پیام، هم با میکروفون.",
+    "onboard.idea.settings": "صدا، نقش‌تون، قوانین — همه‌ش پشت این دکمه‌ست. بزنید روش.",
+    "onboard.idea.homeSettings": "اسم، عکس، صدا — از این دکمه عوض می‌شن. بزنید روش.",
+    "onboard.idea.settingsMenu": (
+        "از اینجا می‌تونید صدا رو قطع کنید، نقش‌تون رو ببینید، یا از میز برید بیرون."
+    ),
+    "onboard.idea.messages": "پیام‌ها همین‌جا می‌آد.",
+    "onboard.idea.writeHere": (
+        "هر چی اینجا بنویسید می‌ره تو چت و بقیه می‌بینن. "
+        "الان یه چیزی بنویسید، بعد دکمهٔ فرستادن رو بزنید."
+    ),
+    "onboard.idea.whereWereWe": "خب کجا بودیم؟",
+    "onboard.idea.campaign": (
+        "اها داشتم می‌گفتم درسته که رئیس‌جمهور صدراعظم رو انتخاب می‌کنه، "
+        "ولی این همه هستن که رأی می‌دن کدوم دولت تشکیل شه."
+    ),
+    "onboard.idea.talkAbout": "با هم ببینیم سر میز چی می‌گن.",
+    "onboard.idea.yourTurn": "شما هم حرف بزنید. یه چیزی که بقیه بهش رأی آره بدن.",
+    "onboard.idea.youChancellor": "الان شما صدراعظم این دستید.",
+    "onboard.idea.chancellorDoes": (
+        "صدراعظم دو تا قانون می‌گیره و یکی رو می‌ذاره رو تخته — لیبرال یا فاشیست."
+    ),
+    "onboard.idea.onlyPresidentSees": "این سه تا فقط دست رئیس‌جمهوره. شما نمی‌بینید چی اومده.",
+    "onboard.idea.presidentBurns": "یکی رو سوزوند. دوتا می‌آد دست شما.",
+    "onboard.idea.youPickLaw": "الان نوبت شماست. یکی رو بذارید رو تخته.",
+    "onboard.idea.seeNext": "بریم ببینیم تو یه بازی ۵ نفره چه اتفاقاتی می‌افته.",
+    "onboard.youPresident": "شما رئیس‌جمهورید. ببینید سر میز چی می‌شه.",
+    "onboard.mustNominate": (
+        "باید یکی رو صدراعظم بذارید. اگه نذارید نوبتتون می‌سوزه و رئیس‌جمهور می‌ره نفر بعدی."
+    ),
+    "onboard.openNominate": "همین دکمه رو بزنید تا صدراعظم رو انتخاب کنید.",
+    "onboard.openNominateTap": "بزنید روش.",
+    "onboard.pick": (
+        "دست اول چیزی معلوم نیست. معمولاً نفر بعدی رو می‌ذارن تا بازی راه بیفته."
+    ),
+    "onboard.pickNima": "الان نیما رو بذارید صدراعظم.",
+    "onboard.pickRetry": "این یکی رو برای این دست نه. یکی دیگه.",
+    "onboard.vote": (
+        "دولت پیشنهاده — شما رئیس‌جمهورید، نیما صدراعظم. "
+        "باید اکثریت آره بدن تا بشینن. الان آره بزنید."
+    ),
+    "onboard.voteRetry": "نه رو برای این دست نزنید. آره بزنید.",
+    "onboard.draw": "حالا یکی رو بسوزونید. دوتا می‌ره دست صدراعظم؛ یکی‌ش می‌شینه رو تخته.",
+    "onboard.secretEnact": "چی اومده و چی می‌ذاره رو فقط صدراعظم می‌بینه.",
+    "onboard.comingSoon": "بقیه‌ش به‌زودی می‌آد سر میز.",
+    "onboard.history.chip": "همه بازی‌هایی که تا الان کردید جزئیاتش اینجاست. بزنید روش.",
+    "onboard.history.list": (
+        "اینا میزهایی‌ان که نشستید. اگه هنوز ننشسته باشید خالیه؛ بعد چند تا دست همین‌جوری پر می‌شه."
+    ),
+    "onboard.history.outcome": "بالاش می‌گه کی برد — لیبرال‌ها یا فاشیست‌ها.",
+    "onboard.history.yours": "پایین‌تر مال شماست: بردید یا باختید، و کی تموم شد.",
+    "onboard.history.people": "اینا همه‌ان که سر اون میز بودن. به ترتیب صندلی.",
+    "onboard.history.you": "این ردیف خودتونه. نقش‌تون اینجاست.",
+    "onboard.history.roles": "بعد بازی نقش‌ها معلومه. هر کی چی بوده، اینجاست.",
+    "onboard.history.add": (
+        "از همین‌جا می‌تونید دوست‌شون کنید — مثل آخر میز. الان رضا رو اضافه کنید."
+    ),
+    "onboard.history.ties": (
+        "اگه درخواست رفته «فرستاده شد» می‌آد. دوست که باشید همون نوشته می‌شه. "
+        "یه درخواست اومده هم همین‌جا می‌بینید."
+    ),
+    "onboard.history.loss": "فرض کنید یه دست دیگه هم زدین و باختید. این یکی می‌آد زیرش.",
+    "onboard.history.done": "تموم. از خونه هر وقت خواستید تاریخچه رو باز کنید.",
+}
+
+ONBOARD_DIRECTION: dict[str, str] = {
+    "onboard.piece.welcome": "[warmly]",
+    "onboard.piece.check": "[calm]",
+    "onboard.piece.checkReassure": "[calm]",
+    "onboard.idea.welcome": "[warmly]",
+    "onboard.idea.youChancellor": "[announcing]",
+    "onboard.idea.seeNext": "[warmly]",
+    "onboard.idea.talkAbout": "[calm]",
+    "onboard.pickRetry": "[disappointed]",
+    "onboard.voteRetry": "[disappointed]",
+    "onboard.draw": "[whispering]",
+    "onboard.secretEnact": "[whispering]",
+    "onboard.comingSoon": "[warmly]",
+    "onboard.history.done": "[warmly]",
+}

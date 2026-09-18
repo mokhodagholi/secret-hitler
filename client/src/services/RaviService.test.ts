@@ -158,4 +158,18 @@ describe('RaviService', () => {
     expect(ravi.speaking()).toBe(false);
     expect(ravi.lineDurationMs()).toBe(0);
   });
+
+  it('Should speak onboarding guide lines and skip table talk', async () => {
+    const play = rs.spyOn(HTMLMediaElement.prototype, 'play');
+    const ravi = makeRavi(true);
+    await ravi.speakGuide('onboard.talk.listening');
+    expect(ravi.line()).toBeNull();
+    expect(play).not.toHaveBeenCalled();
+
+    await ravi.speakGuide('onboard.piece.welcome');
+    expect(ravi.line()).toBe(
+      "Before a real table, we'll walk the board together. About two minutes — skip whenever you want.",
+    );
+    expect(play).not.toHaveBeenCalled();
+  });
 });

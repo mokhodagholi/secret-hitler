@@ -1,10 +1,15 @@
 import { createSignal, type Accessor, type Setter } from 'solid-js';
-import type { GameCommand, GameStateView, Role } from '@secret-hitler/shared';
+import type {
+  GameCommand,
+  GameStateView,
+  HistoryMatchView,
+  Role,
+  SocialTieStatus,
+} from '@secret-hitler/shared';
 import type { MessageKey, MessageValues } from '../i18n';
 import type { NavigationService } from '../services/NavigationService';
 import { TutorialDirector } from './TutorialDirector';
 import {
-  fascistIndex,
   isAllowedChancellor,
   isAllowedPowerTarget,
   liberalIndex,
@@ -25,9 +30,29 @@ import {
   lookBeatAt,
   lookBlursTable,
   lookShowsChat,
+  lookShowsMenu,
   type LookWait,
   type LookYou,
 } from './lookView';
+import {
+  HISTORY_ADD_ACCOUNT,
+  HISTORY_BEATS,
+  INITIAL_HISTORY_TIES,
+  buildHistoryLoss,
+  buildHistoryWin,
+  historyBeatAt,
+  historyExpandMatchIds,
+  historyShowsLoss,
+  historyShowsSheet,
+  type HistoryWait,
+} from './historyView';
+import {
+  settingsBeatAt,
+  settingsBeats,
+  settingsShowsPage,
+  type SettingsBeatSpec,
+  type SettingsWait,
+} from './settingsView';
 import { INTRO_SLIDE_COUNT, INTRO_SLIDES } from './introSlides';
 import type { IntroSlide } from './introSlides';
 
@@ -40,6 +65,10 @@ export const TUTORIAL_SEEN_COUNT_KEY = 'sh:tutorial-seen-count';
 export const ONBOARDING_STEP_KEY = 'sh:onboarding-step';
 
 export const ONBOARDING_DECLINE_KEY = 'sh:onboarding-declines';
+
+export const ONBOARDING_HOME_SETTINGS_KEY = 'sh:onboarding-home-settings';
+
+export const ONBOARDING_HOME_HISTORY_KEY = 'sh:onboarding-home-history';
 
 export interface TutorialTalk {
   id: string;
@@ -67,6 +96,9 @@ export class TutorialService {
   readonly offeringSit: Accessor<boolean>;
   readonly introducing: Accessor<boolean>;
   readonly looking: Accessor<boolean>;
+  readonly guidingHome: Accessor<boolean>;
+  readonly reviewingHistory: Accessor<boolean>;
+  readonly historyMatches: Accessor<HistoryMatchView[]>;
   readonly playing: Accessor<boolean>;
   readonly introBeat: Accessor<number>;
   readonly beat: Accessor<number>;
@@ -75,10 +107,16 @@ export class TutorialService {
   readonly lock: Accessor<PlayLock>;
   readonly playHeadline: Accessor<MessageKey>;
   readonly talk: Accessor<TutorialTalk[]>;
+  readonly playSoon: Accessor<boolean>;
   private readonly setAnnouncing: Setter<boolean>;
   private readonly setOfferingSit: Setter<boolean>;
   private readonly setIntroducing: Setter<boolean>;
   private readonly setLooking: Setter<boolean>;
+  private readonly setGuidingHome: Setter<boolean>;
+  private readonly setReviewingHistory: Setter<boolean>;
+  private readonly setHistoryMatches: Setter<HistoryMatchView[]>;
+  private readonly historyTies: Accessor<Record<string, SocialTieStatus>>;
+  private readonly setHistoryTies: Setter<Record<string, SocialTieStatus>>;
   private readonly setPlaying: Setter<boolean>;
   private readonly setIntroBeat: Setter<number>;
   private readonly setBeat: Setter<number>;
@@ -87,6 +125,7 @@ export class TutorialService {
   private readonly setLock: Setter<PlayLock>;
   private readonly setPlayHeadline: Setter<MessageKey>;
   private readonly setTalk: Setter<TutorialTalk[]>;
+  private readonly setPlaySoon: Setter<boolean>;
 
   private lookSettled = false;
   private lookPicked = false;
@@ -95,6 +134,11 @@ export class TutorialService {
   private lookYou: LookYou | null = null;
   private table: ScriptedTable | null = null;
   private director: TutorialDirector | null = null;
+  private playLines: MessageKey[] = [];
+  private playLineIndex = 0;
+  private playLineTimers: number[] = [];
+  private playSettled = false;
+  private settingsTour: SettingsBeatSpec[] = [];
   private readonly setLookLifted: Setter<boolean>;
   private readonly lookLifted: Accessor<boolean>;
   private readonly lookHintKey: Accessor<MessageKey>;
@@ -111,6 +155,14 @@ export class TutorialService {
     const [offeringSit, setOfferingSit] = createSignal(false);
     const [introducing, setIntroducing] = createSignal(false);
     const [looking, setLooking] = createSignal(false);
+    const [guidingHome, setGuidingHome] = createSignal(false);
+    const [reviewingHistory, setReviewingHistory] = createSignal(false);
+    const [historyMatches, setHistoryMatches] = createSignal<HistoryMatchView[]>(
+      [],
+    );
+    const [historyTies, setHistoryTies] = createSignal<
+      Record<string, SocialTieStatus>
+    >({});
     const [playing, setPlaying] = createSignal(false);
     const [introBeat, setIntroBeat] = createSignal(0);
     const [beat, setBeat] = createSignal(0);
@@ -119,6 +171,7 @@ export class TutorialService {
     const [lock, setLock] = createSignal<PlayLock>(null);
     const [playHeadline, setPlayHeadline] = createSignal<MessageKey>('onboard.pick');
     const [talk, setTalk] = createSignal<TutorialTalk[]>([]);
+    const [playSoon, setPlaySoon] = createSignal(false);
     const [lookLifted, setLookLifted] = createSignal(false);
     const [lookHintKey, setLookHintKey] = createSignal<MessageKey>(
       'onboard.idea.composeHint',
@@ -138,6 +191,14 @@ export class TutorialService {
     this.setIntroducing = setIntroducing;
     this.looking = looking;
     this.setLooking = setLooking;
+    this.guidingHome = guidingHome;
+    this.setGuidingHome = setGuidingHome;
+    this.reviewingHistory = reviewingHistory;
+    this.setReviewingHistory = setReviewingHistory;
+    this.historyMatches = historyMatches;
+    this.setHistoryMatches = setHistoryMatches;
+    this.historyTies = historyTies;
+    this.setHistoryTies = setHistoryTies;
     this.playing = playing;
     this.setPlaying = setPlaying;
     this.introBeat = introBeat;
@@ -154,6 +215,8 @@ export class TutorialService {
     this.setPlayHeadline = setPlayHeadline;
     this.talk = talk;
     this.setTalk = setTalk;
+    this.playSoon = playSoon;
+    this.setPlaySoon = setPlaySoon;
     this.lookHintKey = lookHintKey;
     this.setLookHintKey = setLookHintKey;
     this.lookWaitOverride = lookWaitOverride;
@@ -164,7 +227,12 @@ export class TutorialService {
 
   /** Any onboarding path owns the client — GameScreen hides the server path. */
   active(): boolean {
-    return this.introducing() || this.looking() || this.playing();
+    return (
+      this.introducing() ||
+      this.looking() ||
+      this.playing() ||
+      this.reviewingHistory()
+    );
   }
 
   seenCount(): number {
@@ -212,7 +280,9 @@ export class TutorialService {
     ) {
       return false;
     }
-    if (this.offeringSit() || this.active() || this.sitAsked) return false;
+    if (this.offeringSit() || this.active() || this.sitAsked || this.guidingHome()) {
+      return false;
+    }
     this.sitAsked = true;
     this.setOfferingSit(true);
     return true;
@@ -230,10 +300,193 @@ export class TutorialService {
     this.bumpDeclines();
   }
 
+  homeSettingsSeen(): boolean {
+    try {
+      return localStorage.getItem(ONBOARDING_HOME_SETTINGS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  /** First time on Home with no Sit dialog and no table lesson running. */
+  canGuideHome(): boolean {
+    return (
+      !this.homeSettingsSeen() &&
+      !this.offeringSit() &&
+      (this.sitAsked || !this.shouldOffer()) &&
+      !this.active() &&
+      !this.guidingHome() &&
+      !this.reviewingHistory()
+    );
+  }
+
+  beginHomeSettings(options?: { voice?: boolean }): boolean {
+    if (!this.canGuideHome()) return false;
+    this.startHomeSettings(options);
+    return true;
+  }
+
+  /** Dev replay. Rings the home gear even after it has been seen. */
+  startHomeSettings(options?: { voice?: boolean }): void {
+    this.stopPlay();
+    this.endLook();
+    this.endHomeHistory(false);
+    this.setOfferingSit(false);
+    this.settingsTour = settingsBeats(options?.voice === true);
+    this.setGuidingHome(true);
+    this.applySettingsBeat(0);
+  }
+
+  skipHomeSettings(): void {
+    if (!this.guidingHome()) return;
+    this.endHomeSettings(true);
+  }
+
+  settingsWait(): SettingsWait {
+    return this.settingsBeat().wait;
+  }
+
+  settingsPage(): boolean {
+    return this.guidingHome() && settingsShowsPage(this.settingsBeat());
+  }
+
+  canContinueHomeSettings(): boolean {
+    return this.guidingHome() && this.settingsWait() === 'continue';
+  }
+
+  /** Gear tap. Caller opens Settings. */
+  openHomeSettings(): boolean {
+    if (!this.guidingHome() || this.settingsWait() !== 'open') return false;
+    this.advanceHomeSettings();
+    return true;
+  }
+
+  /** True when the tour is finished. Caller goes Home. */
+  advanceHomeSettings(): boolean {
+    if (!this.guidingHome()) return false;
+    const next = this.beat() + 1;
+    if (next >= this.settingsTour.length) {
+      this.endHomeSettings(true);
+      return true;
+    }
+    this.applySettingsBeat(next);
+    return false;
+  }
+
+  retreatHomeSettings(): void {
+    if (!this.guidingHome()) return;
+    const previous = this.beat() - 1;
+    if (previous < 0) return;
+    this.applySettingsBeat(previous);
+  }
+
+  homeHistorySeen(): boolean {
+    try {
+      return localStorage.getItem(ONBOARDING_HOME_HISTORY_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  canGuideHomeHistory(): boolean {
+    return (
+      this.homeSettingsSeen() &&
+      !this.homeHistorySeen() &&
+      !this.offeringSit() &&
+      !this.active() &&
+      !this.guidingHome()
+    );
+  }
+
+  beginHomeHistory(you: LookYou): boolean {
+    if (!this.canGuideHomeHistory()) return false;
+    this.startHomeHistory(you);
+    return true;
+  }
+
+  startHomeHistory(you: LookYou): void {
+    this.stopPlay();
+    this.endLook();
+    this.endHomeSettings(false);
+    this.setOfferingSit(false);
+    this.lookYou = you;
+    this.setHistoryTies({ ...INITIAL_HISTORY_TIES });
+    this.setReviewingHistory(true);
+    this.applyHistoryBeat(0);
+  }
+
+  skipHomeHistory(): void {
+    if (!this.reviewingHistory()) return;
+    this.endHomeHistory(true);
+  }
+
+  historyWait(): HistoryWait {
+    return historyBeatAt(this.beat()).wait;
+  }
+
+  historySheet(): boolean {
+    return this.reviewingHistory() && historyShowsSheet(this.beat());
+  }
+
+  historyExpandIds(): string[] {
+    if (!this.reviewingHistory()) return [];
+    return historyExpandMatchIds(this.beat());
+  }
+
+  historyTie(accountId: string): SocialTieStatus {
+    return this.historyTies()[accountId] ?? 'none';
+  }
+
+  /** History chip tap on the first beat. */
+  openHistoryChip(): boolean {
+    if (!this.reviewingHistory() || this.historyWait() !== 'open') return false;
+    if (historyBeatAt(this.beat()).target !== 'homeHistory') return false;
+    this.advanceHomeHistory();
+    return true;
+  }
+
+  /** Add on the taught seat. Other Adds are ignored. */
+  addHistoryFriend(accountId: string): boolean {
+    if (!this.reviewingHistory() || this.historyWait() !== 'open') return false;
+    if (historyBeatAt(this.beat()).target !== 'historyAdd') return false;
+    if (accountId !== HISTORY_ADD_ACCOUNT) return false;
+    this.setHistoryTies((ties) => ({ ...ties, [accountId]: 'outgoing' }));
+    this.advanceHomeHistory();
+    return true;
+  }
+
+  canContinueHomeHistory(): boolean {
+    return this.reviewingHistory() && this.historyWait() === 'continue';
+  }
+
+  /** True when the tour is finished. */
+  advanceHomeHistory(): boolean {
+    if (!this.reviewingHistory()) return false;
+    const next = this.beat() + 1;
+    if (next >= HISTORY_BEATS.length) {
+      this.endHomeHistory(true);
+      return true;
+    }
+    this.applyHistoryBeat(next);
+    return false;
+  }
+
+  retreatHomeHistory(): void {
+    if (!this.reviewingHistory()) return;
+    const previous = this.beat() - 1;
+    if (previous < 0) return;
+    if (historyBeatAt(previous).target === 'historyAdd') {
+      this.setHistoryTies((ties) => ({ ...ties, [HISTORY_ADD_ACCOUNT]: 'none' }));
+    }
+    this.applyHistoryBeat(previous);
+  }
+
   /** Step 0 — full-page image + text for each idea. */
   startIntro(you: LookYou): void {
     this.stopPlay();
     this.endLook();
+    this.endHomeHistory(false);
+    this.endHomeSettings(false);
     this.setOfferingSit(false);
     this.lookYou = you;
     this.setIntroBeat(0);
@@ -280,6 +533,8 @@ export class TutorialService {
     this.stopPlay();
     this.setIntroducing(false);
     this.setOfferingSit(false);
+    this.endHomeSettings(false);
+    this.endHomeHistory(false);
     this.lookSettled = false;
     this.lookYou = you;
     this.setTalk([]);
@@ -288,6 +543,8 @@ export class TutorialService {
   }
 
   headlineKey(): MessageKey {
+    if (this.reviewingHistory()) return historyBeatAt(this.beat()).headline;
+    if (this.guidingHome()) return this.settingsBeat().headline;
     if (this.playing()) return this.playHeadline();
     if (this.looking() && this.lookHeadlineOverride()) {
       return this.lookHeadlineOverride()!;
@@ -296,6 +553,8 @@ export class TutorialService {
   }
 
   target(): string {
+    if (this.reviewingHistory()) return historyBeatAt(this.beat()).target;
+    if (this.guidingHome()) return this.settingsBeat().target;
     if (this.playing()) return this.lockTarget(this.lock());
     return lookBeatAt(this.beat()).target;
   }
@@ -309,8 +568,17 @@ export class TutorialService {
     return this.looking() && lookShowsChat(this.beat());
   }
 
+  lookMenu(): boolean {
+    return this.looking() && lookShowsMenu(this.beat());
+  }
+
   lookBlurred(): boolean {
     return this.looking() && lookBlursTable(this.beat());
+  }
+
+  /** Look closer or the five-player “coming soon” card. */
+  blurred(): boolean {
+    return this.lookBlurred() || this.playSoon();
   }
 
   lookContinueKey(): MessageKey {
@@ -332,12 +600,19 @@ export class TutorialService {
     return wait === 'say' || wait === 'try';
   }
 
-  /** Composer, seats, votes, and laws must receive taps through the hole. */
+  /** Composer, seats, votes, laws, and the settings gear must receive taps through the hole. */
   passHole(): boolean {
-    if (this.looking()) return this.lookTyping();
+    if (this.guidingHome()) return this.settingsWait() === 'open';
+    if (this.reviewingHistory()) return this.historyWait() === 'open';
+    if (this.looking()) {
+      return (
+        this.lookTyping() || this.lookWait() === 'pick' || this.lookWait() === 'open'
+      );
+    }
     if (!this.playing()) return false;
     const lock = this.lock();
     return (
+      lock === 'openNominate' ||
       lock === 'nominate' ||
       lock === 'voteJa' ||
       lock === 'voteNein' ||
@@ -388,36 +663,34 @@ export class TutorialService {
    */
   lookHeadlineFinished(): void {
     if (!this.looking()) return;
-    if (lookBeatAt(this.beat()).wait !== 'pause') return;
+    const beat = lookBeatAt(this.beat());
+    if (beat.wait !== 'pause') return;
     this.stopLookScript();
+    const waitMs =
+      this.lookTest
+        ? 0
+        : 'pauseMs' in beat && beat.pauseMs != null
+          ? beat.pauseMs
+          : this.lookDelay(1400, 2200);
     this.scheduleLook(() => {
       if (lookBeatAt(this.beat()).wait !== 'pause') return;
       this.advanceLook();
-    }, this.lookDelay(1400, 2200));
+    }, waitMs);
   }
 
   /**
-   * Skip this look beat. Talk/write waits jump to the next real lesson.
-   * True when the look is finished.
+   * Skip the look table. True so the caller can open the five-player hand.
    */
   skipLookBeat(): boolean {
     if (!this.looking()) return false;
-    const wait = this.lookWait();
-    if (wait === 'talk') {
-      const sayIndex = LOOK_BEATS.findIndex((item) => item.wait === 'say');
-      if (sayIndex < 0) return this.advanceLook();
-      this.applyLookBeat(sayIndex);
-      return false;
-    }
-    if (wait === 'say' || this.lookWaitOverride() === 'auto') {
-      this.lookPicked = true;
-      this.refreshLookView();
-      const government = LOOK_BEATS.findIndex((item) => item.target === 'government');
-      if (government < 0) return this.advanceLook();
-      this.applyLookBeat(government);
-      return false;
-    }
-    return this.advanceLook();
+    this.settleLook();
+    return true;
+  }
+
+  /** Gear tap on the settings beat. Ignored on every other look wait. */
+  openLookSettings(): void {
+    if (!this.looking() || this.lookWait() !== 'open') return;
+    this.advanceLook();
   }
 
   /** After look: open a scripted table. Count 5 is the full small hand. */
@@ -441,12 +714,18 @@ export class TutorialService {
     this.setPlayView(playView(table));
     this.setTalk([]);
     this.setLock(null);
+    this.setPlaySoon(false);
+    this.playSettled = false;
+    this.playLines = [];
+    this.playLineIndex = 0;
+    this.stopPlayLines();
     this.director = new TutorialDirector(table, {
       onView: () => this.refreshPlay(),
       onLock: (lock) => this.setLock(lock),
-      onHeadline: (key) => this.setPlayHeadline(key as MessageKey),
-      onTalk: (playerId, key) => this.appendTalk(playerId, key as MessageKey),
+      onHeadline: (key) => this.setPlayLines(key),
+      onTalk: (playerId, key) => this.appendTalk(playerId, key),
       onDone: () => this.finishPlay(),
+      onSoon: () => this.showComingSoon(),
     });
     this.director.start();
     this.refreshPlay();
@@ -514,9 +793,19 @@ export class TutorialService {
 
   skipPlay(): void {
     if (!this.playing()) return;
-    const won = this.table?.room.winner != null;
+    const won = this.table?.room.winner != null || this.playSettled;
     this.stopPlay();
     if (!won) this.bumpDeclines();
+  }
+
+  /** Five-player skip lands on the coming-soon card, not six. */
+  skipFiveSoon(): boolean {
+    if (!this.playing() || this.table?.count !== 5) return false;
+    if (this.playSoon()) return false;
+    this.director?.stop();
+    this.director = null;
+    this.showComingSoon();
+    return true;
   }
 
   /** Skip this count and sit the next. False when the ladder is done. */
@@ -539,6 +828,8 @@ export class TutorialService {
     if (this.introducing()) this.skipIntro();
     else if (this.looking()) this.closeLook();
     else if (this.playing()) this.skipPlay();
+    else if (this.reviewingHistory()) this.skipHomeHistory();
+    else if (this.guidingHome()) this.skipHomeSettings();
   }
 
   canNominate(targetId: string): boolean {
@@ -565,14 +856,22 @@ export class TutorialService {
     );
   }
 
-  /** Lift the teaching mask while bots play, and during night (its own overlay). */
+  /** Lift the teaching mask while bots play, during night, and while the Chancellor picks in secret. */
   maskLifted(): boolean {
+    if (this.guidingHome()) return this.settingsBeat().lifted === true;
+    if (this.reviewingHistory()) {
+      return historyBeatAt(this.beat()).lifted === true;
+    }
     if (this.looking()) {
       return lookBeatAt(this.beat()).lifted === true || this.lookLifted();
     }
     if (!this.playing()) return false;
+    if (this.playSoon()) return true;
     const lock = this.lock();
-    return (lock == null || lock === 'night') && this.playView()?.winner == null;
+    return (
+      (lock == null || lock === 'night' || lock === 'watchEnact') &&
+      this.playView()?.winner == null
+    );
   }
 
   finishNight(): void {
@@ -602,7 +901,7 @@ export class TutorialService {
     if (command.kind === 'nominateChancellor') {
       if (lock !== 'nominate') return false;
       if (!isAllowedChancellor(this.table, command.targetId)) {
-        this.setPlayHeadline(this.table.count === 6 ? 'onboard.termLimit' : 'onboard.pickRetry');
+        this.setPlayHeadline(this.retryHeadline(command.targetId));
         return false;
       }
       const error = playHandle(this.table, command);
@@ -613,11 +912,15 @@ export class TutorialService {
     }
 
     if (command.kind === 'castVote') {
-      if (lock === 'voteJa' && command.vote === 'ja') {
-        playHandle(this.table, command);
-        this.refreshPlay();
-        this.director.afterPlayer('voteJa');
-        return true;
+      if (lock === 'voteJa') {
+        if (command.vote === 'ja') {
+          playHandle(this.table, command);
+          this.refreshPlay();
+          this.director.afterPlayer('voteJa');
+          return true;
+        }
+        this.setPlayHeadline('onboard.voteRetry');
+        return false;
       }
       if (lock === 'voteNein' && command.vote === 'nein') {
         playHandle(this.table, command);
@@ -631,8 +934,7 @@ export class TutorialService {
     if (command.kind === 'discardPolicy') {
       if (lock !== 'burnFascist') return false;
       const hand = this.table.room.drawnPolicies;
-      const fascist = fascistIndex(hand);
-      if (fascist < 0 || command.index !== fascist) {
+      if (command.index < 0 || command.index >= hand.length) {
         this.setPlayHeadline('onboard.draw');
         return false;
       }
@@ -679,12 +981,72 @@ export class TutorialService {
     }
 
     if (command.kind === 'endTurn') {
-      playHandle(this.table, command);
+      if (lock !== 'openNominate') return false;
+      const error = playHandle(this.table, command);
+      if (error) return false;
       this.refreshPlay();
+      this.director.afterPlayer('openNominate');
       return true;
     }
 
     return false;
+  }
+
+  /**
+   * Daniel finished typing this play line. Queued lines wait, then move on.
+   */
+  playHeadlineFinished(): void {
+    if (!this.playing() || this.playSoon()) return;
+    if (this.playLineIndex >= this.playLines.length - 1) return;
+    this.stopPlayLines();
+    const waitMs = this.lookTest ? 0 : 3000;
+    const timer = window.setTimeout(() => {
+      if (!this.playing() || this.playSoon()) return;
+      if (this.playLineIndex >= this.playLines.length - 1) return;
+      this.playLineIndex += 1;
+      const next = this.playLines[this.playLineIndex];
+      if (next) this.setPlayHeadline(next);
+    }, waitMs);
+    this.playLineTimers.push(timer);
+  }
+
+  /** Teaching header while a lock is on — night keeps the live Ravi line. */
+  guidesHeader(): boolean {
+    if (!this.playing()) return false;
+    if (this.playSoon()) return true;
+    if (this.playLines.length > 0) return true;
+    const lock = this.lock();
+    return lock != null && lock !== 'night';
+  }
+
+  private setPlayLines(key: MessageKey | readonly MessageKey[]): void {
+    this.stopPlayLines();
+    const lines = typeof key === 'string' ? [key] : [...key];
+    this.playLines = lines;
+    this.playLineIndex = 0;
+    const first = lines[0];
+    if (first) this.setPlayHeadline(first);
+  }
+
+  private stopPlayLines(): void {
+    for (const timer of this.playLineTimers) window.clearTimeout(timer);
+    this.playLineTimers = [];
+  }
+
+  private showComingSoon(): void {
+    this.playSettled = true;
+    this.stopPlayLines();
+    this.playLines = ['onboard.comingSoon'];
+    this.playLineIndex = 0;
+    this.setLock(null);
+    this.setPlayHeadline('onboard.comingSoon');
+    this.setPlaySoon(true);
+    try {
+      localStorage.setItem(ONBOARDING_STEP_KEY, String(Math.max(this.completedStep(), 2)));
+    } catch {
+      /* private-mode / quota */
+    }
+    this.refreshPlay();
   }
 
   private refreshPlay(): void {
@@ -711,13 +1073,27 @@ export class TutorialService {
     this.director?.stop();
     this.director = null;
     this.table = null;
+    this.stopPlayLines();
+    this.playLines = [];
+    this.playLineIndex = 0;
+    this.playSettled = false;
     this.setPlaying(false);
     this.setPlayView(null);
     this.setLock(null);
+    this.setPlaySoon(false);
     this.setTalk([]);
   }
 
+  private retryHeadline(targetId: string): MessageKey {
+    if (!this.table) return 'onboard.pickRetry';
+    if (this.table.room.ineligibleChancellorIds().includes(targetId)) {
+      return this.table.count === 6 ? 'onboard.termLimit' : 'onboard.termLimitFive';
+    }
+    return this.table.count === 6 ? 'onboard.termLimit' : 'onboard.pickRetry';
+  }
+
   private lockTarget(lock: PlayLock): string {
+    if (lock === 'openNominate') return 'nominateAction';
     if (lock === 'nominate' && this.table?.strictFirstPick) return 'nima';
     if (
       lock === 'nominate' ||
@@ -730,7 +1106,12 @@ export class TutorialService {
       return 'seats';
     }
     if (lock === 'voteJa' || lock === 'voteNein') return 'vote';
-    if (lock === 'burnFascist' || lock === 'enactLiberal' || lock === 'peek') {
+    if (
+      lock === 'burnFascist' ||
+      lock === 'enactLiberal' ||
+      lock === 'peek' ||
+      lock === 'watchEnact'
+    ) {
       return 'laws';
     }
     return 'seats';
@@ -745,14 +1126,13 @@ export class TutorialService {
     const beat = lookBeatAt(index);
     const tryFrom = LOOK_BEATS.findIndex((item) => item.wait === 'try');
     const governmentFrom = LOOK_BEATS.findIndex((item) => item.target === 'government');
-    const pickedBefore = this.lookPicked;
     if (index < governmentFrom) this.lookPicked = false;
     if (beat.wait !== 'say') {
       this.setLookHintKey('onboard.idea.composeHint');
     }
     // Keep the viewer's first line on the table until they write again.
     if (index < tryFrom) this.setTalk([]);
-    if (!this.lookView() || pickedBefore !== this.lookPicked) this.refreshLookView();
+    this.refreshLookView();
     if (beat.wait === 'talk') this.startCampaignTalk();
   }
 
@@ -861,6 +1241,56 @@ export class TutorialService {
     const next = Math.min(TUTORIAL_ANNOUNCE_LIMIT, this.declineCount() + 1);
     try {
       localStorage.setItem(ONBOARDING_DECLINE_KEY, String(next));
+    } catch {
+      /* private-mode / quota */
+    }
+  }
+
+  private applyHistoryBeat(index: number): void {
+    this.setBeat(index);
+    const you = this.lookYou;
+    if (!you) {
+      this.setHistoryMatches([]);
+      return;
+    }
+    const win = buildHistoryWin(you);
+    this.setHistoryMatches(
+      historyShowsLoss(index) ? [win, buildHistoryLoss(you)] : [win],
+    );
+  }
+
+  private endHomeHistory(remember: boolean): void {
+    if (remember) this.markHomeHistorySeen();
+    this.setReviewingHistory(false);
+    this.setHistoryMatches([]);
+    this.setHistoryTies({});
+  }
+
+  private settingsBeat(): SettingsBeatSpec {
+    return settingsBeatAt(this.beat(), this.settingsTour);
+  }
+
+  private applySettingsBeat(index: number): void {
+    this.setBeat(index);
+  }
+
+  private endHomeSettings(remember: boolean): void {
+    if (remember) this.markHomeSettingsSeen();
+    this.settingsTour = [];
+    this.setGuidingHome(false);
+  }
+
+  private markHomeSettingsSeen(): void {
+    try {
+      localStorage.setItem(ONBOARDING_HOME_SETTINGS_KEY, '1');
+    } catch {
+      /* private-mode / quota */
+    }
+  }
+
+  private markHomeHistorySeen(): void {
+    try {
+      localStorage.setItem(ONBOARDING_HOME_HISTORY_KEY, '1');
     } catch {
       /* private-mode / quota */
     }

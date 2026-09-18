@@ -108,4 +108,31 @@ describe('SettingsScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
     expect(harness.services.nav.screen()).toBe('settings');
   });
+
+  it('Should walk each setting after the home gear is opened', () => {
+    const harness = buildHarness();
+    harness.services.nav.navigate('settings');
+    harness.services.tutorial.startHomeSettings();
+    harness.services.tutorial.openHomeSettings();
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'settings'}
+          fallback={<div data-testid="left-settings" />}
+        >
+          <SettingsScreen />
+        </Show>
+      ),
+      harness,
+    );
+
+    expect(screen.getByText(en.onboard.settings.name)).toBeTruthy();
+    expect(screen.queryByText(en.onboard.settings.table)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    expect(screen.getByText(en.onboard.settings.card)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.skip }));
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(localStorage.getItem('sh:onboarding-home-settings')).toBe('1');
+    expect(harness.services.tutorial.guidingHome()).toBe(false);
+  });
 });

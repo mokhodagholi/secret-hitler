@@ -246,7 +246,7 @@ function BootGate(props: ParentProps<{ skip?: boolean }>) {
 }
 
 function SitOffer() {
-  const { tutorial, nav, i18n, settings, flags, game } = useApp();
+  const { tutorial, nav, i18n, settings, flags, game, ravi } = useApp();
   const { formatMessage } = i18n;
 
   // Offer after this dialog exists. Asking during splash leaves offeringSit
@@ -268,20 +268,29 @@ function SitOffer() {
   const sitOpen = () =>
     tutorial.offeringSit() && flags.ready() && flags.flags.onboarding;
 
+  createEffect(() => {
+    if (!sitOpen()) return;
+    void ravi.speakGuide('onboard.piece.welcome');
+  });
+
   return (
     <ConfirmDialog
       open={sitOpen()}
-      message={formatMessage('onboard.invite')}
+      message={formatMessage('onboard.piece.welcome')}
       confirmLabel={formatMessage('onboard.sit')}
       cancelLabel={formatMessage('onboard.notNow')}
       onConfirm={() => {
+        ravi.cancel();
         tutorial.startIntro({
           name: settings.settings.profileName.trim() || formatMessage('game.you'),
           avatar: settings.settings.avatar,
         });
         nav.navigate('onboarding');
       }}
-      onCancel={() => tutorial.declineSit()}
+      onCancel={() => {
+        ravi.cancel();
+        tutorial.declineSit();
+      }}
     />
   );
 }

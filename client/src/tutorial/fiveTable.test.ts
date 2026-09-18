@@ -15,10 +15,10 @@ describe('fiveTable', () => {
     expect(table.room.presidentId).toBe(table.youId);
   });
 
-  it('Should only allow Nima or Sara as the first chancellor', () => {
+  it('Should only allow Nima as the first chancellor', () => {
     const table = startFiveTable({ name: 'You', avatar: 0 });
     expect(isAllowedChancellor(table, table.nimaId)).toBe(true);
-    expect(isAllowedChancellor(table, table.saraId)).toBe(true);
+    expect(isAllowedChancellor(table, table.saraId)).toBe(false);
     expect(isAllowedChancellor(table, table.rezaId)).toBe(false);
     expect(isAllowedChancellor(table, table.omidId)).toBe(false);
   });
@@ -30,6 +30,15 @@ describe('fiveTable', () => {
       'woman',
     );
     expect(portraitGender(table.room.findPlayer(table.rezaId)?.avatar ?? -1)).toBe('man');
+  });
+
+  it('Should lock last chancellor at five after a government sits', () => {
+    const table = startFiveTable({ name: 'You', avatar: 0 });
+    table.strictFirstPick = false;
+    table.room.lastElectedChancellorId = table.nimaId;
+    expect(isAllowedChancellor(table, table.nimaId)).toBe(false);
+    expect(isAllowedChancellor(table, table.saraId)).toBe(true);
+    expect(isAllowedChancellor(table, table.rezaId)).toBe(true);
   });
 });
 

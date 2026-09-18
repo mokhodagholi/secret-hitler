@@ -31,6 +31,15 @@
   }
 }
 
+/** Teaching lock — glow stays, the portrait does not sway. */
+.selectableStill {
+  cursor: pointer;
+
+  .paper {
+    filter: drop-shadow(0 0 8px rgba($gold, 0.75));
+  }
+}
+
 /** Ravi is still introducing the pick — sway without the gold “tap me” glow. */
 .awaitingPick {
   pointer-events: none;

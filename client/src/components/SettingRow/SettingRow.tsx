@@ -6,6 +6,7 @@ import styles from './SettingRow.module.scss';
 interface BaseProps {
   icon: IconName;
   label: string;
+  tutorialTarget?: string;
 }
 
 type ControlProps =
@@ -37,6 +38,7 @@ export function SettingRow(props: SettingRowProps) {
   return (
     <div
       classList={{ [styles.row]: true, [styles.tappable]: interactive() }}
+      data-tutorial-target={props.tutorialTarget}
       role={
         props.kind === 'toggle' ? 'switch' : interactive() ? 'button' : undefined
       }

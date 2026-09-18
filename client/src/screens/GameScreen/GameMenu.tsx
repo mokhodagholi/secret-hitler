@@ -36,6 +36,7 @@ export function GameMenu(props: GameMenuProps) {
           role="dialog"
           aria-modal="true"
           aria-label={formatMessage('settings.title')}
+          data-tutorial-target="menu"
           ref={(element) => void animation.play(element, 'pop-in')}
         >
           <header class={styles.header}>

@@ -33,11 +33,18 @@ function sendLookLine(text: string, fieldName: string): void {
 }
 
 async function passLookChatLesson(): Promise<void> {
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.talk)).toBeTruthy();
   clickContinue();
-  clickContinue();
-  clickContinue();
-  clickContinue();
-  expect(screen.getByText(en.onboard.idea.talk)).toBeTruthy();
+  expect(screen.getByText(en.onboard.idea.settings)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
+  expect(screen.getByText(en.onboard.idea.settingsMenu)).toBeTruthy();
+  expect(screen.getByRole('dialog', { name: en.settings.title })).toBeTruthy();
   clickContinue();
   expect(screen.getByText(en.onboard.idea.messages)).toBeTruthy();
   clickContinue();
@@ -99,10 +106,40 @@ describe('GameScreen — look', () => {
     clickContinue();
     expect(screen.getByText(en.onboard.idea.thisPresident)).toBeTruthy();
     clickContinue();
+    expect(screen.getByText(en.onboard.idea.thisPresidentLaws)).toBeTruthy();
+    clickContinue();
     expect(screen.getByText(en.onboard.idea.talk)).toBeTruthy();
     expect(screen.getByLabelText(en.game.chat)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.game.muteSelf })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.settings.title })).toBeTruthy();
     expect(document.querySelector('[data-look-chrome-spacer]')).toBeTruthy();
+  });
+
+  it('Should open the table settings from the gear, then go on to the feed', () => {
+    const harness = buildHarness();
+    openLook(harness);
+    renderWithApp(() => <LookRoutes />, harness);
+
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.talk)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.settings)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: en.settings.title })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: en.settings.title }));
+    expect(screen.getByText(en.onboard.idea.settingsMenu)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: en.settings.title })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.gameMenu.music })).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.game.yourRole })).toBeTruthy();
+
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.messages)).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: en.settings.title })).toBeNull();
   });
 
   it('Should campaign in chat then wait for the viewer to write', async () => {
@@ -114,7 +151,6 @@ describe('GameScreen — look', () => {
     expect(screen.getByText(en.onboard.idea.campaign)).toBeTruthy();
     clickContinue();
     expect(screen.getByText(en.onboard.idea.talkAbout)).toBeTruthy();
-    clickContinue();
     expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
 
     await waitFor(() => {
@@ -145,15 +181,20 @@ describe('GameScreen — look', () => {
     ).toBeTruthy();
   });
 
-  it('Should move to the next look beat when Skip is pressed', () => {
+  it('Should skip the look table onto the five-player hand', async () => {
     const harness = buildHarness();
     openLook(harness);
     renderWithApp(() => <LookRoutes />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: en.onboard.skip }));
-    expect(screen.getByText(en.onboard.idea.people)).toBeTruthy();
     expect(harness.services.nav.screen()).toBe('game');
-    expect(harness.services.tutorial.looking()).toBe(true);
+    expect(harness.services.tutorial.looking()).toBe(false);
+    expect(harness.services.tutorial.playing()).toBe(true);
+    expect(localStorage.getItem(ONBOARDING_STEP_KEY)).toBe('1');
+    expect(harness.services.tutorial.lock()).toBe('night');
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: en.ravi.deal.start })).toBeTruthy();
+    });
   });
 
   it('Should open the five-player table after the last Continue', async () => {
@@ -163,7 +204,6 @@ describe('GameScreen — look', () => {
 
     await passLookChatLesson();
     clickContinue();
-    clickContinue();
     await waitFor(() => {
       expect(screen.getByText(en.onboard.idea.yourTurn)).toBeTruthy();
     });
@@ -172,6 +212,18 @@ describe('GameScreen — look', () => {
       expect(screen.getByText(en.onboard.idea.youChancellor)).toBeTruthy();
     });
     clickContinue();
+    expect(screen.getByText(en.onboard.idea.chancellorDoes)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.onlyPresidentSees)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.presidentBurns)).toBeTruthy();
+    clickContinue();
+    expect(screen.getByText(en.onboard.idea.youPickLaw)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: en.game.liberal })).toBeTruthy();
+    });
+    fireEvent.click(screen.getByRole('button', { name: en.game.liberal }));
     expect(screen.getByText(en.onboard.idea.seeNext)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.onboard.seeNext }));
 
@@ -179,6 +231,9 @@ describe('GameScreen — look', () => {
     expect(harness.services.tutorial.looking()).toBe(false);
     expect(harness.services.tutorial.playing()).toBe(true);
     expect(localStorage.getItem(ONBOARDING_STEP_KEY)).toBe('1');
-    expect(screen.getByText(en.onboard.nightDone)).toBeTruthy();
+    expect(harness.services.tutorial.lock()).toBe('night');
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: en.ravi.deal.start })).toBeTruthy();
+    });
   });
 });

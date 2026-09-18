@@ -1,9 +1,11 @@
 import { Phase, type Policy, type Vote } from '@secret-hitler/shared';
+import type { MessageKey } from '../i18n';
 import {
   deltaHeadline,
   fascistIndex,
   liberalIndex,
   playBot,
+  skipOpeningNight,
   type PlayLock,
   type ScriptedTable,
 } from './scriptedTable';
@@ -20,9 +22,10 @@ function delayMs(min: number, max: number): number {
 export interface DirectorHooks {
   onView: () => void;
   onLock: (lock: PlayLock) => void;
-  onHeadline: (key: string) => void;
-  onTalk: (playerId: string, key: string) => void;
+  onHeadline: (key: MessageKey | readonly MessageKey[]) => void;
+  onTalk: (playerId: string, key: MessageKey) => void;
   onDone: () => void;
+  onSoon: () => void;
 }
 
 /**
@@ -37,6 +40,7 @@ export class TutorialDirector {
   private seenSpecialElection = false;
   private seenPeek = false;
   private seenExecute = false;
+  private seenRefuse = false;
   /** When true, the director plays the viewer's seat too. */
   private handsOff: boolean;
 
@@ -49,7 +53,7 @@ export class TutorialDirector {
 
   start(): void {
     if (this.table.count === 5) {
-      this.hooks.onHeadline('onboard.nightDone');
+      // Real opening night speaks deal / night / president — no guide line yet.
       this.hooks.onLock('night');
       return;
     }
@@ -68,6 +72,7 @@ export class TutorialDirector {
     if (this.stopped || lock == null) return;
     if (lock === 'night') this.afterNight();
     else if (lock === 'delta') this.afterDelta();
+    else if (lock === 'openNominate') this.afterOpenNominate();
     else if (lock === 'nominate') this.afterNominate();
     else if (lock === 'voteJa') this.afterVoteJa();
     else if (lock === 'burnFascist') this.afterBurn();
@@ -80,8 +85,8 @@ export class TutorialDirector {
   }
 
   private afterNight(): void {
+    skipOpeningNight(this.table.room);
     this.hooks.onLock(null);
-    this.endDiscussion();
     this.shufflePresident();
     this.hooks.onView();
     this.campaignThenNominate();
@@ -95,7 +100,7 @@ export class TutorialDirector {
 
   private campaignThenNominate(): void {
     const president = this.table.room.presidentId;
-    const lines: Array<[string, string]> = [
+    const lines: Array<[string, MessageKey]> = [
       [this.table.nimaId, 'onboard.talk.pickMe'],
       [this.table.saraId, 'onboard.talk.meToo'],
       [this.table.rezaId, 'onboard.talk.meToo'],
@@ -112,7 +117,7 @@ export class TutorialDirector {
         return;
       }
       this.hooks.onTalk(line[0], line[1]);
-      this.schedule(() => speak(offset + 1), delayMs(1600, 2800));
+      this.schedule(() => speak(offset + 1), delayMs(4500, 6500));
     };
 
     if (president === this.table.youId) {
@@ -123,27 +128,51 @@ export class TutorialDirector {
       this.hooks.onHeadline('onboard.watch');
       this.hooks.onView();
     }
-    this.schedule(() => speak(0), delayMs(800, 1400));
+    this.schedule(() => speak(0), delayMs(3000, 3000));
   }
 
   private openFirstNomination(): void {
     if (this.stopped) return;
     const president = this.table.room.presidentId;
     if (president === this.table.youId) {
-      this.hooks.onHeadline('onboard.pick');
-      this.hooks.onLock('nominate');
+      this.lockPlayerNomination();
+      return;
+    }
+    this.nominateAsBot(president);
+  }
+
+  private afterOpenNominate(): void {
+    this.lockSeatNomination();
+  }
+
+  /** Discussion stays open so they can tap Choose Chancellor in chat. */
+  private lockPlayerNomination(): void {
+    if (this.table.room.discussionEndsAt > 0) {
+      this.hooks.onHeadline([
+        'onboard.mustNominate',
+        'onboard.openNominate',
+        'onboard.openNominateTap',
+      ]);
+      this.hooks.onLock('openNominate');
       this.hooks.onView();
       return;
     }
-    if (!president) return;
-    const target = this.chancellorFor(president);
-    if (!target) return;
-    playBot(this.table, president, {
-      kind: 'nominateChancellor',
-      targetId: target,
-    });
+    this.lockSeatNomination();
+  }
+
+  private lockSeatNomination(): void {
+    const lastChancellor = this.table.room.lastElectedChancellorId;
+    if (lastChancellor && lastChancellor !== this.table.youId) {
+      this.hooks.onHeadline(
+        this.table.count === 6 ? 'onboard.termLimit' : 'onboard.termLimitFive',
+      );
+    } else if (this.table.count === 5 && this.table.strictFirstPick) {
+      this.hooks.onHeadline(['onboard.pick', 'onboard.pickNima']);
+    } else {
+      this.hooks.onHeadline('onboard.pick');
+    }
+    this.hooks.onLock('nominate');
     this.hooks.onView();
-    this.afterNominate();
   }
 
   private afterDelta(): void {
@@ -177,31 +206,31 @@ export class TutorialDirector {
 
   private afterVoteJa(): void {
     this.hooks.onLock(null);
-    this.castBotVotes({
-      [this.table.nimaId]: 'ja',
-      [this.table.saraId]: 'ja',
-      [this.table.rezaId]: 'nein',
-      [this.table.omidId]: 'ja',
-    });
-    this.hooks.onHeadline('onboard.votesRead');
     this.hooks.onView();
-    this.schedule(() => {
-      const president = this.table.room.presidentId;
-      if (
-        president === this.table.youId &&
-        this.table.room.phase === Phase.PresidentLegislative
-      ) {
-        this.hooks.onHeadline('onboard.draw');
-        this.hooks.onLock('burnFascist');
-        this.hooks.onView();
-        return;
-      }
-      this.autoLegislate();
-    }, delayMs(1800, 2800));
+    this.castBotVotesStaggered(
+      [
+        [this.table.nimaId, 'ja'],
+        [this.table.saraId, 'ja'],
+        [this.table.rezaId, 'nein'],
+        [this.table.omidId, 'nein'],
+      ],
+      () => {
+        if (this.table.count !== 5) {
+          this.autoLegislate();
+          return;
+        }
+        this.schedule(() => {
+          this.hooks.onHeadline('onboard.draw');
+          this.hooks.onLock('burnFascist');
+          this.hooks.onView();
+        }, delayMs(2800, 4200));
+      },
+    );
   }
 
   private afterBurn(): void {
-    this.hooks.onLock(null);
+    this.hooks.onLock('watchEnact');
+    this.hooks.onHeadline('onboard.secretEnact');
     this.hooks.onView();
     this.schedule(() => {
       const hand = this.table.room.drawnPolicies;
@@ -212,17 +241,20 @@ export class TutorialDirector {
           index: liberal,
         });
       }
-      this.hooks.onHeadline('onboard.watch');
       this.hooks.onView();
-      this.schedule(() => this.runBotGovernmentThenRefuse(), delayMs(2200, 3600));
-    }, delayMs(1600, 2600));
+      this.schedule(() => this.hooks.onSoon(), delayMs(1800, 2800));
+    }, delayMs(2800, 4200));
   }
 
   private runBotGovernmentThenRefuse(): void {
     if (this.stopped) return;
     if (this.table.room.phase === Phase.Nomination) {
-      this.endDiscussion();
       const president = this.table.room.presidentId;
+      if (president === this.table.youId) {
+        this.lockPlayerNomination();
+        return;
+      }
+      this.endDiscussion();
       if (president === this.table.rezaId) {
         playBot(this.table, this.table.rezaId, {
           kind: 'nominateChancellor',
@@ -236,6 +268,17 @@ export class TutorialDirector {
       if (president && president !== this.table.youId) {
         const target = this.chancellorFor(president);
         if (target) {
+          if (
+            president === this.table.nimaId &&
+            target === this.table.saraId
+          ) {
+            this.hooks.onTalk(this.table.nimaId, 'onboard.talk.saraThisHand');
+            this.hooks.onHeadline('onboard.watchPick');
+            this.schedule(
+              () => this.hooks.onTalk(this.table.saraId, 'onboard.talk.saraOk'),
+              delayMs(1400, 2200),
+            );
+          }
           playBot(this.table, president, {
             kind: 'nominateChancellor',
             targetId: target,
@@ -262,6 +305,15 @@ export class TutorialDirector {
     }
     this.schedule(() => {
       if (room.phase === Phase.ChancellorLegislative && room.chancellorId) {
+        if (
+          !this.handsOff &&
+          room.chancellorId === this.table.youId
+        ) {
+          this.hooks.onLock('enactLiberal');
+          this.hooks.onHeadline('onboard.chancellor');
+          this.hooks.onView();
+          return;
+        }
         const enact = liberalIndex(room.drawnPolicies);
         playBot(this.table, room.chancellorId, {
           kind: 'enactPolicy',
@@ -274,6 +326,7 @@ export class TutorialDirector {
   }
 
   private afterVoteNein(): void {
+    this.seenRefuse = true;
     this.hooks.onLock(null);
     this.castBotVotes({
       [this.table.nimaId]: 'nein',
@@ -283,29 +336,16 @@ export class TutorialDirector {
     });
     this.hooks.onHeadline('onboard.tracker');
     this.hooks.onView();
-    this.schedule(() => {
-      if (this.table.room.phase === Phase.Nomination) {
-        this.endDiscussion();
-      }
-      this.hooks.onHeadline('onboard.chancellor');
-      if (
-        this.table.room.phase === Phase.ChancellorLegislative &&
-        this.table.room.chancellorId === this.table.youId
-      ) {
-        this.hooks.onLock('enactLiberal');
-      } else if (this.table.room.presidentId === this.table.youId) {
-        this.hooks.onLock('nominate');
-        this.hooks.onHeadline('onboard.pick');
-      } else {
-        this.schedule(() => this.driveTowardWin(), delayMs(1500, 2500));
-      }
-      this.hooks.onView();
-    }, delayMs(1800, 2800));
+    this.schedule(() => this.driveTowardWin(), delayMs(1800, 2800));
   }
 
   private afterEnact(): void {
     this.hooks.onLock(null);
     this.hooks.onView();
+    if (this.table.count === 5 && !this.seenRefuse) {
+      this.schedule(() => this.runBotGovernmentThenRefuse(), delayMs(1500, 2500));
+      return;
+    }
     this.schedule(() => this.driveTowardWin(), delayMs(1500, 2500));
   }
 
@@ -359,27 +399,13 @@ export class TutorialDirector {
     if (this.takePowerIfNeeded()) return;
 
     if (this.table.room.phase === Phase.Nomination) {
-      this.endDiscussion();
       const president = this.table.room.presidentId;
       if (president === this.table.youId && !this.handsOff) {
-        this.hooks.onLock('nominate');
-        this.hooks.onHeadline('onboard.pick');
-        this.hooks.onView();
+        this.lockPlayerNomination();
         return;
       }
-      if (president) {
-        const target = this.chancellorFor(president);
-        if (target) {
-          playBot(this.table, president, {
-            kind: 'nominateChancellor',
-            targetId: target,
-          });
-          this.castAllAlive('ja');
-          this.hooks.onView();
-          this.schedule(() => this.autoLegislate(), delayMs(1600, 2600));
-          return;
-        }
-      }
+      this.endDiscussion();
+      if (this.nominateAsBot(president)) return;
     }
     if (
       !this.handsOff &&
@@ -553,6 +579,29 @@ export class TutorialDirector {
   }
 
   private chancellorFor(presidentId: string): string | null {
+    if (this.table.count === 5) {
+      const scripted = this.scriptedChancellor(presidentId);
+      if (scripted) return scripted;
+    }
+    return this.firstEligibleChancellor(presidentId);
+  }
+
+  /** Five-player tickets that are not just the next seat. */
+  private scriptedChancellor(presidentId: string): string | null {
+    const pick = (id: string): string | null => {
+      if (id === presidentId) return null;
+      if (this.table.room.ineligibleChancellorIds().includes(id)) return null;
+      const player = this.table.room.findPlayer(id);
+      return player?.isAlive ? id : null;
+    };
+    if (presidentId === this.table.nimaId) return pick(this.table.saraId);
+    if (presidentId === this.table.saraId) return pick(this.table.youId);
+    if (presidentId === this.table.rezaId) return pick(this.table.omidId);
+    if (presidentId === this.table.omidId) return pick(this.table.nimaId);
+    return null;
+  }
+
+  private firstEligibleChancellor(presidentId: string): string | null {
     const ineligible = this.table.room.ineligibleChancellorIds();
     const order = this.table.seatIds.filter((id) => id !== presidentId);
     for (const id of order) {
@@ -562,6 +611,20 @@ export class TutorialDirector {
       return id;
     }
     return null;
+  }
+
+  private nominateAsBot(presidentId: string | null): boolean {
+    if (!presidentId) return false;
+    const target = this.chancellorFor(presidentId);
+    if (!target) return false;
+    playBot(this.table, presidentId, {
+      kind: 'nominateChancellor',
+      targetId: target,
+    });
+    this.castAllAlive('ja');
+    this.hooks.onView();
+    this.schedule(() => this.autoLegislate(), delayMs(1600, 2600));
+    return true;
   }
 
   private executeTarget(presidentId: string): string | null {
@@ -590,6 +653,28 @@ export class TutorialDirector {
     if (this.table.room.discussionEndsAt > 0 && this.table.room.presidentId) {
       playBot(this.table, this.table.room.presidentId, { kind: 'endTurn' });
     }
+  }
+
+  private castBotVotesStaggered(
+    votes: Array<[string, Vote]>,
+    then: () => void,
+  ): void {
+    const cast = (offset: number): void => {
+      if (this.stopped) return;
+      if (offset >= votes.length) {
+        then();
+        return;
+      }
+      const next = votes[offset];
+      if (!next) {
+        then();
+        return;
+      }
+      playBot(this.table, next[0], { kind: 'castVote', vote: next[1] });
+      this.hooks.onView();
+      this.schedule(() => cast(offset + 1), delayMs(1600, 2800));
+    };
+    this.schedule(() => cast(0), delayMs(900, 1600));
   }
 
   private castBotVotes(votes: Record<string, Vote>): void {

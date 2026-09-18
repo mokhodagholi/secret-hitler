@@ -1,6 +1,7 @@
 import {
   Phase,
   type GameStateView,
+  type Policy,
   type PublicPlayer,
 } from '@secret-hitler/shared';
 import type { MessageKey } from '../i18n';
@@ -16,7 +17,15 @@ export const LOOK_SEAT = {
   omid: 'look-omid',
 } as const;
 
-export type LookWait = 'continue' | 'talk' | 'say' | 'try' | 'auto' | 'pause';
+export type LookWait =
+  | 'continue'
+  | 'talk'
+  | 'say'
+  | 'try'
+  | 'auto'
+  | 'pause'
+  | 'pick'
+  | 'open';
 
 interface LookBeatSpec {
   target: string;
@@ -25,7 +34,13 @@ interface LookBeatSpec {
   lifted?: boolean;
   chat?: boolean;
   blur?: boolean;
+  /** Punch out the in-game settings sheet (gear already opened it). */
+  menu?: boolean;
   continueKey?: MessageKey;
+  /** Staged law hand after the ticket — deal / burn-pass / chancellor pick. */
+  laws?: 'deal' | 'pass' | 'enact';
+  /** After the header finishes, wait this long then advance. Pause beats only. */
+  pauseMs?: number;
 }
 
 /**
@@ -46,7 +61,25 @@ export const LOOK_BEATS = [
     headline: 'onboard.idea.thisPresident',
     wait: 'continue',
   },
+  {
+    target: 'president',
+    headline: 'onboard.idea.thisPresidentLaws',
+    wait: 'continue',
+  },
   { target: 'chat', headline: 'onboard.idea.talk', wait: 'continue', chat: true },
+  {
+    target: 'settings',
+    headline: 'onboard.idea.settings',
+    wait: 'open',
+    chat: true,
+  },
+  {
+    target: 'menu',
+    headline: 'onboard.idea.settingsMenu',
+    wait: 'continue',
+    chat: true,
+    menu: true,
+  },
   {
     target: 'messages',
     headline: 'onboard.idea.messages',
@@ -76,9 +109,10 @@ export const LOOK_BEATS = [
   {
     target: 'chat',
     headline: 'onboard.idea.talkAbout',
-    wait: 'continue',
+    wait: 'pause',
     lifted: true,
     chat: true,
+    pauseMs: 2000,
   },
   {
     target: 'chat',
@@ -99,6 +133,33 @@ export const LOOK_BEATS = [
     chat: true,
   },
   {
+    target: 'government',
+    headline: 'onboard.idea.chancellorDoes',
+    wait: 'continue',
+    chat: true,
+  },
+  {
+    target: 'laws',
+    headline: 'onboard.idea.onlyPresidentSees',
+    wait: 'continue',
+    chat: true,
+    laws: 'deal',
+  },
+  {
+    target: 'laws',
+    headline: 'onboard.idea.presidentBurns',
+    wait: 'continue',
+    chat: true,
+    laws: 'pass',
+  },
+  {
+    target: 'laws',
+    headline: 'onboard.idea.youPickLaw',
+    wait: 'pick',
+    chat: true,
+    laws: 'enact',
+  },
+  {
     target: 'table',
     headline: 'onboard.idea.seeNext',
     wait: 'continue',
@@ -116,6 +177,10 @@ export function lookBeatAt(index: number): LookBeat {
 
 export function lookShowsChat(index: number): boolean {
   return lookBeatAt(index).chat === true;
+}
+
+export function lookShowsMenu(index: number): boolean {
+  return lookBeatAt(index).menu === true;
 }
 
 export function lookBlursTable(index: number): boolean {
@@ -204,7 +269,9 @@ export function buildLookView(
 ): GameStateView {
   const beat = lookBeatAt(beatIndex);
   const target = beat.target;
-  const withChancellor = options.picked === true || target === 'government';
+  const laws = 'laws' in beat ? beat.laws : undefined;
+  const withChancellor =
+    options.picked === true || target === 'government' || laws != null;
 
   const avatars = companionPortraits(you.avatar, 4);
   const players: PublicPlayer[] = [
@@ -243,15 +310,19 @@ export function buildLookView(
     }),
   ];
 
-  return emptyView(players, withChancellor);
+  return emptyView(players, withChancellor, laws);
 }
 
-function emptyView(players: PublicPlayer[], withChancellor: boolean): GameStateView {
+function emptyView(
+  players: PublicPlayer[],
+  withChancellor: boolean,
+  laws?: 'deal' | 'pass' | 'enact',
+): GameStateView {
   return {
     roomId: LOOK_ROOM_ID,
     code: 'LOOK',
     name: '',
-    phase: Phase.Nomination,
+    phase: lawsPhase(laws),
     hostId: LOOK_SEAT.you,
     minPlayers: 5,
     maxPlayers: 10,
@@ -286,7 +357,7 @@ function emptyView(players: PublicPlayer[], withChancellor: boolean): GameStateV
       id: LOOK_SEAT.you,
       role: null,
       vote: null,
-      policies: [],
+      policies: lawsPolicies(laws),
       peek: [],
       investigation: null,
       canRequestKick: false,
@@ -315,4 +386,14 @@ function seat(
     selfMuted: false,
     ...overrides,
   };
+}
+
+function lawsPhase(laws?: 'deal' | 'pass' | 'enact'): Phase {
+  if (laws === 'deal') return Phase.PresidentLegislative;
+  if (laws === 'pass' || laws === 'enact') return Phase.ChancellorLegislative;
+  return Phase.Nomination;
+}
+
+function lawsPolicies(laws?: 'deal' | 'pass' | 'enact'): Policy[] {
+  return laws === 'enact' ? ['liberal', 'fascist'] : [];
 }

@@ -19,20 +19,20 @@ describe('OnboardingIntroScreen', () => {
     harness.services.nav.navigate('onboarding');
     renderWithApp(() => <OnboardingIntroScreen />, harness);
 
-    expect(screen.getByText(en.onboard.piece.welcomeTitle)).toBeTruthy();
-    expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy();
+    expect(screen.getByText(en.onboard.piece.rolesTitle)).toBeTruthy();
+    expect(screen.getByText(en.onboard.piece.roles)).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.continue })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
   });
 
-  it('Should play a page tap on the welcome piece', () => {
+  it('Should play a page tap on the first piece', () => {
     const harness = buildHarness();
     const play = rs.spyOn(harness.services.sound, 'play');
     harness.services.tutorial.startIntro({ name: 'You', avatar: 0 });
     harness.services.nav.navigate('onboarding');
     renderWithApp(() => <OnboardingIntroScreen />, harness);
 
-    expect(play).toHaveBeenCalledWith('onboard-turn');
+    expect(play).toHaveBeenCalledWith('onboard-roles');
   });
 
   it('Should show current and total as separate page numbers', () => {
@@ -86,7 +86,7 @@ describe('OnboardingIntroScreen', () => {
 
     expect(harness.services.tutorial.introBeat()).toBe(0);
     expect(harness.services.tutorial.introducing()).toBe(true);
-    expect(screen.getByText(en.onboard.piece.welcomeTitle)).toBeTruthy();
+    expect(screen.getByText(en.onboard.piece.rolesTitle)).toBeTruthy();
     expect(screen.getByText('1').parentElement?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       `1 / ${INTRO_SLIDES.length}`,
     );

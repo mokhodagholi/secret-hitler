@@ -59,7 +59,7 @@ export interface ScriptedTable {
   rezaId: string;
   omidId: string;
   seatIds: string[];
-  /** Five-player first pick: only Nima or Sara. */
+  /** Five-player first pick: only Nima. */
   strictFirstPick: boolean;
 }
 
@@ -68,9 +68,11 @@ export type FiveTable = ScriptedTable;
 export type PlayLock =
   | 'night'
   | 'delta'
+  | 'openNominate'
   | 'nominate'
   | 'voteJa'
   | 'burnFascist'
+  | 'watchEnact'
   | 'voteNein'
   | 'enactLiberal'
   | 'peek'
@@ -224,7 +226,8 @@ function flushTutorialBreath(engine: GameEngine): void {
   }
 }
 
-function skipOpeningNight(room: Room): void {
+/** Backdate the opening ceremony so the President can tap Choose Chancellor. */
+export function skipOpeningNight(room: Room): void {
   if (room.discussionStartedAt > 0) {
     room.discussionStartedAt -= OPENING_CEREMONY_MS + 1;
   }
@@ -234,7 +237,7 @@ export function isAllowedChancellor(table: ScriptedTable, targetId: string): boo
   const target = table.room.findPlayer(targetId);
   if (!target?.isAlive || targetId === table.youId) return false;
   if (table.room.ineligibleChancellorIds().includes(targetId)) return false;
-  if (table.strictFirstPick) return targetId === table.nimaId || targetId === table.saraId;
+  if (table.strictFirstPick) return targetId === table.nimaId;
   return true;
 }
 

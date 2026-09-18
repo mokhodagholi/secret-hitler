@@ -27,6 +27,14 @@ export const ANIMATIONS = {
     ],
     options: { duration: 260, easing: 'ease-out' },
   },
+  /** A second match card dropping into the history list. */
+  'history-card-in': {
+    keyframes: [
+      { opacity: 0, transform: 'translateY(16px) scale(0.96)' },
+      { opacity: 1, transform: 'translateY(0) scale(1)' },
+    ],
+    options: { duration: 320, easing: 'ease-out' },
+  },
   /** Dialog entrance: small overshoot so it lands with weight. */
   'pop-in': {
     keyframes: [

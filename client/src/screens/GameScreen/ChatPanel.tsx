@@ -326,6 +326,7 @@ export function ChatPanel(props: ChatPanelProps) {
               <button
                 type="button"
                 class={styles.tableAction}
+                data-tutorial-target="nominateAction"
                 {...commitOnPress(() => props.onAction?.())}
               >
                 {props.actionLabel}
@@ -418,16 +419,23 @@ export function ChatPanel(props: ChatPanelProps) {
                 <Icon name="skip" size={20} />
               </button>
             </Show>
-            <span class={styles.toolDivider} aria-hidden="true" />
-            <button
-              type="button"
-              class={styles.tool}
-              aria-label={formatMessage('settings.title')}
-              onClick={props.onOpenMenu}
-            >
-              <Icon name="gear" size={20} />
-            </button>
           </Show>
+          <span class={styles.toolDivider} aria-hidden="true" />
+          <button
+            type="button"
+            class={styles.tool}
+            data-tutorial-target="settings"
+            aria-label={formatMessage('settings.title')}
+            onClick={() => {
+              if (tutorial.looking()) {
+                tutorial.openLookSettings();
+                return;
+              }
+              props.onOpenMenu();
+            }}
+          >
+            <Icon name="gear" size={20} />
+          </button>
         </div>
       </header>
 

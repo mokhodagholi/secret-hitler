@@ -19,7 +19,8 @@ export interface VotingOverlayProps {
   /** Living voter who hasn't voted yet — show the Ja/Nein buttons. */
   canVote: boolean;
   yourVote: Vote | null;
-  onVote: (vote: Vote) => void;
+  /** False leaves the dialog open (wrong tutorial ballot). */
+  onVote: (vote: Vote) => boolean | void;
 }
 
 /**
@@ -40,9 +41,9 @@ export function VotingOverlay(props: VotingOverlayProps) {
 
   function choose(vote: Vote): void {
     if (chosen() != null) return;
-    setPicked(vote);
     if (!tutorial.looking()) sound.play('ballot-tap');
-    props.onVote(vote);
+    if (props.onVote(vote) === false) return;
+    setPicked(vote);
   }
 
   return (

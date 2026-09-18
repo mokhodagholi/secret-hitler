@@ -1,5 +1,6 @@
 import { createSignal } from 'solid-js';
 import { raviClipMs, RAVI_CLIP_MS, type RaviVoiceId } from '@secret-hitler/shared';
+import { ONBOARD_CLIPS } from '../assets/sounds/ravi/onboardClips';
 import { RAVI_CLIPS, type RaviWho } from '../assets/sounds/ravi/clips';
 import type { MessageKey, MessageValues } from '../i18n';
 import type { I18nService } from './I18nService';
@@ -10,6 +11,18 @@ export type { RaviWho };
 
 function asVoiceId(who: RaviWho): RaviVoiceId {
   return who in RAVI_CLIP_MS ? (who as RaviVoiceId) : 'daniel';
+}
+
+/** Table talk is seats, not the guide. Buttons and seat names stay silent too. */
+export function isOnboardGuideKey(key: MessageKey): boolean {
+  if (!key.startsWith('onboard.')) return false;
+  if (key.startsWith('onboard.talk.')) return false;
+  if (key.startsWith('onboard.seat.')) return false;
+  return true;
+}
+
+function guideDurationMs(text: string): number {
+  return Math.max(800, Math.round(text.length * 70));
 }
 
 /** Catalog ids — same strings as `ravi-script.md` and the mp3 filenames. */
@@ -152,6 +165,21 @@ export class RaviService {
     private readonly i18n: I18nService,
     private readonly prefetch?: PrefetchService,
   ) {}
+
+  /**
+   * Onboarding guide line (Sarah). Table chat (`onboard.talk.*`) stays silent.
+   * Header copy still comes from i18n — this only plays the clip and sets type pace.
+   */
+  speakGuide(key: MessageKey): Promise<void> {
+    if (!isOnboardGuideKey(key)) return Promise.resolve();
+    const epoch = this.epoch;
+    const run = this.queue.then(() => {
+      if (this.epoch !== epoch) return;
+      return this.deliverGuide(key);
+    });
+    this.queue = run.catch(() => {});
+    return run;
+  }
 
   /** Resolve the line into the header and play the matching clip if voice is on. */
   speak(id: RaviLineId, params?: MessageValues): Promise<void> {
@@ -345,6 +373,49 @@ export class RaviService {
       },
       { once: true },
     );
+  }
+
+  private deliverGuide(key: MessageKey): Promise<void> {
+    const subtitle = this.i18n.formatMessage(key);
+    this.setLine(subtitle);
+    this.setLineId(null);
+    this.setLineDurationMs(guideDurationMs(subtitle));
+    this.generation += 1;
+    const generation = this.generation;
+    this.stopCurrent();
+    this.setSpeaking(true);
+
+    const src = ONBOARD_CLIPS[key];
+    if (!canPlayAudio || !this.settings.settings.raviVoice || !src) {
+      return this.hold(generation, guideDurationMs(subtitle));
+    }
+
+    this.stopCurrent();
+    const audio = new Audio(this.prefetch?.src(src) ?? src);
+    audio.preload = 'auto';
+    audio.volume = 0.9;
+    this.current = audio;
+
+    return new Promise((resolve) => {
+      const finish = () => {
+        if (this.generation === generation) {
+          this.setSpeaking(false);
+          if (this.current === audio) this.current = null;
+        }
+        resolve();
+      };
+      audio.addEventListener('ended', finish, { once: true });
+      audio.addEventListener('error', finish, { once: true });
+      const played = audio.play() as Promise<void> | undefined;
+      played
+        ?.then(() => {
+          if (audio.paused || audio.ended) finish();
+        })
+        .catch((error) => {
+          if (isAutoplayBlocked(error)) this.armUnlock();
+          finish();
+        });
+    });
   }
 
   private clipSrc(id: RaviLineId): string | undefined {

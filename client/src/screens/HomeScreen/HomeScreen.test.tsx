@@ -9,6 +9,7 @@ import { RulesScreen } from '../RulesScreen/RulesScreen';
 import { SettingsScreen } from '../SettingsScreen/SettingsScreen';
 import { WaitingRoomScreen } from '../WaitingRoomScreen/WaitingRoomScreen';
 import { en } from '../../i18n/locales/en';
+import { ONBOARDING_HOME_SETTINGS_KEY } from '../../tutorial/TutorialService';
 import { buildHarness, makeView, renderWithApp } from '../../../test/test-utils';
 
 describe('HomeScreen', () => {
@@ -105,6 +106,40 @@ describe('HomeScreen', () => {
     expect(harness.services.tutorial.introducing()).toBe(true);
   });
 
+  it('Should ring the home gear from the palette icon', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <HomeScreen />, harness);
+
+    const button = screen.queryByRole('button', {
+      name: en.home.checkSettingsOnboarding,
+    });
+    if (!import.meta.env.DEV) {
+      expect(button).toBeNull();
+      return;
+    }
+    fireEvent.click(button!);
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(harness.services.tutorial.guidingHome()).toBe(true);
+    expect(screen.getByText(en.onboard.idea.homeSettings)).toBeTruthy();
+  });
+
+  it('Should start the history tour from the home trophy', () => {
+    const harness = buildHarness();
+    renderWithApp(() => <HomeScreen />, harness);
+
+    const button = screen.queryByRole('button', {
+      name: en.home.checkHistoryOnboarding,
+    });
+    if (!import.meta.env.DEV) {
+      expect(button).toBeNull();
+      return;
+    }
+    fireEvent.click(button!);
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(harness.services.tutorial.reviewingHistory()).toBe(true);
+    expect(screen.getByText(en.onboard.history.chip)).toBeTruthy();
+  });
+
   it('Should open Settings from the gear', () => {
     const harness = buildHarness();
     renderWithApp(
@@ -122,6 +157,49 @@ describe('HomeScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     expect(harness.services.nav.screen()).toBe('settings');
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy();
+  });
+
+  it('Should ring the home settings gear on a first visit', () => {
+    const harness = buildHarness({ flags: { onboarding: true } });
+    harness.services.tutorial.offerAfterSplash(harness.services.nav, false, true);
+    harness.services.tutorial.declineSit();
+    renderWithApp(
+      () => (
+        <Show
+          when={harness.services.nav.screen() === 'home'}
+          fallback={<SettingsScreen />}
+        >
+          <HomeScreen />
+        </Show>
+      ),
+      harness,
+    );
+
+    expect(screen.getByText(en.onboard.idea.homeSettings)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.onboard.skip })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(harness.services.nav.screen()).toBe('settings');
+    expect(harness.services.tutorial.guidingHome()).toBe(true);
+    expect(localStorage.getItem('sh:onboarding-home-settings')).toBeNull();
+    expect(screen.getByText(en.onboard.settings.name)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.onboard.continue })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull();
+  });
+
+  it('Should skip the home settings ring without opening Settings', () => {
+    const harness = buildHarness({ flags: { onboarding: true } });
+    harness.services.tutorial.offerAfterSplash(harness.services.nav, false, true);
+    harness.services.tutorial.declineSit();
+    renderWithApp(() => <HomeScreen />, harness);
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.skip }));
+    expect(harness.services.nav.screen()).toBe('home');
+    expect(localStorage.getItem('sh:onboarding-home-settings')).toBe('1');
+    expect(screen.queryByText(en.onboard.idea.homeSettings)).toBeNull();
+    expect(screen.getByText(en.onboard.history.chip)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy();
   });
 
   it('Should open the guide from the labeled chip under Settings', () => {
@@ -321,11 +399,65 @@ describe('HomeScreen', () => {
     renderWithApp(() => <HomeScreen />, harness);
 
     fireEvent.click(screen.getByRole('button', { name: en.home.history }));
+    await waitFor(() => expect(screen.getByText(en.game.over.liberalsWin)).toBeTruthy());
+    expect(screen.queryByText('Ben')).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(en.game.over.liberalsWin) }),
+    );
     await waitFor(() => expect(screen.getByText('Ben')).toBeTruthy());
     expect(screen.getByText(en.game.over.liberalsWin)).toBeTruthy();
     expect(screen.getByText(new RegExp(en.home.historyWon))).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: en.game.over.addFriend }));
     await waitFor(() => expect(screen.getByText(en.game.over.sent)).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
+  });
+
+  it('Should walk mock history and add Reza without hitting the server', () => {
+    localStorage.setItem(ONBOARDING_HOME_SETTINGS_KEY, '1');
+    const harness = buildHarness({ flags: { onboarding: true } });
+    const fetchSpy = rs.spyOn(globalThis, 'fetch');
+    renderWithApp(() => <HomeScreen />, harness);
+
+    expect(screen.getByText(en.onboard.history.chip)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: en.onboard.continue })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: en.home.history }));
+
+    expect(screen.getByText(en.onboard.history.list)).toBeTruthy();
+    expect(screen.getByText(en.game.over.liberalsWin)).toBeTruthy();
+    expect(screen.getByText(new RegExp(en.home.historyWon))).toBeTruthy();
+    expect(screen.queryByText('Nima')).toBeNull();
+    expect(screen.queryByText(en.game.over.fascistsWin)).toBeNull();
+
+    for (let step = 0; step < 3; step++) {
+      fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    }
+    expect(screen.getByText(en.onboard.history.people)).toBeTruthy();
+    expect(screen.getByText('Nima')).toBeTruthy();
+    expect(screen.getByText('Reza')).toBeTruthy();
+    expect(screen.getAllByText(en.game.over.friends).length).toBeGreaterThan(0);
+    expect(screen.getByText(en.game.over.sent)).toBeTruthy();
+    expect(screen.getByText(en.social.incomingRequests)).toBeTruthy();
+
+    for (let step = 0; step < 3; step++) {
+      fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    }
+    expect(screen.getByText(en.onboard.history.add)).toBeTruthy();
+    fireEvent.click(screen.getByText('Reza').parentElement!.querySelector('button')!);
+    expect(screen.getByText(en.onboard.history.ties)).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    expect(screen.getByText(en.onboard.history.loss)).toBeTruthy();
+    expect(screen.getByText(en.game.over.fascistsWin)).toBeTruthy();
+    expect(screen.getAllByText(new RegExp(en.home.historyLost)).length).toBeGreaterThan(0);
+    expect(screen.getByText('Maryam')).toBeTruthy();
+    expect(screen.queryByText('Hoda')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    expect(screen.getByText(en.onboard.history.done)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: en.onboard.continue }));
+    expect(harness.services.tutorial.reviewingHistory()).toBe(false);
+    expect(screen.queryByText(en.onboard.history.done)).toBeNull();
+    expect(localStorage.getItem('sh:onboarding-home-history')).toBe('1');
   });
 });

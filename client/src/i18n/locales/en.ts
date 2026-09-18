@@ -49,6 +49,8 @@ export const en = {
     live: 'Live',
     events: 'Events',
     checkOnboarding: 'Onboarding',
+    checkSettingsOnboarding: 'Settings onboarding',
+    checkHistoryOnboarding: 'History onboarding',
   },
   playerCards: {
     title: 'Player Cards',
@@ -261,13 +263,48 @@ export const en = {
     previous: 'Previous',
     skip: 'Skip',
     seeNext: "Let's see",
+    history: {
+      chip: "Every match you've played — the details are here.\nTap it.",
+      list: "These are tables you sat at. Empty until you play — this is what it looks like after a few hands.",
+      outcome: 'The top line says who took it — Liberals or Fascists.',
+      yours: 'Under that is yours: won or lost, and when it ended.',
+      people: 'Everyone who sat that table, in seat order.',
+      you: "That's your row. Your role is here.",
+      roles: 'After a match the roles are public. Who sat what is here.',
+      add: 'You can add them from here — same as after a table. Add Reza.',
+      ties: 'If you already asked, it says sent. Friends stay marked. A request waiting on you shows here too.',
+      loss: 'Imagine you played another game and lost. That one lands under it.',
+      done: "That's it. Open History from Home whenever you want.",
+    },
+    settings: {
+      name: 'This is the name the table sees. Change it here.',
+      card: 'This picture sits on your seat. You pick it from here.',
+      music: "The music under the desk. Off if you don't want it.",
+      sound: "Whatever happens at the table has a sound. Off if you don't want that.",
+      ravi: "That's my voice in the game. Off if you don't want it.",
+      table: "People at the table talk on the mic. Off if you don't want to hear them.",
+      who: "Who's talking to you. Right now that's Daniel.",
+      motion: 'If the game feels laggy, turn this off.',
+      briefing: 'What we added. Open it whenever you want.',
+      support: 'Something wrong, or an idea — write from here.',
+      done: "That's it. Open Settings from Home whenever you want.",
+    },
     letsSit: "Let's sit.",
     youPresident: "You're President. Watch how the table plays this.",
-    pick: 'First hand nobody knows anything. Tables usually name the next seat — Nima.',
+    mustNominate:
+      "Name a Chancellor. If you don't, your turn burns and the next seat is President.",
+    openNominate: 'This button is how you pick them.',
+    openNominateTap: 'Tap it.',
+    pick: 'First hand nobody knows anything. Tables usually name the next seat so the game can start.',
+    pickNima: 'Put Nima up as Chancellor.',
     pickRetry: 'Not that one for this hand. Someone else.',
-    vote: 'Tap your vote. You want this government — Ja.',
+    vote:
+      "That's a government: you President, Nima Chancellor. It sits if most people vote Ja. Tap Ja.",
+    voteRetry: 'Not Nein this hand. Tap Ja.',
     votesRead: 'Reza said Nein. Remember who keeps saying no.',
-    draw: 'Three laws in your hand. Burn the Fascist. The two Liberals go to Nima.',
+    draw: 'Burn one. The other two go to the Chancellor — they put one on the board.',
+    secretEnact: 'Only the Chancellor sees those laws, and which one they put down.',
+    comingSoon: 'The rest of this table is coming soon.',
     watch: 'This hand is not yours. Watch who sits with whom.',
     refuse: 'Reza named Omid. They lined up too fast. Vote Nein.',
     tracker:
@@ -285,6 +322,10 @@ export const en = {
       'One more Liberal sits down. Same small board as five. While six remain, last president and last chancellor are locked. If someone dies and five are left, only last chancellor stays locked.',
     termLimit:
       'Nima just sat as Chancellor. You cannot name them again. While six are alive, last president is locked too.',
+    termLimitFive:
+      'At five, last Chancellor cannot sit in the new government. That seat is locked — name someone else.',
+    watchPick:
+      "Nima didn't name you. He named Sara. The President picks someone — it doesn't have to be the next seat.",
     nextSeven:
       'From seven on, Hitler does not see the Fascists at night. The board changes: first investigate, then a special election.',
     investigate:
@@ -299,15 +340,18 @@ export const en = {
       pickMe: "Put me in as Chancellor. I'll play it calm.",
       meToo: "I'm here too.",
       trustMe: "I'm Liberal, come on. Put me in first.",
-      playingYou: 'Reza jumped too soon.',
+      playingYou: "Reza, why'd you jump in so fast?",
       anyoneCan: 'Let the table talk. We all vote.',
       listening: 'Who should I name Chancellor? Tell me.',
       putMeIn: "I'm serious. Put me in — you'll see what I enact.",
       tooEager: "If it's Reza I'm voting Nein. He's rushing it.",
-      quietlyLiberal: "I can go. I'm not shouting.",
+      quietlyLiberal:
+        "Look, I could just make noise here too — I'd rather we talk and give reasons…",
       illPick: "Alright. Naming one.",
       notYou: 'No. Not you.',
       iPickYou: "{name} — I'm putting them up. We vote.",
+      saraThisHand: "Sara, let's go with you this hand…",
+      saraOk: "Fine — don't put a Fascist down.",
     },
     seat: {
       nima: 'Nima',
@@ -324,6 +368,11 @@ export const en = {
       welcome: "We're in. Right — everything you just saw is used on this screen.",
       people: 'These are the people in the game. Two sides: Fascist and Liberal.',
       talk: 'People talk to each other — in chat, and on the mic.',
+      settings: 'Sound, your role, the rules — they all sit behind this button. Tap it.',
+      homeSettings:
+        'Your name, portrait, and the sound — they change from this button. Tap it.',
+      settingsMenu:
+        'From here you mute the room, look at your card, or leave the table.',
       messages: 'Messages show up here.',
       writeHere:
         'Anything you type here goes into chat and the table sees it. Write something, then hit send.',
@@ -336,15 +385,23 @@ export const en = {
       yourTurn: 'Your turn. Write something the table would vote Ja on — not just the President.',
       composeHint: "Anyone's fine first.",
       presidentPicks: 'The President puts a name up. Then the table votes.',
-      youChancellor: 'That makes you Chancellor this hand.',
-      seeNext: 'Want to see what happens next?',
+      youChancellor: 'You are Chancellor this hand.',
+      chancellorDoes:
+        'The Chancellor gets two laws and puts one on the board — Liberal or Fascist.',
+      onlyPresidentSees:
+        "Those three are only in the President's hand. You do not see what came.",
+      presidentBurns: 'They burned one. Two are coming to you.',
+      youPickLaw: 'Your turn. Put one on the board.',
+      seeNext: "Let's see what happens at a five-player table.",
       tableTitle: 'Who sits',
       table:
         'A few people around the table, ready to play together. Two teams: Liberal and Fascist. And one special seat — Hitler.',
       boardsTitle: 'The boards',
       boards: 'And these are the boards. That is where the laws sit.',
       thisPresident:
-        'This one is President. They choose the Chancellor each hand — then everybody votes.',
+        'This one is President. Each hand they pick the Chancellor.',
+      thisPresidentLaws:
+        'If that government sits, they draw three laws from the deck. They burn one and pass the other two to the Chancellor.',
       governmentTitle: 'The government',
       government:
         'Each hand a government is proposed. The President picks the Chancellor.',

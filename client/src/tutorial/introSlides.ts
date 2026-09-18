@@ -8,7 +8,6 @@ import voteJa from '../assets/table/votes/ja.webp';
 import voteNein from '../assets/table/votes/nein.webp';
 
 export type IntroVisual =
-  | { kind: 'welcome' }
   | { kind: 'images'; srcs: string[]; layout: 'row' | 'stack' | 'trio' }
   | { kind: 'government' }
   | { kind: 'tracker'; marks: 0 | 1 | 2 | 3 }
@@ -24,14 +23,10 @@ export interface IntroSlide {
 
 /**
  * Step 0 — name the pieces. Images + short labels.
+ * Welcome is the Sit dialog after splash, not a slide.
  * Last slide asks if they got it, then step 1 (look) teaches how to play.
  */
 export const INTRO_SLIDES: readonly IntroSlide[] = [
-  {
-    titleKey: 'onboard.piece.welcomeTitle',
-    bodyKey: 'onboard.piece.welcome',
-    visual: { kind: 'welcome' },
-  },
   {
     titleKey: 'onboard.piece.rolesTitle',
     bodyKey: 'onboard.piece.roles',
@@ -115,7 +110,6 @@ export type IntroSlideEffect =
 
 export function effectForIntroVisual(visual: IntroVisual): IntroSlideEffect | null {
   switch (visual.kind) {
-    case 'welcome':
     case 'check':
       return 'onboard-turn';
     case 'images':

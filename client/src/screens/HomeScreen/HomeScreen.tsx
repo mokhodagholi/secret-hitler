@@ -1,16 +1,20 @@
-import { Show, createSignal, onCleanup, onMount } from 'solid-js';
+import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import { Phase } from '@secret-hitler/shared';
 import { useApp } from '../../services/AppContext';
 import { Icon } from '../../components/Icon/Icon';
 import { Screen } from '../../components/Screen/Screen';
 import { WarmImg } from '../../components/WarmImg/WarmImg';
 import type { SocialIdentity } from '../../services/SocialService';
+import { GameEventHeader } from '../GameScreen/GameEventHeader';
+import { Spotlight } from '../GameScreen/Spotlight';
 import heroImage from '../../assets/home/hero.webp';
 import heroFindingImage from '../../assets/home/hero-finding.webp';
 import deskImage from '../../assets/home/desk.png';
 import liberalBoard from '../../assets/boards/liberal.png';
 import fascistBoard from '../../assets/boards/fascist.png';
 import { MatchHistorySheet } from './MatchHistorySheet';
+import { tutorialYou } from '../../tutorial/cast';
+import { HISTORY_TARGET } from '../../tutorial/historyView';
 import styles from './HomeScreen.module.scss';
 
 /** Cycles on the home support chip — same topics as the support letter form. */
@@ -41,13 +45,28 @@ export function HomeScreen() {
     miniApp,
     social,
     tutorial,
+    flags,
+    ravi,
   } = useApp();
   const { formatMessage } = i18n;
   const showDevOnboarding = import.meta.env.DEV;
 
   const canRejoin = () => game.inRoom() && game.view() != null;
+  const homeGuiding = () => tutorial.guidingHome() || tutorial.reviewingHistory();
 
   const [historyOpen, setHistoryOpen] = createSignal(false);
+  const [homeHeadlineTyped, setHomeHeadlineTyped] = createSignal<{
+    text: string;
+    done: boolean;
+  }>({ text: '', done: false });
+  const homeHeadlineText = () => formatMessage(tutorial.headlineKey());
+  const homeHeadlineReady = () =>
+    homeHeadlineTyped().done && homeHeadlineTyped().text === homeHeadlineText();
+
+  createEffect(() => {
+    if (!homeGuiding()) return;
+    void ravi.speakGuide(tutorial.headlineKey());
+  });
 
   function resolvedName(): string {
     return miniApp.user()?.firstName ?? settings.settings.profileName.trim();
@@ -63,7 +82,23 @@ export function HomeScreen() {
     };
   }
 
+  function homeYou() {
+    return tutorialYou(
+      resolvedName() || formatMessage('game.you'),
+      settings.settings.avatar,
+      formatMessage,
+    );
+  }
+
+  function startHomeHistory(): void {
+    tutorial.beginHomeHistory(homeYou());
+  }
+
   async function openHistory(): Promise<void> {
+    if (tutorial.reviewingHistory()) {
+      tutorial.openHistoryChip();
+      return;
+    }
     setHistoryOpen(true);
     const identity = socialIdentity();
     try {
@@ -86,8 +121,38 @@ export function HomeScreen() {
     nav.navigate('onboarding');
   }
 
+  function openDevSettingsOnboarding(): void {
+    tutorial.startHomeSettings({ voice: flags.flags.voice });
+  }
+
+  function openDevHistoryOnboarding(): void {
+    tutorial.startHomeHistory(homeYou());
+  }
+
   const [supportIndex, setSupportIndex] = createSignal(0);
   const [supportFading, setSupportFading] = createSignal(false);
+
+  createEffect(() => {
+    if (!flags.ready() || !flags.flags.onboarding) return;
+    if (tutorial.offeringSit()) return;
+    if (game.inRoom()) return;
+    tutorial.beginHomeSettings({ voice: flags.flags.voice });
+    startHomeHistory();
+  });
+
+  createEffect(() => {
+    if (!homeGuiding()) return;
+    const handleBack = () => {
+      if (tutorial.reviewingHistory()) {
+        tutorial.skipHomeHistory();
+        return;
+      }
+      tutorial.skipHomeSettings();
+      tutorial.startHomeHistory(homeYou());
+    };
+    nav.setBackHandler(handleBack);
+    onCleanup(() => nav.clearBackHandler(handleBack));
+  });
 
   onMount(() => {
     const tick = setInterval(() => {
@@ -107,6 +172,16 @@ export function HomeScreen() {
   return (
     <Screen>
       <div class={styles.home}>
+        <Show when={homeGuiding()}>
+          <div class={styles.guideHeader}>
+            <GameEventHeader
+              headline={homeHeadlineText()}
+              durationMs={ravi.lineDurationMs()}
+              onTyped={(done, text) => setHomeHeadlineTyped({ text, done })}
+            />
+          </div>
+        </Show>
+        <div class={styles.scene}>
         <div class={styles.tools}>
           <div class={styles.toolStart}>
             <button
@@ -130,8 +205,12 @@ export function HomeScreen() {
             <button
               type="button"
               class={styles.tool}
+              data-tutorial-target="homeSettings"
               aria-label={formatMessage('nav.settings')}
-              onClick={() => nav.navigate('settings')}
+              onClick={() => {
+                if (tutorial.guidingHome()) tutorial.openHomeSettings();
+                nav.navigate('settings');
+              }}
             >
               <Icon name="gear" size={22} />
             </button>
@@ -143,6 +222,22 @@ export function HomeScreen() {
                 onClick={openDevOnboarding}
               >
                 <Icon name="hand" size={22} />
+              </button>
+              <button
+                type="button"
+                class={styles.tool}
+                aria-label={formatMessage('home.checkSettingsOnboarding')}
+                onClick={openDevSettingsOnboarding}
+              >
+                <Icon name="palette" size={22} />
+              </button>
+              <button
+                type="button"
+                class={styles.tool}
+                aria-label={formatMessage('home.checkHistoryOnboarding')}
+                onClick={openDevHistoryOnboarding}
+              >
+                <Icon name="trophy" size={22} />
               </button>
             </Show>
             <button
@@ -159,6 +254,7 @@ export function HomeScreen() {
             <button
               type="button"
               class={styles.guideChip}
+              data-tutorial-target={HISTORY_TARGET.chip}
               aria-label={formatMessage('home.history')}
               onClick={() => void openHistory()}
             >
@@ -223,13 +319,49 @@ export function HomeScreen() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
 
       <MatchHistorySheet
-        open={historyOpen()}
+        open={historyOpen() || tutorial.historySheet()}
         identity={socialIdentity()}
         onClose={() => setHistoryOpen(false)}
       />
+          <Show when={homeGuiding()}>
+            <Spotlight
+              target={tutorial.target()}
+              lifted={tutorial.maskLifted()}
+              passHole={tutorial.passHole()}
+              layoutKey={
+                tutorial.beat() +
+                Number(tutorial.historySheet()) +
+                tutorial.historyMatches().length +
+                tutorial.historyExpandIds().join('').length
+              }
+              showContinue={
+                tutorial.reviewingHistory() &&
+                tutorial.canContinueHomeHistory() &&
+                homeHeadlineReady()
+              }
+              showPrevious={
+                tutorial.reviewingHistory() &&
+                tutorial.beat() > 0 &&
+                homeHeadlineReady()
+              }
+              showSkip={homeHeadlineReady()}
+              onPrevious={() => tutorial.retreatHomeHistory()}
+              onContinue={() => tutorial.advanceHomeHistory()}
+              onSkip={() => {
+                if (tutorial.reviewingHistory()) {
+                  tutorial.skipHomeHistory();
+                  return;
+                }
+                tutorial.skipHomeSettings();
+                tutorial.startHomeHistory(homeYou());
+              }}
+              formatMessage={formatMessage}
+            />
+          </Show>
+      </div>
     </Screen>
   );
 }

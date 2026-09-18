@@ -11,7 +11,7 @@ describe('App — first-run look', () => {
     const harness = buildHarness({ flags: { onboarding: true } });
     render(() => <App services={harness.services} />);
 
-    await waitFor(() => expect(screen.getByText(en.onboard.invite)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
     expect(screen.getByRole('button', { name: en.onboard.sit })).toBeTruthy();
     expect(screen.getByRole('button', { name: en.onboard.notNow })).toBeTruthy();
@@ -37,7 +37,8 @@ describe('App — first-run look', () => {
     fireEvent.click(screen.getByRole('button', { name: en.onboard.notNow }));
     expect(localStorage.getItem(ONBOARDING_DECLINE_KEY)).toBe('1');
     expect(harness.services.nav.screen()).toBe('home');
-    expect(screen.queryByText(en.onboard.invite)).toBeNull();
+    expect(screen.queryByText(en.onboard.piece.welcome)).toBeNull();
+    expect(screen.getByText(en.onboard.idea.homeSettings)).toBeTruthy();
   });
 
   it('Should go home after splash once the sit offer has been seen five times', async () => {
@@ -47,7 +48,7 @@ describe('App — first-run look', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy());
     expect(harness.services.nav.screen()).toBe('home');
-    expect(screen.queryByText(en.onboard.invite)).toBeNull();
+    expect(screen.queryByText(en.onboard.piece.welcome)).toBeNull();
   });
 
   it('Should not steal a restored live seat away from home', async () => {
@@ -77,10 +78,10 @@ describe('App — first-run look', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy(),
     );
-    expect(screen.queryByText(en.onboard.invite)).toBeNull();
+    expect(screen.queryByText(en.onboard.piece.welcome)).toBeNull();
 
     harness.services.flags.apply({ ...DEFAULT_FLAGS, onboarding: true });
-    await waitFor(() => expect(screen.getByText(en.onboard.invite)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy());
   });
 
   it('Should not offer Sit when onboarding is off', async () => {
@@ -91,7 +92,7 @@ describe('App — first-run look', () => {
       expect(screen.getByRole('button', { name: en.home.play })).toBeTruthy(),
     );
     expect(harness.services.nav.screen()).toBe('home');
-    expect(screen.queryByText(en.onboard.invite)).toBeNull();
+    expect(screen.queryByText(en.onboard.piece.welcome)).toBeNull();
     expect(harness.services.tutorial.offeringSit()).toBe(false);
   });
 });
