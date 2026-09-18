@@ -106,9 +106,9 @@ room, then how people talk their way into office.
 Nima is President from the first beat. The player is not. After the
 boards, Daniel points at Nima, then chat opens and grows up. He
 explains why people talk, then they listen together, then the table
-campaigns. The first ghost is a bad line — copying it is still
-rejected. The second ghost is the real pitch. After a match, Nima names
-them Chancellor, the ticket modal, then a blur and “see next”.
+campaigns. The ghost is a suggestion — any line they send is enough.
+After they write, Nima puts their name up for the table, the ticket
+modal, then a blur and “see next”.
 
 Beats live in `client/src/tutorial/lookView.ts` (`LOOK_BEATS`). Copy
 under `onboard.idea.*` and `onboard.talk.*` in both locales.
@@ -122,8 +122,8 @@ ribbons that make a seat look picked.
 | Ring | What they see |
 |---|---|
 | **Off** | Whole table. Warm room, no smoke hole. Nima already wears the President ribbon — no gold ring, so it is not a pick (welcome). After the ticket, the closing beat is off again — you already sit as Chancellor, no ring. |
-| **On** | One punched-out thing, gold border, smoke over the rest. That widget is the lesson. Chat / composer rings sit **inside** the panel: inset from the screen edge. Continue sits **under** the chat with a gap — not on the gold border. |
-| **On, then chat** | After boards, ring **only** Nima. Then open chat. Do not ring the whole table while they talk. After a matching pitch, Nima speaks in chat; then ring **only** the ticket modal. |
+| **On** | One punched-out thing, gold border, smoke over the rest. That widget is the lesson. Chat rings sit **inside** the panel: inset from the screen edge. Composer rings sit on the bottom chat strip (the top line, the field, and send) — no extra pad. Continue sits **under** the chat with a gap — not on the gold border. |
+| **On, then chat** | After boards, ring **only** Nima. Then open chat. Do not ring the whole table while they talk. After they send a pitch, Nima speaks in chat; then ring **only** the ticket modal. |
 
 Never ring the seats on the first beat. Never leave a seat looking
 selected when Daniel is talking about the whole page. Chat is hidden
@@ -131,8 +131,9 @@ until after the President beat; it **grows up** from composer height
 when it first opens. First the whole dock (chat + mic, **one** ring
 around the panel — no extra gold on the mic), then the feed, then the
 composer. After they send, lift the mask. “Where were we?” then the
-campaign line, still with no ring. After “let’s listen”, ring **chat**
-again (still no extra mic border) while the table talks. The composer
+campaign line, still with no ring. “Let’s listen” stays lifted. Continue
+then rings **chat** (the panel, not each bubble — still no extra mic
+border) while the table talks. The composer
 ring is only for a write beat (clicks must pass through so they can
 type). Ghost hint stays dim even while they type. Continue sits under
 the chat with a gap so it is not sitting on the gold border.
@@ -144,10 +145,9 @@ while Nima names them in chat. The last Continue is «ببینیم» / “Let's
 see”, not «ادامه».
 
 The first write is any line — Daniel waits, then lifts the mask and
-picks the lesson back up. The chancellor pitch is two tries. First
-ghost is a **bad** line — even copying it is rejected («این جمله کمکتون
-نمی‌کنه.»). Then another campaign and the real suggestion. Match that,
-the mask lifts, Nima names them in chat, ticket modal, then a blur and
+picks the lesson back up. The chancellor pitch is any line too; the
+ghost is a suggestion, not a required copy. After they send, the mask
+lifts, Nima names them in chat, ticket modal, then a blur and
 «می‌خواید ببینید بعدش چی می‌شه؟».
 
 ### Beats
@@ -157,15 +157,15 @@ the mask lifts, Nima names them in chat, ticket modal, then a blur and
 | 1 | **Off** — whole table, Nima already President | Hidden | Continue | We're in | وارد بازی شدیم. درسته، همه‌چی که تا الان دیدیم اینجا استفاده می‌شه. | We're in. Right — everything you just saw is used on this screen. | `[warmly]` |
 | 2 | **On** — all seats | Hidden | Continue | Who sits | اینا آدمای بازی‌ان. دو دسته تو بازی هست: فاشیست و لیبرال. | These are the people in the game. Two sides: Fascist and Liberal. | `[calm]` |
 | 3 | **On** — boards | Hidden | Continue | Where laws sit | اینا هم تخته‌های بازی‌ان. قانون‌ها روشون می‌شینه. | And these are the boards. That is where the laws sit. | `[calm]` |
-| 4 | **On** — Nima | Hidden | Continue | Who is President | این یکی رئیس‌جمهوره. هر دست صدراعظم رو این انتخاب می‌کنه. | This one is President. They pick the Chancellor each hand. | `[calm]` |
+| 4 | **On** — Nima | Hidden | Continue | Who is President | این یکی رئیس‌جمهوره. صدراعظم رو این انتخاب می‌کنه — ولی رأی با همه‌ست. | This one is President. They choose the Chancellor each hand — then everybody votes. | `[calm]` |
 | 5 | **On** — chat (inset; mic inside, no extra ring) | Opens, grows up | Continue | How people talk | آدما با هم حرف می‌زنن — هم با پیام، هم با میکروفون. | People talk to each other — in chat, and on the mic. | `[calm]` |
 | 6 | **On** — feed (inset) | Open | Continue | Where lines land | پیام‌ها همین‌جا می‌آد. | Messages show up here. | `[calm]` |
 | 7 | **On** — composer only (tappable) | Open | Until they send any line | You can write | هر چی اینجا بنویسید می‌ره تو چت و بقیه می‌بینن. الان یه چیزی بنویسید، بعد دکمهٔ فرستادن رو بزنید. | Anything you type here goes into chat and the table sees it. Write something, then hit send. | `[calm]` |
 | 8 | **Off** — whole table | Open, their line | Pause | Resume | خب کجا بودیم؟ | Wait — where were we? | `[calm]` |
-| 9 | **Off** — whole table | Open | Continue | Why they talk | اها داشتم می‌گفتم همه سعی می‌کنن لیبرال به نظر برسن تا رئیس‌جمهور بذارتشون صدراعظم. | Oh right — everyone tries to look Liberal so the President will make them Chancellor. | `[announce]` |
-| 10 | **On** — chat (inset; no extra mic ring) | Open | Continue | Let's listen | با هم ببینیم سر میز چی می‌گن. | Let's watch together what they're saying. | `[calm]` |
-| 11 | **On** — chat (inset) | Open, auto lines + seat clouds | Until talk ends | Campaign as Liberal | (same as #10) | (same as #10) | `[announce]` |
-| 12 | **On** — composer only (tappable) | Open | Until they send | Write — first line is bad | شما هم بنویسید. یه چیزی که رئیس‌جمهور بذارتتون صدراعظم. | Your turn. Write something that makes the President name you Chancellor. | `[calm]` |
+| 9 | **Off** — whole table | Open | Continue | Why they talk | اها داشتم می‌گفتم درسته که رئیس‌جمهور صدراعظم رو انتخاب می‌کنه، ولی این همه هستن که رأی می‌دن کدوم دولت تشکیل شه. | Right — the President names a Chancellor, but everybody votes which government sits. | `[announce]` |
+| 10 | **Off** — whole table | Open | Continue | Let's listen | با هم ببینیم سر میز چی می‌گن. | Let's watch together what they're saying. | `[calm]` |
+| 11 | **On** — chat panel (not messages) | Open, auto lines + seat clouds | Until talk ends | Campaign as Liberal | (same as #10) | (same as #10) | `[announce]` |
+| 12 | **On** — composer only (tappable) | Open | Until they send any line | Write — suggestion is a ghost | شما هم حرف بزنید. یه چیزی که بقیه بهش رأی آره بدن. | Your turn. Write something the table would vote Ja on — not just the President. | `[calm]` |
 | 13 | **On** — ticket modal only | Open | Continue | You are Chancellor | این یعنی شما صدراعظم این دستید. | That makes you Chancellor this hand. | `[announce]` |
 | 14 | **Blur** — whole table | Hidden | «ببینیم» | Next hand | می‌خواید ببینید بعدش چی می‌شه؟ | Want to see what happens next? | `[warmly]` |
 
@@ -173,39 +173,26 @@ Then the five-player hand starts. No “this is a lesson table” in these lines
 
 ### Campaign talk (beat 11)
 
-Table colour. Two lines each from رضا، سارا، امید، and نیما (President).
-Each line also paints the seat cloud. 4.5–6.5 s between messages.
-Reza claims Liberal first; Sara calls it. Native fa / native en — not a
-translation of each other. They never mention Daniel, the guide, or that
-the table is scripted.
+Table colour. Nima asks who to name; Reza jumps too early; Sara talks
+like a voter; Omid stays quiet. Each line also paints the seat cloud.
+4.5–6.5 s between messages. Native fa / native en — not a translation
+of each other. They never mention Daniel, the guide, or that the table
+is scripted. The President **asks** — the vote is the table’s.
 
 | Who | FA | EN |
 |---|---|---|
-| رضا | من لیبرالم، به من اعتماد کن. | I'm Liberal. Trust me. |
-| سارا | نه بابا، داره فریبتون می‌ده. | Come off it. He's playing you. |
-| امید | از کجا معلوم؟ هر کی می‌تونه اینو بگه. | How would we know? Anyone can say that. |
-| نیما | آروم باشید. دارم گوش می‌دم. | Easy. I'm listening. |
-| رضا | جدی می‌گم. بذارید برم صدراعظم، خودتون می‌بینید. | I'm serious. Put me in — you'll see. |
-| سارا | رئیس‌جمهور این یکی رو نذار. خیلی عجله داره. | Don't pick him. He's rushing it. |
-| امید | منم لیبرالم. فقط سر میز داد نمی‌زنم. | I'm Liberal too. I just don't shout it. |
-| نیما | باشه. یکی رو برمی‌دارم. | Alright. I'll pick someone. |
+| نیما | کی رو بذارم صدراعظم؟ نظر بدید. | Who should I name Chancellor? Tell me. |
+| رضا | بچه‌ها من لیبرالم ها. همین اول منو بذارید صدراعظم. | I'm Liberal, come on. Put me in first. |
+| سارا | رضا زود پرید. | Reza jumped too soon. |
+| امید | بذار میز حرف بزنه. رأی با همه‌ست. | Let the table talk. We all vote. |
+| رضا | جدی می‌گم. بذارید برم، خودتون می‌بینید چی می‌ذارم. | I'm serious. Put me in — you'll see what I enact. |
+| سارا | اگه رضا باشه من نه می‌دم. خیلی عجله داره. | If it's Reza I'm voting Nein. He's rushing it. |
+| امید | منم می‌تونم برم. داد نمی‌زنم. | I can go. I'm not shouting. |
+| نیما | باشه یکی رو می‌ذارم. | Alright. Naming one. |
 
-Ghost 1 (bad, even a copy is rejected): «منو بذارید. برام فرقی نداره کی می‌بره.» / “Just put me in. I don't care who wins.”
-Ghost 2: «رئیس‌جمهور منو بذارید. لیبرالم.» / “Put me in. I'm Liberal.”
+Ghost (suggestion only — any send is accepted): «هرکی باشه فرقی نداره» / “Anyone's fine first.”
 
-Nima on a bad first line: «این جمله به درد نمی‌خوره.» / “That line won't get you in.”
-Nima on a match, before the modal: «{name} رو می‌ذارم صدراعظم.» / “I'm putting {name} in as Chancellor.”
-
-Second campaign (after the first miss):
-
-| Who | FA | EN |
-|---|---|---|
-| رضا | باز هم می‌گم، لیبرالم. | I'll say it again. I'm Liberal. |
-| سارا | یکی دیگه رو بذار. | Pick someone else. |
-| امید | فرقی نمی‌کنه، همه همینو می‌گن. | Doesn't matter. Everyone says that. |
-| نیما | هنوز گوش می‌دم. | Still listening. |
-| رضا | این دست منو بذارید. | This hand, put me in. |
-| سارا | رئیس‌جمهور عجله نکن. | Don't rush it. |
+Nima on a send, before the modal: «{name} رو می‌ذارم. رأی بدید.» / “{name} — I'm putting them up. We vote.”
 
 ---
 
@@ -216,7 +203,9 @@ Not a black dimmer and not a tutorial cartoon.
 - Fill: warm smoke, roughly `rgba(12, 8, 5, 0.8)` — dark enough to
   kill contrast on the rest, still the same room.
 - Hole: one bounding rect for all matches (~8 px pad, 12 px radius),
-  optional gold ring. President + chancellor share a single hole.
+  optional gold ring. Composer sits on the bottom chat strip (top
+  line, field, send) — no extra pad. President + chancellor share a
+  single hole.
 - The punched-out control is the only pressable hit target.
 - Ravi / Daniel plaque sits **above** the mask (never covered).
 - Continue / Skip / Previous sit in the safe area, also above the mask,
@@ -268,7 +257,7 @@ They play like people. Scripted, not an LLM. They never break character.
 | 3 | رضا | Reza | Fascist | Sure of himself. Moves too early. |
 | 4 | امید | Omid | Hitler | Quiet. Agrees. Almost never explains. |
 
-Reuse existing avatars, fixed mapping. Later steps add seats from a
+Reuse existing avatars, **gender-matched** to the seat names. Later steps add seats from a
 name pool (مریم, کیان, آرش, هدا, بهراد, الناز) — still real first
 names, still existing portraits.
 
@@ -288,9 +277,9 @@ No one says تمرین, ربات, درس, آموزش.
 
 ### Step 1 campaign (look table)
 
-Eight lines, two each. Keys `onboard.talk.trustMe` … `illPick`. A miss
-adds `LOOK_CAMPAIGN_AGAIN`. Each line is also a seat cloud. Timing as
-in [Timing](#timing) — not a burst.
+Eight lines. Nima asks first (`onboard.talk.listening`). Keys through
+`illPick`. Each line is also a seat cloud. Timing as in [Timing](#timing)
+— not a burst.
 
 ### In-match chat
 
@@ -331,8 +320,10 @@ play like a normal table (slow).
 1. Night — reuse `deal.start`, `night.start`, `night.end`. Then
    `onboard.night.done` (whisper): you are Liberal; you do not see the
    others; that is how this game is.
-2. **Nominate.** `onboard.pick` — pick a chancellor. Hint Nima (Sara
-   allowed). Reza / Omid: retry line, command ignored.
+2. **You are President.** `onboard.youPresident` — mask off. Watch the
+   table talk. Then **nominate** Nima. `onboard.pick` — first hand
+   nobody knows anything; tables usually name the next seat. Sara is
+   still allowed. Reza / Omid: retry line, command ignored.
 3. **Vote Ja.** `onboard.vote`. Others vote staggered. Reza Nein, rest
    Ja. After reveal, `onboard.votes.read` — remember who keeps saying
    no.
@@ -415,15 +406,14 @@ Do not use the word تمرین / practice / bot / ربات in any of these.
 | `onboard.idea.writeHere` | calm | *(step 1 #7 — ring composer, wait for any line)* | |
 | `onboard.idea.whereWereWe` | calm | *(step 1 #8 — lift, then pause)* | |
 | `onboard.idea.campaign` | announcing | *(step 1 #9 — still lifted)* | |
-| `onboard.idea.talkAbout` | calm | *(step 1 #10 — ring chat, then talk starts)* | |
-| `onboard.idea.yourTurn` | calm | *(step 1 #12 — ring composer; lift after they send)* | |
-| `onboard.idea.badPitch` | down | *(first send, even if they copied the ghost)* | |
-| `onboard.idea.writeTheHint` | down | *(second miss)* | |
+| `onboard.idea.talkAbout` | calm | *(step 1 #10 — lift; Continue then rings chat)* | |
+| `onboard.idea.yourTurn` | calm | *(step 1 #12 — ring composer; any send; then lift)* | |
 | `onboard.idea.youChancellor` | announcing | *(step 1 #13 — ring ticket)* | |
 | `onboard.idea.seeNext` | warmly | *(step 1 #14 — blur)* | |
 | `onboard.letsSit` | warmly | بریم سر میز. | Let's sit. |
 | `onboard.night.done` | whispering | شما لیبرالید. بقیه رو نمی‌بینید. همین درسته. | You are a Liberal. You do not see the others. That is the point. |
-| `onboard.pick` | calm | یه صدراعظم انتخاب کنید. نیما آرومه. از اونجا شروع کنید. | Pick a Chancellor. Nima is calm. Start there. |
+| `onboard.youPresident` | calm | شما رئیس‌جمهورید. ببینید سر میز چی می‌شه. | You're President. Watch how the table plays this. |
+| `onboard.pick` | calm | دست اول چیزی معلوم نیست. معمولاً نفر بعدی رو صدراعظم می‌کنن — نیما. | First hand nobody knows anything. Tables usually name the next seat — Nima. |
 | `onboard.pick.retry` | down | این یکی رو برای این دست نه. یکی دیگه. | Not that one for this hand. Someone else. |
 | `onboard.vote` | calm | کارت رأی‌تون رو بزنید. این دولت رو می‌خواید — آره. | Tap your vote. You want this government — Ja. |
 | `onboard.votes.read` | firm | رضا نه گفت. یکی که هی نه می‌ده، یادتون بمونه. | Reza said Nein. Remember who keeps saying no. |

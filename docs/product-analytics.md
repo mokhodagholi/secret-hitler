@@ -48,14 +48,33 @@ Message shape (same numbers the assistant uses in SQL recipes):
 
 بازی
   شروع … · تمام … · رها …
+
+🎯 امروز ایران تا ۱۸:۰۰
+  بازی تمام: … / 180
+  نشستند: … / 900
+  رسیدن به ۵: … / 350
+  قبول دوست: … / 40
+  قبول دعوت میز: … / 50
+  نشست شب: … / 350
+  برگشت فردا تا الان: …٪ / 35٪
+نگهبان
+  رها: …٪ · سقف 12٪
+  پر کردن میز: …٪ · کف 20٪
 ```
+
+The 🎯 block is the **Iran-day fight scoreboard** (today so far at 06/12/18;
+the day that just closed at 00:00). Goals live in `PRODUCT_GOALS`
+(`server/src/product/productDigest.ts`). Do **not** treat friend-requests
+*sent* as a goal — only **accepts**. `نشست شب` is unique `seated` at Iran
+hours 18–23 (`—` before 18:00). D1 = yesterday’s sitters who sat again on
+the scoreboard day. Code: `productDigest.ts`, `summarizeProductDigest.ts`,
+`ProductDigestService.ts`. Agent: `/data-assis-metrics`.
 
 Notes:
 
 - Skips noisy `bot_start` (floods; not demand).
 - Fill conversion = invite → `seated`/`room_join` on **that** `room_code` within 30m.
 - Needs a support chat id; no feature flag. Starts with the server.
-- Code: `productDigest.ts`, `summarizeProductDigest.ts`, `ProductDigestService.ts`.
 
 ---
 
@@ -153,6 +172,7 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 | When do people play (Iran hour)? | `product_lobbies.hour_iran` or trunc `at` |
 | Who wins / table sizes? | `games`, `game_players` |
 | Friends / invites / blocks? | `friendships`, `friend_requests`, `table_invites`, `social_blocks` |
+| Community fight scoreboard? | Iran-day vs `PRODUCT_GOALS` — `/data-assis-metrics` |
 | What’s live right now? | `live_rooms` count (+ server if needed) |
 
 ---
@@ -392,6 +412,73 @@ SELECT
 FROM product_blast_recipients;
 ```
 
+### Community fight scoreboard (Iran day)
+
+Goals: `PRODUCT_GOALS` in `server/src/product/productDigest.ts`.
+North star is finished games (not abandoned). Count **accepts**, never
+requests sent. Swap the day filter as needed; midnight digest uses the
+closed yesterday.
+
+```sql
+-- Unique sitters + evening cafe
+SELECT
+  COUNT(DISTINCT user_key) FILTER (WHERE name = 'seated') AS seated,
+  COUNT(DISTINCT user_key) FILTER (
+    WHERE name = 'seated'
+      AND EXTRACT(HOUR FROM at AT TIME ZONE 'Asia/Tehran') BETWEEN 18 AND 23
+  ) AS seated_evening
+FROM product_events
+WHERE name = 'seated' AND user_key IS NOT NULL
+  AND (at AT TIME ZONE 'Asia/Tehran')::date = DATE '2026-09-17';
+```
+
+```sql
+-- D1 sit: yesterday's sitters who sat again today
+WITH y AS (
+  SELECT DISTINCT user_key FROM product_events
+  WHERE name = 'seated' AND user_key IS NOT NULL
+    AND (at AT TIME ZONE 'Asia/Tehran')::date = DATE '2026-09-16'
+),
+t AS (
+  SELECT DISTINCT user_key FROM product_events
+  WHERE name = 'seated' AND user_key IS NOT NULL
+    AND (at AT TIME ZONE 'Asia/Tehran')::date = DATE '2026-09-17'
+)
+SELECT
+  (SELECT COUNT(*) FROM y) AS sat_yesterday,
+  COUNT(*) FILTER (WHERE t.user_key IS NOT NULL) AS returned,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE t.user_key IS NOT NULL)
+    / NULLIF((SELECT COUNT(*) FROM y), 0), 1) AS d1_pct
+FROM y
+LEFT JOIN t USING (user_key);
+```
+
+```sql
+-- Reached 5 + finished games + abandon
+SELECT COUNT(*) AS reached_5
+FROM product_lobbies
+WHERE reached_5_at IS NOT NULL
+  AND (reached_5_at AT TIME ZONE 'Asia/Tehran')::date = DATE '2026-09-17';
+
+SELECT
+  COUNT(*) FILTER (WHERE outcome IS NOT NULL AND outcome <> 'abandoned') AS finished,
+  COUNT(*) FILTER (WHERE outcome = 'abandoned') AS abandoned
+FROM product_matches
+WHERE ended_at IS NOT NULL
+  AND (ended_at AT TIME ZONE 'Asia/Tehran')::date = DATE '2026-09-17';
+```
+
+```sql
+-- Player-pulled accepts (resolved that Iran day)
+SELECT COUNT(*) FROM friend_requests
+WHERE status = 'accepted'
+  AND (resolved_at AT TIME ZONE 'Asia/Tehran')::date = DATE '2026-09-17';
+
+SELECT COUNT(*) FROM table_invites
+WHERE status = 'accepted'
+  AND (resolved_at AT TIME ZONE 'Asia/Tehran')::date = DATE '2026-09-17';
+```
+
 ### Audience
 
 ```sql
@@ -445,7 +532,8 @@ LIMIT 20;
    say so — don’t pretend.
 7. Support-group digests are already posted every **6h** Iran time — when the
    user asks “what happened this window?”, prefer matching that digest shape
-   (people → lobby → fill → games) so chat and bot stay aligned.
+   (people → lobby → fill → games, then the 🎯 scoreboard) so chat and bot
+   stay aligned. For the fight goals specifically, `/data-assis-metrics`.
 
 ### Cautions
 

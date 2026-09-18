@@ -47,6 +47,7 @@ ssh root@195.248.241.251 \
 | Blast ROI | `product_blasts` + recipients opened/sat |
 | User X timeline | `product_events` by `user_key` + `bot_subscribers` |
 | Digest-shaped window | Same blocks as the support-group digest (people → lobby → fill → games) |
+| Fight scoreboard / community goals | `/data-assis-metrics` |
 
 ## Lobby-fill anti-spam (quick)
 
@@ -54,7 +55,7 @@ Warm lookback **6h** (`find_match` > `seated`/`miniapp_auth`). Skip: busy, finis
 
 ## Digest
 
-Bot posts to support chat every **6h** Iran (00/06/12/18). Cadence: `PRODUCT_DIGEST.intervalMs` (plan → 24h). Shape is in `product-analytics.md` → Support-group digest.
+Bot posts to support chat every **6h** Iran (00/06/12/18). Cadence: `PRODUCT_DIGEST.intervalMs` (plan → 24h). Shape is in `product-analytics.md` → Support-group digest. The 🎯 block is the Iran-day fight scoreboard — `/data-assis-metrics` for an on-demand read.
 
 ## Rules
 

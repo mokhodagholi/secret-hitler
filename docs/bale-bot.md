@@ -630,7 +630,7 @@ These talk to Bale but **never** as a slash-command in private chat.
 |---|---|---|
 | Support letter | Mini-app Support screen → `POST /api/support` | Bot posts a letter to `BALE_SUPPORT_CHAT_ID` (help / suggestion / criticism). There is no `/support` in chat. |
 | Kick-vote notice | Server, after a table kick vote | Same support group gets a tally (requester, target, yes/needed, kicked or not). |
-| Product digest | `ProductDigestService` on Iran 6h boundaries | Same support group gets people / lobby / fill / match counts for the last window. See [`product-analytics.md`](./product-analytics.md). |
+| Product digest | `ProductDigestService` on Iran 6h boundaries | Same support group gets the last 6h ops window **and** the Iran-day fight scoreboard vs `PRODUCT_GOALS`. See [`product-analytics.md`](./product-analytics.md). |
 | Mini-app login | `POST /api/auth/bale` | Validates `initData`, returns first name + saved avatar. Not a chat command. |
 
 ---
