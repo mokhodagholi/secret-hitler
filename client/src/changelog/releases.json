@@ -1,19 +1,14 @@
 {
   "releases": [
     {
-      "version": "0.10.0",
-      "bump": "minor",
-      "date": "2026-09-18",
+      "version": "0.10.1",
+      "bump": "patch",
+      "date": "2026-09-19",
       "changes": [
         {
           "kind": "feat",
           "fa": "برای اینکه در بازی استاد شوید، آموزش شبیه‌سازی‌شده اضافه شده.",
           "en": "A simulated lesson is in, so you can master the game."
-        },
-        {
-          "kind": "feat",
-          "fa": "میزهایی که در گروه ساخته می‌شوند در فهرست اتاق‌ها دیده می‌شوند. اگر در همان گروه باشید بدون رمز می‌نشینید؛ بقیه باید رمز را وارد کنند.",
-          "en": "Tables opened from a group appear on Join. People in that group sit without a password; everyone else needs it."
         }
       ]
     },

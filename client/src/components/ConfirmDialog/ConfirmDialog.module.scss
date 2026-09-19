@@ -11,6 +11,10 @@
   background: rgba(2, 8, 16, 0.7);
 }
 
+.backdropUnderBriefing {
+  z-index: 150; // Sit waits under What's New (160); kick/room-closed stay at 180
+}
+
 .dialog {
   @include card;
   width: 100%;

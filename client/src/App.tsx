@@ -296,6 +296,7 @@ function SitOffer() {
   return (
     <ConfirmDialog
       open={sitOpen()}
+      underBriefing
       message={formatMessage('onboard.piece.welcome')}
       confirmLabel={formatMessage('onboard.sit')}
       cancelLabel={sitRequired() ? undefined : formatMessage('onboard.notNow')}

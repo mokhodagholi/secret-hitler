@@ -18,6 +18,8 @@ export interface ConfirmDialogProps {
   autoCloseMs?: number;
   /** Stack actions so the primary sits at the bottom (own-table dialog). */
   stackActions?: boolean;
+  /** Sit waits under What's New; kick and room-closed stay above the briefing. */
+  underBriefing?: boolean;
 }
 
 /** Modal confirmation card over a dimmed backdrop. */
@@ -33,6 +35,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         confirmOnPointerDown={props.confirmOnPointerDown}
         autoCloseMs={props.autoCloseMs}
         stackActions={props.stackActions}
+        underBriefing={props.underBriefing}
       >
         {props.children}
       </Notice>
@@ -50,6 +53,7 @@ function Notice(props: {
   confirmOnPointerDown?: boolean;
   autoCloseMs?: number;
   stackActions?: boolean;
+  underBriefing?: boolean;
 }) {
   const timed = () => props.autoCloseMs != null && props.autoCloseMs > 0;
   let confirmHandledByPointer = false;
@@ -62,7 +66,10 @@ function Notice(props: {
 
   return (
     <div
-      class={styles.backdrop}
+      classList={{
+        [styles.backdrop]: true,
+        [styles.backdropUnderBriefing]: props.underBriefing === true,
+      }}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return;
         if (timed()) props.onConfirm?.();

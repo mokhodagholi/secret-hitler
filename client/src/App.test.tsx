@@ -2,6 +2,7 @@ import { describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { DEFAULT_FLAGS, Phase } from '@secret-hitler/shared';
 import { App } from './App';
+import confirmStyles from './components/ConfirmDialog/ConfirmDialog.module.scss';
 import { en } from './i18n/locales/en';
 import { BrowserMiniApp } from './services/miniapp';
 import { TUTORIAL_ANNOUNCE_LIMIT, ONBOARDING_DECLINE_KEY } from './tutorial/TutorialService';
@@ -96,6 +97,24 @@ describe('App — first-run look', () => {
 
     harness.services.flags.apply({ ...DEFAULT_FLAGS, onboarding: true });
     await waitFor(() => expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy());
+  });
+
+  it('Should keep Sit under the briefing until the notes are dismissed', async () => {
+    localStorage.setItem('sh:seen-changelog', '0.0.0');
+    const harness = buildHarness({ flags: { onboarding: true } });
+    render(() => <App services={harness.services} />);
+
+    await waitFor(() => expect(screen.getByText(en.changelog.whatsNew)).toBeTruthy());
+    expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy();
+    const sitDialog = screen.getByText(en.onboard.piece.welcome).closest('[role="alertdialog"]');
+    expect(sitDialog?.parentElement?.classList.contains(confirmStyles.backdropUnderBriefing)).toBe(
+      true,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: en.changelog.continue }));
+    expect(screen.queryByText(en.changelog.whatsNew)).toBeNull();
+    expect(screen.getByText(en.onboard.piece.welcome)).toBeTruthy();
+    expect(screen.getByRole('button', { name: en.onboard.sit })).toBeTruthy();
   });
 
   it('Should not offer Sit when onboarding is off', async () => {
