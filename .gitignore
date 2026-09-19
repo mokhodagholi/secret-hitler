@@ -16,3 +16,4 @@ __pycache__/
 *.pyc
 scripts/.venv-ravi
 scripts/.venv-ravi-native
+todo.md
