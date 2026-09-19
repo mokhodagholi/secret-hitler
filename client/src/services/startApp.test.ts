@@ -12,6 +12,7 @@ describe('joinCodeFromStartApp', () => {
     expect(joinCodeFromStartApp('')).toBeNull();
     expect(joinCodeFromStartApp('naqvvxd7vbc2xvky')).toBeNull();
     expect(joinCodeFromStartApp('rules')).toBeNull();
+    expect(joinCodeFromStartApp('1')).toBeNull();
     expect(joinCodeFromStartApp('p1ABC123')).toBeNull();
   });
 });

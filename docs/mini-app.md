@@ -209,7 +209,9 @@ which wrapper to call when both SDKs saw the same hash.
 
 `start_param` / `tgWebAppStartParam` already feeds
 [`joinCodeFromStartApp`](../client/src/services/startApp.ts). Keep
-that. Both hosts inject the same query flag.
+that. Both hosts inject the same query flag. Unknown payloads (ads
+`startapp=1`) still open home; auth records `payload.startParam` on
+`miniapp_auth` — see [`product-analytics.md`](./product-analytics.md).
 
 ### In-memory routing (Bale BackButton)
 

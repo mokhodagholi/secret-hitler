@@ -131,7 +131,7 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 | Name | Meaning |
 |---|---|
 | `bot_start` | Private bot start |
-| `miniapp_auth` | Mini-app opened/authed (also marks blast *opened*) |
+| `miniapp_auth` | Mini-app opened/authed (also marks blast *opened*). `payload.startParam` when they opened via `?startapp=` — ad `1`, a room code, or `/play-game` |
 | `find_match` | Legacy Find Match queue (unused while the salon is on) |
 | `room_create` / `room_join` / `group_create` | How the table was born / joined |
 | `own_room_prompt` | Opened the “own table” dialog on Join |
@@ -155,6 +155,7 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 | `lobby_fill_wave` | One fill attempt summary |
 
 `user_key`: `bale:123`, `telegram:123`, or `client:uuid` (browser).  
+`miniapp_auth.payload.startParam`: the `startapp` value (`1` is the first Bale ad). Absent on bot Play / empty `startapp`.  
 `lobby_fill_fail.reason`: `rate_limit` | `blocked` | `bad_user_key` | `other`.  
 `lobby_fill_wave.stop`: `done` | `no_candidates` | `lobby_gone` | `table_full`.
 
@@ -179,6 +180,7 @@ WebSocket frames, Bale “DM opened” (messenger doesn’t tell us).
 | Why did this invite fail? | `lobby_fill_fail` then user timeline |
 | When did user X join / block? | `product_events` + `bot_subscribers` |
 | How big is our audience? | `bot_subscribers` (+ note blockers drop) |
+| Did this ad (`startapp=1`) convert? | `miniapp_auth.payload.startParam` then join to `seated` / games |
 | Did /broadcast bring people back? | `product_blasts` + recipients `opened_at` / `sat_at` |
 | Why do lobbies die? | `product_lobbies.death_reason`, peak seats |
 | When do people play (Iran hour)? | `product_lobbies.hour_iran` or trunc `at` |
@@ -232,6 +234,53 @@ SELECT
 FROM product_events
 WHERE at >= NOW() - INTERVAL '1 day'
   AND user_key IS NOT NULL;
+```
+
+### Ad campaign (`startapp=1`)
+
+`ble.ir/secret_hitler_bot?startapp=1`. Cohort = anyone who opened the mini-app
+with that payload (later sits/games may not carry `startParam` — join by
+`user_key`). Swap `'1'` for a later campaign code. Empty `startapp` (bot Play)
+is not an ad open.
+
+```sql
+WITH cohort AS (
+  SELECT DISTINCT user_key FROM product_events
+  WHERE name = 'miniapp_auth' AND user_key IS NOT NULL
+    AND payload->>'startParam' = '1'
+    AND at >= NOW() - INTERVAL '7 days'
+),
+sits AS (
+  SELECT DISTINCT e.user_key, e.room_code
+  FROM product_events e
+  JOIN cohort c USING (user_key)
+  WHERE e.name = 'seated' AND e.room_code IS NOT NULL
+    AND e.at >= NOW() - INTERVAL '7 days'
+)
+SELECT
+  (SELECT COUNT(*) FROM cohort) AS opened,
+  COUNT(DISTINCT sits.user_key) AS seated,
+  COUNT(DISTINCT sits.user_key) FILTER (WHERE EXISTS (
+    SELECT 1 FROM product_events e
+    WHERE e.name = 'table_dealt' AND e.room_code = sits.room_code
+      AND e.at >= NOW() - INTERVAL '7 days'
+  )) AS dealt,
+  COUNT(DISTINCT sits.user_key) FILTER (WHERE EXISTS (
+    SELECT 1 FROM product_events e
+    WHERE e.name = 'game_finished' AND e.room_code = sits.room_code
+      AND e.at >= NOW() - INTERVAL '7 days'
+  )) AS finished
+FROM sits;
+```
+
+```sql
+-- Mix of startapp values (ads vs room invites vs play-game)
+SELECT payload->>'startParam' AS start_param, COUNT(*) AS events,
+       COUNT(DISTINCT user_key) AS unique_users
+FROM product_events
+WHERE name = 'miniapp_auth' AND at >= NOW() - INTERVAL '7 days'
+GROUP BY 1
+ORDER BY unique_users DESC;
 ```
 
 ### Onboarding follow-through
@@ -599,6 +648,8 @@ LIMIT 20;
 ### Cautions
 
 - `bot_start` unique ≠ `bot_subscribers` (starts can exceed list; blockers drop).
+- `miniapp_auth.payload.startParam` only exists after that tracking shipped.
+  Opens before that cannot be attributed to an ad.
 - Room codes **reuse**; when joining invites → lobbies, prefer the lobby whose
   `opened_at` is near the invite time.
 - Bale ~**3 req/s**. Prefer fill invites over mass `/broadcast`.

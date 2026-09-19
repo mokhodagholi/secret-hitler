@@ -133,6 +133,26 @@ describe('BaleMiniApp', () => {
     expect(nav.screen()).toBe('join-game');
     expect(nav.consumeJoinCode()).toBe('ABC123');
   });
+
+  it('Should send the Bale startParam on mini-app auth', async () => {
+    const original = globalThis.fetch;
+    let payload: unknown;
+    globalThis.fetch = (async (_url, init) => {
+      payload = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({ id: 9, firstName: 'Ana' }), {
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+    try {
+      window.Bale = {
+        WebApp: fakeBaleWebApp('query_id=BALE', { startParam: '1' }),
+      };
+      await new BaleMiniApp().boot(new SettingsService(), new NavigationService('/'));
+      expect(payload).toEqual({ initData: 'query_id=BALE', startParam: '1' });
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
 });
 
 describe('TelegramMiniApp', () => {

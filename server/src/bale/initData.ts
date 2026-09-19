@@ -4,6 +4,20 @@ import type { MessengerKind } from '@secret-hitler/shared';
 /** Max age of mini-app initData before we treat it as stale (24h). */
 export const INIT_DATA_MAX_AGE_SEC = 86_400;
 
+/** Telegram/Bale `startapp`: 1–64 of A–Z a–z 0–9 _ -. Ads use `1`. */
+const START_PARAM = /^[A-Za-z0-9_-]{1,64}$/;
+
+export function sanitizeStartParam(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed || !START_PARAM.test(trimmed)) return null;
+  return trimmed;
+}
+
+/** Read `start_param` from signed initData. Call only after HMAC succeeds. */
+export function startParamFromInitData(initData: string): string | null {
+  return sanitizeStartParam(new URLSearchParams(initData).get('start_param'));
+}
+
 export interface BaleWebAppUser {
   id: number;
   firstName: string;

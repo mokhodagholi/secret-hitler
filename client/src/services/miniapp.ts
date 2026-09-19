@@ -134,7 +134,7 @@ class HostMiniApp implements MiniApp {
       response = await fetch(AUTH_PATH, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ initData }),
+        body: JSON.stringify({ initData, startParam: startParam || undefined }),
       });
     } catch {
       return;

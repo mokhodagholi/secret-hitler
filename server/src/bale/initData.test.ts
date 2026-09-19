@@ -1,6 +1,11 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from '@rstest/core';
-import { identifyInitData, validateBaleInitData } from './initData';
+import {
+  identifyInitData,
+  sanitizeStartParam,
+  startParamFromInitData,
+  validateBaleInitData,
+} from './initData';
 
 const TOKEN = '123456:test-token';
 
@@ -48,6 +53,25 @@ describe('validateBaleInitData', () => {
       user: JSON.stringify({ id: 1, first_name: 'Ana' }),
     });
     expect(validateBaleInitData(initData, TOKEN, 1_000_000)).toBeNull();
+  });
+});
+
+describe('startParamFromInitData', () => {
+  it('Should read a signed start_param used for ads', () => {
+    const initData = sign({
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      start_param: '1',
+      user: JSON.stringify({ id: 9, first_name: 'Ana' }),
+    });
+    expect(validateBaleInitData(initData, TOKEN)?.id).toBe(9);
+    expect(startParamFromInitData(initData)).toBe('1');
+  });
+
+  it('Should ignore missing or illegal start_param values', () => {
+    expect(startParamFromInitData('user=%7B%7D')).toBeNull();
+    expect(sanitizeStartParam('')).toBeNull();
+    expect(sanitizeStartParam('not a code')).toBeNull();
+    expect(sanitizeStartParam('a'.repeat(65))).toBeNull();
   });
 });
 

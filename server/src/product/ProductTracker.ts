@@ -69,10 +69,18 @@ export class ProductTracker {
     this.event('bot_start', { platform, userKey: `${platform}:${chatId}` });
   }
 
-  miniappOpened(platform: MessengerKind, userId: number | string): void {
+  miniappOpened(
+    platform: MessengerKind,
+    userId: number | string,
+    startParam?: string | null,
+  ): void {
     const chatId = String(userId);
     const userKey = `${platform}:${chatId}`;
-    this.event('miniapp_auth', { platform, userKey });
+    this.event('miniapp_auth', {
+      platform,
+      userKey,
+      payload: startParam ? { startParam } : null,
+    });
     this.run((store, at) => store.markBlastOpened(platform, chatId, at));
   }
 

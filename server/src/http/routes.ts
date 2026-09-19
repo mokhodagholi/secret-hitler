@@ -31,7 +31,11 @@ import {
   type OnboardStage,
 } from '../product/ProductStore';
 import { hashPassword, verifyPassword } from './password';
-import { identifyInitData } from '../bale/initData';
+import {
+  identifyInitData,
+  sanitizeStartParam,
+  startParamFromInitData,
+} from '../bale/initData';
 import { baleUserInOriginChat } from '../bale/groupMember';
 import {
   handleMessengerWebhook,
@@ -190,16 +194,20 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
         .code(503)
         .send({ error: 'Mini-app login is not configured', code: 'MINIAPP_DISABLED' });
     }
-    const initData =
-      typeof (req.body as { initData?: unknown } | null)?.initData === 'string'
-        ? (req.body as { initData: string }).initData
-        : '';
+    const rawBody = req.body as { initData?: unknown; startParam?: unknown } | null;
+    const initData = typeof rawBody?.initData === 'string' ? rawBody.initData : '';
     const identified = identifyInitData(initData, messengers);
     if (!identified) {
       return reply.code(401).send({ error: 'Invalid mini-app login', code: 'AUTH_FAILED' });
     }
     await subscribers.upsert(identified.kind, String(identified.user.id));
-    product.miniappOpened(identified.kind, identified.user.id);
+    const bodyStartParam =
+      typeof rawBody?.startParam === 'string' ? sanitizeStartParam(rawBody.startParam) : null;
+    product.miniappOpened(
+      identified.kind,
+      identified.user.id,
+      startParamFromInitData(initData) ?? bodyStartParam,
+    );
     const avatar = await profiles.get(
       identified.kind === 'telegram'
         ? { telegramUserId: String(identified.user.id) }

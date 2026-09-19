@@ -34,6 +34,19 @@ describe('ProductTracker — funnel', () => {
       'seated',
     ]);
     expect(store.events[0]).toMatchObject({ platform: 'bale', userKey: 'bale:9' });
+    expect(store.events[1].payload).toBeNull();
+  });
+
+  it('Should stamp startapp on miniapp_auth so ad opens can be joined later', async () => {
+    const store = new InMemoryProductStore();
+    const tracker = new ProductTracker(store);
+    tracker.miniappOpened('bale', 9, '1');
+    await flush(tracker);
+    expect(store.events[0]).toMatchObject({
+      name: 'miniapp_auth',
+      userKey: 'bale:9',
+      payload: { startParam: '1' },
+    });
   });
 
   it('Should record Find Match and group create as their own funnel steps', async () => {

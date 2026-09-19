@@ -38,10 +38,15 @@ async function waitUntil(
   }
 }
 
-function signInitData(userId: number, firstName: string): string {
+function signInitData(
+  userId: number,
+  firstName: string,
+  extra: Record<string, string> = {},
+): string {
   const fields = {
     auth_date: String(Math.floor(Date.now() / 1000)),
     user: JSON.stringify({ id: userId, first_name: firstName }),
+    ...extra,
   };
   const params = new URLSearchParams(fields);
   const dataCheckString = [...params.entries()]
@@ -324,6 +329,73 @@ describe('Bale webhook', () => {
     });
     const { status } = await httpJson(app, 'POST', '/api/auth/bale', { initData: 'hash=nope' });
     expect(status).toBe(401);
+  });
+
+  it('Should stamp signed startapp=1 on miniapp_auth', async () => {
+    const product = new InMemoryProductStore();
+    const { app, product: tracker } = await buildServer({
+      product,
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: TOKEN,
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    const { status, body } = await httpJson(app, 'POST', '/api/auth/miniapp', {
+      initData: signInitData(9, 'Ana', { start_param: '1' }),
+    });
+    await tracker.flush();
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ id: 9, firstName: 'Ana', platform: 'bale' });
+    expect(product.events).toEqual([
+      expect.objectContaining({
+        name: 'miniapp_auth',
+        userKey: 'bale:9',
+        payload: { startParam: '1' },
+      }),
+    ]);
+  });
+
+  it('Should take a body startParam when initData has none', async () => {
+    const product = new InMemoryProductStore();
+    const { app, product: tracker } = await buildServer({
+      product,
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: TOKEN,
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    await httpJson(app, 'POST', '/api/auth/miniapp', {
+      initData: signInitData(9, 'Ana'),
+      startParam: '1',
+    });
+    await tracker.flush();
+    expect(product.events[0]?.payload).toEqual({ startParam: '1' });
+  });
+
+  it('Should prefer signed start_param over a spoofed body field', async () => {
+    const product = new InMemoryProductStore();
+    const { app, product: tracker } = await buildServer({
+      product,
+      bale: {
+        bot: { sendMessage: async () => ({}) },
+        botToken: TOKEN,
+        publicUrl: 'https://mrfantastic.ir',
+        botUsername: '@secret_hitler_bot',
+        seats: new BaleSeatIndex(),
+      },
+    });
+    await httpJson(app, 'POST', '/api/auth/miniapp', {
+      initData: signInitData(9, 'Ana', { start_param: '1' }),
+      startParam: '2',
+    });
+    await tracker.flush();
+    expect(product.events[0]?.payload).toEqual({ startParam: '1' });
   });
 });
 
